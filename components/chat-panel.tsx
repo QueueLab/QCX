@@ -184,12 +184,12 @@ export function ChatPanel({ messages }: ChatPanelProps) {
     </Button>
 
     {showDropdown && (
-      <div className="absolute top-10 right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none">
+      <div className="absolute top-10 right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none dark:bg-gray-800 dark:ring-gray-700">
         <div ref={dropdownRef} className="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
-          <button onClick={handleOption1Click} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left" role="menuitem">
+          <button onClick={handleOption1Click} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left dark:text-gray-300 dark:hover:bg-gray-700" role="menuitem">
             Documents
           </button>
-          <button onClick={() => alert('Function not implemented.')} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left" role="menuitem">
+          <button onClick={() => alert('Function not implemented.')} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left dark:text-gray-300 dark:hover:bg-gray-700" role="menuitem">
             Images
           </button>
         </div>

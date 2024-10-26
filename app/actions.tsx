@@ -24,6 +24,8 @@ import { CopilotDisplay } from '@/components/copilot-display'
 import RetrieveSection from '@/components/retrieve-section'
 import { VideoSearchSection } from '@/components/video-search-section'
 import { Mapbox } from '@/components/map/mapbox-map'
+import { detectMapImage, overlayMapImage } from '@/lib/utils/map-utils'
+import { processImageAttachment } from '@/lib/agents/image-agent'
 
 async function submit(formData?: FormData, skip?: boolean) {
   'use server'

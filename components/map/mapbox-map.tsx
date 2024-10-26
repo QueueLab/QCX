@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useMapToggle, MapToggleEnum } from '../map-toggle-context';
 import debounce from 'lodash.debounce';
+import { detectMapImage, overlayMapImage } from '@/lib/utils/map-utils';
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN as string;
 
@@ -192,6 +193,29 @@ export const Mapbox: React.FC<{ position: { latitude: number; longitude: number;
       });
     }
   }, 300);
+
+  const handleMapImageOverlay = async (image: string) => {
+    const isMap = await detectMapImage(image);
+    if (isMap) {
+      const overlayData = await overlayMapImage(image);
+      if (overlayData && map.current) {
+        map.current.addSource('map-image-overlay', {
+          type: 'image',
+          url: overlayData.url,
+          coordinates: overlayData.coordinates,
+        });
+
+        map.current.addLayer({
+          id: 'map-image-overlay-layer',
+          type: 'raster',
+          source: 'map-image-overlay',
+          paint: {
+            'raster-opacity': 0.85,
+          },
+        });
+      }
+    }
+  };
 
   return (
     <>

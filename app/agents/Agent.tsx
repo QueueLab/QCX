@@ -4,6 +4,8 @@ import { streamObject } from 'ai'
 import { BaseAgent } from './base-agent'
 import { Copilot } from '@/components/copilot'
 import { createStreamableValue } from '@/lib/streamable-value'
+import { detectMapImage, processImageAttachment } from '@/lib/utils/map-utils'
+
 class InquiryAgent extends BaseAgent {
   async execute(): Promise<PartialInquiry> {
     const objectStream = createStreamableValue<PartialInquiry>()
@@ -46,4 +48,26 @@ class EnvironmentAwareQueryAgent extends BaseAgent {
   }
 }
 
-export { InquiryAgent, LandUseAgent, EnvironmentAwareQueryAgent }
+class ImageAttachmentAgent extends BaseAgent {
+  async execute(): Promise<any> {
+    const imageAttachment = this.messages.find(
+      message => message.type === 'image'
+    )
+
+    if (imageAttachment) {
+      const isMap = await detectMapImage(imageAttachment.content)
+      if (isMap) {
+        await processImageAttachment(imageAttachment.content)
+      }
+    }
+
+    return {}
+  }
+}
+
+export {
+  InquiryAgent,
+  LandUseAgent,
+  EnvironmentAwareQueryAgent,
+  ImageAttachmentAgent
+}
