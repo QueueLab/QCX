@@ -7,6 +7,7 @@ import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import 'katex/dist/katex.min.css'
+import { linkLocations } from '@/lib/utils/location-extractor'
 
 export function BotMessage({ content }: { content: StreamableValue<string> }) {
   const [data, error, pending] = useStreamableValue(content)
@@ -36,8 +37,9 @@ const preprocessLaTeX = (content: string) => {
     (_, equation) => `$$${equation}$$`
   )
   const inlineProcessedContent = blockProcessedContent.replace(
-    /\\\(([\s\S]*?)\\\)/g,
+    /\\\(([\\s\S]*?)\\\)/g,
     (_, equation) => `$${equation}$`
   )
-  return inlineProcessedContent
+  const linkedContent = linkLocations(inlineProcessedContent)
+  return linkedContent
 }

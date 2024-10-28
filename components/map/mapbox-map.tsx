@@ -115,6 +115,13 @@ export const Mapbox: React.FC<{ position: { latitude: number; longitude: number;
     }
   };
 
+  // Add functionality to link location names to map rendering
+  useEffect(() => {
+    window.renderMapToLocation = (latitude: number, longitude: number) => {
+      updateMapPosition(latitude, longitude);
+    };
+  }, []);
+
   return (
     <>
       <div

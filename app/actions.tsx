@@ -1,4 +1,3 @@
-
 'use server'
 import {
   StreamableValue,
@@ -24,6 +23,7 @@ import SearchRelated from '@/components/search-related'
 import { CopilotDisplay } from '@/components/copilot-display'
 import RetrieveSection from '@/components/retrieve-section'
 import { VideoSearchSection } from '@/components/video-search-section'
+import { extractLocations } from '@/lib/utils/location-extractor'
 
 async function submit(formData?: FormData, skip?: boolean) {
   'use server'
@@ -214,6 +214,15 @@ async function submit(formData?: FormData, skip?: boolean) {
             type: 'followup'
           }
         ]
+      })
+    }
+
+    // Process location links
+    const locations = extractLocations(answer)
+    if (locations.length > 0) {
+      locations.forEach(location => {
+        const locationLink = `<a href="#" onclick="window.renderMapToLocation(${location.latitude}, ${location.longitude})">${location.name}</a>`
+        answer = answer.replace(location.name, locationLink)
       })
     }
 
