@@ -31,17 +31,15 @@ export function Chat({ id }: ChatProps) {
   }, [aiState, router])
 
   return (
-    <div className="flex justify-start items-start">
-      <div className="w-1/2 flex flex-col space-y-3 md:space-y-4 px-8 sm:px-12 pt-12 md:pt-14 pb-14 md:pb-24">
+    <div className="chat-container flex justify-start items-start">
+      <div className="chat-panel w-1/2 flex flex-col space-y-3 md:space-y-4 px-8 sm:px-12 pt-12 md:pt-14 pb-14 md:pb-24">
         <ChatMessages messages={messages} />
         <ChatPanel messages={messages} />
       </div>
     
-      <div className="w-1/2 p-4 fixed h-[calc(100vh-0.5in)] top-0 right-0 mt-[0.5in]">
+      <div className="map-container w-1/2 p-4 fixed h-[calc(100vh-0.5in)] top-0 right-0 mt-[0.5in]">
         <Mapbox position={{ latitude: -3.0674, longitude: 37.3556 }} />
       </div>
-
-      
     </div>
   )
 }

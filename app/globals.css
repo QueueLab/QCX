@@ -105,3 +105,39 @@
   .map-container {
     transform: scale(0.8);
   }
+
+  @media (max-width: 768px) {
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    .chat-panel {
+      order: 2;
+      height: 50%;
+    }
+
+    .map-container {
+      order: 1;
+      height: 50%;
+    }
+  }
+
+  @media (min-width: 769px) and (max-width: 1024px) {
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    .chat-panel {
+      order: 2;
+      height: 50%;
+    }
+
+    .map-container {
+      order: 1;
+      height: 50%;
+    }
+  }

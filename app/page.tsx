@@ -81,7 +81,9 @@ const AppPage = () => {
 
     return (
       <AI initialAIState={{ chatId: id, messages: [] }}>
-        <Chat id={id} />
+        <div className="chat-container">
+          <Chat id={id} />
+        </div>
       </AI>
     );
   }
