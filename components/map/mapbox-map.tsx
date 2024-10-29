@@ -18,11 +18,13 @@ export const Mapbox: React.FC<{ position: { latitude: number; longitude: number;
   const { mapType } = useMapToggle();
   const [roundedArea, setRoundedArea] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-
+  const [visualizationState, setVisualizationState] = useState<any>(null);
 
   const draw = new MapboxDraw({
     displayControlsDefault: false,
     controls: {
+      point: true,
+      line_string: true,
       polygon: true,
       trash: true
     },
@@ -103,6 +105,44 @@ export const Mapbox: React.FC<{ position: { latitude: number; longitude: number;
           setRoundedArea(Math.round(area * 100) / 100);
         }
       };
+
+      const handleKeyDown = (event: KeyboardEvent) => {
+        if (event.ctrlKey || event.shiftKey) {
+          if (event.key === '1') {
+            draw.changeMode('draw_point');
+          } else if (event.key === '2') {
+            draw.changeMode('draw_line_string');
+          } else if (event.key === '3') {
+            draw.changeMode('draw_polygon');
+          } else if (event.key === '4') {
+            draw.trash();
+          } else if (event.key === '5') {
+            const allDrawnFeatures = draw.getAll();
+            if (allDrawnFeatures.features.length > 0) {
+              const buffer = turf.buffer(allDrawnFeatures, 50, { units: 'meters' });
+              draw.add(buffer);
+              setVisualizationState(buffer);
+            }
+          } else if (event.key === '6') {
+            const allDrawnFeatures = draw.getAll();
+            if (allDrawnFeatures.features.length > 0) {
+              const centroid = turf.centroid(allDrawnFeatures);
+              draw.add(centroid);
+              setVisualizationState(centroid);
+            }
+          } else if (event.key === '7') {
+            const allDrawnFeatures = draw.getAll();
+            if (allDrawnFeatures.features.length > 0) {
+              const convex = turf.convex(allDrawnFeatures);
+              draw.add(convex);
+              setVisualizationState(convex);
+            }
+          }
+        }
+      };
+
+      document.addEventListener('keydown', handleKeyDown);
+
       // Add zoom controls
       if (map.current) {
         map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
@@ -141,6 +181,7 @@ export const Mapbox: React.FC<{ position: { latitude: number; longitude: number;
         map.current.remove();
         map.current = null;
       }
+      document.removeEventListener('keydown', handleKeyDown);
     };
   }, [mapContainer]);
 
