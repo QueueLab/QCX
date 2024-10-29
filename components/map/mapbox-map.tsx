@@ -12,13 +12,24 @@ import { useMapToggle, MapToggleEnum } from '../map-toggle-context'
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN as string;
 
+const naturalWonders = [
+  { name: 'Mount Everest', coordinates: { latitude: 27.9881, longitude: 86.9250 } },
+  { name: 'Grand Canyon', coordinates: { latitude: 36.1069, longitude: -112.1129 } },
+  { name: 'Great Barrier Reef', coordinates: { latitude: -18.2871, longitude: 147.6992 } },
+  { name: 'Aurora Borealis', coordinates: { latitude: 67.8558, longitude: 20.2253 } },
+  { name: 'Victoria Falls', coordinates: { latitude: -17.9243, longitude: 25.8567 } },
+  { name: 'Paricutin Volcano', coordinates: { latitude: 19.4933, longitude: -102.2514 } },
+  { name: 'Harbor of Rio de Janeiro', coordinates: { latitude: -22.9519, longitude: -43.2105 } }
+];
+
 export const Mapbox: React.FC<{ position: { latitude: number; longitude: number; } }> = ({ position }) => {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null);
   const { mapType } = useMapToggle();
   const [roundedArea, setRoundedArea] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-
+  const [currentWonderIndex, setCurrentWonderIndex] = useState(0);
+  const idleTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const draw = new MapboxDraw({
     displayControlsDefault: false,
@@ -74,6 +85,22 @@ export const Mapbox: React.FC<{ position: { latitude: number; longitude: number;
     }
   };
 
+  const rotateToNextWonder = () => {
+    const nextIndex = (currentWonderIndex + 1) % naturalWonders.length;
+    setCurrentWonderIndex(nextIndex);
+    const nextWonder = naturalWonders[nextIndex];
+    updateMapPosition(nextWonder.coordinates.latitude, nextWonder.coordinates.longitude);
+  };
+
+  const resetIdleTimeout = () => {
+    if (idleTimeout.current) {
+      clearTimeout(idleTimeout.current);
+    }
+    idleTimeout.current = setTimeout(() => {
+      rotateToNextWonder();
+    }, 5000); // 5 seconds of idle time before rotating
+  };
+
   useEffect(() => {
     if (mapContainer.current && !map.current) {
       const initialCenter: [number, number] = [
@@ -110,6 +137,8 @@ export const Mapbox: React.FC<{ position: { latitude: number; longitude: number;
         map.current.on('draw.create', updateArea);
         map.current.on('draw.delete', updateArea);
         map.current.on('draw.update', updateArea);
+        map.current.on('idle', resetIdleTimeout);
+        map.current.on('move', resetIdleTimeout);
       }
       // Add terrain
       map.current.on('load', () => {
@@ -140,6 +169,9 @@ export const Mapbox: React.FC<{ position: { latitude: number; longitude: number;
       if (map.current) {
         map.current.remove();
         map.current = null;
+      }
+      if (idleTimeout.current) {
+        clearTimeout(idleTimeout.current);
       }
     };
   }, [mapContainer]);
