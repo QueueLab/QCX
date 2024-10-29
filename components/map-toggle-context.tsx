@@ -1,6 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { useTheme } from 'next-themes';
 
 export enum MapToggleEnum {
   FreeMode,
@@ -10,6 +11,9 @@ export enum MapToggleEnum {
 interface MapToggleContextType {
   mapType: MapToggleEnum;
   setMapType: (type: MapToggleEnum) => void;
+  theme: string | undefined;
+  is3DPreviewEnabled: boolean;
+  set3DPreviewEnabled: (enabled: boolean) => void;
 }
 
 const MapToggleContext = createContext<MapToggleContextType | undefined>(undefined);
@@ -20,13 +24,15 @@ interface MapToggleProviderProps {
 
 export const MapToggleProvider: React.FC<MapToggleProviderProps> = ({ children }) => {
   const [mapToggleState, setMapToggle] = useState<MapToggleEnum>(MapToggleEnum.FreeMode);
+  const { theme } = useTheme();
+  const [is3DPreviewEnabled, set3DPreviewEnabled] = useState(false);
 
   const setMapType = (type: MapToggleEnum) => {
     setMapToggle(type);
   }
 
   return (
-    <MapToggleContext.Provider value={{ mapType: mapToggleState, setMapType }}>
+    <MapToggleContext.Provider value={{ mapType: mapToggleState, setMapType, theme, is3DPreviewEnabled, set3DPreviewEnabled }}>
       {children}
     </MapToggleContext.Provider>
   );

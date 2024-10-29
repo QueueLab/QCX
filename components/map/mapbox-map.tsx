@@ -9,6 +9,7 @@ import 'react-toastify/dist/ReactToastify.css'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css'
 import { useMapToggle, MapToggleEnum } from '../map-toggle-context'
+import { useTheme } from 'next-themes'
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN as string;
 
@@ -16,6 +17,7 @@ export const Mapbox: React.FC<{ position: { latitude: number; longitude: number;
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null);
   const { mapType } = useMapToggle();
+  const { theme } = useTheme();
   const [roundedArea, setRoundedArea] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [visualizationState, setVisualizationState] = useState<any>(null);
@@ -83,9 +85,20 @@ export const Mapbox: React.FC<{ position: { latitude: number; longitude: number;
         position?.latitude ?? 0
       ];
 
+      const getMapStyle = (theme: string | undefined) => {
+        switch (theme) {
+          case 'dark':
+            return 'mapbox://styles/mapbox/dark-v10';
+          case 'light':
+            return 'mapbox://styles/mapbox/light-v10';
+          default:
+            return 'mapbox://styles/mapbox/satellite-streets-v12';
+        }
+      };
+
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/satellite-streets-v12',
+        style: getMapStyle(theme),
         center: initialCenter,
         zoom: 12,
         pitch: 60,
@@ -183,7 +196,7 @@ export const Mapbox: React.FC<{ position: { latitude: number; longitude: number;
       }
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [mapContainer]);
+  }, [mapContainer, theme]);
 
   useEffect(() => {
     if (map.current && position?.latitude && position?.longitude) {
