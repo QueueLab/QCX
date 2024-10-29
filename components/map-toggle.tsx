@@ -29,6 +29,9 @@ export function MapToggle() {
         <DropdownMenuItem onClick={() => {setMapType(MapToggleEnum.RealTimeMode)}}>
           Live
         </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => {setMapType(MapToggleEnum.DrawArea)}}>
+          Draw Area
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

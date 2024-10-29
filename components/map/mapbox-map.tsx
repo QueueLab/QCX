@@ -180,6 +180,26 @@ export const Mapbox: React.FC<{ position: { latitude: number; longitude: number;
     }
   }, [mapType]);
 
+  useEffect(() => {
+    const handleUndo = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === 'z') {
+        const allDrawnFeatures = draw.getAll();
+        if (allDrawnFeatures.features.length > 0) {
+          const lastFeatureId = allDrawnFeatures.features[allDrawnFeatures.features.length - 1].id;
+          if (lastFeatureId) {
+            draw.delete(lastFeatureId);
+          }
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleUndo);
+
+    return () => {
+      document.removeEventListener('keydown', handleUndo);
+    };
+  }, []);
+
   return (
     <div className="h-full w-full overflow-hidden rounded-l-lg">
       <div
