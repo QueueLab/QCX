@@ -52,6 +52,7 @@ export interface Chat extends Record<string, any> {
   path: string
   messages: AIMessage[]
   sharePath?: string
+  isSharePage?: boolean
 }
 
 export type AIMessage = {

@@ -1,4 +1,3 @@
-
 'use server'
 import {
   StreamableValue,
@@ -261,7 +260,7 @@ export const AI = createAI<AIState, UIState>({
   onGetUIState: async () => {
     'use server'
 
-    const aiState = getAIState()
+    const aiState = getAIState() as Chat
     if (aiState) {
       const uiState = getUIStateFromAIState(aiState)
       return uiState
