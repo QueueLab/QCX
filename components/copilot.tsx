@@ -7,12 +7,17 @@ import { Checkbox } from './ui/checkbox'
 import { Button } from './ui/button'
 import { Card } from './ui/card'
 import { ArrowRight, Check, FastForward, Sparkles } from 'lucide-react'
-import { useActions, useStreamableValue, useUIState, StreamableValue } from 'ai/rsc'
+import {
+  StreamableValue,
+  useActions,
+  useStreamableValue,
+  useUIState
+} from 'ai/rsc'
 import type { AI } from '@/app/actions'
-import { IconLogo } from './ui/icons'
-import { cn } from '@/lib/utils'
-import { createStreamableValue } from "ai/rsc"
-
+import { useAppState } from '@/lib/utils/app-state'
+import { useLocalStorage } from '@/lib/hooks/use-local-storage'
+import { models } from '@/lib/types/models'
+import { getDefaultModelId } from '@/lib/utils'
 
 export type CopilotProps = {
   inquiry?: StreamableValue<PartialInquiry>
@@ -29,6 +34,12 @@ export const Copilot: React.FC<CopilotProps> = ({ inquiry }: CopilotProps) => {
   const [isButtonDisabled, setIsButtonDisabled] = useState(true)
   const [, setMessages] = useUIState<typeof AI>()
   const { submit } = useActions()
+  const { isGenerating, setIsGenerating } = useAppState()
+  const [object, setObject] = useState<PartialInquiry>()
+  const [selectedModelId] = useLocalStorage<string>(
+    'selectedModel',
+    getDefaultModelId(models)
+  )
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setQuery(event.target.value)
@@ -63,17 +74,40 @@ export const Copilot: React.FC<CopilotProps> = ({ inquiry }: CopilotProps) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query])
 
+  useEffect(() => {
+    if (!data) return
+    setObject(data)
+  }, [data])
+
   const onFormSubmit = async (
     e: React.FormEvent<HTMLFormElement>,
     skip?: boolean
   ) => {
     e.preventDefault()
+
+    if (isGenerating) return
+
+    setIsGenerating(true)
     setCompleted(true)
     setSkipped(skip || false)
 
-    const formData = skip
-      ? undefined
-      : new FormData(e.target as HTMLFormElement)
+    // Always create FormData
+    const formData = new FormData()
+
+    // Add model information
+    formData.set('model', selectedModelId)
+
+    // If not skipping, add form data from the event
+    if (!skip) {
+      const form = e.target as HTMLFormElement
+      const formEntries = Array.from(new FormData(form).entries())
+      formEntries.forEach(([key, value]) => {
+        if (key !== 'model') {
+          // Don't override model
+          formData.append(key, value)
+        }
+      })
+    }
 
     const response = await submit(formData, skip)
     setMessages(currentMessages => [...currentMessages, response])
@@ -104,7 +138,6 @@ export const Copilot: React.FC<CopilotProps> = ({ inquiry }: CopilotProps) => {
     return (
       <Card className="p-3 md:p-4 w-full flex justify-between items-center">
         <div className="flex items-center space-x-2 flex-1 min-w-0">
-          <IconLogo className="w-4 h-4 flex-shrink-0" />
           <h5 className="text-muted-foreground text-xs truncate">
             {updatedQuery()}
           </h5>
@@ -117,12 +150,12 @@ export const Copilot: React.FC<CopilotProps> = ({ inquiry }: CopilotProps) => {
       <Card className="p-4 rounded-lg w-full mx-auto">
         <div className="mb-4">
           <p className="text-lg text-foreground text-semibold ml-2">
-            {data?.question}
+            {object?.question}
           </p>
         </div>
         <form onSubmit={onFormSubmit}>
           <div className="flex flex-wrap justify-start mb-4">
-            {data?.options?.map((option, index) => (
+            {object?.options?.map((option, index) => (
               <div
                 key={`option-${index}`}
                 className="flex items-center space-x-1.5 mb-2"
@@ -143,17 +176,17 @@ export const Copilot: React.FC<CopilotProps> = ({ inquiry }: CopilotProps) => {
               </div>
             ))}
           </div>
-          {data?.allowsInput && (
+          {object?.allowsInput && (
             <div className="mb-6 flex flex-col space-y-2 text-sm">
               <label className="text-muted-foreground" htmlFor="query">
-                {data?.inputLabel}
+                {object?.inputLabel}
               </label>
               <Input
                 type="text"
                 name="additional_query"
                 className="w-full"
                 id="query"
-                placeholder={data?.inputPlaceholder}
+                placeholder={object?.inputPlaceholder}
                 value={query}
                 onChange={handleInputChange}
               />
@@ -164,7 +197,7 @@ export const Copilot: React.FC<CopilotProps> = ({ inquiry }: CopilotProps) => {
               type="button"
               variant="outline"
               onClick={handleSkip}
-              disabled={pending}
+              disabled={pending || isGenerating}
             >
               <FastForward size={16} className="mr-1" />
               Skip
