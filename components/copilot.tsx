@@ -13,7 +13,7 @@ import { IconLogo } from './ui/icons'
 import { cn } from '@/lib/utils'
 
 export type CopilotProps = {
-  inquiry?: PartialInquiry
+  inquiry?: StreamableValue<PartialInquiry>
 }
 
 export const Copilot: React.FC<CopilotProps> = ({ inquiry }: CopilotProps) => {
