@@ -30,7 +30,7 @@ export const Copilot: React.FC<CopilotProps> = ({ inquiry }: CopilotProps) => {
   const [isButtonDisabled, setIsButtonDisabled] = useState(true)
   const [, setMessages] = useUIState<typeof AI>()
   const { submit } = useActions()
-  const { isGenerating, setIsGenerating } = useAppState()
+  const { isGenerating, setIsGenerating } = useState()
   const [object, setObject] = useState<PartialInquiry>()
   const [selectedModelId] = useLocalStorage<string>(
     'selectedModel',
