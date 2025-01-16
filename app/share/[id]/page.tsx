@@ -4,13 +4,13 @@ import { getSharedChat } from '@/lib/actions/chat'
 import { AI } from '@/app/actions'
 
 export interface SharePageProps {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 export async function generateMetadata({ params }: SharePageProps) {
-  const chat = await getSharedChat(params.id)
+  const chat = await getSharedChat((await params).id)
 
   if (!chat || !chat.sharePath) {
     return notFound()
@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: SharePageProps) {
 }
 
 export default async function SharePage({ params }: SharePageProps) {
-  const chat = await getSharedChat(params.id)
+  const chat = await getSharedChat((await params).id)
 
   if (!chat || !chat.sharePath) {
     notFound()
@@ -36,7 +36,7 @@ export default async function SharePage({ params }: SharePageProps) {
         isSharePage: true
       }}
     >
-      <Chat id={params.id} />
+      <Chat id={(await params).id} />
     </AI>
   )
 }
