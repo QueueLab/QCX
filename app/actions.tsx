@@ -265,7 +265,7 @@ export const AI = createAI<AIState, UIState>({
 
 
     if (aiState && 'id' in aiState && 'title' in aiState && 'createdAt' in aiState && 'userId' in aiState && 'path' in aiState && 'messages' in aiState) {
-      const uiState = getUIStateFromAIState(aiState as Chat);
+      const uiState = await getUIStateFromAIState(aiState as Chat);
       return uiState;
     } else {
       return;
@@ -315,7 +315,7 @@ export const AI = createAI<AIState, UIState>({
 });
 
 
-export const getUIStateFromAIState = (aiState: Chat) => {
+export const getUIStateFromAIState = async (aiState: Chat) => {
   const chatId = aiState.chatId
   const isSharePage = aiState.isSharePage
   return aiState.messages
