@@ -1,131 +1,51 @@
 import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
-import { createOllama } from 'ollama-ai-provider'
-import { createOpenAI } from '@ai-sdk/openai'
+import { openai } from '@ai-sdk/openai'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createAnthropic } from '@ai-sdk/anthropic'
-import { CoreMessage } from 'ai'
+import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function getModel(useSubModel = false) {
-  const ollamaBaseUrl = process.env.OLLAMA_BASE_URL + '/api'
-  const ollamaModel = process.env.OLLAMA_MODEL
-  const ollamaSubModel = process.env.OLLAMA_SUB_MODEL
-  const openaiApiBase = process.env.OPENAI_API_BASE
-  const openaiApiKey = process.env.OPENAI_API_KEY
-  let openaiApiModel = process.env.OPENAI_API_MODEL || 'gpt-4o'
-  const googleApiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY
-  const anthropicApiKey = process.env.ANTHROPIC_API_KEY
+export function getModel() {
+  // Currently does not work with Google or Anthropic
+  // if (process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+  //   const google = createGoogleGenerativeAI()
+  //   return google('models/gemini-1.5-pro-latest')
+  // }
 
-  if (
-    !(ollamaBaseUrl && ollamaModel) &&
-    !openaiApiKey &&
-    !googleApiKey &&
-    !anthropicApiKey
-  ) {
-    throw new Error(
-      'Missing environment variables for Ollama, OpenAI, Google or Anthropic'
-    )
-  }
-  // Ollama
-  if (ollamaBaseUrl && ollamaModel) {
-    const ollama = createOllama({ baseURL: ollamaBaseUrl })
+  // if (process.env.ANTHROPIC_API_KEY) {
+  //   const anthropic = createAnthropic()
+  //   return anthropic('claude-3-haiku-20240307')
+  // }
+  const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID
+  const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY
+  const awsRegion = process.env.AWS_REGION
+  const bedrockModelId = 'anthropic.claude-3-5-sonnet-20241022-v2:0'
 
-    if (useSubModel && ollamaSubModel) {
-      return ollama(ollamaSubModel)
-    }
 
-    return ollama(ollamaModel)
-  }
+ // const openai = new OpenAI({
+ //   baseUrl: process.env.OPENAI_API_BASE, // optional base URL for proxies etc.
+ //   apiKey: process.env.OPENAI_API_KEY, // optional API key, default to env property OPENAI_API_KEY
+ //   organization: '' // optional organization
+ // })
+ // return openai.chat(process.env.OPENAI_API_MODEL || 'gpt-4o')
 
-  if (googleApiKey) {
-    const google = createGoogleGenerativeAI({
-      baseURL: process.env.GOOGLE_GENERATIVE_AI_API_BASE,
-      apiKey: googleApiKey
+  if (awsAccessKeyId && awsSecretAccessKey) {
+    const bedrock = createAmazonBedrock({
+      bedrockOptions: {
+        region: awsRegion,
+        credentials: {
+          accessKeyId: awsAccessKeyId,
+          secretAccessKey: awsSecretAccessKey,
+        },
+      },
     })
-    return google('models/gemini-1.5-pro-latest')
-  }
-
-  if (anthropicApiKey) {
-    const anthropic = createAnthropic({
-      baseURL: process.env.ANTHROPIC_API_BASE,
-      apiKey: anthropicApiKey
+    const model = bedrock(bedrockModelId, {
+      additionalModelRequestFields: { top_k: 350 },
     })
-    return anthropic('claude-3-5-sonnet-20240620')
+    return model
   }
-
-  // Fallback to OpenAI instead
-
-  const openai = createOpenAI({
-    baseURL: openaiApiBase, // optional base URL for proxies etc.
-    apiKey: openaiApiKey, // optional API key, default to env property OPENAI_API_KEY
-    organization: '' // optional organization
-  })
-
-  return openai.chat(openaiApiModel)
 }
-
-/**
- * Takes an array of AIMessage and modifies each message where the role is 'tool'.
- * Changes the role to 'assistant' and converts the content to a JSON string.
- * Returns the modified messages as an array of CoreMessage.
- *
- * @param aiMessages - Array of AIMessage
- * @returns modifiedMessages - Array of modified messages
- */
-export function transformToolMessages(messages: CoreMessage[]): CoreMessage[] {
-  return messages.map(message =>
-    message.role === 'tool'
-      ? {
-          ...message,
-          role: 'assistant',
-          content: JSON.stringify(message.content),
-          type: 'tool'
-        }
-      : message
-  ) as CoreMessage[]
-}
-
-/**
- * Sanitizes a URL by replacing spaces with '%20'
- * @param url - The URL to sanitize
- * @returns The sanitized URL
- */
-export function sanitizeUrl(url: string): string {
-  return url.replace(/\s+/g, '%20')
-}
-
-// else if (projectId && region && typeof window === 'undefined') {
-/* Use OpenAI via Google Vertex AI on the server side only
-
-      //  const model = new VertexAI({ project: projectId, location: region })
-      //  const client = await auth.getClient()
-      //  const token = await client.getAccessToken()
-      //  if (!token.token) {
-       //   throw new Error('Failed to obtain access token')
-     //   }
-      //  return new OpenAI({
-        //  apiKey: token.token,
-        //  baseURL: `https://${region}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${region}/publishers/google/models/publishers/meta/models/llama3-405b-instruct-maas`
-        //})
-      }
-      break
-    case 'llama-3.1-405b':
-      if (projectId && region && typeof window === 'undefined') {
-        const vertexAI = new VertexAI({ project: projectId, location: region })
-        return vertexAI.preview.getGenerativeModel({
-          model: modelid,
-          generationConfig: {
-            maxOutputTokens: 2048,
-            temperature: 0.9,
-            topP: 1
-          }
-        })
-      }
-      break
-  }
-  throw new Error('No valid model configuration found')
-} */

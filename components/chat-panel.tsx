@@ -11,10 +11,6 @@ import { ArrowRight, Plus, Paperclip } from 'lucide-react'
 import { EmptyScreen } from './empty-screen'
 import Textarea from 'react-textarea-autosize'
 import { nanoid } from 'ai'
-import AnimatedShinyText from '@/components/magicui/animated-shiny-text'
-import { aiUseChatAdapter } from "@upstash/rag-chat/nextjs";
-// import { embedData } from '@/lib/actions/chat'
-
 
 interface ChatPanelProps {
   messages: UIState
@@ -28,10 +24,8 @@ export function ChatPanel({ messages }: ChatPanelProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const [showEmptyScreen, setShowEmptyScreen] = useState(false)
   const router = useRouter()
-  const [showDropdown, setShowDropdown] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const dropdownRef = useRef<HTMLDivElement>(null)
 
+  // Focus on input when button is pressed
   useEffect(() => {
     if (isButtonPressed) {
       inputRef.current?.focus()
@@ -42,11 +36,13 @@ export function ChatPanel({ messages }: ChatPanelProps) {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
+    // Clear messages if button is pressed
     if (isButtonPressed) {
       handleClear()
       setIsButtonPressed(false)
     }
 
+    // Add user message to UI state
     setMessages(currentMessages => [
       ...currentMessages,
       {
@@ -55,59 +51,23 @@ export function ChatPanel({ messages }: ChatPanelProps) {
       }
     ])
 
+    // Submit and get response message
     const formData = new FormData(e.currentTarget)
     const responseMessage = await submit(formData)
     setMessages(currentMessages => [...currentMessages, responseMessage as any])
   }
 
+  // Clear messages
   const handleClear = () => {
     router.push('/')
-    window.location.reload()
   }
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent): void => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowDropdown(false);
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [])
-
-  useEffect(() => {
+    // Focus on input when the page loads
     inputRef.current?.focus()
   }, [])
 
- 
-  const handleOption1Click = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-      //embedData(fileInputRef.current.value);
-    }
-  }
-  
-
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = () => {
-        localStorage.setItem('uploadedFile', reader.result as string)
-        alert('File content stored in local storage')
-      }
-      reader.readAsText(file)
-    }
-  }
-
-  const toggleDropdown = () => {
-    setShowDropdown(!showDropdown)
-  }
-
+  // If there are messages and the new button has not been pressed, display the new Button
   if (messages.length > 0 && !isButtonPressed) {
     return (
       <div className="fixed bottom-2 md:bottom-8 left-2 flex justify-start items-center mx-auto pointer-events-none">
@@ -129,90 +89,75 @@ export function ChatPanel({ messages }: ChatPanelProps) {
   return (
     <div className="fixed top-10 left-2 bottom-8 w-1/2 flex flex-col items-start justify-center">
       <form onSubmit={handleSubmit} className="max-w-full w-full px-6">
-      <div className="relative flex items-center w-full">
-  <Textarea
-    ref={inputRef}
-    name="input"
-    rows={1}
-    maxRows={5}
-    tabIndex={0}
-    placeholder="explore"
-    spellCheck={false}
-    value={input}
-    className="resize-none w-full min-h-12 rounded-fill bg-muted border border-input pl-4 pr-20 pt-3 pb-1 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-    onChange={e => {
-      setInput(e.target.value);
-      setShowEmptyScreen(e.target.value.length === 0);
-    }}
-    onKeyDown={e => {
-      if (
-        e.key === 'Enter' &&
-        !e.shiftKey &&
-        !e.nativeEvent.isComposing
-      ) {
-        if (input.trim().length === 0) {
-          e.preventDefault();
-          return;
-        }
-        e.preventDefault();
-        const textarea = e.target as HTMLTextAreaElement;
-        textarea.form?.requestSubmit();
-      }
-    }}
-    onHeightChange={height => {
-      if (!inputRef.current) return;
+        <div className="relative flex items-start w-full">
+          <Textarea
+            ref={inputRef}
+            name="input"
+            rows={1}
+            maxRows={5}
+            tabIndex={0}
+            placeholder="Ask a question..."
+            spellCheck={false}
+            value={input}
+            className="resize-none w-full min-h-12 rounded-fill bg-muted border border-input pl-4 pr-20 pt-3 pb-1 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50'"
+            onChange={e => {
+              setInput(e.target.value)
+              setShowEmptyScreen(e.target.value.length === 0)
+            }}
+            onKeyDown={e => {
+              // Enter should submit the form
+              if (
+                e.key === 'Enter' &&
+                !e.shiftKey &&
+                !e.nativeEvent.isComposing
+              ) {
+                // Prevent the default action to avoid adding a new line
+                if (input.trim().length === 0) {
+                  e.preventDefault()
+                  return
+                }
+                e.preventDefault()
+                const textarea = e.target as HTMLTextAreaElement
+                textarea.form?.requestSubmit()
+              }
+            }}
+            onHeightChange={height => {
+              // Ensure inputRef.current is defined
+              if (!inputRef.current) return
 
-      const initialHeight = 70;
-      const initialBorder = 32;
-      const multiple = (height - initialHeight) / 20;
+              // The initial height and left padding is 70px and 2rem
+              const initialHeight = 70
+              // The initial border radius is 32px
+              const initialBorder = 32
+              // The height is incremented by multiples of 20px
+              const multiple = (height - initialHeight) / 20
 
-      const newBorder = initialBorder - 4 * multiple;
-      inputRef.current.style.borderRadius =
-        Math.max(8, newBorder) + 'px';
-    }}
-    onFocus={() => setShowEmptyScreen(true)}
-    onBlur={() => setShowEmptyScreen(false)}
-  />
-  
-  <div className="absolute right-2 flex items-center">
-    <Button
-      type="button"
-      variant={'ghost'}
-      size={'icon'}
-      className="mr-2"
-      
-      onClick={toggleDropdown}
-    >
-      <Paperclip size={20} />
-    </Button>
-
-    {showDropdown && (
-      <div className="absolute top-10 right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none">
-        <div ref={dropdownRef} className="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
-          <button onClick={() => alert('Function not implemented.')} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left" role="menuitem">
-            Documents
-          </button>
-          <button onClick={() => alert('Function not implemented.')} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left" role="menuitem">
-            Images
-          </button>
-        </div>
-      </div>
-    )}
-
-    <Button
-      type="submit"
-      size={'icon'}
-      variant={'ghost'}
-      className=""
-      disabled={input.length === 0}
-    >
-      <ArrowRight size={20} />
-    </Button>
-  </div>
-</div>
-
-        <div className="text-xs text-gray-500 mt-2">
-          Beta:
+              // Decrease the border radius by 4px for each 20px height increase
+              const newBorder = initialBorder - 4 * multiple
+              // The lowest border radius will be 8px
+              inputRef.current.style.borderRadius =
+                Math.max(8, newBorder) + 'px'
+            }}
+            onFocus={() => setShowEmptyScreen(true)}
+            onBlur={() => setShowEmptyScreen(false)}
+          />
+          <Button 
+            type="button"
+            variant={'ghost'}
+            size={'icon'}
+            className="absolute right-10 top-1/2 transform -translate-y-1/2"
+          >
+            <Paperclip size={20} />
+          </Button>
+          <Button
+            type="submit"
+            size={'icon'}
+            variant={'ghost'}
+            className="absolute right-2 top-1/2 transform -translate-y-1/2"
+            disabled={input.length === 0}
+          >
+            <ArrowRight size={20} />
+          </Button>
         </div>
         <EmptyScreen
           submitMessage={message => {
@@ -221,14 +166,6 @@ export function ChatPanel({ messages }: ChatPanelProps) {
           className={cn(showEmptyScreen ? 'visible' : 'invisible')}
         />
       </form>
-
-      {/* Hidden file input */}
-      <input
-        type="file"
-        ref={fileInputRef}
-        style={{ display: 'none' }}
-        onChange={handleFileChange}
-      />
     </div>
   )
 }

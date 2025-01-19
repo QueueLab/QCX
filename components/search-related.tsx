@@ -12,10 +12,9 @@ import {
 import { AI } from '@/app/actions'
 import { UserMessage } from './user-message'
 import { PartialRelated } from '@/lib/schema/related'
-import { StreamableValue } from 'ai/rsc'
 
 export interface SearchRelatedProps {
-  relatedQueries: StreamableValue<PartialRelated>
+  relatedQueries: PartialRelated
 }
 
 export const SearchRelated: React.FC<SearchRelatedProps> = ({

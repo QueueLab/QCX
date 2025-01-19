@@ -19,12 +19,6 @@ export async function generateMetadata({ params }: SearchPageProps) {
 }
 
 export default async function SearchPage({ params }: SearchPageProps) {
- /* if (!isAuthenticated) {
-    redirect('/auth')
-  }
-*/
-
-  //replace with supabase user ID
   const userId = 'anonymous'
   const chat = await getChat(params.id, userId)
 

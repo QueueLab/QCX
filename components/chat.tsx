@@ -6,7 +6,7 @@ import { ChatPanel } from './chat-panel'
 import { ChatMessages } from './chat-messages'
 import { Mapbox } from './map/mapbox-map'
 import { useUIState, useAIState } from 'ai/rsc'
-import { AccountSettings } from '../app/settings/settings'
+
 type ChatProps = {
   id?: string
 }
@@ -36,12 +36,9 @@ export function Chat({ id }: ChatProps) {
         <ChatMessages messages={messages} />
         <ChatPanel messages={messages} />
       </div>
-    
       <div className="w-1/2 p-4 fixed h-[calc(100vh-0.5in)] top-0 right-0 mt-[0.5in]">
-        <Mapbox position={{ latitude: -3.0674, longitude: 37.3556 }} />
+        <Mapbox />
       </div>
-
-      
     </div>
   )
 }

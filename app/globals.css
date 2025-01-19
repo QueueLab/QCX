@@ -99,9 +99,4 @@
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
-  
-  }
-
-  .map-container {
-    transform: scale(0.8);
   }

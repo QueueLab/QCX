@@ -1,51 +1,23 @@
 import { Button } from '@/components/ui/button'
-import { ArrowRight, icons } from 'lucide-react'
-import { Globe, Video, FileText, Search,
-  CircleUserRound,
-  Map,
-  CalendarDays,
-  TentTree} from 'lucide-react';
-
-
+import { ArrowRight } from 'lucide-react'
 
 const exampleMessages = [
   {
-    
-    heading: "What is the best route and time for a Jog tomorrow Morning?",
-    message: "What is the best route and time for a Jog tomorrow Morning?",
-    icon: Map
+    heading: 'What are the best nature parks here?',
+    message: 'What are the best nature parks here?'
   },
   {
-    
-    heading: "Plan me a safari trip",
-    message: "Plan me a safari trip",
-    icon: CalendarDays 
-
+    heading: "What are some of the tallest trees?",
+    message: "What are some of the tallest trees?"
   },
   {
-    heading: 'Recommend a nature video on rare species' ,
-    message: 'Recommend a nature video on rare species',
-    icon: Video
+    heading: 'When is the next lunar eclipse?',
+    message: 'When is the next lunar eclipse?'
   },
   {
-    heading: 'How far is mars today?',
-    message: 'How far is mars today?',
-    icon: Globe
-  },
-
-  {
-    heading: 'Make a brunch reservation for me this weekend',
-    message: 'Make a brunch reservation for me this weekend',
-    icon: CalendarDays
-  },
-
-  {
-    heading: 'Who owns that green building next to the subway station?',
-    message: 'Who owns that green building next to the subway station?',
-    icon: TentTree
+    heading: 'How far is mars?',
+    message: 'How far is mars?'
   }
-
-
 ]
 export function EmptyScreen({
   submitMessage,
@@ -69,7 +41,6 @@ export function EmptyScreen({
               }}
             >
               <ArrowRight size={16} className="mr-2 text-muted-foreground" />
-              <message.icon size={16} className="mr-2 text-muted-foreground" />
               {message.heading}
             </Button>
           ))}

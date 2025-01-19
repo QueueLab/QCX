@@ -19,15 +19,16 @@ export function MapToggle() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
           <Map className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
-          
+          <span className="sr-only">Toggle theme</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => {setMapType(MapToggleEnum.FreeMode)}}>
-          My Maps
-        </DropdownMenuItem>
+        
         <DropdownMenuItem onClick={() => {setMapType(MapToggleEnum.RealTimeMode)}}>
           Live
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => {setMapType(MapToggleEnum.FreeMode)}}>
+          My Maps
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
