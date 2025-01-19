@@ -33,6 +33,7 @@
     "clsx": "^2.1.0",
     "embla-carousel-react": "^8.0.0",
     "exa-js": "^1.0.12",
+    "git-filter-repo": "^0.0.30",
     "katex": "^0.16.10",
     "lucide-react": "^0.363.0",
     "mapbox-gl": "^3.4.0",
