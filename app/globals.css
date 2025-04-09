@@ -144,6 +144,7 @@
     background-color: hsl(var(--background));
     border-top: 1px solid hsl(var(--border));
     z-index: 30;
+    transform: translateY(10%);
   }
 
   .mobile-chat-input input {
@@ -155,4 +156,4 @@
     color: hsl(var(--foreground));
     box-sizing: border-box;
   }
-    }
+}
