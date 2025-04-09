@@ -55,10 +55,10 @@ export function Chat({ id }: ChatProps) {
         <div className="mobile-chat-section">
           <ChatMessages messages={messages} />
         </div>
-        <ChatPanel messages={messages} />
         <div className="mobile-icons-bar">
           <MobileIconsBar />
         </div>
+        <ChatPanel messages={messages} />
         <div className="mobile-map-section">
           <Mapbox />
         </div>

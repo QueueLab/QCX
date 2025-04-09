@@ -24,6 +24,7 @@ export function ChatPanel({ messages }: ChatPanelProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const [showEmptyScreen, setShowEmptyScreen] = useState(false)
   const router = useRouter()
+  const [isMobile, setIsMobile] = useState(false)
 
   // Focus on input when button is pressed
   useEffect(() => {
@@ -32,6 +33,22 @@ export function ChatPanel({ messages }: ChatPanelProps) {
       setIsButtonPressed(false)
     }
   }, [isButtonPressed])
+
+  useEffect(() => {
+    // Check if device is mobile
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768)
+    }
+    
+    // Initial check
+    checkMobile()
+    
+    // Add event listener for window resize
+    window.addEventListener('resize', checkMobile)
+    
+    // Cleanup
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -87,7 +104,7 @@ export function ChatPanel({ messages }: ChatPanelProps) {
   }
 
   return (
-    <div className="fixed top-10 left-2 bottom-8 md:w-1/2 w-full flex flex-col items-start justify-center">
+    <div className={`fixed ${isMobile ? 'top-[calc(40vh+60px)]' : 'top-10'} left-2 bottom-8 md:w-1/2 w-full flex flex-col items-start justify-center`}>
       <form onSubmit={handleSubmit} className="max-w-full w-full px-4 md:px-6">
         <div className="relative flex items-start w-full">
           <Textarea

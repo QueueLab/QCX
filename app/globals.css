@@ -130,4 +130,13 @@
     width: 100%;
     z-index: 10;
   }
+
+  .mobile-chat-panel {
+    position: fixed;
+    top: calc(40vh + 60px);
+    left: 0;
+    right: 0;
+    width: 100%;
+    z-index: 15;
+  }
 }
