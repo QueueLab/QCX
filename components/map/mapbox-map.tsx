@@ -44,7 +44,6 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     }
   }
 
-  // Function to rotate the map continuously
   const rotateMap = useCallback(() => {
     if (map.current && isRotatingRef.current) {
       let bearing = map.current.getBearing()
@@ -55,7 +54,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
 
   const startRotation = useCallback(() => {
     if (!isRotatingRef.current && map.current && mapType !== MapToggleEnum.RealTimeMode) {
-      isRotatingRef.current =-true
+      isRotatingRef.current = true
       rotateMap()
     }
   }, [rotateMap, mapType])
@@ -68,17 +67,15 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     }
   }, [])
 
-  // Handle user interaction
   const handleUserInteraction = useCallback(() => {
     lastInteractionRef.current = Date.now()
     stopRotation()
   }, [stopRotation])
 
-  // Check for idle time to restart rotation
   useEffect(() => {
     const checkIdle = setInterval(() => {
       const idleTime = Date.now() - lastInteractionRef.current
-      if (idleTime > 5000 && !isRotatingRef.current && mapType !== MapToggleEnum.RealTimeMode) { // 5 seconds idle
+      if (idleTime > 5000 && !isRotatingRef.current && mapType !== MapToggleEnum.RealTimeMode) {
         startRotation()
       }
     }, 1000)
@@ -86,7 +83,6 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     return () => clearInterval(checkIdle)
   }, [mapType, startRotation])
 
-  // Handle real-time location tracking
   useEffect(() => {
     if (mapType !== MapToggleEnum.RealTimeMode) return
 
@@ -116,7 +112,6 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     }
   }, [mapType])
 
-  // Initialize the map
   useEffect(() => {
     if (mapContainer.current && !map.current) {
       const initialCenter: [number, number] = [
@@ -135,16 +130,13 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         attributionControl: true
       })
 
-      // Add zoom controls
       map.current.addControl(new mapboxgl.NavigationControl(), 'top-left')
 
-      // Add interaction listeners
       map.current.on('mousedown', handleUserInteraction)
       map.current.on('touchstart', handleUserInteraction)
       map.current.on('wheel', handleUserInteraction)
       map.current.on('drag', handleUserInteraction)
 
-      // Add terrain
       map.current.on('load', () => {
         if (!map.current) return
 
@@ -167,7 +159,6 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
           },
         })
 
-        // Start rotating the map only in specific modes
         if (mapType !== MapToggleEnum.RealTimeMode) {
           startRotation()
         }
@@ -191,7 +182,6 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     }
   }, [position?.latitude, position?.longitude, mapType, handleUserInteraction, startRotation, stopRotation])
 
-  // Update position when props change
   useEffect(() => {
     if (map.current && position?.latitude && position?.longitude) {
       updateMapPosition(position.latitude, position.longitude)
