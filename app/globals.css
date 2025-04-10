@@ -155,4 +155,38 @@
     color: hsl(var(--foreground));
     box-sizing: border-box;
   }
-    }
+
+  .mobile-icons-bar-content .icon-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: hsl(var(--secondary));
+    color: hsl(var(--secondary-foreground));
+    cursor: pointer;
+  }
+
+  .mobile-icons-bar-content .icon-button:hover {
+    background-color: hsl(var(--secondary-foreground));
+    color: hsl(var(--secondary));
+  }
+
+  .mobile-chat-input .icon-button {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+  }
+
+  .mobile-chat-input .icon-button.paperclip {
+    right: 40px;
+  }
+
+  .mobile-chat-input .icon-button.arrow-right {
+    right: 10px;
+  }
+}
