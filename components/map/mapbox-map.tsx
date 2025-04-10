@@ -18,12 +18,17 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   const drawRef = useRef<MapboxDraw | null>(null)
   const rotationFrameRef = useRef<number | null>(null)
   const [roundedArea, setRoundedArea] = useState<number | null>(null)
+  const [lineDistance, setLineDistance] = useState<number | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [measurementUnit, setMeasurementUnit] = useState<'meters' | 'kilometers' | 'hectares'>('meters')
   const [currentCenter, setCurrentCenter] = useState<[number, number]>([
     position?.longitude ?? -74.0060152,
     position?.latitude ?? 40.7127281
   ])
+  const [drawnFeatures, setDrawnFeatures] = useState<GeoJSON.FeatureCollection>({
+    type: 'FeatureCollection',
+    features: []
+  })
   const { mapType } = useMapToggle()
   const lastInteractionRef = useRef<number>(Date.now())
   const isRotatingRef = useRef<boolean>(false)
@@ -45,10 +50,14 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
             curve: 1,
           })
           map.current?.once('moveend', () => {
-            setCurrentCenter([longitude, latitude]) // Update current center
+            setCurrentCenter([longitude, latitude])
             resolve()
           })
         })
+        // Re-apply existing drawings after position update
+        if (drawRef.current && drawnFeatures.features.length > 0) {
+          drawRef.current.set(drawnFeatures)
+        }
         setTimeout(() => {
           if (mapType === MapToggleEnum.RealTimeMode) {
             startRotation()
@@ -135,7 +144,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/satellite-streets-v12',
-        center: currentCenter, // Use currentCenter instead of initial position
+        center: currentCenter,
         zoom: 12,
         pitch: 60,
         bearing: -20,
@@ -193,7 +202,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         map.current = null
       }
     }
-  }, [mapType, handleUserInteraction, startRotation, stopRotation, currentCenter]) // Added currentCenter to dependencies
+  }, [mapType, handleUserInteraction, startRotation, stopRotation, currentCenter])
 
   useEffect(() => {
     if (map.current && position?.latitude && position?.longitude) {
@@ -203,12 +212,16 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     }
   }, [position])
 
-  const updateArea = useCallback(() => {
+  const updateMeasurements = useCallback(() => {
     if (!drawRef.current) return
     
     const data = drawRef.current.getAll()
-    if (data.features.length > 0) {
-      const area = turf.area(data)
+    setDrawnFeatures(data) // Store all drawn features
+
+    // Calculate area for polygons
+    const polygons = data.features.filter(f => f.geometry.type === 'Polygon')
+    if (polygons.length > 0) {
+      const area = polygons.reduce((sum, feature) => sum + turf.area(feature), 0)
       let displayArea: number
       let unit: 'meters' | 'kilometers' | 'hectares'
       
@@ -228,15 +241,24 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     } else {
       setRoundedArea(null)
     }
+
+    // Calculate distance for lines
+    const lines = data.features.filter(f => f.geometry.type === 'LineString')
+    if (lines.length > 0) {
+      const distance = lines.reduce((sum, feature) => sum + turf.length(feature, { units: 'meters' }), 0)
+      setLineDistance(Math.round(distance * 100) / 100)
+    } else {
+      setLineDistance(null)
+    }
   }, [])
 
   useEffect(() => {
     if (!map.current) return
     
     if (drawRef.current) {
-      map.current.off('draw.create', updateArea)
-      map.current.off('draw.delete', updateArea)
-      map.current.off('draw.update', updateArea)
+      map.current.off('draw.create', updateMeasurements)
+      map.current.off('draw.delete', updateMeasurements)
+      map.current.off('draw.update', updateMeasurements)
       try {
         map.current.removeControl(drawRef.current)
         drawRef.current = null
@@ -253,28 +275,35 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
           trash: true,
           line_string: true
         },
-        defaultMode: 'draw_polygon'
+        // Remove defaultMode to allow multiple drawings without resetting
       })
 
       map.current.addControl(drawRef.current, 'top-right')
-      map.current.on('draw.create', updateArea)
-      map.current.on('draw.delete', updateArea)
-      map.current.on('draw.update', updateArea)
+      
+      // Restore previous drawings
+      if (drawnFeatures.features.length > 0) {
+        drawRef.current.set(drawnFeatures)
+      }
+
+      map.current.on('draw.create', updateMeasurements)
+      map.current.on('draw.delete', updateMeasurements)
+      map.current.on('draw.update', updateMeasurements)
     } else {
       setRoundedArea(null)
+      setLineDistance(null)
     }
 
     return () => {
       if (map.current && drawRef.current) {
-        map.current.off('draw.create', updateArea)
-        map.current.off('draw.delete', updateArea)
-        map.current.off('draw.update', updateArea)
+        map.current.off('draw.create', updateMeasurements)
+        map.current.off('draw.delete', updateMeasurements)
+        map.current.off('draw.update', updateMeasurements)
       }
     }
-  }, [mapType, updateArea])
+  }, [mapType, updateMeasurements, drawnFeatures])
 
   return (
-    <div className="relative h-full w-full">
+    <div className="relative h carcasses-full w-full">
       <div
         ref={mapContainer}
         className="h-full w-full overflow-hidden rounded-l-lg"
@@ -288,16 +317,23 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
       
       {mapType === MapToggleEnum.DrawingMode && (
         <div className="absolute bottom-10 left-10 bg-white bg-opacity-80 p-4 rounded-lg shadow-md z-10">
-          <h3 className="font-bold text-center mb-2">Area Measurement</h3>
-          {roundedArea ? (
-            <div className="text-center">
+          <h3 className="font-bold text-center mb-2">Measurements</h3>
+          {roundedArea && (
+            <div className="text-center mb-2">
               <p className="text-xl font-semibold">{roundedArea}</p>
               <p className="text-sm">square {measurementUnit}</p>
-              <p className="text-xs mt-2">Draw on the map to measure areas</p>
             </div>
-          ) : (
-            <p className="text-center">Draw a polygon to measure area</p>
           )}
+          {lineDistance && (
+            <div className="text-center">
+              <p className="text-xl font-semibold">{lineDistance}</p>
+              <p className="text-sm">meters</p>
+            </div>
+          )}
+          {!roundedArea && !lineDistance && (
+            <p className="text-center">Draw polygons for area or lines for distance</p>
+          )}
+          <p className="text-xs mt-2">Multiple drawings supported</p>
         </div>
       )}
     </div>
