@@ -20,6 +20,10 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   const [roundedArea, setRoundedArea] = useState<number | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [measurementUnit, setMeasurementUnit] = useState<'meters' | 'kilometers' | 'hectares'>('meters')
+  const [currentCenter, setCurrentCenter] = useState<[number, number]>([
+    position?.longitude ?? -74.0060152,
+    position?.latitude ?? 40.7127281
+  ])
   const { mapType } = useMapToggle()
   const lastInteractionRef = useRef<number>(Date.now())
   const isRotatingRef = useRef<boolean>(false)
@@ -29,7 +33,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     if (map.current && !isUpdatingPositionRef.current) {
       isUpdatingPositionRef.current = true
       setIsLoading(true)
-      stopRotation() // Stop rotation while updating position
+      stopRotation()
       
       try {
         await new Promise<void>((resolve) => {
@@ -41,17 +45,17 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
             curve: 1,
           })
           map.current?.once('moveend', () => {
+            setCurrentCenter([longitude, latitude]) // Update current center
             resolve()
           })
         })
-        // Add a small delay before starting rotation to ensure rendering is complete
         setTimeout(() => {
           if (mapType === MapToggleEnum.RealTimeMode) {
             startRotation()
           }
           isUpdatingPositionRef.current = false
           setIsLoading(false)
-        }, 500) // 500ms delay to ensure map rendering completes
+        }, 500)
       } catch (error) {
         console.error('Error updating map position:', error)
         isUpdatingPositionRef.current = false
@@ -128,15 +132,10 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
 
   useEffect(() => {
     if (mapContainer.current && !map.current) {
-      const initialCenter: [number, number] = [
-        position?.longitude ?? -74.0060152,
-        position?.latitude ?? 40.7127281
-      ]
-
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/satellite-streets-v12',
-        center: initialCenter,
+        center: currentCenter, // Use currentCenter instead of initial position
         zoom: 12,
         pitch: 60,
         bearing: -20,
@@ -194,10 +193,12 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         map.current = null
       }
     }
-  }, [position?.latitude, position?.longitude, mapType, handleUserInteraction, startRotation, stopRotation])
+  }, [mapType, handleUserInteraction, startRotation, stopRotation, currentCenter]) // Added currentCenter to dependencies
 
   useEffect(() => {
     if (map.current && position?.latitude && position?.longitude) {
+      const newCenter: [number, number] = [position.longitude, position.latitude]
+      setCurrentCenter(newCenter)
       updateMapPosition(position.latitude, position.longitude)
     }
   }, [position])
