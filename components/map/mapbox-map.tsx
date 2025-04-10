@@ -81,7 +81,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   useEffect(() => {
     const checkIdle = setInterval(() => {
       const idleTime = Date.now() - lastInteractionRef.current
-      if (idleTime > 3000 && !isRotatingRef.current) { // Changed from 5000 to 30000 (30 seconds)
+      if (idleTime > 6000 && !isRotatingRef.current) { // Changed from 5000 to 30000 (30 seconds)
         startRotation()
       }
     }, 1000)
