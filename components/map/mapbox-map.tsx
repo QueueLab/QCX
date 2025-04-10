@@ -23,10 +23,14 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   const { mapType } = useMapToggle()
   const lastInteractionRef = useRef<number>(Date.now())
   const isRotatingRef = useRef<boolean>(false)
+  const isUpdatingPositionRef = useRef<boolean>(false)
 
   const updateMapPosition = async (latitude: number, longitude: number) => {
-    if (map.current) {
+    if (map.current && !isUpdatingPositionRef.current) {
+      isUpdatingPositionRef.current = true
       setIsLoading(true)
+      stopRotation() // Stop rotation while updating position
+      
       try {
         await new Promise<void>((resolve) => {
           map.current?.flyTo({
@@ -38,20 +42,26 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
           })
           map.current?.once('moveend', () => {
             resolve()
-            // Start rotation after moving to new location in real-time mode
-            if (mapType === MapToggleEnum.RealTimeMode) {
-              startRotation()
-            }
           })
         })
-      } finally {
+        // Add a small delay before starting rotation to ensure rendering is complete
+        setTimeout(() => {
+          if (mapType === MapToggleEnum.RealTimeMode) {
+            startRotation()
+          }
+          isUpdatingPositionRef.current = false
+          setIsLoading(false)
+        }, 500) // 500ms delay to ensure map rendering completes
+      } catch (error) {
+        console.error('Error updating map position:', error)
+        isUpdatingPositionRef.current = false
         setIsLoading(false)
       }
     }
   }
 
   const rotateMap = useCallback(() => {
-    if (map.current && isRotatingRef.current) {
+    if (map.current && isRotatingRef.current && !isUpdatingPositionRef.current) {
       let bearing = map.current.getBearing()
       map.current.setBearing(bearing + 0.1)
       rotationFrameRef.current = requestAnimationFrame(rotateMap)
@@ -59,7 +69,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   }, [])
 
   const startRotation = useCallback(() => {
-    if (!isRotatingRef.current && map.current) {
+    if (!isRotatingRef.current && map.current && !isUpdatingPositionRef.current) {
       isRotatingRef.current = true
       rotateMap()
     }
@@ -81,7 +91,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   useEffect(() => {
     const checkIdle = setInterval(() => {
       const idleTime = Date.now() - lastInteractionRef.current
-      if (idleTime > 6000 && !isRotatingRef.current) { // Changed from 5000 to 30000 (30 seconds)
+      if (idleTime > 30000 && !isRotatingRef.current && !isUpdatingPositionRef.current) {
         startRotation()
       }
     }, 1000)
@@ -91,8 +101,6 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
 
   useEffect(() => {
     if (mapType !== MapToggleEnum.RealTimeMode) return
-
-    stopRotation()
 
     let watchId: number | null = null
     if (!navigator.geolocation) {
@@ -225,7 +233,6 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     if (!map.current) return
     
     if (drawRef.current) {
-      map.current.off('moveend', updateArea)
       map.current.off('draw.create', updateArea)
       map.current.off('draw.delete', updateArea)
       map.current.off('draw.update', updateArea)
