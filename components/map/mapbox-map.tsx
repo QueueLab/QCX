@@ -53,6 +53,12 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   // Handle real-time location tracking
   useEffect(() => {
     if (mapType !== MapToggleEnum.RealTimeMode) return
+  
+    // Stop rotation when entering real-time mode
+    if (rotationFrameRef.current) {
+      cancelAnimationFrame(rotationFrameRef.current)
+      rotationFrameRef.current = null
+    }
 
     let watchId: number | null = null
     if (!navigator.geolocation) {
