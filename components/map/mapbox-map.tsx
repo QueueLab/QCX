@@ -16,10 +16,13 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const drawRef = useRef<MapboxDraw | null>(null)
+  const rotationFrameRef = useRef<number | null>(null)
   const [roundedArea, setRoundedArea] = useState<number | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [measurementUnit, setMeasurementUnit] = useState<'meters' | 'kilometers' | 'hectares'>('meters')
   const { mapType } = useMapToggle()
+  const lastInteractionRef = useRef<number>(Date.now())
+  const isRotatingRef = useRef<boolean>(false)
 
   const updateMapPosition = async (latitude: number, longitude: number) => {
     if (map.current) {
@@ -42,29 +45,52 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   }
 
   // Function to rotate the map continuously
-  const rotateMap = () => {
-    if (map.current) {
+  const rotateMap = useCallback(() => {
+    if (map.current && isRotatingRef.current) {
       let bearing = map.current.getBearing()
       map.current.setBearing(bearing + 0.1)
       rotationFrameRef.current = requestAnimationFrame(rotateMap)
     }
-  }
+  }, [])
+
+  const startRotation = useCallback(() => {
+    if (!isRotatingRef.current && map.current && mapType !== MapToggleEnum.RealTimeMode) {
+      isRotatingRef.current =-true
+      rotateMap()
+    }
+  }, [rotateMap, mapType])
+
+  const stopRotation = useCallback(() => {
+    if (rotationFrameRef.current) {
+      cancelAnimationFrame(rotationFrameRef.current)
+      rotationFrameRef.current = null
+      isRotatingRef.current = false
+    }
+  }, [])
+
+  // Handle user interaction
+  const handleUserInteraction = useCallback(() => {
+    lastInteractionRef.current = Date.now()
+    stopRotation()
+  }, [stopRotation])
+
+  // Check for idle time to restart rotation
+  useEffect(() => {
+    const checkIdle = setInterval(() => {
+      const idleTime = Date.now() - lastInteractionRef.current
+      if (idleTime > 5000 && !isRotatingRef.current && mapType !== MapToggleEnum.RealTimeMode) { // 5 seconds idle
+        startRotation()
+      }
+    }, 1000)
+
+    return () => clearInterval(checkIdle)
+  }, [mapType, startRotation])
 
   // Handle real-time location tracking
   useEffect(() => {
     if (mapType !== MapToggleEnum.RealTimeMode) return
-  
-    // Stop rotation when entering real-time mode
-    if (rotationFrameRef.current) {
-      cancelAnimationFrame(rotationFrameRef.current)
-      rotationFrameRef.current = null
-    }
-  
-    // Stop rotation when entering real-time mode
-    if (rotationFrameRef.current) {
-      cancelAnimationFrame(rotationFrameRef.current)
-      rotationFrameRef.current = null
-    }
+
+    stopRotation()
 
     let watchId: number | null = null
     if (!navigator.geolocation) {
@@ -80,12 +106,13 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
       }
       
       watchId = navigator.geolocation.watchPosition(success, error)
+    }
 
-      return () => {
-        if (watchId !== null) {
-          navigator.geolocation.clearWatch(watchId)
-        }
+    return () => {
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId)
       }
+      stopRotation()
     }
   }, [mapType])
 
@@ -111,6 +138,12 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
       // Add zoom controls
       map.current.addControl(new mapboxgl.NavigationControl(), 'top-left')
 
+      // Add interaction listeners
+      map.current.on('mousedown', handleUserInteraction)
+      map.current.on('touchstart', handleUserInteraction)
+      map.current.on('wheel', handleUserInteraction)
+      map.current.on('drag', handleUserInteraction)
+
       // Add terrain
       map.current.on('load', () => {
         if (!map.current) return
@@ -134,14 +167,15 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
           },
         })
 
-        // Start rotating the map
-        rotateMap()
+        // Start rotating the map only in specific modes
+        if (mapType !== MapToggleEnum.RealTimeMode) {
+          startRotation()
+        }
       })
     }
 
     return () => {
       if (map.current) {
-        // Make sure we remove the draw control if it exists
         if (drawRef.current) {
           try {
             map.current.removeControl(drawRef.current)
@@ -150,11 +184,12 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
             console.log('Draw control already removed')
           }
         }
+        stopRotation()
         map.current.remove()
         map.current = null
       }
     }
-  }, [position?.latitude, position?.longitude])
+  }, [position?.latitude, position?.longitude, mapType, handleUserInteraction, startRotation, stopRotation])
 
   // Update position when props change
   useEffect(() => {
@@ -163,14 +198,12 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     }
   }, [position])
 
-  // Create a stable reference to the updateArea function
   const updateArea = useCallback(() => {
     if (!drawRef.current) return
     
     const data = drawRef.current.getAll()
     if (data.features.length > 0) {
       const area = turf.area(data)
-      
       let displayArea: number
       let unit: 'meters' | 'kilometers' | 'hectares'
       
@@ -192,30 +225,22 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     }
   }, [])
 
-  // Handle drawing mode toggle
   useEffect(() => {
     if (!map.current) return
     
-    // Clean up any existing draw control
     if (drawRef.current) {
-      if (map.current) {
-        // Properly remove event listeners with the same function reference
-        map.current.off('draw.create', updateArea)
-        map.current.off('draw.delete', updateArea)
-        map.current.off('draw.update', updateArea)
-        
-        try {
-          map.current.removeControl(drawRef.current)
-          drawRef.current = null
-        } catch (e) {
-          console.log('Draw control already removed')
-        }
+      map.current.off('draw.create', updateArea)
+      map.current.off('draw.delete', updateArea)
+      map.current.off('draw.update', updateArea)
+      try {
+        map.current.removeControl(drawRef.current)
+        drawRef.current = null
+      } catch (e) {
+        console.log('Draw control already removed')
       }
     }
 
-    // Add drawing control if in drawing mode
     if (mapType === MapToggleEnum.DrawingMode) {
-      // Create a new draw instance
       drawRef.current = new MapboxDraw({
         displayControlsDefault: false,
         controls: {
@@ -226,22 +251,16 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         defaultMode: 'draw_polygon'
       })
 
-      // Add the draw control to the map
       map.current.addControl(drawRef.current, 'top-right')
-
-      // Add drawing event listeners with the stable callback
       map.current.on('draw.create', updateArea)
       map.current.on('draw.delete', updateArea)
       map.current.on('draw.update', updateArea)
     } else {
-      // Reset the area measurement when not in drawing mode
       setRoundedArea(null)
     }
 
-    // Cleanup function
     return () => {
       if (map.current && drawRef.current) {
-        // Properly remove event listeners with the same function reference
         map.current.off('draw.create', updateArea)
         map.current.off('draw.delete', updateArea)
         map.current.off('draw.update', updateArea)
