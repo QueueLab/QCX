@@ -36,7 +36,13 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
             speed: 0.5,
             curve: 1,
           })
-          map.current?.once('moveend', () => resolve())
+          map.current?.once('moveend', () => {
+            resolve()
+            // Start rotation after moving to new location in real-time mode
+            if (mapType === MapToggleEnum.RealTimeMode) {
+              startRotation()
+            }
+          })
         })
       } finally {
         setIsLoading(false)
@@ -53,11 +59,11 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   }, [])
 
   const startRotation = useCallback(() => {
-    if (!isRotatingRef.current && map.current && mapType !== MapToggleEnum.RealTimeMode) {
+    if (!isRotatingRef.current && map.current) {
       isRotatingRef.current = true
       rotateMap()
     }
-  }, [rotateMap, mapType])
+  }, [rotateMap])
 
   const stopRotation = useCallback(() => {
     if (rotationFrameRef.current) {
@@ -75,13 +81,13 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   useEffect(() => {
     const checkIdle = setInterval(() => {
       const idleTime = Date.now() - lastInteractionRef.current
-      if (idleTime > 5000 && !isRotatingRef.current && mapType !== MapToggleEnum.RealTimeMode) {
+      if (idleTime > 3000 && !isRotatingRef.current) { // Changed from 5000 to 30000 (30 seconds)
         startRotation()
       }
     }, 1000)
 
     return () => clearInterval(checkIdle)
-  }, [mapType, startRotation])
+  }, [startRotation])
 
   useEffect(() => {
     if (mapType !== MapToggleEnum.RealTimeMode) return
@@ -219,6 +225,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     if (!map.current) return
     
     if (drawRef.current) {
+      map.current.off('moveend', updateArea)
       map.current.off('draw.create', updateArea)
       map.current.off('draw.delete', updateArea)
       map.current.off('draw.update', updateArea)
