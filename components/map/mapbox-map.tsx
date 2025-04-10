@@ -41,6 +41,15 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     }
   }
 
+  // Function to rotate the map continuously
+  const rotateMap = () => {
+    if (map.current) {
+      let bearing = map.current.getBearing()
+      map.current.setBearing(bearing + 0.1)
+      requestAnimationFrame(rotateMap)
+    }
+  }
+
   // Handle real-time location tracking
   useEffect(() => {
     if (mapType !== MapToggleEnum.RealTimeMode) return
@@ -112,6 +121,9 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
             'sky-atmosphere-sun-intensity': 15,
           },
         })
+
+        // Start rotating the map
+        rotateMap()
       })
     }
 
