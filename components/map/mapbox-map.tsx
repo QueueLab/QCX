@@ -46,7 +46,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     if (map.current) {
       let bearing = map.current.getBearing()
       map.current.setBearing(bearing + 0.1)
-      requestAnimationFrame(rotateMap)
+      rotationFrameRef.current = requestAnimationFrame(rotateMap)
     }
   }
 
