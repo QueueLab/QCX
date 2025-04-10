@@ -16,14 +16,30 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const drawRef = useRef<MapboxDraw | null>(null)
+  const rotationFrameRef = useRef<number | null>(null)
   const [roundedArea, setRoundedArea] = useState<number | null>(null)
+  const [lineDistance, setLineDistance] = useState<number | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [measurementUnit, setMeasurementUnit] = useState<'meters' | 'kilometers' | 'hectares'>('meters')
+  const [currentCenter, setCurrentCenter] = useState<[number, number]>([
+    position?.longitude ?? -74.0060152,
+    position?.latitude ?? 40.7127281
+  ])
+  const [drawnFeatures, setDrawnFeatures] = useState<GeoJSON.FeatureCollection>({
+    type: 'FeatureCollection',
+    features: []
+  })
   const { mapType } = useMapToggle()
+  const lastInteractionRef = useRef<number>(Date.now())
+  const isRotatingRef = useRef<boolean>(false)
+  const isUpdatingPositionRef = useRef<boolean>(false)
 
   const updateMapPosition = async (latitude: number, longitude: number) => {
-    if (map.current) {
+    if (map.current && !isUpdatingPositionRef.current) {
+      isUpdatingPositionRef.current = true
       setIsLoading(true)
+      stopRotation()
+      
       try {
         await new Promise<void>((resolve) => {
           map.current?.flyTo({
@@ -33,15 +49,69 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
             speed: 0.5,
             curve: 1,
           })
-          map.current?.once('moveend', () => resolve())
+          map.current?.once('moveend', () => {
+            setCurrentCenter([longitude, latitude])
+            resolve()
+          })
         })
-      } finally {
+        // Re-apply existing drawings after position update
+        if (drawRef.current && drawnFeatures.features.length > 0) {
+          drawRef.current.set(drawnFeatures)
+        }
+        setTimeout(() => {
+          if (mapType === MapToggleEnum.RealTimeMode) {
+            startRotation()
+          }
+          isUpdatingPositionRef.current = false
+          setIsLoading(false)
+        }, 500)
+      } catch (error) {
+        console.error('Error updating map position:', error)
+        isUpdatingPositionRef.current = false
         setIsLoading(false)
       }
     }
   }
 
-  // Handle real-time location tracking
+  const rotateMap = useCallback(() => {
+    if (map.current && isRotatingRef.current && !isUpdatingPositionRef.current) {
+      let bearing = map.current.getBearing()
+      map.current.setBearing(bearing + 0.1)
+      rotationFrameRef.current = requestAnimationFrame(rotateMap)
+    }
+  }, [])
+
+  const startRotation = useCallback(() => {
+    if (!isRotatingRef.current && map.current && !isUpdatingPositionRef.current) {
+      isRotatingRef.current = true
+      rotateMap()
+    }
+  }, [rotateMap])
+
+  const stopRotation = useCallback(() => {
+    if (rotationFrameRef.current) {
+      cancelAnimationFrame(rotationFrameRef.current)
+      rotationFrameRef.current = null
+      isRotatingRef.current = false
+    }
+  }, [])
+
+  const handleUserInteraction = useCallback(() => {
+    lastInteractionRef.current = Date.now()
+    stopRotation()
+  }, [stopRotation])
+
+  useEffect(() => {
+    const checkIdle = setInterval(() => {
+      const idleTime = Date.now() - lastInteractionRef.current
+      if (idleTime > 30000 && !isRotatingRef.current && !isUpdatingPositionRef.current) {
+        startRotation()
+      }
+    }, 1000)
+
+    return () => clearInterval(checkIdle)
+  }, [startRotation])
+
   useEffect(() => {
     if (mapType !== MapToggleEnum.RealTimeMode) return
 
@@ -59,27 +129,22 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
       }
       
       watchId = navigator.geolocation.watchPosition(success, error)
+    }
 
-      return () => {
-        if (watchId !== null) {
-          navigator.geolocation.clearWatch(watchId)
-        }
+    return () => {
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId)
       }
+      stopRotation()
     }
   }, [mapType])
 
-  // Initialize the map
   useEffect(() => {
     if (mapContainer.current && !map.current) {
-      const initialCenter: [number, number] = [
-        position?.longitude ?? -74.0060152,
-        position?.latitude ?? 40.7127281
-      ]
-
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/satellite-streets-v12',
-        center: initialCenter,
+        center: currentCenter,
         zoom: 12,
         pitch: 60,
         bearing: -20,
@@ -87,10 +152,13 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         attributionControl: true
       })
 
-      // Add zoom controls
       map.current.addControl(new mapboxgl.NavigationControl(), 'top-left')
 
-      // Add terrain
+      map.current.on('mousedown', handleUserInteraction)
+      map.current.on('touchstart', handleUserInteraction)
+      map.current.on('wheel', handleUserInteraction)
+      map.current.on('drag', handleUserInteraction)
+
       map.current.on('load', () => {
         if (!map.current) return
 
@@ -112,12 +180,15 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
             'sky-atmosphere-sun-intensity': 15,
           },
         })
+
+        if (mapType !== MapToggleEnum.RealTimeMode) {
+          startRotation()
+        }
       })
     }
 
     return () => {
       if (map.current) {
-        // Make sure we remove the draw control if it exists
         if (drawRef.current) {
           try {
             map.current.removeControl(drawRef.current)
@@ -126,27 +197,31 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
             console.log('Draw control already removed')
           }
         }
+        stopRotation()
         map.current.remove()
         map.current = null
       }
     }
-  }, [position?.latitude, position?.longitude])
+  }, [mapType, handleUserInteraction, startRotation, stopRotation, currentCenter])
 
-  // Update position when props change
   useEffect(() => {
     if (map.current && position?.latitude && position?.longitude) {
+      const newCenter: [number, number] = [position.longitude, position.latitude]
+      setCurrentCenter(newCenter)
       updateMapPosition(position.latitude, position.longitude)
     }
   }, [position])
 
-  // Create a stable reference to the updateArea function
-  const updateArea = useCallback(() => {
+  const updateMeasurements = useCallback(() => {
     if (!drawRef.current) return
     
     const data = drawRef.current.getAll()
-    if (data.features.length > 0) {
-      const area = turf.area(data)
-      
+    setDrawnFeatures(data) // Store all drawn features
+
+    // Calculate area for polygons
+    const polygons = data.features.filter(f => f.geometry.type === 'Polygon')
+    if (polygons.length > 0) {
+      const area = polygons.reduce((sum, feature) => sum + turf.area(feature), 0)
       let displayArea: number
       let unit: 'meters' | 'kilometers' | 'hectares'
       
@@ -166,32 +241,33 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     } else {
       setRoundedArea(null)
     }
+
+    // Calculate distance for lines
+    const lines = data.features.filter(f => f.geometry.type === 'LineString')
+    if (lines.length > 0) {
+      const distance = lines.reduce((sum, feature) => sum + turf.length(feature, { units: 'meters' }), 0)
+      setLineDistance(Math.round(distance * 100) / 100)
+    } else {
+      setLineDistance(null)
+    }
   }, [])
 
-  // Handle drawing mode toggle
   useEffect(() => {
     if (!map.current) return
     
-    // Clean up any existing draw control
     if (drawRef.current) {
-      if (map.current) {
-        // Properly remove event listeners with the same function reference
-        map.current.off('draw.create', updateArea)
-        map.current.off('draw.delete', updateArea)
-        map.current.off('draw.update', updateArea)
-        
-        try {
-          map.current.removeControl(drawRef.current)
-          drawRef.current = null
-        } catch (e) {
-          console.log('Draw control already removed')
-        }
+      map.current.off('draw.create', updateMeasurements)
+      map.current.off('draw.delete', updateMeasurements)
+      map.current.off('draw.update', updateMeasurements)
+      try {
+        map.current.removeControl(drawRef.current)
+        drawRef.current = null
+      } catch (e) {
+        console.log('Draw control already removed')
       }
     }
 
-    // Add drawing control if in drawing mode
     if (mapType === MapToggleEnum.DrawingMode) {
-      // Create a new draw instance
       drawRef.current = new MapboxDraw({
         displayControlsDefault: false,
         controls: {
@@ -199,34 +275,35 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
           trash: true,
           line_string: true
         },
-        defaultMode: 'draw_polygon'
+        // Remove defaultMode to allow multiple drawings without resetting
       })
 
-      // Add the draw control to the map
       map.current.addControl(drawRef.current, 'top-right')
+      
+      // Restore previous drawings
+      if (drawnFeatures.features.length > 0) {
+        drawRef.current.set(drawnFeatures)
+      }
 
-      // Add drawing event listeners with the stable callback
-      map.current.on('draw.create', updateArea)
-      map.current.on('draw.delete', updateArea)
-      map.current.on('draw.update', updateArea)
+      map.current.on('draw.create', updateMeasurements)
+      map.current.on('draw.delete', updateMeasurements)
+      map.current.on('draw.update', updateMeasurements)
     } else {
-      // Reset the area measurement when not in drawing mode
       setRoundedArea(null)
+      setLineDistance(null)
     }
 
-    // Cleanup function
     return () => {
       if (map.current && drawRef.current) {
-        // Properly remove event listeners with the same function reference
-        map.current.off('draw.create', updateArea)
-        map.current.off('draw.delete', updateArea)
-        map.current.off('draw.update', updateArea)
+        map.current.off('draw.create', updateMeasurements)
+        map.current.off('draw.delete', updateMeasurements)
+        map.current.off('draw.update', updateMeasurements)
       }
     }
-  }, [mapType, updateArea])
+  }, [mapType, updateMeasurements, drawnFeatures])
 
   return (
-    <div className="relative h-full w-full">
+    <div className="relative h carcasses-full w-full">
       <div
         ref={mapContainer}
         className="h-full w-full overflow-hidden rounded-l-lg"
@@ -240,16 +317,23 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
       
       {mapType === MapToggleEnum.DrawingMode && (
         <div className="absolute bottom-10 left-10 bg-white bg-opacity-80 p-4 rounded-lg shadow-md z-10">
-          <h3 className="font-bold text-center mb-2">Area Measurement</h3>
-          {roundedArea ? (
-            <div className="text-center">
+          <h3 className="font-bold text-center mb-2">Measurements</h3>
+          {roundedArea && (
+            <div className="text-center mb-2">
               <p className="text-xl font-semibold">{roundedArea}</p>
               <p className="text-sm">square {measurementUnit}</p>
-              <p className="text-xs mt-2">Draw on the map to measure areas</p>
             </div>
-          ) : (
-            <p className="text-center">Draw a polygon to measure area</p>
           )}
+          {lineDistance && (
+            <div className="text-center">
+              <p className="text-xl font-semibold">{lineDistance}</p>
+              <p className="text-sm">meters</p>
+            </div>
+          )}
+          {!roundedArea && !lineDistance && (
+            <p className="text-center">Draw polygons for area or lines for distance</p>
+          )}
+          <p className="text-xs mt-2">Multiple drawings supported</p>
         </div>
       )}
     </div>
