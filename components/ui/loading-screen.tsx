@@ -19,7 +19,7 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ isLoading }) => {
   return (
     <>
       {isLoading && (
-        <div className="fixed inset-0 flex items-center justify-center bg-white z-50">
+        <div className="fixed inset-0 flex items-center justify-center bg-background z-50">
           <Lottie options={defaultOptions} height={400} width={400} />
         </div>
       )}
