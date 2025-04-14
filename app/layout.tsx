@@ -8,6 +8,7 @@ import Footer from '@/components/footer'
 import { Sidebar } from '@/components/sidebar'
 import { Toaster } from '@/components/ui/sonner'
 import { MapToggleProvider } from '@/components/map-toggle-context'
+import { Mapbox } from '@/components/map/mapbox-map'
 
 const fontSans = FontSans({
   subsets: ['latin'],
@@ -58,6 +59,7 @@ export default function RootLayout({
             themes={['light', 'dark', 'earth']}
           >
             <Header />
+            <Mapbox />
             {children}
             <Sidebar />
             <Footer />
