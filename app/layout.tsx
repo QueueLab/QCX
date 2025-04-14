@@ -8,6 +8,8 @@ import Footer from '@/components/footer'
 import { Sidebar } from '@/components/sidebar'
 import { Toaster } from '@/components/ui/sonner'
 import { MapToggleProvider } from '@/components/map-toggle-context'
+import LoadingScreen from '@/components/ui/loading-screen'
+import { useState } from 'react'
 
 const fontSans = FontSans({
   subsets: ['latin'],
@@ -46,6 +48,8 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const [isMapLoading, setIsMapLoading] = useState(true);
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={cn('font-sans antialiased', fontSans.variable)}>
@@ -57,6 +61,7 @@ export default function RootLayout({
             disableTransitionOnChange
             themes={['light', 'dark', 'earth']}
           >
+            <LoadingScreen isLoading={isMapLoading} />
             <Header />
             {children}
             <Sidebar />

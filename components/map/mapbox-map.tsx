@@ -12,7 +12,7 @@ import { useMapToggle, MapToggleEnum } from '../map-toggle-context'
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN as string;
 
-export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number; } }> = ({ position }) => {
+export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number; }, onLoad?: () => void }> = ({ position, onLoad }) => {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const drawRef = useRef<MapboxDraw | null>(null)
@@ -418,6 +418,10 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
 
         initializedRef.current = true
         setupGeolocationWatcher()
+
+        if (onLoad) {
+          onLoad();
+        }
       })
     }
 
