@@ -29,10 +29,20 @@ export async function writer(
     messages
   })
     .then(async result => {
-      for await (const text of result.textStream) {
-        if (text) {
-          fullResponse += text
+      for await (const delta of result.textStream) {
+        if (delta) {
+          fullResponse += delta
           streamText.update(fullResponse)
+        }
+      }
+      for await (const delta of result.fullStream) {
+        switch (delta.type) {
+          case 'response-metadata':
+            // Handle response-metadata chunk type
+            if (delta.metadata) {
+              // Process metadata if needed
+            }
+            break
         }
       }
     })

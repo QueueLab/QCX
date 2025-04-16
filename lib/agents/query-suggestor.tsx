@@ -43,6 +43,16 @@ export async function querySuggestor(
           finalRelatedQueries = obj
         }
       }
+      for await (const delta of result.fullStream) {
+        switch (delta.type) {
+          case 'response-metadata':
+            // Handle response-metadata chunk type
+            if (delta.metadata) {
+              // Process metadata if needed
+            }
+            break
+        }
+      }
     })
     .finally(() => {
       objectStream.done()

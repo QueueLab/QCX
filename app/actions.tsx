@@ -57,7 +57,6 @@ async function submit(formData?: FormData, skip?: boolean) {
     ? JSON.stringify(Object.fromEntries(formData))
     : null
   const type = skip
-    ? undefined
     : formData?.has('input')
     ? 'input'
     : formData?.has('related_query')

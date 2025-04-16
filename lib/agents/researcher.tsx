@@ -81,6 +81,12 @@ export async function researcher(
         hasError = true
         fullResponse += `\nError occurred while executing the tool`
         break
+      case 'response-metadata':
+        // Handle response-metadata chunk type
+        if (delta.metadata) {
+          // Process metadata if needed
+        }
+        break
     }
   }
   messages.push({

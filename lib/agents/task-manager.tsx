@@ -20,6 +20,17 @@ export async function taskManager(messages: CoreMessage[]) {
       schema: nextActionSchema
     })
 
+    for await (const delta of result.fullStream) {
+      switch (delta.type) {
+        case 'response-metadata':
+          // Handle response-metadata chunk type
+          if (delta.metadata) {
+            // Process metadata if needed
+          }
+          break
+      }
+    }
+
     return result
   } catch (error) {
     console.error(error)
