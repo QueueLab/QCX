@@ -29,7 +29,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     position?.latitude ?? 40.7127281
   ])
   const drawingFeatures = useRef<any>(null)
-  const { mapType } = useMapToggle()
+  const { mapType, registerScreenshotCallback } = useMapToggle()
   const previousMapTypeRef = useRef<MapToggleEnum | null>(null)
 
   // Formats the area or distance for display
@@ -88,11 +88,6 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         el.textContent = formattedArea
         
         // Add marker for the label
-
-
-
-
-
         if (map.current) {
           const marker = new mapboxgl.Marker({ element: el })
             .setLngLat(coordinates as [number, number])
@@ -465,6 +460,45 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
       updateMapPosition(position.latitude, position.longitude)
     }
   }, [position, updateMapPosition, mapType])
+
+  // Function to capture a screenshot of the map
+  const captureScreenshot = useCallback((silentMode = false) => {
+    if (!map.current) {
+      if (!silentMode) {
+        toast.error('Map is not initialized')
+      }
+      return null
+    }
+
+    try {
+      const canvas = map.current.getCanvas()
+      const dataUrl = canvas.toDataURL('image/png')
+      
+      // If not in silent mode, create download link and show toast
+      if (!silentMode) {
+        const downloadLink = document.createElement('a')
+        downloadLink.href = dataUrl
+        downloadLink.download = `map-screenshot-${new Date().toISOString().slice(0, 10)}.png`
+        downloadLink.click()
+        
+        toast.success('Screenshot captured successfully!')
+      }
+      
+      // Always return the dataUrl
+      return dataUrl
+    } catch (error) {
+      console.error('Error capturing screenshot:', error)
+      if (!silentMode) {
+        toast.error('Failed to capture screenshot')
+      }
+      return null
+    }
+  }, [])
+
+  // Register the screenshot callback with the context
+  useEffect(() => {
+    registerScreenshotCallback(captureScreenshot)
+  }, [captureScreenshot, registerScreenshotCallback])
 
   return (
     <div className="relative h-full w-full">
