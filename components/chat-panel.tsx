@@ -93,6 +93,37 @@ export function ChatPanel({ messages }: ChatPanelProps) {
     )
   }
 
+  // Function to capture a screenshot of the map
+  const captureScreenshot = () => {
+    const mapElement = document.querySelector('.mapboxgl-canvas');
+    if (!mapElement) return null;
+
+    const canvas = mapElement as HTMLCanvasElement;
+    return canvas.toDataURL('image/png');
+  };
+
+  // Function to send the captured image to the Model
+  const sendImageToModel = (imageData: string) => {
+    // Logic to send the image data to the Model for multi-modal understanding
+    console.log('Sending image to model:', imageData);
+  };
+
+  // Listen for user input after using mapping tools
+  useEffect(() => {
+    const handleUserInput = () => {
+      const screenshot = captureScreenshot();
+      if (screenshot) {
+        sendImageToModel(screenshot);
+      }
+    };
+
+    window.addEventListener('userInput', handleUserInput);
+
+    return () => {
+      window.removeEventListener('userInput', handleUserInput);
+    };
+  }, []);
+
   return (
     <div
       className={cn(
