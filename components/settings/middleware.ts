@@ -8,7 +8,7 @@ export function middleware(request: NextRequest) {
   }
 
   // Example: Check if the user is authenticated for protected routes
-  const isAuthenticated = true // Replace with actual auth check
+  const isAuthenticated = checkUserAuthentication(request) // Implement proper auth check
 
   // If the request is for the settings page and the user is not authenticated
   if (request.nextUrl.pathname.startsWith("/settings") && !isAuthenticated) {
