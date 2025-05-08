@@ -1,4 +1,4 @@
-/*import type { UseFormReturn } from "react-hook-form"
+import type { UseFormReturn } from "react-hook-form"
 import { FormField, FormItem, FormLabel, FormControl, FormDescription, FormMessage } from "@/components/ui/form"
 import { Textarea } from "@/components/ui/textarea"
 
@@ -14,7 +14,7 @@ export function SystemPromptForm({ form }: SystemPromptFormProps) {
     <FormField
       control={form.control}
       name="systemPrompt"
-      render={({ field }) => (
+      render={({ field, fieldState, formState }: { field: import("react-hook-form").ControllerRenderProps<any, "systemPrompt">; fieldState: import("react-hook-form").ControllerFieldState; formState: import("react-hook-form").UseFormStateReturn<any>; }) => (
         <FormItem>
           <FormLabel>System Prompt</FormLabel>
           <FormControl>
@@ -34,4 +34,3 @@ export function SystemPromptForm({ form }: SystemPromptFormProps) {
     />
   )
 }
-*/

@@ -1,4 +1,4 @@
-/*"use client"
+"use client"
 
 import { useState } from "react"
 import type { UseFormReturn } from "react-hook-form"
@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/components/ui/hooks/use-toast"
 import { Loader2, UserPlus, Trash2, Mail } from "lucide-react"
 import { Label } from "@/components/ui/label"
 
@@ -161,7 +161,7 @@ export function UserManagementForm({ form }: UserManagementFormProps) {
                       {user.email}
                     </TableCell>
                     <TableCell>
-                      <Select value={user.role} onValueChange={(value) => handleUpdateRole(user.id, value)}>
+                      <Select value={user.role} onValueChange={(value: string) => handleUpdateRole(user.id, value)}>
                         <SelectTrigger className="w-[120px]">
                           <SelectValue>
                             <Badge
@@ -206,4 +206,3 @@ export function UserManagementForm({ form }: UserManagementFormProps) {
     </div>
   )
 }
-*/

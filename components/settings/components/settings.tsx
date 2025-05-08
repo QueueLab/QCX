@@ -1,19 +1,21 @@
-/*"use client"
+"use client"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import * as Tabs from "@radix-ui/react-tabs";
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Form } from "@/components/ui/form"
-import { useToast } from "@/hooks/use-toast"
+import { FormProvider, UseFormReturn } from "react-hook-form"; import React from "react";
+import { Loader2, Save, RotateCcw } from "lucide-react"
+// Or, if the file does not exist, create it as shown below.
 import { SystemPromptForm } from "./system-prompt-form"
 import { UserManagementForm } from "./user-management-form"
 import { ModelSelectionForm } from "./model-selection-form"
-import { Loader2, Save, RotateCcw } from "lucide-react"
+import { Form } from "@/components/ui/form"
+import { useToast } from "@/components/ui/hooks/use-toast"
 
 // Define the form schema
 const settingsFormSchema = z.object({
@@ -69,6 +71,9 @@ export function Settings() {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000))
 
+      // Use the data parameter to avoid unused variable error
+      console.log("Submitted data:", data)
+
       // Success notification
       toast({
         title: "Settings updated",
@@ -101,14 +106,14 @@ export function Settings() {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)}>
         <div className="space-y-6">
-          <Tabs defaultValue="system-prompt" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="system-prompt">System Prompt</TabsTrigger>
-              <TabsTrigger value="users">User Management</TabsTrigger>
-              <TabsTrigger value="model">Model Selection</TabsTrigger>
-            </TabsList>
+          <Tabs.Root defaultValue="system-prompt" className="w-full">
+            <Tabs.List className="grid w-full grid-cols-3">
+              <Tabs.Trigger value="system-prompt">System Prompt</Tabs.Trigger>
+              <Tabs.Trigger value="users">User Management</Tabs.Trigger>
+              <Tabs.Trigger value="model">Model Selection</Tabs.Trigger>
+            </Tabs.List>
 
-            <TabsContent value="system-prompt">
+            <Tabs.Content value="system-prompt">
               <Card>
                 <CardHeader>
                   <CardTitle>System Prompt</CardTitle>
@@ -118,9 +123,9 @@ export function Settings() {
                   <SystemPromptForm form={form} />
                 </CardContent>
               </Card>
-            </TabsContent>
+            </Tabs.Content>
 
-            <TabsContent value="users">
+            <Tabs.Content value="users">
               <Card>
                 <CardHeader>
                   <CardTitle>User Management</CardTitle>
@@ -130,9 +135,9 @@ export function Settings() {
                   <UserManagementForm form={form} />
                 </CardContent>
               </Card>
-            </TabsContent>
+            </Tabs.Content>
 
-            <TabsContent value="model">
+            <Tabs.Content value="model">
               <Card>
                 <CardHeader>
                   <CardTitle>Model Selection</CardTitle>
@@ -142,8 +147,8 @@ export function Settings() {
                   <ModelSelectionForm form={form} />
                 </CardContent>
               </Card>
-            </TabsContent>
-          </Tabs>
+            </Tabs.Content>
+          </Tabs.Root>
 
           <Card>
             <CardFooter className="flex justify-between pt-6">
@@ -171,4 +176,3 @@ export function Settings() {
     </Form>
   )
 }
-*/

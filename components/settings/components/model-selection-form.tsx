@@ -1,15 +1,21 @@
-/*
-"use client"
+"use client";
 
-import type { UseFormReturn } from "react-hook-form"
-import { FormField, FormItem, FormLabel, FormControl, FormDescription, FormMessage } from "@/components/ui/form"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Sparkles, Zap, Rocket, Cpu } from "lucide-react"
+import type { UseFormReturn } from "react-hook-form";
+import {
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormDescription,
+  FormMessage,
+} from "@/components/ui/form";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Sparkles, Zap, Rocket, Cpu } from "lucide-react";
 
 interface ModelSelectionFormProps {
-  form: UseFormReturn<any>
+  form: UseFormReturn<any>;
 }
 
 const models = [
@@ -45,24 +51,32 @@ const models = [
     badge: "Open Source",
     badgeVariant: "outline" as const,
   },
-]
+];
 
 export function ModelSelectionForm({ form }: ModelSelectionFormProps) {
   return (
     <FormField
       control={form.control}
       name="selectedModel"
-     // render={({ field }) => (
+      render={({ field }) => (
         <FormItem className="space-y-4">
           <FormLabel>AI Model</FormLabel>
           <FormControl>
-            <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="space-y-3">
+            <RadioGroup
+              onValueChange={field.onChange}
+              defaultValue={field.value}
+              className="space-y-3"
+            >
               {models.map((model) => {
-                const Icon = model.icon
+                const Icon = model.icon;
                 return (
                   <FormItem key={model.id} className="space-y-0">
                     <FormControl>
-                      <RadioGroupItem value={model.id} id={model.id} className="peer sr-only" />
+                      <RadioGroupItem
+                        value={model.id}
+                        id={model.id}
+                        className="peer sr-only"
+                      />
                     </FormControl>
                     <FormLabel htmlFor={model.id} className="cursor-pointer">
                       <Card className="border-2 transition-all peer-data-[state=checked]:border-primary">
@@ -73,26 +87,30 @@ export function ModelSelectionForm({ form }: ModelSelectionFormProps) {
                           <div className="flex-1 space-y-1">
                             <div className="flex items-center gap-2">
                               <h4 className="font-medium">{model.name}</h4>
-                              <Badge variant={model.badgeVariant}>{model.badge}</Badge>
+                              <Badge variant={model.badgeVariant}>
+                                {model.badge}
+                              </Badge>
                             </div>
-                            <p className="text-sm text-muted-foreground">{model.description}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {model.description}
+                            </p>
                           </div>
                         </CardContent>
                       </Card>
                     </FormLabel>
                   </FormItem>
-                )
+                );
               })}
             </RadioGroup>
           </FormControl>
           <FormDescription>
-            Select the AI model that will power your planetary copilot. Different models have different capabilities and
-            performance characteristics.
+            Select the AI model that will power your planetary copilot.
+            Different models have different capabilities and performance
+            characteristics.
           </FormDescription>
           <FormMessage />
         </FormItem>
       )}
     />
-  )
+  );
 }
-*/
