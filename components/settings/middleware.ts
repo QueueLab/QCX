@@ -2,8 +2,10 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
 export function middleware(request: NextRequest) {
-  // This is a placeholder for actual authentication middleware
-  // In a real application, you would implement proper authentication checks
+  // Skip middleware for server actions to avoid breaking them
+  if (request.headers.get('next-action')) {
+    return NextResponse.next()
+  }
 
   // Example: Check if the user is authenticated for protected routes
   const isAuthenticated = true // Replace with actual auth check
@@ -18,5 +20,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [""],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 }
