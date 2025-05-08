@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server"
 
 export function middleware(request: NextRequest) {
   // Skip middleware for server actions to avoid breaking them
-  if (request.headers.get('next-action')) {
+  if (request.headers.get('x-middleware-skip')) {
     return NextResponse.next()
   }
 
