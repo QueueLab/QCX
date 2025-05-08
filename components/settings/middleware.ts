@@ -1,22 +1,19 @@
-import { NextResponse } from "next/server"
-import type { NextRequest } from "next/server"
+//import { updateSession } from '@/lib/supabase/middleware'
+import { type NextRequest } from 'next/server'
 
-export function middleware(request: NextRequest) {
-  // This is a placeholder for actual authentication middleware
-  // In a real application, you would implement proper authentication checks
-
-  // Example: Check if the user is authenticated for protected routes
-  const isAuthenticated = true // Replace with actual auth check
-
-  // If the request is for the settings page and the user is not authenticated
-  if (request.nextUrl.pathname.startsWith("/settings") && !isAuthenticated) {
-    // Redirect to the login page
-    return NextResponse.redirect(new URL("/login", request.url))
-  }
-
-  return NextResponse.next()
+export async function middleware(request: NextRequest) {
+  //return await updateSession(request)
 }
 
 export const config = {
-  matcher: [""],
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * Feel free to modify this pattern to include more paths.
+     */
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
 }

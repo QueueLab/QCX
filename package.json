@@ -42,7 +42,7 @@
     "katex": "^0.16.22",
     "lucide-react": "^0.363.0",
     "mapbox-gl": "^3.11.0",
-    "next": "^15.3.1",
+    "next": "^15.3.2",
     "next-themes": "^0.3.0",
     "open-codex": "^0.1.30",
     "react": "^18.3.1",
