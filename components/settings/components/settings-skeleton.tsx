@@ -1,19 +1,18 @@
-/*
 import { Skeleton } from "@/components/ui/skeleton"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import * as Tabs from "@radix-ui/react-tabs";
 
 export function SettingsSkeleton() {
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="system-prompt" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="system-prompt">System Prompt</TabsTrigger>
-          <TabsTrigger value="users">User Management</TabsTrigger>
-          <TabsTrigger value="model">Model Selection</TabsTrigger>
-        </TabsList>
+      <Tabs.Root defaultValue="system-prompt" className="w-full">
+        <Tabs.List className="grid w-full grid-cols-3">
+          <Tabs.Trigger value="system-prompt">System Prompt</Tabs.Trigger>
+          <Tabs.Trigger value="users">User Management</Tabs.Trigger>
+          <Tabs.Trigger value="model">Model Selection</Tabs.Trigger>
+        </Tabs.List>
 
-        <TabsContent value="system-prompt">
+        <Tabs.Content value="system-prompt">
           <Card>
             <CardHeader>
               <Skeleton className="h-6 w-[250px]" />
@@ -23,8 +22,8 @@ export function SettingsSkeleton() {
               <Skeleton className="h-[200px] w-full" />
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </Tabs.Content>
+      </Tabs.Root>
 
       <Card>
         <CardFooter className="flex justify-between pt-6">
@@ -33,6 +32,5 @@ export function SettingsSkeleton() {
         </CardFooter>
       </Card>
     </div>
-  )
+  );
 }
-*/

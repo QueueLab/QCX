@@ -8,6 +8,7 @@ import Footer from '@/components/footer'
 import { Sidebar } from '@/components/sidebar'
 import { Toaster } from '@/components/ui/sonner'
 import { MapToggleProvider } from '@/components/map-toggle-context'
+import { ProfileToggleProvider } from '@/components/profile-toggle-context'
 
 const fontSans = FontSans({
   subsets: ['latin'],
@@ -50,19 +51,21 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={cn('font-sans antialiased', fontSans.variable)}>
         <MapToggleProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-            themes={['light', 'dark', 'earth']}
-          >
-            <Header />
-            {children}
-            <Sidebar />
-            <Footer />
-            <Toaster />
-          </ThemeProvider>
+          <ProfileToggleProvider>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+              themes={['light', 'dark', 'earth']}
+            >
+              <Header />
+              {children}
+              <Sidebar />
+              <Footer />
+              <Toaster />
+            </ThemeProvider>
+          </ProfileToggleProvider>
         </MapToggleProvider>
       </body>
     </html>

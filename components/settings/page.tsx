@@ -1,6 +1,6 @@
-/*import { Suspense } from "react"
-import { Settings } from "@/components/settings/settings"
-import { SettingsSkeleton } from "@/components/settings/settings-skeleton"
+import { Suspense } from "react"
+import { Settings } from "@/components/settings/components/settings"
+import { SettingsSkeleton } from "@/components/settings/components/settings-skeleton"
 
 export default function SettingsPage() {
   return (
@@ -10,9 +10,8 @@ export default function SettingsPage() {
         <p className="text-muted-foreground">Manage your planetary copilot preferences and user access</p>
       </div>
       <Suspense fallback={<SettingsSkeleton />}>
-     <Settings />
+        <Settings />
       </Suspense>
     </div>
   )
 }
-  */
