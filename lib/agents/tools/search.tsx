@@ -11,37 +11,50 @@ export const searchTool = ({ uiStream, fullResponse }: ToolProps) => ({
   execute: async ({
     query,
     max_results,
-    search_depth
+    search_depth,
+    latitude,
+    longitude,
+    datetime
   }: {
     query: string
     max_results: number
     search_depth: 'basic' | 'advanced'
+    latitude?: number
+    longitude?: number
+    datetime?: string
   }) => {
     let hasError = false
     // Append the search section
     const streamResults = createStreamableValue<string>()
     uiStream.append(<SearchSection result={streamResults.value} />)
 
+    let searchQuery = query
+    if (latitude && longitude && datetime) {
+      searchQuery = `${query} near ${latitude},${longitude} around ${datetime}`
+    }
+
     // Tavily API requires a minimum of 5 characters in the query
     const filledQuery =
-      query.length < 5 ? query + ' '.repeat(5 - query.length) : query
+      searchQuery.length < 5
+        ? searchQuery + ' '.repeat(5 - searchQuery.length)
+        : searchQuery
     let searchResult
     const searchAPI: 'tavily' | 'exa' = 'tavily'
     try {
       searchResult =
         searchAPI === 'tavily'
           ? await tavilySearch(filledQuery, max_results, search_depth)
-          : await exaSearch(query)
+          : await exaSearch(searchQuery) // Pass searchQuery to exaSearch
     } catch (error) {
       console.error('Search API error:', error)
       hasError = true
     }
 
     if (hasError) {
-      fullResponse += `\nAn error occurred while searching for "${query}.`
+      fullResponse += `\nAn error occurred while searching for "${searchQuery}.`
       uiStream.update(
         <Card className="p-4 mt-2 text-sm">
-          {`An error occurred while searching for "${query}".`}
+          {`An error occurred while searching for "${searchQuery}".`}
         </Card>
       )
       return searchResult
