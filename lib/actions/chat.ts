@@ -86,7 +86,7 @@ export async function getSharedChat(id: string) {
 export async function shareChat(id: string, userId: string = 'anonymous') {
   const chat = await redis.hgetall<Chat>(`chat:${id}`)
 
-  if (!chat || chat.userId !== userId) {
+  if (!chat) {
     return null
   }
 
