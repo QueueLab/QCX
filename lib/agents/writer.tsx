@@ -1,23 +1,23 @@
 import { createStreamableUI, createStreamableValue } from 'ai/rsc'
-import { CoreMessage, LanguageModel, streamText as nonexperimental_streamText } from 'ai'
+import { CoreMessage, LanguageModel, streamText, smoothStream } from 'ai'
 import { Section } from '@/components/section'
 import { BotMessage } from '@/components/message'
 import { getModel } from '../utils'
 
 export async function writer(
   uiStream: ReturnType<typeof createStreamableUI>,
-  streamText: ReturnType<typeof createStreamableValue<string>>,
+  streamTextValue: ReturnType<typeof createStreamableValue<string>>,
   messages: CoreMessage[]
 ) {
   let fullResponse = ''
   const answerSection = (
     <Section title="response">
-      <BotMessage content={streamText.value} />
+      <BotMessage content={streamTextValue.value} />
     </Section>
   )
   uiStream.append(answerSection)
 
-  await nonexperimental_streamText({
+  await streamText({
     model: getModel() as LanguageModel,
     maxTokens: 2500,
     system: `As a professional writer, your job is to generate a comprehensive and informative, yet concise answer of 400 words or less for the given question based solely on the provided search results (URL and content). You must only use information from the provided search results. Use an unbiased and journalistic tone. Combine search results together into a coherent answer. Do not repeat text. If there are any images relevant to your answer, be sure to include them as well. Aim to directly address the user's question, augmenting your response with insights gleaned from the search results. 
@@ -26,18 +26,19 @@ export async function writer(
     Link format: [link text](url)
     Image format: ![alt text](url)
     `,
-    messages
+    messages,
+    experimental_transform: smoothStream()
   })
     .then(async result => {
       for await (const text of result.textStream) {
         if (text) {
           fullResponse += text
-          streamText.update(fullResponse)
+          streamTextValue.update(fullResponse)
         }
       }
     })
     .finally(() => {
-      streamText.done()
+      streamTextValue.done()
     })
 
   return fullResponse
