@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { lazy, Suspense } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Search,
@@ -13,7 +13,9 @@ import {
 } from 'lucide-react'
 import { History } from '@/components/history'
 import { MapToggle } from './map-toggle'
-import { ModeToggle } from './mode-toggle'
+// import { ModeToggle } from './mode-toggle'
+
+const ModeToggle = lazy(() => import('./mode-toggle').then(module => ({ default: module.ModeToggle })));
 
 export const MobileIconsBar: React.FC = () => {
   return (
@@ -38,7 +40,7 @@ export const MobileIconsBar: React.FC = () => {
         <ArrowRight className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>
       <History location="header" />
-      <ModeToggle />
+      <Suspense fallback={<div>Loading theme toggle...</div>}><ModeToggle /></Suspense>
     </div>
   )
 }
