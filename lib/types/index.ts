@@ -44,6 +44,10 @@ export type SerperSearchResultItem = {
   position: number
 }
 
+export type ReasoningChunk = {
+  content: string
+}
+
 export interface Chat extends Record<string, any> {
   id: string
   title: string
@@ -69,4 +73,5 @@ export type AIMessage = {
     | 'tool'
     | 'followup'
     | 'end'
+    | 'reasoning'
 }

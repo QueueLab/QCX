@@ -81,6 +81,13 @@ export async function researcher(
         hasError = true
         fullResponse += `\nError occurred while executing the tool`
         break
+      case 'reasoning':
+        // Assuming delta.value contains the reasoning content as a string
+        if (typeof delta.value === 'string') {
+          fullResponse += delta.value
+          streamText.update(fullResponse)
+        }
+        break
     }
   }
   messages.push({

@@ -17,6 +17,19 @@ export function BotMessage({ content }: { content: StreamableValue<string> }) {
   //modify the content to render LaTeX equations
   const processedData = preprocessLaTeX(data || '')
 
+  const reasoningPrefix = '[reasoning]'
+  if (processedData.startsWith(reasoningPrefix)) {
+    const reasoningText = processedData.substring(reasoningPrefix.length).trim()
+    return (
+      <div
+        style={{ fontStyle: 'italic', color: 'grey' }}
+        className="reasoning-text prose-sm prose-neutral"
+      >
+        {reasoningText}
+      </div>
+    )
+  }
+
   return (
     <MemoizedReactMarkdown
       rehypePlugins={[[rehypeExternalLinks, { target: '_blank' }], rehypeKatex]}
