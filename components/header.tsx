@@ -59,6 +59,7 @@ export const Header = () => {
         </Button>
         
         <ProfileToggle/>
+        <HistoryContainer location="header" />
       </div>
     </header>
   )
