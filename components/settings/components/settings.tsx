@@ -16,6 +16,7 @@ import { ModelSelectionForm } from "./model-selection-form"
 import { UserManagementForm } from './user-management-form';
 import { Form } from "@/components/ui/form"
 import { useToast } from "@/components/ui/hooks/use-toast"
+import { getSettings, saveSettings } from '@/lib/actions/settings';
 
 // Define the form schema
 const settingsFormSchema = z.object({
@@ -58,57 +59,110 @@ interface SettingsProps {
   initialTab?: string;
 }
 
+const userId = 'default-user'; // Placeholder for actual user ID management
+
 export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
   const { toast } = useToast()
-  const router = useRouter()
-  const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter() // Keep router if needed for other operations, though refresh is often handled by revalidatePath
+  const [isLoading, setIsLoading] = useState(true) // Start true for initial fetch
   const [currentTab, setCurrentTab] = useState(initialTab);
+
+  const form = useForm<SettingsFormValues>({
+    resolver: zodResolver(settingsFormSchema),
+    defaultValues,
+  });
 
   useEffect(() => {
     setCurrentTab(initialTab);
   }, [initialTab]);
 
-  const form = useForm<SettingsFormValues>({
-    resolver: zodResolver(settingsFormSchema),
-    defaultValues,
-  })
+  useEffect(() => {
+    async function fetchSettings() {
+      setIsLoading(true);
+      try {
+        const currentSettings = await getSettings(userId);
+        form.reset({
+          ...defaultValues, // Start with component defaults
+          systemPrompt: currentSettings.systemPrompt,
+          selectedModel: currentSettings.selectedModel || defaultValues.selectedModel,
+          // users array will come from defaultValues unless getSettings also returns it in the future
+          // newUserEmail and newUserRole will also remain from defaultValues (which is undefined/empty string)
+        });
+      } catch (error) {
+        console.error("Failed to fetch settings:", error);
+        toast({
+          title: "Error loading settings",
+          description: "Could not load your saved settings. Displaying default values.",
+          variant: "destructive",
+        });
+        // Form will retain defaultValues if fetch fails
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchSettings();
+  }, [form, toast]); // form.reset is stable, so form is fine. toast for error reporting.
 
   async function onSubmit(data: SettingsFormValues) {
-    setIsLoading(true)
-
+    setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      const settingsToSave = {
+        systemPrompt: data.systemPrompt,
+        selectedModel: data.selectedModel,
+        // users: data.users // Not handled by current saveSettings in lib/actions/settings.ts
+      };
+      const result = await saveSettings(userId, settingsToSave);
 
-      // Use the data parameter to avoid unused variable error
-      console.log("Submitted data:", data)
-
-      // Success notification
-      toast({
-        title: "Settings updated",
-        description: "Your settings have been saved successfully.",
-      })
-
-      // Refresh the page to reflect changes
-      router.refresh()
+      if (result.error) {
+        toast({
+          title: "Error saving settings",
+          description: result.error,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Settings updated",
+          description: "Your settings have been saved successfully.",
+        });
+        // Data should be refreshed by revalidatePath in the action.
+        // If needed, could re-fetch here:
+        // const updatedSettings = await getSettings(userId);
+        // form.reset({ ...defaultValues, ...updatedSettings });
+      }
     } catch (error) {
-      // Error notification
+      console.error("Failed to save settings:", error);
       toast({
         title: "Something went wrong",
         description: "Your settings could not be saved. Please try again.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
   function onReset() {
-    form.reset(defaultValues)
+    // Option 1: Reset to initial component defaults
+    form.reset(defaultValues);
     toast({
       title: "Settings reset",
-      description: "Your settings have been reset to default values.",
-    })
+      description: "Settings have been reset to the initial default values.",
+    });
+
+    // Option 2: Refetch last saved settings (more complex, might need another state for 'lastFetchedSettings')
+    // async function resetToSaved() {
+    //   setIsLoading(true);
+    //   try {
+    //     const savedSettings = await getSettings(userId);
+    //     form.reset({ ...defaultValues, ...savedSettings });
+    //     toast({ title: "Settings reset", description: "Settings have been reset to your last saved configuration." });
+    //   } catch (error) {
+    //     toast({ title: "Error", description: "Could not reload saved settings.", variant: "destructive" });
+    //   } finally {
+    //     setIsLoading(false);
+    //   }
+    // }
+    // resetToSaved();
   }
 
   return (
