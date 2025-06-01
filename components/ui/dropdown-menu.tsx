@@ -93,10 +93,9 @@ const DropdownMenuContent = React.forwardRef<
       return () => window.removeEventListener('resize', checkMobile)
     }, [])
 
-    const side = alignOnMobile && isMobile ? 'left' : initialSide
-    // If side is 'left' due to mobile alignment, align to 'end' to make it appear left of trigger.
-    // Otherwise, use the initialAlign.
-    const align = side === 'left' && alignOnMobile && isMobile ? 'end' : initialAlign
+    // On mobile with alignOnMobile enabled, use 'start' alignment to position on the left
+    // Otherwise, use the provided initialAlign
+    const align = alignOnMobile && isMobile ? 'start' : initialAlign
 
     return (
       <DropdownMenuPrimitive.Portal>
