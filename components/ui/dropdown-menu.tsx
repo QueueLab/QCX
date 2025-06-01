@@ -87,10 +87,17 @@ const DropdownMenuContent = React.forwardRef<
       }
       // Initial check
       checkMobile()
-      // Listen for window resize
-      window.addEventListener('resize', checkMobile)
+  
+      let resizeTimer: NodeJS.Timeout;
+      const debouncedResize = () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(checkMobile, 100);
+      };
+  
+      // Listen for window resize with debouncing
+      window.addEventListener('resize', debouncedResize)
       // Cleanup
-      return () => window.removeEventListener('resize', checkMobile)
+      return () => window.removeEventListener('resize', debouncedResize)
     }, [])
 
     // On mobile with alignOnMobile enabled, use 'start' alignment to position on the left
