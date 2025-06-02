@@ -28,6 +28,16 @@ type RelatedQueries = {
   items: { query: string }[];
 };
 
+// Helper function to convert File to Data URL
+async function convertFileToDataURL(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = (error) => reject(error);
+    reader.readAsDataURL(file);
+  });
+}
+
 async function submit(formData?: FormData, skip?: boolean) {
 'use server';
 
@@ -52,15 +62,43 @@ async function submit(formData?: FormData, skip?: boolean) {
   // Limit the number of messages to the maximum
   messages.splice(0, Math.max(messages.length - maxMessages, 0));
   // Get the user input from the form data
-  const userInput = skip
+  let userInput = skip
     ? `{"action": "skip"}`
-    : (formData?.get('input') as string);
+    : (formData?.get('input') as string) || "";
 
-  const content = skip
-    ? userInput
-    : formData
-    ? JSON.stringify(Object.fromEntries(formData))
-    : null;
+  let content: string | null = null;
+  const imageFile = formData?.get('image_attachment') as File | null;
+  let imageDataUrl: string | null = null;
+
+  if (imageFile) {
+    try {
+      imageDataUrl = await convertFileToDataURL(imageFile);
+    } catch (error) {
+      console.error("Error converting file to data URL:", error);
+      // Handle error appropriately, maybe send a message to UI
+      uiStream.update(<div>Error processing image. Please try again.</div>);
+      isGenerating.done(false);
+      aiState.done(aiState.get()); // Pass current state to done()
+      return {
+        id: nanoid(),
+        isGenerating: isGenerating.value,
+        component: uiStream.value,
+        isCollapsed: isCollapsed.value,
+      };
+    }
+  }
+
+  if (skip) {
+    content = userInput;
+  } else if (formData) {
+    const textInput = formData.get('input') as string;
+    if (imageDataUrl) {
+      content = JSON.stringify({ input: textInput, image: imageDataUrl });
+    } else {
+      content = JSON.stringify({ input: textInput });
+    }
+  }
+  
   const type = skip
     ? undefined
     : formData?.has('input')
@@ -78,15 +116,41 @@ async function submit(formData?: FormData, skip?: boolean) {
         {
           id: nanoid(),
           role: 'user',
-          content,
+          content, // This content includes image dataURL if present
           type,
         },
       ],
     });
-    messages.push({
+
+    const userMessageForAI: CoreMessage = {
       role: 'user',
-      content,
-    });
+      content: userInput, // Send only text input to AI content
+    };
+
+    if (imageFile && imageDataUrl) {
+      (userMessageForAI as any).experimental_attachments = [
+        {
+          contentType: imageFile.type,
+          url: imageDataUrl,
+        },
+      ];
+      // Add a message to aiState for map display if needed
+      // This is a placeholder, actual implementation might vary
+      // For example, you might want to do this after AI processing
+      aiState.update({
+        ...aiState.get(),
+        messages: [
+          ...aiState.get().messages,
+          {
+            id: nanoid(),
+            role: 'assistant', // Or a custom role like 'system'
+            content: JSON.stringify({ mapImageUrl: imageDataUrl, caption: userInput }),
+            type: 'map_image_update', // Custom type for map component to listen to
+          },
+        ],
+      });
+    }
+    messages.push(userMessageForAI);
   }
 
   async function processEvents() {
@@ -238,6 +302,7 @@ export type AIState = {
   messages: AIMessage[];
   chatId: string;
   isSharePage?: boolean;
+  currentMapImage?: string; // Optional: for dedicated map image state
 };
 
 export type UIState = {
@@ -331,15 +396,32 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
           switch (type) {
             case 'input':
             case 'input_related':
-              const json = JSON.parse(content);
-              const value = type === 'input' ? json.input : json.related_query;
+              let parsedInputContent;
+              try {
+                parsedInputContent = JSON.parse(content);
+              } catch (e) {
+                // If content is not JSON, it might be a simple string (e.g. from skip action)
+                // or an older message. Handle appropriately.
+                // For now, assume it's the direct message string if not JSON.
+                // This part might need more robust handling based on actual content variations.
+                if (typeof content === 'string' && content.startsWith('{"action": "skip"}')) {
+                  parsedInputContent = { input: "Action skipped" }; // Placeholder for skipped actions
+                } else {
+                  parsedInputContent = { input: content };
+                }
+              }
+              // Check if image is part of the content for UI display
+              const messageValue = parsedInputContent.input || (type === 'input_related' ? parsedInputContent.related_query : '');
+              const imageUrlForUI = parsedInputContent.image; // image dataURL from content
+
               return {
                 id,
                 component: (
                   <UserMessage
-                    message={value}
+                    message={messageValue}
                     chatId={chatId}
                     showShare={index === 0 && !isSharePage}
+                    imageUrl={imageUrlForUI} // Pass imageUrl to UserMessage if it exists
                   />
                 ),
               };

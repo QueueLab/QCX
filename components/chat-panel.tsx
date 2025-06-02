@@ -23,6 +23,8 @@ export function ChatPanel({ messages }: ChatPanelProps) {
   const [isButtonPressed, setIsButtonPressed] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null) // Added fileInputRef
+  const [selectedFile, setSelectedFile] = useState<File | null>(null) // Added selectedFile state
   const [showEmptyScreen, setShowEmptyScreen] = useState(false)
   const router = useRouter()
 
@@ -57,12 +59,23 @@ export function ChatPanel({ messages }: ChatPanelProps) {
       }
     ])
     const formData = new FormData(e.currentTarget)
+    if (selectedFile) {
+      formData.append('image_attachment', selectedFile)
+    }
     const responseMessage = await submit(formData)
     setMessages(currentMessages => [...currentMessages, responseMessage as any])
+    setSelectedFile(null) // Reset selectedFile after submission
   }
 
   const handleClear = () => {
     router.push('/')
+    setSelectedFile(null) // Reset selectedFile when clearing
+  }
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      setSelectedFile(event.target.files[0])
+    }
   }
 
   useEffect(() => {
@@ -112,6 +125,13 @@ export function ChatPanel({ messages }: ChatPanelProps) {
             isMobile && 'mobile-chat-input' // Apply mobile chat input styling
           )}
         >
+          <input
+            type="file"
+            accept="image/*"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            style={{ display: 'none' }}
+          />
           <Textarea
             ref={inputRef}
             name="input"
@@ -166,6 +186,7 @@ export function ChatPanel({ messages }: ChatPanelProps) {
               'absolute top-1/2 transform -translate-y-1/2',
               isMobile ? 'right-8' : 'right-10'
             )}
+            onClick={() => fileInputRef.current?.click()} // Trigger file input click
           >
             <Paperclip size={isMobile ? 18 : 20} />
           </Button>
