@@ -220,7 +220,7 @@ async function submit(formData?: FormData, skip?: boolean) {
             content: 'followup',
             type: 'followup',
           },
-        ],
+        ];
 
       // Construct the final state for aiState.done()
       const finalAIStateUpdate: AIState = {

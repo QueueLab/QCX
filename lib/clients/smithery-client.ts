@@ -2,16 +2,22 @@ import { Client, type ToolDefinition as SmitheryToolDefinition } from '@modelcon
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp';
 import { z } from 'zod'; // For potential Zod schema generation if needed
 
-const profileId = process.env.NEXT_PUBLIC_SMITHERY_PROFILE_ID;
-const apiKey = process.env.NEXT_PUBLIC_SMITHERY_API_KEY || process.env.SMITHERY_API_KEY; // Also check non-public for server-side
-const serverPath = process.env.NEXT_PUBLIC_SMITHERY_SERVER_PATH || '@ngoiyaeric/mapbox-mcp-server';
+const profileId = process.env.SMITHERY_PROFILE_ID;
+const apiKey = process.env.SMITHERY_API_KEY;
+const serverPath = process.env.SMITHERY_SERVER_PATH || '@ngoiyaeric/mapbox-mcp-server'; // Default server path if not set
 
-if (!profileId || !apiKey) {
-  console.warn('Smithery Profile ID or API Key is not set. Smithery client may not function.');
+if (!profileId) {
+  console.warn('SMITHERY_PROFILE_ID environment variable is not set. Smithery client may not function.');
+}
+if (!apiKey) {
+  console.warn('SMITHERY_API_KEY environment variable is not set. Smithery client may not function.');
+}
+if (!process.env.SMITHERY_SERVER_PATH) { // Only warn if the default is being used because the env var is missing
+  console.warn('SMITHERY_SERVER_PATH environment variable is not set. Using default value.');
 }
 
 const transport = new StreamableHTTPClientTransport(
-  `https://server.smithery.ai/${serverPath}/mcp?profile=${profileId}&api_key=${apiKey}`
+  `https://server.smithery.ai/${serverPath}/mcp?profile=${profileId || ''}&api_key=${apiKey || ''}`
 );
 
 export const smitheryClient = new Client({
