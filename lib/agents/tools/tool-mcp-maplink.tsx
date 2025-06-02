@@ -43,12 +43,12 @@ export const mcpMapLinkTool = ({ uiStream, fullResponse }: ToolProps) => ({
         if (coordsMatch) structuredData.coordinates = { latitude: parseFloat(coordsMatch[1]), longitude: parseFloat(coordsMatch[2]) };
         structuredData.summary = textualSummary.split('\n')[0]; // First line as summary
       } else {
-        structuredData = result;
+        structuredData = result; 
       }
-
+      
       toolResponse = {
-        summary: textualSummary,
-        data: structuredData
+        summary: textualSummary, 
+        data: structuredData     
       };
 
       uiStream.update(

@@ -13,7 +13,7 @@ import { MapUpdateContent } from '@/lib/types'; // Import MapUpdateContent
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN as string;
 
-export const Mapbox: React.FC<{
+export const Mapbox: React.FC<{ 
   position?: { latitude: number; longitude: number; };
   mapUpdate?: MapUpdateContent; // New prop
 }> = ({ position, mapUpdate }) => {
@@ -252,7 +252,7 @@ export const Mapbox: React.FC<{
     handleUserInteraction, 
     startRotation, 
     stopRotation, 
-    captureMapCenter
+    captureMapCenter 
     // Removed mapType, updateMeasurementLabels, setupGeolocationWatcher, setupDrawingTools
   ])
 
@@ -307,7 +307,7 @@ export const Mapbox: React.FC<{
             features: mapUpdate.features,
           },
         });
-
+        
         map.current.addLayer({
           id: dynamicFeaturesLayerId,
           type: 'circle',
@@ -325,7 +325,7 @@ export const Mapbox: React.FC<{
           mapUpdate.features.forEach(feature => {
             if (feature.geometry.type === 'Point') {
               bounds.extend(feature.geometry.coordinates as [number, number]);
-            }
+            } 
           });
           if (!bounds.isEmpty()) {
               map.current.fitBounds(bounds, { padding: 100, maxZoom: 15 });

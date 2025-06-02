@@ -21,7 +21,7 @@ export const MobileIconsBar: React.FC = () => {
       <Button variant="ghost" size="icon">
         <CircleUserRound className="h-[1.2rem] w-[1.2rem]" />
       </Button>
-      {/* <MapToggle /> */}
+      {/* <MapToggle /> */} 
       <Button variant="ghost" size="icon">
         <CalendarDays className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>

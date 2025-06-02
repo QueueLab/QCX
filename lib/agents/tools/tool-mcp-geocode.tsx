@@ -1,6 +1,6 @@
 import { z } from "zod";
 import mcpClient from "../../utils/mcp-client"; // Corrected path
-import { ToolProps } from ".";
+import { ToolProps } from "."; 
 import { Card } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 
@@ -27,7 +27,7 @@ export const mcpGeocodeTool = ({ uiStream, fullResponse }: ToolProps) => ({
 
     try {
       const result = await mcpClient.tool("geocode_location", { query, includeMapPreview });
-
+      
       let structuredData: any = null;
       let textualSummary = `Geocoded "${query}".`;
 
@@ -44,15 +44,15 @@ export const mcpGeocodeTool = ({ uiStream, fullResponse }: ToolProps) => ({
           }
         } else {
            textualSummary = result.content[0]?.text || textualSummary;
-           structuredData = result.content;
+           structuredData = result.content; 
         }
       } else {
-        structuredData = result;
+        structuredData = result; 
       }
-
+      
       toolResponse = {
         summary: textualSummary,
-        data: structuredData
+        data: structuredData     
       };
 
       uiStream.update(

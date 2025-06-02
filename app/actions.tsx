@@ -450,19 +450,7 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
               };
             case 'related':
               const relatedQueries = createStreamableValue<RelatedQueries>();
-              relatedQueries.done(JSON.parse(content));
-              return {
-                id,
-                component: (
-                  <Section title="Related" separator={true}>
-                    <SearchRelated relatedQueries={relatedQueries.value} />
-                  </Section>
-                ),
-              };
-            case 'related':
-              // Define RelatedQueries if not done - Assuming it's: type RelatedQueries = { items: { query: string }[] };
-              const relatedQueries = createStreamableValue<any>(); // Using 'any' for brevity, define RelatedQueries properly
-              relatedQueries.done(JSON.parse(content as string));
+              relatedQueries.done(JSON.parse(content as string)); // Ensure content is cast to string if necessary
               return {
                 id,
                 component: (

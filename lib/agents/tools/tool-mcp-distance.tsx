@@ -1,6 +1,6 @@
 import { z } from "zod";
 import mcpClient from "../../utils/mcp-client"; // Corrected path
-import { ToolProps } from ".";
+import { ToolProps } from "."; 
 import { Card } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 
@@ -50,7 +50,7 @@ export const mcpDistanceTool = ({ uiStream, fullResponse }: ToolProps) => ({
       } else {
         structuredData = result;
       }
-
+      
       toolResponse = {
         summary: textualSummary,
         data: structuredData

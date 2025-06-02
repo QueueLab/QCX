@@ -50,12 +50,12 @@ export const mcpNearbyTool = ({ uiStream, fullResponse }: ToolProps) => ({
       } else {
         structuredData = result;
       }
-
+      
       toolResponse = {
         summary: textualSummary,
         data: structuredData // Expected to be an object like { places: [ { name, address, latitude, longitude, mapUrl }, ... ] }
       };
-
+      
       const numPlaces = structuredData?.places?.length || 0;
       uiStream.update(
         <Card className="p-2 my-2 text-sm">
