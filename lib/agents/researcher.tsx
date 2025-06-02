@@ -29,7 +29,7 @@ export async function researcher(
   const result = await nonexperimental_streamText({
     model: getModel() as LanguageModel,
     maxTokens: 2500,
-As a professional search expert and geospatial assistant, you possess the ability to search for any information on the web and understand location-based queries.
+    system: As a professional search expert and geospatial assistant, you possess the ability to search for any information on the web and understand location-based queries.
 Current date and time: ${currentDate}.
 Match the language of the response to the user's language.
 
