@@ -14,7 +14,7 @@ import { FollowupPanel } from '@/components/followup-panel';
 import { inquire, researcher, taskManager, querySuggestor } from '@/lib/agents';
 import { writer } from '@/lib/agents/writer';
 import { saveChat } from '@/lib/actions/chat';
-import { Chat, AIMessage } from '@/lib/types';
+import { Chat, AIMessage, MapUpdateContent } from '@/lib/types';
 import { UserMessage } from '@/components/user-message';
 import { BotMessage } from '@/components/message';
 import { SearchSection } from '@/components/search-section';
@@ -143,13 +143,14 @@ async function submit(formData?: FormData, skip?: boolean) {
       errorOccurred = hasError;
 
       if (toolOutputs.length > 0) {
-        toolOutputs.map((output) => {
+        // Existing logic to add tool results to aiState
+        toolOutputs.forEach((output) => { // Changed from .map to .forEach
           aiState.update({
             ...aiState.get(),
             messages: [
               ...aiState.get().messages,
               {
-                id: groupeId,
+                id: groupeId, // Use existing groupeId or nanoid() if this needs to be separate
                 role: 'tool',
                 content: JSON.stringify(output.result),
                 name: output.toolName,
@@ -157,6 +158,89 @@ async function submit(formData?: FormData, skip?: boolean) {
               },
             ],
           });
+
+          // New logic to add map_update messages
+          const toolResult = output.result as any; // Cast for easier access to summary/data
+          if (toolResult && toolResult.data) {
+            let mapUpdateData: MapUpdateContent | null = null;
+            switch (output.toolName) {
+              case 'mcp_geocode':
+                if (toolResult.data.location?.latitude && toolResult.data.location?.longitude) {
+                  mapUpdateData = {
+                    mapAction: 'flyTo',
+                    coordinates: {
+                      latitude: toolResult.data.location.latitude,
+                      longitude: toolResult.data.location.longitude,
+                    },
+                    zoom: 14, // Default zoom for geocode
+                  };
+                } else if (toolResult.data.mapUrl) { // Fallback to map link if geocode itself provides one
+                   mapUpdateData = {
+                     mapAction: 'showMapLink',
+                     mapUrl: toolResult.data.mapUrl,
+                     placeName: toolResult.data.location?.place_name || output.toolArgs?.query,
+                   };
+                }
+                break;
+              case 'mcp_calculate_distance':
+                if (toolResult.data.route_geometry) {
+                  mapUpdateData = {
+                    mapAction: 'drawRoute',
+                    routeGeometry: toolResult.data.route_geometry,
+                  };
+                } else if (toolResult.data.mapUrl) { // Fallback to map link
+                   mapUpdateData = {
+                     mapAction: 'showMapLink',
+                     mapUrl: toolResult.data.mapUrl,
+                     placeName: `Route from ${toolResult.data.from?.address || output.toolArgs?.from} to ${toolResult.data.to?.address || output.toolArgs?.to}`,
+                   };
+                }
+                break;
+              case 'mcp_search_nearby_places':
+                if (toolResult.data.places && toolResult.data.places.length > 0) {
+                  const features = toolResult.data.places.map((place: any) => ({
+                    type: 'Feature',
+                    geometry: {
+                      type: 'Point',
+                      coordinates: [place.longitude, place.latitude],
+                    },
+                    properties: {
+                      name: place.name,
+                      address: place.address,
+                      mapUrl: place.mapUrl,
+                    },
+                  }));
+                  mapUpdateData = { mapAction: 'drawFeatures', features };
+                }
+                break;
+              case 'mcp_generate_map_link':
+                if (toolResult.data.staticMapUrl || toolResult.data.interactiveMapUrl) {
+                  mapUpdateData = {
+                    mapAction: 'showMapLink',
+                    mapUrl: toolResult.data.staticMapUrl,
+                    interactiveMapUrl: toolResult.data.interactiveMapUrl,
+                    placeName: toolResult.data.summary?.split('\n')[0]?.replace('🗺️ **Map for ', '')?.replace('**','') || "Map View"
+                  };
+                }
+                break;
+            }
+
+            if (mapUpdateData) {
+              aiState.update({
+                ...aiState.get(),
+                messages: [
+                  ...aiState.get().messages,
+                  {
+                    id: nanoid(), // Separate ID for the map update message
+                    role: 'assistant', // Or 'system' - 'assistant' fits if it's part of assistant's turn
+                    type: 'map_update',
+                    content: mapUpdateData, // Directly assign the object
+                    name: output.toolName, // Keep track of which tool triggered this
+                  },
+                ],
+              });
+            }
+          }
         });
       }
     }

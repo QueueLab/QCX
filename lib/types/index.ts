@@ -54,9 +54,26 @@ export interface Chat extends Record<string, any> {
   sharePath?: string
 }
 
+export type MapUpdateContent = {
+  mapAction: 'flyTo';
+  coordinates: { latitude: number; longitude: number };
+  zoom?: number;
+} | {
+  mapAction: 'drawFeatures';
+  features: any[]; // GeoJSON features
+} | {
+  mapAction: 'drawRoute';
+  routeGeometry: any; // GeoJSON LineString geometry
+} | {
+  mapAction: 'showMapLink';
+  mapUrl: string; // Static map URL
+  interactiveMapUrl?: string; // Interactive map URL
+  placeName?: string;
+};
+
 export type AIMessage = {
   role: 'user' | 'assistant' | 'system' | 'function' | 'data' | 'tool'
-  content: string
+  content: string | MapUpdateContent; // Adjusted to include MapUpdateContent
   id: string
   name?: string
   type?:
@@ -68,5 +85,6 @@ export type AIMessage = {
     | 'input_related'
     | 'tool'
     | 'followup'
+    | 'map_update' // New type
     | 'end'
 }
