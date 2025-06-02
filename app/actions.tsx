@@ -198,45 +198,34 @@ async function submit(formData?: FormData, skip?: boolean) {
       // Wait for 0.5 second before adding the answer to the state
       await new Promise((resolve) => setTimeout(resolve, 500));
 
-      aiState.done({
-        ...aiState.get(),
-        messages: [
-          ...aiState.get().messages,
-          {
-            id: groupeId,
-            role: 'assistant',
-            content: answer,
-            type: 'response',
-          },
-          {
-            id: groupeId,
-            role: 'assistant',
-            content: JSON.stringify(relatedQueries),
-            type: 'related',
-          },
-          {
-            id: groupeId,
-            role: 'assistant',
-            content: 'followup',
-            type: 'followup',
-          },
-        ];
+      // Prepare the messages for the final state update
+      const finalMessages: AIMessage[] = [
+        ...aiState.get().messages, // Includes user messages, and any tool messages already updated by aiState.update()
+        {
+          id: groupeId,
+          role: 'assistant',
+          content: answer, // The main textual answer from the LLM
+          type: 'response',
+        },
+        {
+          id: groupeId, // Using same groupeId to associate these meta-messages with the response
+          role: 'assistant',
+          content: JSON.stringify(relatedQueries),
+          type: 'related',
+        },
+        {
+          id: groupeId, // Using same groupeId
+          role: 'assistant',
+          content: 'followup', // Placeholder content, actual UI rendered by type
+          type: 'followup',
+        },
+      ];
 
-      // Construct the final state for aiState.done()
       const finalAIStateUpdate: AIState = {
-        ...aiState.get(), // Get existing parts of state like chatId, existing messages to be retained by aiState.get()
-        messages: allMessagesForDone, // This contains the new assistant response, related, followup etc.
+        ...aiState.get(), // Preserves chatId, and any other top-level AIState fields
+        messages: finalMessages,
+        currentMapTarget: mapDataFromGeospatialTool ?? aiState.get().currentMapTarget ?? null,
       };
-
-      if (mapDataFromGeospatialTool) {
-        finalAIStateUpdate.currentMapTarget = mapDataFromGeospatialTool;
-      } else {
-        // If no new map data, retain the existing one from the current state
-        // This ensures map doesn't clear if subsequent messages don't have map data.
-        // If it should clear, then set to null explicitly.
-        const existingState = aiState.get();
-        finalAIStateUpdate.currentMapTarget = existingState.currentMapTarget ?? null;
-      }
 
       aiState.done(finalAIStateUpdate);
     }
