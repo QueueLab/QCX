@@ -30,9 +30,6 @@ export function SearchSection({ result }: SearchSectionProps) {
               />
             </Section>
           )}
-          <Section title="Sources">
-            <SearchResults results={searchResults.results} />
-          </Section>
         </>
       ) : (
         <Section className="pt-2 pb-0">
