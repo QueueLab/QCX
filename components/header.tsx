@@ -10,7 +10,7 @@ import {
   CalendarDays,
   TentTree
 } from 'lucide-react'
-import { MapToggle } from './map-toggle'
+// import { MapToggle } from './map-toggle'; // Removed
 import { ProfileToggle } from './profile-toggle'
 
 export const Header = () => {
@@ -32,7 +32,7 @@ export const Header = () => {
         
           <ProfileToggle/>
         
-        <MapToggle />
+        {/* <MapToggle /> */}
         
         <Button variant="ghost" size="icon">
           <CalendarDays className="h-[1.2rem] w-[1.2rem]" />

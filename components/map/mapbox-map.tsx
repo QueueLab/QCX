@@ -8,29 +8,33 @@ import { toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css'
-import { useMapToggle, MapToggleEnum } from '../map-toggle-context'
+// import { useMapToggle, MapToggleEnum } from '../map-toggle-context'; // Removed
+import { MapUpdateContent } from '@/lib/types'; // Import MapUpdateContent
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN as string;
 
-export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number; } }> = ({ position }) => {
+export const Mapbox: React.FC<{
+  position?: { latitude: number; longitude: number; };
+  mapUpdate?: MapUpdateContent; // New prop
+}> = ({ position, mapUpdate }) => {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
-  const drawRef = useRef<MapboxDraw | null>(null)
+  // const drawRef = useRef<MapboxDraw | null>(null); // Removed
   const rotationFrameRef = useRef<number | null>(null)
-  const polygonLabelsRef = useRef<{ [id: string]: mapboxgl.Marker }>({})
-  const lineLabelsRef = useRef<{ [id: string]: mapboxgl.Marker }>({})
+  // const polygonLabelsRef = useRef<{ [id: string]: mapboxgl.Marker }>({}); // Removed
+  // const lineLabelsRef = useRef<{ [id: string]: mapboxgl.Marker }>({}); // Removed
   const lastInteractionRef = useRef<number>(Date.now())
   const isRotatingRef = useRef<boolean>(false)
   const isUpdatingPositionRef = useRef<boolean>(false)
-  const geolocationWatchIdRef = useRef<number | null>(null)
+  // const geolocationWatchIdRef = useRef<number | null>(null); // Removed
   const initializedRef = useRef<boolean>(false)
   const currentMapCenterRef = useRef<[number, number]>([
     position?.longitude ?? -74.0060152,
     position?.latitude ?? 40.7127281
   ])
-  const drawingFeatures = useRef<any>(null)
-  const { mapType } = useMapToggle()
-  const previousMapTypeRef = useRef<MapToggleEnum | null>(null)
+  // const drawingFeatures = useRef<any>(null); // Removed
+  // const { mapType } = useMapToggle(); // Removed
+  // const previousMapTypeRef = useRef<MapToggleEnum | null>(null); // Removed
 
   // Formats the area or distance for display
   const formatMeasurement = useCallback((value: number, isArea = true) => {
@@ -51,88 +55,8 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     }
   }, [])
 
-  // Create measurement labels for all features
-  const updateMeasurementLabels = useCallback(() => {
-    if (!map.current || !drawRef.current) return
-
-    // Remove existing labels
-    Object.values(polygonLabelsRef.current).forEach(marker => marker.remove())
-    Object.values(lineLabelsRef.current).forEach(marker => marker.remove())
-    polygonLabelsRef.current = {}
-    lineLabelsRef.current = {}
-
-    const features = drawRef.current.getAll().features
-
-    features.forEach(feature => {
-      const id = feature.id as string
-      
-      if (feature.geometry.type === 'Polygon') {
-        // Calculate area for polygons
-        const area = turf.area(feature)
-        const formattedArea = formatMeasurement(area, true)
-        
-        // Get centroid for label placement
-        const centroid = turf.centroid(feature)
-        const coordinates = centroid.geometry.coordinates
-        
-        // Create a label
-        const el = document.createElement('div')
-        el.className = 'area-label'
-        el.style.background = 'rgba(255, 255, 255, 0.8)'
-        el.style.padding = '4px 8px'
-        el.style.borderRadius = '4px'
-        el.style.fontSize = '12px'
-        el.style.fontWeight = 'bold'
-        el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)'
-        el.style.pointerEvents = 'none'
-        el.textContent = formattedArea
-        
-        // Add marker for the label
-
-
-
-
-
-        if (map.current) {
-          const marker = new mapboxgl.Marker({ element: el })
-            .setLngLat(coordinates as [number, number])
-            .addTo(map.current)
-            
-          polygonLabelsRef.current[id] = marker
-        }
-      } 
-      else if (feature.geometry.type === 'LineString') {
-        // Calculate length for lines
-        const length = turf.length(feature, { units: 'kilometers' }) * 1000 // Convert to meters
-        const formattedLength = formatMeasurement(length, false)
-        
-        // Get midpoint for label placement
-        const line = feature.geometry.coordinates
-        const midIndex = Math.floor(line.length / 2) - 1
-        const midpoint = midIndex >= 0 ? line[midIndex] : line[0]
-        
-        // Create a label
-        const el = document.createElement('div')
-        el.className = 'distance-label'
-        el.style.background = 'rgba(255, 255, 255, 0.8)'
-        el.style.padding = '4px 8px'
-        el.style.borderRadius = '4px'
-        el.style.fontSize = '12px'
-        el.style.fontWeight = 'bold'
-        el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)'
-        el.style.pointerEvents = 'none'
-        el.textContent = formattedLength
-        
-        // Add marker for the label
-        if (map.current) {
-          const marker = new mapboxgl.Marker({ element: el })
-            .setLngLat(midpoint as [number, number])
-            .addTo(map.current)
-            
-          lineLabelsRef.current[id] = marker
-        }
-      }
-    })  }, [formatMeasurement])
+  // Create measurement labels for all features - REMOVED
+  // const updateMeasurementLabels = useCallback(() => { ... }, [formatMeasurement]);
 
   // Handle map rotation
   const rotateMap = useCallback(() => {
@@ -191,9 +115,9 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
           })
         })
         setTimeout(() => {
-          if (mapType === MapToggleEnum.RealTimeMode) {
-            startRotation()
-          }
+          // if (mapType === MapToggleEnum.RealTimeMode) { // Removed mapType check
+          startRotation() // Consider if rotation should always start or be conditional
+          // }
           isUpdatingPositionRef.current = false
         }, 500)
       } catch (error) {
@@ -201,88 +125,13 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         isUpdatingPositionRef.current = false
       }
     }
-  }, [mapType, startRotation, stopRotation])
+  }, [startRotation, stopRotation]) // Removed mapType
 
-  // Set up drawing tools
-  const setupDrawingTools = useCallback(() => {
-    if (!map.current) return
-    
-    // Remove existing draw control if present
-    if (drawRef.current) {
-      try {
-        map.current.off('draw.create', updateMeasurementLabels)
-        map.current.off('draw.delete', updateMeasurementLabels)
-        map.current.off('draw.update', updateMeasurementLabels)
-        map.current.removeControl(drawRef.current)
-        drawRef.current = null
-        
-        // Clean up any existing labels
-        Object.values(polygonLabelsRef.current).forEach(marker => marker.remove())
-        Object.values(lineLabelsRef.current).forEach(marker => marker.remove())
-        polygonLabelsRef.current = {}
-        lineLabelsRef.current = {}
-      } catch (e) {
-        console.log('Error removing draw control:', e)
-      }
-    }
-    
-    // Create new draw control with both polygon and line tools
-    drawRef.current = new MapboxDraw({
-      displayControlsDefault: false,
-      controls: {
-        polygon: true,
-        trash: true,
-        line_string: true
-      },
-      // Start in polygon mode by default
-      defaultMode: 'draw_polygon'
-    })
-    
-    // Add control to map
-    map.current.addControl(drawRef.current, 'top-right')
-    
-    // Set up event listeners for measurements
-    map.current.on('draw.create', updateMeasurementLabels)
-    map.current.on('draw.delete', updateMeasurementLabels)
-    map.current.on('draw.update', updateMeasurementLabels)
-    
-    // Restore previous drawings if they exist
-    if (drawingFeatures.current && drawingFeatures.current.features.length > 0) {
-      // Add each feature back to the draw tool
-      drawingFeatures.current.features.forEach((feature: any) => {
-        drawRef.current?.add(feature)
-      })
-      
-      // Update labels after restoring features
-      setTimeout(updateMeasurementLabels, 100)
-    }
-  }, [updateMeasurementLabels])
+  // Set up drawing tools - REMOVED
+  // const setupDrawingTools = useCallback(() => { ... }, [updateMeasurementLabels]);
 
-  // Set up geolocation watcher
-  const setupGeolocationWatcher = useCallback(() => {
-    if (geolocationWatchIdRef.current !== null) {
-      navigator.geolocation.clearWatch(geolocationWatchIdRef.current)
-      geolocationWatchIdRef.current = null
-    }
-
-    if (mapType !== MapToggleEnum.RealTimeMode) return
-
-    if (!navigator.geolocation) {
-      toast('Geolocation is not supported by your browser')
-      return
-    }
-
-    const success = async (geoPos: GeolocationPosition) => {
-      await updateMapPosition(geoPos.coords.latitude, geoPos.coords.longitude)
-    }
-
-    const error = (positionError: GeolocationPositionError) => {
-      console.error('Geolocation Error:', positionError.message)
-      toast.error(`Location error: ${positionError.message}`)
-    }
-    
-    geolocationWatchIdRef.current = navigator.geolocation.watchPosition(success, error)
-  }, [mapType, updateMapPosition])
+  // Set up geolocation watcher - REMOVED / DISABLED
+  // const setupGeolocationWatcher = useCallback(() => { ... }, [mapType, updateMapPosition]);
 
   // Capture map center changes
   const captureMapCenter = useCallback(() => {
@@ -304,58 +153,9 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     return () => clearInterval(checkIdle)
   }, [startRotation])
 
-  // Handle map type changes
-  useEffect(() => {
-    // Store previous map type to detect changes
-    const isMapTypeChanged = previousMapTypeRef.current !== mapType
-    previousMapTypeRef.current = mapType
-    
-    // Only proceed if map is initialized
-    if (!map.current || !initializedRef.current) return
-    
-    // If we're switching modes, capture the current map center
-    if (isMapTypeChanged) {
-      captureMapCenter()
-      
-      // Handle geolocation setup based on mode
-      setupGeolocationWatcher()
-      
-      // Handle draw controls based on mode
-      if (mapType === MapToggleEnum.DrawingMode) {
-        // If switching to drawing mode, setup drawing tools
-        setupDrawingTools()
-      } else {
-        // If switching from drawing mode, remove drawing tools but save features
-        if (drawRef.current) {
-          // Save current drawings before removing control
-          drawingFeatures.current = drawRef.current.getAll()
-          
-          try {
-            map.current.off('draw.create', updateMeasurementLabels)
-            map.current.off('draw.delete', updateMeasurementLabels)
-            map.current.off('draw.update', updateMeasurementLabels)
-            map.current.removeControl(drawRef.current)
-            drawRef.current = null
-            
-            // Clean up any existing labels
-            Object.values(polygonLabelsRef.current).forEach(marker => marker.remove())
-            Object.values(lineLabelsRef.current).forEach(marker => marker.remove())
-            polygonLabelsRef.current = {}
-            lineLabelsRef.current = {}
-          } catch (e) {
-            console.log('Error removing draw control:', e)
-          }
-        }
-      }
-    }
+  // Handle map type changes - REMOVED / SIMPLIFIED
+  // useEffect(() => { ... }, [mapType, ...]);
 
-    return () => {
-      if (geolocationWatchIdRef.current !== null) {
-        navigator.geolocation.clearWatch(geolocationWatchIdRef.current)
-        geolocationWatchIdRef.current = null
-      }
-    }
-  }, [mapType, updateMeasurementLabels, setupGeolocationWatcher, captureMapCenter, setupDrawingTools])
 
   // Initialize map (only once)
   useEffect(() => {
@@ -404,18 +204,18 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
           },
         })
 
-        // Initialize drawing tools based on initial mode
-        if (mapType === MapToggleEnum.DrawingMode) {
-          setupDrawingTools()
-        }
+        // Initialize drawing tools based on initial mode - REMOVED
+        // if (mapType === MapToggleEnum.DrawingMode) {
+        //   setupDrawingTools()
+        // }
 
-        // If not in real-time mode, start rotation
-        if (mapType !== MapToggleEnum.RealTimeMode) {
-          startRotation()
-        }
+        // If not in real-time mode, start rotation - SIMPLIFIED: always start rotation initially
+        // if (mapType !== MapToggleEnum.RealTimeMode) { // Removed mapType check
+        startRotation()
+        // }
 
         initializedRef.current = true
-        setupGeolocationWatcher()
+        // setupGeolocationWatcher(); // Geolocation watcher is disabled
       })
     }
 
@@ -423,48 +223,164 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
       if (map.current) {
         map.current.off('moveend', captureMapCenter)
         
-        if (drawRef.current) {
-          try {
-            map.current.off('draw.create', updateMeasurementLabels)
-            map.current.off('draw.delete', updateMeasurementLabels)
-            map.current.off('draw.update', updateMeasurementLabels)
-            map.current.removeControl(drawRef.current)
-          } catch (e) {
-            console.log('Draw control already removed')
-          }
-        }
+        // if (drawRef.current) { // Removed drawRef logic
+        //   try {
+        //     map.current.off('draw.create', updateMeasurementLabels)
+        //     map.current.off('draw.delete', updateMeasurementLabels)
+        //     map.current.off('draw.update', updateMeasurementLabels)
+        //     map.current.removeControl(drawRef.current)
+        //   } catch (e) {
+        //     console.log('Draw control already removed')
+        //   }
+        // }
         
-        // Clean up any existing labels
-        Object.values(polygonLabelsRef.current).forEach(marker => marker.remove())
-        Object.values(lineLabelsRef.current).forEach(marker => marker.remove())
+        // Clean up any existing labels - REMOVED
+        // Object.values(polygonLabelsRef.current).forEach(marker => marker.remove());
+        // Object.values(lineLabelsRef.current).forEach(marker => marker.remove());
         
         stopRotation()
         map.current.remove()
         map.current = null
       }
       
-      if (geolocationWatchIdRef.current !== null) {
-        navigator.geolocation.clearWatch(geolocationWatchIdRef.current)
-        geolocationWatchIdRef.current = null
-      }
+      // if (geolocationWatchIdRef.current !== null) { // Removed geolocation logic
+      //   navigator.geolocation.clearWatch(geolocationWatchIdRef.current)
+      //   geolocationWatchIdRef.current = null
+      // }
     }
-  }, [
+  }, [ // Simplified dependencies
     handleUserInteraction, 
     startRotation, 
     stopRotation, 
-    mapType, 
-    updateMeasurementLabels, 
-    setupGeolocationWatcher, 
-    captureMapCenter, 
-    setupDrawingTools
+    captureMapCenter
+    // Removed mapType, updateMeasurementLabels, setupGeolocationWatcher, setupDrawingTools
   ])
 
-  // Handle position updates from props
+  // Handle position updates from props - This can be simplified or removed if 'position' prop is not primary driver
   useEffect(() => {
-    if (map.current && position?.latitude && position?.longitude && mapType === MapToggleEnum.RealTimeMode) {
+    // This effect might conflict with mapUpdate if both try to control position.
+    // For now, keeping it but it might need to be re-evaluated.
+    // It was originally tied to RealTimeMode.
+    if (map.current && position?.latitude && position?.longitude /* && mapType === MapToggleEnum.RealTimeMode */) { // mapType check removed
       updateMapPosition(position.latitude, position.longitude)
     }
-  }, [position, updateMapPosition, mapType])
+  }, [position, updateMapPosition /*, mapType */]) // mapType removed
+
+  // Refs for dynamic sources and layers
+  const dynamicFeaturesSourceId = 'dynamic-geojson-features';
+  const dynamicFeaturesLayerId = 'dynamic-geojson-layer-points';
+  const dynamicRouteSourceId = 'dynamic-geojson-route';
+  const dynamicRouteLayerId = 'dynamic-geojson-layer-route';
+
+  useEffect(() => {
+    if (!map.current || !mapUpdate || !initializedRef.current) {
+      return;
+    }
+
+    // Helper to remove existing dynamic source and layer
+    const removeDynamicLayerAndSource = (sourceId: string, layerId: string) => {
+      if (map.current?.getLayer(layerId)) {
+        map.current.removeLayer(layerId);
+      }
+      if (map.current?.getSource(sourceId)) {
+        map.current.removeSource(sourceId);
+      }
+    };
+
+    switch (mapUpdate.mapAction) {
+      case 'flyTo':
+        map.current.flyTo({
+          center: [mapUpdate.coordinates.longitude, mapUpdate.coordinates.latitude],
+          zoom: mapUpdate.zoom || 14,
+          essential: true,
+        });
+        break;
+
+      case 'drawFeatures':
+        removeDynamicLayerAndSource(dynamicFeaturesSourceId, dynamicFeaturesLayerId);
+        removeDynamicLayerAndSource(dynamicRouteSourceId, dynamicRouteLayerId); // Clear route if drawing features
+
+        map.current.addSource(dynamicFeaturesSourceId, {
+          type: 'geojson',
+          data: {
+            type: 'FeatureCollection',
+            features: mapUpdate.features,
+          },
+        });
+
+        map.current.addLayer({
+          id: dynamicFeaturesLayerId,
+          type: 'circle',
+          source: dynamicFeaturesSourceId,
+          paint: {
+            'circle-radius': 8,
+            'circle-color': '#FF0000',
+            'circle-stroke-width': 1,
+            'circle-stroke-color': '#FFFFFF',
+          },
+        });
+
+        if (mapUpdate.features.length > 0) {
+          const bounds = new mapboxgl.LngLatBounds();
+          mapUpdate.features.forEach(feature => {
+            if (feature.geometry.type === 'Point') {
+              bounds.extend(feature.geometry.coordinates as [number, number]);
+            }
+          });
+          if (!bounds.isEmpty()) {
+              map.current.fitBounds(bounds, { padding: 100, maxZoom: 15 });
+          }
+        }
+        break;
+
+      case 'drawRoute':
+        removeDynamicLayerAndSource(dynamicRouteSourceId, dynamicRouteLayerId);
+        removeDynamicLayerAndSource(dynamicFeaturesSourceId, dynamicFeaturesLayerId); // Clear features if drawing route
+
+        map.current.addSource(dynamicRouteSourceId, {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            geometry: mapUpdate.routeGeometry,
+            properties: {},
+          },
+        });
+
+        map.current.addLayer({
+          id: dynamicRouteLayerId,
+          type: 'line',
+          source: dynamicRouteSourceId,
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round',
+          },
+          paint: {
+            'line-color': '#007cbf',
+            'line-width': 6,
+            'line-opacity': 0.75,
+          },
+        });
+
+        if (mapUpdate.routeGeometry && mapUpdate.routeGeometry.coordinates && mapUpdate.routeGeometry.coordinates.length > 0) {
+          const routeCoords = mapUpdate.routeGeometry.coordinates as [number, number][];
+          const bounds = routeCoords.reduce((currentBounds, coord) => {
+              return currentBounds.extend(coord);
+          }, new mapboxgl.LngLatBounds(routeCoords[0], routeCoords[0]));
+          if (!bounds.isEmpty()){
+              map.current.fitBounds(bounds, { padding: 50, maxZoom: 15 });
+          }
+        }
+        break;
+
+      case 'showMapLink':
+        if (mapUpdate.placeName && (mapUpdate.interactiveMapUrl || mapUpdate.mapUrl)) {
+          const urlToShow = mapUpdate.interactiveMapUrl || mapUpdate.mapUrl;
+          console.log(`Map link generated for ${mapUpdate.placeName}: ${urlToShow}`);
+          toast.info(<span>Map for <a href={urlToShow} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">{mapUpdate.placeName || 'location'}</a> ready.</span>, { autoClose: 10000 });
+        }
+        break;
+    }
+  }, [mapUpdate, map, initializedRef]);
 
   return (
     <div className="relative h-full w-full">

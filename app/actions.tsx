@@ -329,6 +329,7 @@ export type UIState = {
   component: React.ReactNode;
   isGenerating?: StreamableValue<boolean>;
   isCollapsed?: StreamableValue<boolean>;
+  mapData?: MapUpdateContent; // Add this new optional field
 }[];
 
 const initialAIState: AIState = {
@@ -458,6 +459,18 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                   </Section>
                 ),
               };
+            case 'related':
+              // Define RelatedQueries if not done - Assuming it's: type RelatedQueries = { items: { query: string }[] };
+              const relatedQueries = createStreamableValue<any>(); // Using 'any' for brevity, define RelatedQueries properly
+              relatedQueries.done(JSON.parse(content as string));
+              return {
+                id,
+                component: (
+                  <Section title="Related" separator={true}>
+                    <SearchRelated relatedQueries={relatedQueries.value} />
+                  </Section>
+                ),
+              };
             case 'followup':
               return {
                 id,
@@ -467,8 +480,15 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                   </Section>
                 ),
               };
+            case 'map_update': // New case for map_update
+              return {
+                id,
+                component: null, // No direct visual component in the chat log
+                mapData: content as MapUpdateContent, // Pass the map data
+              };
+            // Add other assistant message types if any
           }
-          break;
+          break; // End of 'assistant' role cases
         case 'tool':
           try {
             const toolOutput = JSON.parse(content);

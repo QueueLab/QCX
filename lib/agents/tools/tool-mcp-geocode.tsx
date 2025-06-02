@@ -1,6 +1,6 @@
 import { z } from "zod";
-import mcpClient from "lib/utils/mcp-client";
-import { ToolProps } from "."; // Assuming ToolProps is exported from index.tsx in the same directory
+import mcpClient from "../../utils/mcp-client"; // Corrected path
+import { ToolProps } from ".";
 import { Card } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 
