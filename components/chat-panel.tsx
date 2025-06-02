@@ -12,6 +12,16 @@ import { EmptyScreen } from './empty-screen'
 import Textarea from 'react-textarea-autosize'
 import { nanoid } from 'nanoid'
 
+// Helper function to convert File to Data URL on the client side
+async function convertFileToDataURLClient(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = (error) => reject(error); // Error will be caught by handleSubmit
+    reader.readAsDataURL(file);
+  });
+}
+
 interface ChatPanelProps {
   messages: UIState
 }
@@ -23,6 +33,8 @@ export function ChatPanel({ messages }: ChatPanelProps) {
   const [isButtonPressed, setIsButtonPressed] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null) // Added fileInputRef
+  const [selectedFile, setSelectedFile] = useState<File | null>(null) // Added selectedFile state
   const [showEmptyScreen, setShowEmptyScreen] = useState(false)
   const router = useRouter()
 
@@ -45,24 +57,100 @@ export function ChatPanel({ messages }: ChatPanelProps) {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    const originalInput = input; // Save original input in case of error
+
     if (isButtonPressed) {
-      handleClear()
+      handleClear() // This already resets selectedFile
       setIsButtonPressed(false)
     }
+
+    let imageDataUrl: string | null = null;
+    let imageContentType: string | null = null;
+
+    if (selectedFile) {
+      try {
+        imageDataUrl = await convertFileToDataURLClient(selectedFile);
+        imageContentType = selectedFile.type;
+        console.log('Image converted to data URL on client:', { dataUrlLength: imageDataUrl.length, type: imageContentType });
+      } catch (error) {
+        console.error('Client-side image conversion error:', error);
+        alert('Error processing image on client. Please try again.');
+        // Optionally restore input if it was cleared or modified prematurely
+        // setInput(originalInput); 
+        return; // Stop submission
+      }
+    }
+
+    // Add user message to UI state
+    // Pass imageDataUrl to UserMessage if you want to display it immediately (optimistic update)
+    // For now, UserMessage will get it from aiState after server processing if actions.tsx is set up for that.
     setMessages(currentMessages => [
       ...currentMessages,
       {
         id: nanoid(),
+        // If UserMessage is updated to take imageDataUrl directly for optimistic UI:
+        // component: <UserMessage message={input} imageUrl={imageDataUrl} /> 
         component: <UserMessage message={input} />
       }
     ])
-    const formData = new FormData(e.currentTarget)
-    const responseMessage = await submit(formData)
-    setMessages(currentMessages => [...currentMessages, responseMessage as any])
+
+    const formData = new FormData(e.currentTarget); // e.currentTarget still contains original 'input' field value
+    // Do NOT append selectedFile (File object) anymore.
+    // Append data URL and content type if available.
+    if (imageDataUrl && imageContentType) {
+      formData.append('image_attachment_data_url', imageDataUrl);
+      formData.append('image_attachment_content_type', imageContentType);
+    }
+    
+    const responseMessage = await submit(formData);
+    setMessages(currentMessages => [...currentMessages, responseMessage as any]);
+    setSelectedFile(null); // Reset selectedFile after successful submission
+    // Input is already managed by setInput, no need to reset here unless it was cleared for submission
   }
 
   const handleClear = () => {
     router.push('/')
+    setSelectedFile(null) // Reset selectedFile when clearing
+    setInput('') // Also clear text input
+  }
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      if (event.target.files && event.target.files[0]) {
+        const file = event.target.files[0];
+        console.log('Selected file:', { 
+          name: file.name, 
+          size: file.size, 
+          type: file.type 
+        });
+
+        // Optional: Check file type (client-side validation)
+        if (!file.type.startsWith('image/')) {
+          console.warn('Selected file is not an image type:', file.type);
+          // alert('Please select an image file.');
+          // setSelectedFile(null);
+          // event.target.value = ''; // Reset file input
+          // return;
+        }
+
+        // Optional: Check file size (client-side validation)
+        // const MAX_FILE_SIZE_MB = 5; // Example: 5MB
+        // if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+        //   console.warn(`File size exceeds ${MAX_FILE_SIZE_MB}MB:`, file.size);
+        //   alert(`File is too large. Maximum size is ${MAX_FILE_SIZE_MB}MB.`);
+        //   setSelectedFile(null);
+        //   event.target.value = ''; // Reset file input
+        //   return;
+        // }
+
+        setSelectedFile(file);
+      }
+    } catch (error) {
+      console.error('Error in handleFileChange:', error);
+      // alert('An error occurred while selecting the file.');
+      // setSelectedFile(null);
+      // event.target.value = ''; // Reset file input
+    }
   }
 
   useEffect(() => {
@@ -112,6 +200,13 @@ export function ChatPanel({ messages }: ChatPanelProps) {
             isMobile && 'mobile-chat-input' // Apply mobile chat input styling
           )}
         >
+          <input
+            type="file"
+            accept="image/*"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            style={{ display: 'none' }}
+          />
           <Textarea
             ref={inputRef}
             name="input"
@@ -166,6 +261,7 @@ export function ChatPanel({ messages }: ChatPanelProps) {
               'absolute top-1/2 transform -translate-y-1/2',
               isMobile ? 'right-8' : 'right-10'
             )}
+            onClick={() => fileInputRef.current?.click()} // Trigger file input click
           >
             <Paperclip size={isMobile ? 18 : 20} />
           </Button>

@@ -69,4 +69,5 @@ export type AIMessage = {
     | 'tool'
     | 'followup'
     | 'end'
+    | 'map_image_update' // Added map_image_update type
 }

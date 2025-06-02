@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useAIState } from 'ai/rsc' // Added useAIState
+import { AIMessage } from '@/lib/types'; // Import AIMessage
 import mapboxgl from 'mapbox-gl'
 import MapboxDraw from '@mapbox/mapbox-gl-draw'
 import * as turf from '@turf/turf'
@@ -31,6 +33,8 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   const drawingFeatures = useRef<any>(null)
   const { mapType } = useMapToggle()
   const previousMapTypeRef = useRef<MapToggleEnum | null>(null)
+  const [aiState] = useAIState() // Added AI State
+  const [displayedImageUrl, setDisplayedImageUrl] = useState<string | null>(null) // Added state for current image
 
   // Formats the area or distance for display
   const formatMeasurement = useCallback((value: number, isArea = true) => {
@@ -465,6 +469,87 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
       updateMapPosition(position.latitude, position.longitude)
     }
   }, [position, updateMapPosition, mapType])
+
+  // Effect to handle image display from AI state
+  useEffect(() => {
+    if (!map.current || !map.current.isStyleLoaded()) {
+      // Wait for map to be ready
+      const checkMapReady = () => {
+        if (map.current && map.current.isStyleLoaded()) {
+          // Re-run effect logic once map is ready
+          // This is a bit of a hack; ideally, this effect depends on map readiness
+          // For simplicity now, we find the message again.
+          findAndUpdateMapImage();
+        } else {
+          setTimeout(checkMapReady, 100); // Check again shortly
+        }
+      };
+      checkMapReady();
+      return;
+    }
+    
+    const findAndUpdateMapImage = () => {
+      const mapImageMessage = aiState.messages
+        .slice()
+        .reverse()
+        .find((msg: AIMessage) => msg.type === 'map_image_update' && msg.role === 'assistant');
+
+      if (mapImageMessage) {
+        try {
+          const content = JSON.parse(mapImageMessage.content as string);
+          const newImageUrl = content.mapImageUrl;
+          // const caption = content.caption; // Caption available if needed later
+
+          if (newImageUrl && newImageUrl !== displayedImageUrl) {
+            setDisplayedImageUrl(newImageUrl);
+
+            // Remove previous image layer and source if they exist
+            if (map.current!.getLayer('attached-image-layer')) {
+              map.current!.removeLayer('attached-image-layer');
+            }
+            if (map.current!.getSource('attached-image-source')) {
+              map.current!.removeSource('attached-image-source');
+            }
+
+            // Get current map bounds for image coordinates
+            const bounds = map.current!.getBounds();
+            if (bounds) { // Check if bounds is not null
+              const coordinates: [[number, number], [number, number], [number, number], [number, number]] = [
+                [bounds.getWest(), bounds.getNorth()], // Top-left
+                [bounds.getEast(), bounds.getNorth()], // Top-right
+                [bounds.getEast(), bounds.getSouth()], // Bottom-right
+                [bounds.getWest(), bounds.getSouth()]  // Bottom-left
+              ];
+
+              map.current!.addSource('attached-image-source', {
+                type: 'image',
+                url: newImageUrl,
+                coordinates: coordinates
+              });
+
+              map.current!.addLayer({
+                id: 'attached-image-layer',
+                type: 'raster',
+                source: 'attached-image-source',
+                paint: {
+                  'raster-opacity': 0.9, // Slightly increased opacity
+                  'raster-fade-duration': 300 // Smooth transition
+                }
+              });
+            } else {
+              console.error("Map bounds are not available to display image.");
+            }
+          }
+        } catch (error) {
+          console.error("Error processing map_image_update message:", error);
+        }
+      }
+    };
+
+    findAndUpdateMapImage();
+
+  }, [aiState.messages, map.current, displayedImageUrl]); // map.current is technically stable but good to list if operations depend on it.
+
 
   return (
     <div className="relative h-full w-full">
