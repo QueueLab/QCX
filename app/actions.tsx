@@ -28,15 +28,7 @@ type RelatedQueries = {
   items: { query: string }[];
 };
 
-// Helper function to convert File to Data URL
-async function convertFileToDataURL(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = (error) => reject(error);
-    reader.readAsDataURL(file);
-  });
-}
+// Server-side convertFileToDataURL is no longer needed.
 
 async function submit(formData?: FormData, skip?: boolean) {
 'use server';
@@ -67,32 +59,18 @@ async function submit(formData?: FormData, skip?: boolean) {
     : (formData?.get('input') as string) || "";
 
   let content: string | null = null;
-  const imageFile = formData?.get('image_attachment') as File | null;
-  let imageDataUrl: string | null = null;
+  // Retrieve data URL and content type from formData, not the File object
+  const imageDataUrl = formData?.get('image_attachment_data_url') as string | null;
+  const imageContentType = formData?.get('image_attachment_content_type') as string | null;
 
-  if (imageFile) {
-    try {
-      imageDataUrl = await convertFileToDataURL(imageFile);
-    } catch (error) {
-      console.error("Error converting file to data URL:", error);
-      // Handle error appropriately, maybe send a message to UI
-      uiStream.update(<div>Error processing image. Please try again.</div>);
-      isGenerating.done(false);
-      aiState.done(aiState.get()); // Pass current state to done()
-      return {
-        id: nanoid(),
-        isGenerating: isGenerating.value,
-        component: uiStream.value,
-        isCollapsed: isCollapsed.value,
-      };
-    }
-  }
+  // Server-side conversion logic is removed.
+  // Error handling for conversion is now on the client-side.
 
   if (skip) {
     content = userInput;
   } else if (formData) {
-    const textInput = formData.get('input') as string;
-    if (imageDataUrl) {
+    const textInput = formData.get('input') as string || ""; // Ensure textInput is string
+    if (imageDataUrl) { // Check if imageDataUrl was retrieved from formData
       content = JSON.stringify({ input: textInput, image: imageDataUrl });
     } else {
       content = JSON.stringify({ input: textInput });
@@ -127,25 +105,26 @@ async function submit(formData?: FormData, skip?: boolean) {
       content: userInput, // Send only text input to AI content
     };
 
-    if (imageFile && imageDataUrl) {
+    if (imageDataUrl && imageContentType) { // Use retrieved dataUrl and contentType
       (userMessageForAI as any).experimental_attachments = [
         {
-          contentType: imageFile.type,
+          contentType: imageContentType, // Use retrieved contentType
           url: imageDataUrl,
         },
       ];
-      // Add a message to aiState for map display if needed
-      // This is a placeholder, actual implementation might vary
-      // For example, you might want to do this after AI processing
+    }
+    
+    // Add a message to aiState for map display if imageDataUrl is present
+    if (imageDataUrl) {
       aiState.update({
         ...aiState.get(),
         messages: [
           ...aiState.get().messages,
           {
             id: nanoid(),
-            role: 'assistant', // Or a custom role like 'system'
+            role: 'assistant', 
             content: JSON.stringify({ mapImageUrl: imageDataUrl, caption: userInput }),
-            type: 'map_image_update', // Custom type for map component to listen to
+            type: 'map_image_update', 
           },
         ],
       });
