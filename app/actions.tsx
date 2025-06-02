@@ -394,11 +394,10 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
 
             // Check if this is our map query trigger
             if (toolOutput.type === "MAP_QUERY_TRIGGER" && name === "geospatialQueryTool") {
-              // The MapQueryHandler now expects the entire toolOutput object
               return {
                 id, // message id
-                component: <MapQueryHandler toolOutput={toolOutput} />, 
-                isCollapsed: false, // Allow handler to be active
+                component: <MapQueryHandler originalUserInput={toolOutput.originalUserInput} />, // Use actual component
+                isCollapsed: true, // Keep it collapsed/hidden as it's a handler
               };
             }
 

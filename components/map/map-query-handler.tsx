@@ -1,83 +1,84 @@
 'use client';
 
 import { useEffect } from 'react';
-// Removed useMCPMapClient as we'll use data passed via props
+// Adjust path if necessary - assuming mapbox_mcp is at the root or configured in tsconfig paths
+import { useMCPMapClient } from '@/mapbox_mcp/src/hooks'; 
 import { useMapData } from './map-data-context'; 
 
-// Define the expected structure of the mcp_response from geospatialTool
-interface McpResponseData {
-  location: {
-    latitude?: number;
-    longitude?: number;
-    place_name?: string;
-    address?: string;
-  };
-  mapUrl?: string;
-}
-
-interface GeospatialToolOutput {
-  type: string; // e.g., "MAP_QUERY_TRIGGER"
-  originalUserInput: string;
-  timestamp: string;
-  mcp_response: McpResponseData | null;
-}
-
 interface MapQueryHandlerProps {
-  // originalUserInput: string; // Kept for now, but primary data will come from toolOutput
-  toolOutput?: GeospatialToolOutput | null; // The direct output from geospatialTool
+  originalUserInput: string;
 }
 
-export const MapQueryHandler: React.FC<MapQueryHandlerProps> = ({ toolOutput }) => {
+export const MapQueryHandler: React.FC<MapQueryHandlerProps> = ({ originalUserInput }) => {
+  const {
+    connect,
+    isConnected,
+    processLocationQuery,
+    isLoading: mcpLoading,
+    error: mcpError,
+    // We might need disconnect later if we manage connections per query handler instance
+  } = useMCPMapClient();
+
   const { setMapData } = useMapData();
 
   useEffect(() => {
-    if (toolOutput && toolOutput.mcp_response && toolOutput.mcp_response.location) {
-      const { latitude, longitude, place_name } = toolOutput.mcp_response.location;
+    // This effect handles the connection to the MCP client and processes the location query.
 
-      if (typeof latitude === 'number' && typeof longitude === 'number') {
-        console.log(`MapQueryHandler: Received data from geospatialTool. Place: ${place_name}, Lat: ${latitude}, Lng: ${longitude}`);
-        setMapData(prevData => ({
-          ...prevData,
-          // Ensure coordinates are in [lng, lat] format for MapboxGL
-          targetPosition: [longitude, latitude], 
-          // Optionally store more info from mcp_response if needed by MapboxMap component later
-          mapFeature: { 
-            place_name, 
-            // Potentially add mapUrl or other details from toolOutput.mcp_response
-            mapUrl: toolOutput.mcp_response?.mapUrl 
-          } 
-        }));
-      } else {
-        console.warn("MapQueryHandler: Invalid latitude/longitude in toolOutput.mcp_response:", toolOutput.mcp_response.location);
-        // Clear target position if data is invalid
-        setMapData(prevData => ({
-          ...prevData,
-          targetPosition: null,
-          mapFeature: null
-        }));
+    const handleQueryProcessing = async () => {
+      if (originalUserInput) {
+        // console.log(`MapQueryHandler: Processing query: "${originalUserInput}"`);
+        try {
+          const response = await processLocationQuery(originalUserInput);
+          // console.log("MapQueryHandler: MCP Response", response);
+
+          if (response && response.mapLocation) {
+            // console.log("MapQueryHandler: Setting map data with targetPosition:", response.mapLocation);
+            setMapData(prevData => ({
+              ...prevData,
+              // Ensure coordinates are in [lng, lat] format for MapboxGL
+              // Safely access .lng and .lat only if mapLocation is not null
+              targetPosition: response.mapLocation ? [response.mapLocation.lng, response.mapLocation.lat] : null, 
+              mapFeature: response.result // Store the whole result for potential other uses
+            }));
+          } else if (response && response.result) {
+            // If there's no direct mapLocation, but there was a result (e.g., from toolInvocations)
+            // store this information. The MapboxMap component might use it.
+            // console.log("MapQueryHandler: Query processed, but no direct mapLocation. Full result:", response.result);
+            setMapData(prevData => ({
+              ...prevData,
+              mapFeature: response.result,
+              targetPosition: null, // Explicitly clear targetPosition if no mapLocation given
+            }));
+          }
+        } catch (error) {
+          console.error("MapQueryHandler: Error processing location query:", error);
+          // Optionally set an error state in MapDataContext or show a toast
+        }
       }
+    };
+
+    if (!isConnected) {
+      // console.log("MapQueryHandler: MCP client not connected, attempting to connect.");
+      connect().then(() => {
+        // console.log("MapQueryHandler: Connected, now processing query.");
+        // After connection, process the query.
+        // Note: isConnected might not update immediately for this effect run,
+        // so we proceed with query processing directly after successful connect promise.
+        handleQueryProcessing();
+      }).catch(connectionError => {
+        console.error("MapQueryHandler: Error connecting MCP client:", connectionError);
+      });
     } else {
-      // This case handles when toolOutput or its critical parts are missing.
-      // Depending on requirements, could fall back to originalUserInput and useMCPMapClient,
-      // or simply log that no valid data was provided from the tool.
-      // For this subtask, we primarily focus on using the new toolOutput.
-      if (toolOutput) { // It exists, but data is not as expected
-        console.warn("MapQueryHandler: toolOutput provided, but mcp_response or location data is missing.", toolOutput);
-      }
-      // If toolOutput is null/undefined, this component might not need to do anything,
-      // or it's an indication that it shouldn't have been rendered/triggered.
-      // For now, if no valid toolOutput, we clear map data or leave it as is.
-      // setMapData(prevData => ({ ...prevData, targetPosition: null, mapFeature: null }));
+      // If already connected, process the query directly.
+      handleQueryProcessing();
     }
-    // The dependencies for this useEffect should be based on the props that trigger its logic.
-    // If originalUserInput and the old MCP client were still used as a fallback, they'd be dependencies.
-  }, [toolOutput, setMapData]);
+    
+  }, [originalUserInput, isConnected, processLocationQuery, setMapData, connect]);
 
   // This component is a handler and does not render any visible UI itself.
   // Its purpose is to trigger map data updates based on AI tool results.
-  // If it were to use the old useMCPMapClient, mcpLoading and mcpError would be relevant.
   // It could return a small status indicator or debug info if needed for development.
-  return null;
-  // Example for debugging with previous client:
+  return null; 
+  // Example for debugging:
   // return <div data-map-query-processed={originalUserInput} data-mcp-loading={mcpLoading} data-mcp-error={mcpError} style={{display: 'none'}} />;
 };
