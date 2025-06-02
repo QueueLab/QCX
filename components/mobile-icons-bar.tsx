@@ -12,7 +12,7 @@ import {
   ArrowRight
 } from 'lucide-react'
 import { History } from '@/components/history'
-import { MapToggle } from './map-toggle'
+// import { MapToggle } from './map-toggle'; // REMOVED
 import { ModeToggle } from './mode-toggle'
 
 export const MobileIconsBar: React.FC = () => {
@@ -21,7 +21,7 @@ export const MobileIconsBar: React.FC = () => {
       <Button variant="ghost" size="icon">
         <CircleUserRound className="h-[1.2rem] w-[1.2rem]" />
       </Button>
-      <MapToggle />
+      {/* <MapToggle /> */} {/* REMOVED */}
       <Button variant="ghost" size="icon">
         <CalendarDays className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>
