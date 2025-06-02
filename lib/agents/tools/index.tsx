@@ -2,6 +2,7 @@ import { createStreamableUI } from 'ai/rsc'
 import { retrieveTool } from './retrieve'
 import { searchTool } from './search'
 import { videoSearchTool } from './video-search'
+import { geospatialTool } from './geospatial'; // Added import for geospatialTool
 
 export interface ToolProps {
   uiStream: ReturnType<typeof createStreamableUI>
@@ -17,7 +18,8 @@ export const getTools = ({ uiStream, fullResponse }: ToolProps) => {
     retrieve: retrieveTool({
       uiStream,
       fullResponse
-    })
+    }),
+    geospatial: geospatialTool, // Added geospatialTool
   }
 
   if (process.env.SERPER_API_KEY) {

@@ -132,7 +132,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         : answer.length === 0 && !errorOccurred
     ) {
       // Search the web and generate the answer
-      const { fullResponse, hasError, toolResponses } = await researcher(
+      const { fullResponse, hasError, toolResponses, mapDataFromGeospatialTool } = await researcher(
         uiStream,
         streamText,
         messages,
@@ -140,6 +140,10 @@ async function submit(formData?: FormData, skip?: boolean) {
       );
       answer = fullResponse;
       toolOutputs = toolResponses;
+      // mapDataFromGeospatialTool is now directly used in the final aiState.done() call.
+      if (mapDataFromGeospatialTool) {
+        console.log("actions.tsx: Received mapData from researcher:", mapDataFromGeospatialTool);
+      }
       errorOccurred = hasError;
 
       if (toolOutputs.length > 0) {
@@ -216,8 +220,25 @@ async function submit(formData?: FormData, skip?: boolean) {
             content: 'followup',
             type: 'followup',
           },
-        ],
-      });
+        ];
+
+      // Construct the final state for aiState.done()
+      const finalAIStateUpdate: AIState = {
+        ...aiState.get(), // Get existing parts of state like chatId, existing messages to be retained by aiState.get()
+        messages: allMessagesForDone, // This contains the new assistant response, related, followup etc.
+      };
+
+      if (mapDataFromGeospatialTool) {
+        finalAIStateUpdate.currentMapTarget = mapDataFromGeospatialTool;
+      } else {
+        // If no new map data, retain the existing one from the current state
+        // This ensures map doesn't clear if subsequent messages don't have map data.
+        // If it should clear, then set to null explicitly.
+        const existingState = aiState.get();
+        finalAIStateUpdate.currentMapTarget = existingState.currentMapTarget ?? null;
+      }
+
+      aiState.done(finalAIStateUpdate);
     }
 
     isGenerating.done(false);
@@ -234,10 +255,13 @@ async function submit(formData?: FormData, skip?: boolean) {
   };
 }
 
+import { Chat, AIMessage, MapData } from '@/lib/types'; // Added MapData
+
 export type AIState = {
   messages: AIMessage[];
   chatId: string;
   isSharePage?: boolean;
+  currentMapTarget?: MapData | null; // Added field
 };
 
 export type UIState = {
@@ -250,6 +274,7 @@ export type UIState = {
 const initialAIState: AIState = {
   chatId: nanoid(),
   messages: [],
+  currentMapTarget: null, // Initialize
 };
 
 const initialUIState: UIState = [];
@@ -383,6 +408,15 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                   </Section>
                 ),
               };
+            // Potentially handle 'map_update' type here for UI rendering if it's a separate component
+            // case 'map_update':
+            //   if (message.mapData) {
+            //     return {
+            //       id,
+            //       component: <MapDisplayComponent mapData={message.mapData} /> // Example component
+            //     };
+            //   }
+            //   return null;
           }
           break;
         case 'tool':

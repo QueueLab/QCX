@@ -7,7 +7,7 @@ import Header from '@/components/header'
 import Footer from '@/components/footer'
 import { Sidebar } from '@/components/sidebar'
 import { Toaster } from '@/components/ui/sonner'
-import { MapToggleProvider } from '@/components/map-toggle-context'
+// import { MapToggleProvider } from '@/components/map-toggle-context'; // REMOVED
 import { ProfileToggleProvider } from '@/components/profile-toggle-context'
 
 const fontSans = FontSans({
@@ -50,7 +50,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={cn('font-sans antialiased', fontSans.variable)}>
-        <MapToggleProvider>
+        {/* <MapToggleProvider> */} {/* REMOVED */}
           <ProfileToggleProvider>
             <ThemeProvider
               attribute="class"
@@ -66,7 +66,7 @@ export default function RootLayout({
               <Toaster />
             </ThemeProvider>
           </ProfileToggleProvider>
-        </MapToggleProvider>
+        {/* </MapToggleProvider> */} {/* REMOVED */}
       </body>
     </html>
   )

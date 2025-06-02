@@ -69,4 +69,31 @@ export type AIMessage = {
     | 'tool'
     | 'followup'
     | 'end'
+  // 'map_update' type is removed as mapData will be on currentMapTarget in AIState or directly on assistant message
+  mapData?: MapData; // Using the more specific MapData type
 }
+
+// Specific MapData types
+export type PointMapData = {
+  type: 'Point';
+  coordinates: [number, number]; // [lon, lat]
+  label?: string;
+  placeName?: string;
+  zoom?: number;
+};
+export type RouteMapData = {
+  type: 'Route';
+  geojson: any; // GeoJSON object for the route
+  label?: string;
+};
+export type PlacesMapData = {
+  type: 'Places';
+  places: Array<{
+    coordinates: [number, number]; // [lon, lat]
+    label?: string;
+    placeName?: string;
+  }>;
+  label?: string;
+};
+
+export type MapData = PointMapData | RouteMapData | PlacesMapData | null; // Allow null for currentMapTarget initial state

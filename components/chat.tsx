@@ -18,10 +18,13 @@ export function Chat({ id }: ChatProps) {
   const router = useRouter()
   const path = usePathname()
   const [messages] = useUIState()
-  const [aiState] = useAIState()
+  const [aiState] = useAIState() // aiState contains currentMapTarget
   const [isMobile, setIsMobile] = useState(false)
   const { activeView } = useProfileToggle();
   
+  // Extract currentMapTarget from aiState
+  const currentMapTarget = aiState.currentMapTarget;
+
   useEffect(() => {
     // Check if device is mobile
     const checkMobile = () => {
@@ -56,7 +59,7 @@ export function Chat({ id }: ChatProps) {
     return (
       <div className="mobile-layout-container">
         <div className="mobile-map-section">
-          {activeView ? <SettingsView /> : <Mapbox />}
+          {activeView ? <SettingsView /> : <Mapbox mapTarget={currentMapTarget} />}
         </div>
         <div className="mobile-icons-bar">
           <MobileIconsBar />
@@ -78,7 +81,7 @@ export function Chat({ id }: ChatProps) {
         <ChatPanel messages={messages} />
       </div>
       <div className="w-1/2 p-4 fixed h-[calc(100vh-0.5in)] top-0 right-0 mt-[0.5in]">
-        {activeView ? <SettingsView /> : <Mapbox />}
+        {activeView ? <SettingsView /> : <Mapbox mapTarget={currentMapTarget} />}
       </div>
     </div>
   )
