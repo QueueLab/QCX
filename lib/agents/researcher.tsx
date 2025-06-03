@@ -1,15 +1,15 @@
 import { createStreamableUI, createStreamableValue } from 'ai/rsc'
 import {
   CoreMessage,
-  LanguageModel,
-  ToolCallPart,
-  ToolResultPart,
-  streamText as nonexperimental_streamText
+  // LanguageModel, // LanguageModel might not be needed here anymore
+  ToolCallPart, // May be handled differently by MCP
+  ToolResultPart // May be handled differently by MCP
+  // streamText as nonexperimental_streamText // Removed
 } from 'ai'
 import { Section } from '@/components/section'
 import { BotMessage } from '@/components/message'
-import { getTools } from './tools'
-import { getModel } from '../utils'
+import { getTools } from './tools' // getTools might be used to send tool definitions or simplified
+// import { getModel } from '../utils' // getModel will likely be used server-side by MCP handler
 
 export async function researcher(
   uiStream: ReturnType<typeof createStreamableUI>,
@@ -25,83 +25,71 @@ export async function researcher(
     </Section>
   )
 
-  const currentDate = new Date().toLocaleString()
-  const system_prompt = `As a comprehensive AI assistant, you can search the web, retrieve information from URLs, and understand geospatial queries to assist the user and display information on a map.
-Current date and time: ${currentDate}.
+  // uiStream.update(null) // Spinner removal can be handled after fetch starts or first data arrives
 
-Tool Usage Guide:
-- For general web searches for factual information: Use the 'search' tool.
-- For retrieving content from specific URLs provided by the user: Use the 'retrieve' tool. (Do not use this for URLs found in search results).
-- **For any questions involving locations, places, addresses, geographical features, finding businesses or points of interest, distances between locations, or directions: You MUST use the 'geospatialQueryTool'. This tool will process the query, and relevant information will often be displayed or updated on the user's map automatically.**
-  Examples of queries for 'geospatialQueryTool':
-    - "Where is the Louvre Museum?"
-    - "Show me cafes near the current map center."
-    - "How far is it from New York City to Los Angeles?"
-    - "What are some parks in San Francisco?"
-  When you use 'geospatialQueryTool', you don't need to describe how the map will change; simply provide your textual answer based on the query, and trust the map will update appropriately.
-
-Always aim to directly address the user's question. If using information from a tool (like web search), cite the source URL.
-Match the language of your response to the user's language.`;
-
-     const result = await nonexperimental_streamText({
-       model: getModel() as LanguageModel,
-       maxTokens: 2500,
-       system: system_prompt, // Use the updated prompt
-       messages,
-       tools: getTools({
-      uiStream,
-      fullResponse
+  try {
+    const response = await fetch('/api/mcp', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        messages,
+        // TODO: Determine if tool definitions or other specific options need to be sent.
+        // For now, assuming the server-side MCP handler has access to necessary tools.
+        // The `getTools` function might not be directly used here anymore,
+        // or its output might need to be transformed.
+        // The system prompt will be part of the MCP handler's setup.
+      })
     })
-  })
 
-  // Remove the spinner
-  uiStream.update(null)
+    if (!response.ok) {
+      throw new Error(`API request failed with status ${response.status}`)
+    }
 
-  // Process the response
-  const toolCalls: ToolCallPart[] = []
-  const toolResponses: ToolResultPart[] = []
-  for await (const delta of result.fullStream) {
-    switch (delta.type) {
-      case 'text-delta':
-        if (delta.textDelta) {
-          // If the first text delta is available, add a UI section
-          if (fullResponse.length === 0 && delta.textDelta.length > 0) {
-            // Update the UI
+    // Remove the spinner once the response starts streaming
+    uiStream.update(null)
+
+    if (response.body) {
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let done = false
+
+      while (!done) {
+        const { value, done: readerDone } = await reader.read()
+        done = readerDone
+        const chunk = decoder.decode(value, { stream: true })
+
+        // TODO: Adapt this part based on the actual stream format from MCP adapter.
+        // Assuming text stream for now. It might be JSON objects with types.
+        if (chunk) {
+          if (fullResponse.length === 0 && chunk.length > 0) {
             uiStream.update(answerSection)
           }
-
-          fullResponse += delta.textDelta
+          fullResponse += chunk
           streamText.update(fullResponse)
         }
-        break
-      case 'tool-call':
-        toolCalls.push(delta)
-        break
-      case 'tool-result':
-        // Append the answer section if the specific model is not used
-        if (!useSpecificModel && toolResponses.length === 0 && delta.result) {
-          uiStream.append(answerSection)
-        }
-        if (!delta.result) {
-          hasError = true
-        }
-        toolResponses.push(delta)
-        break
-      case 'error':
-        hasError = true
-        fullResponse += `\nError occurred while executing the tool`
-        break
+      }
+    } else {
+      throw new Error('Response body is null')
     }
-  }
-  messages.push({
-    role: 'assistant',
-    content: [{ type: 'text', text: fullResponse }, ...toolCalls]
-  })
 
-  if (toolResponses.length > 0) {
-    // Add tool responses to the messages
-    messages.push({ role: 'tool', content: toolResponses })
+    // TODO: Re-evaluate how messages are updated.
+    // The MCP handler might provide the complete assistant message.
+    // Tool calls and results are now handled server-side by the MCP adapter.
+    // The client might receive a final message that already incorporates tool usage.
+    messages.push({
+      role: 'assistant',
+      content: [{ type: 'text', text: fullResponse }] // Simplified for now
+    })
+  } catch (error) {
+    console.error('Error in researcher:', error)
+    hasError = true
+    fullResponse = 'An error occurred while processing your request.' // Or a more specific error
+    streamText.update(fullResponse) // Update UI with error message
+    uiStream.update(answerSection) // Ensure answer section is shown for error
   }
 
-  return { result, fullResponse, hasError, toolResponses }
+  // TODO: Adjust return values. `result` is gone. `toolResponses` might be irrelevant or different.
+  return { fullResponse, hasError, toolResponses: [] } // Placeholder for toolResponses
 }

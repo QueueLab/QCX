@@ -1,35 +1,26 @@
-import { createStreamableUI } from 'ai/rsc'
+// import { createStreamableUI } from 'ai/rsc' // Removed, not suitable for server-side
 import { retrieveTool } from './retrieve'
 import { searchTool } from './search'
 import { videoSearchTool } from './video-search'
-import { geospatialTool } from './geospatial'; // Added import
+import { geospatialTool } from './geospatial'
 
-export interface ToolProps {
-  uiStream: ReturnType<typeof createStreamableUI>
-  fullResponse: string
-}
+// ToolProps is removed as uiStream and fullResponse are client-side constructs.
+// export interface ToolProps {
+//   uiStream: ReturnType<typeof createStreamableUI>
+//   fullResponse: string
+// }
 
-export const getTools = ({ uiStream, fullResponse }: ToolProps) => {
+// getTools will now directly return the tool definitions for the MCP handler.
+// The individual tool files will be refactored to not expect uiStream or fullResponse.
+export const getTools = () => {
   const tools: any = {
-    search: searchTool({
-      uiStream,
-      fullResponse
-    }),
-    retrieve: retrieveTool({
-      uiStream,
-      fullResponse
-       }),
-       geospatialQueryTool: geospatialTool({ // Added new tool
-         uiStream,
-         fullResponse 
-    })
+    search: searchTool(),
+    retrieve: retrieveTool(),
+    geospatialQueryTool: geospatialTool()
   }
 
   if (process.env.SERPER_API_KEY) {
-    tools.videoSearch = videoSearchTool({
-      uiStream,
-      fullResponse
-    })
+    tools.videoSearch = videoSearchTool()
   }
 
   return tools
