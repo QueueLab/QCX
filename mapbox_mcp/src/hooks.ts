@@ -70,8 +70,17 @@ export const useMCPMapClient = () => {
       console.log('✅ Connected to MCP server');
       console.log('Available tools:', Object.keys(tools));
     } catch (err) {
-      setError(`Failed to connect to MCP server: ${err}`);
-      console.error('❌ MCP connection error:', err);
+      const profileId = process.env.NEXT_PUBLIC_SMITHERY_PROFILE_ID;
+      const apiKey = process.env.NEXT_PUBLIC_SMITHERY_API_KEY;
+      const url = `https://server.smithery.ai/@ngoiyaeric/mapbox-mcp-server/mcp?profile=${profileId}&api_key=${apiKey ? '********' + apiKey.slice(-4) : 'NOT_SET'}`;
+
+      console.error('❌ MCP connection error details:');
+      console.error(`Attempted URL (API key masked): ${url.replace(/api_key=([^&]+)/, 'api_key=********')}`);
+      console.error(`NEXT_PUBLIC_SMITHERY_PROFILE_ID: ${profileId || 'NOT_SET'}`);
+      console.error(`NEXT_PUBLIC_SMITHERY_API_KEY (masked): ${apiKey ? apiKey.substring(0, 4) + '********' + apiKey.slice(-4) : 'NOT_SET'}`);
+
+      setError(`Failed to connect to MCP server. Please check console for details. Error: ${err}`);
+      console.error('Original error object:', err);
     } finally {
       setIsLoading(false);
     }
