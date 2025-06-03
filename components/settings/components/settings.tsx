@@ -117,9 +117,15 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
         <div className="space-y-6">
           <Tabs.Root value={currentTab} onValueChange={setCurrentTab} className="w-full">
             <Tabs.List className="grid w-full grid-cols-3">
-              <Tabs.Trigger value="system-prompt">System Prompt</Tabs.Trigger>
-              <Tabs.Trigger value="model">Model Selection</Tabs.Trigger>
-              <Tabs.Trigger value="user-management">User Management</Tabs.Trigger>
+              <Tabs.Trigger value="system-prompt" asChild>
+                <Button variant="outline">System Prompt</Button>
+              </Tabs.Trigger>
+              <Tabs.Trigger value="model" asChild>
+                <Button variant="outline">Model Selection</Button>
+              </Tabs.Trigger>
+              <Tabs.Trigger value="user-management" asChild>
+                <Button variant="outline">User Management</Button>
+              </Tabs.Trigger>
             </Tabs.List>
 
             <Tabs.Content value="system-prompt">
