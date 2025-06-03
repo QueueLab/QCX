@@ -10,12 +10,12 @@ export async function writer(
   messages: CoreMessage[]
 ) {
   let fullResponse = ''
-  const answerSection = (
-    <Section title="response">
-      <BotMessage content={streamText.value} />
-    </Section>
-  )
-  uiStream.append(answerSection)
+  // const answerSection = (
+  //   <Section title="response">
+  //     <BotMessage content={streamText.value} />
+  //   </Section>
+  // )
+  // uiStream.append(answerSection)
 
   const result = await nonexperimental_streamText({
     model: getModel() as LanguageModel,
