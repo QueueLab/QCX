@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { startNewChat } from '@/lib/actions/chat'
 import type { AI, UIState } from '@/app/actions'
 import { useUIState, useActions } from 'ai/rsc'
 import { cn } from '@/lib/utils'
@@ -61,8 +62,8 @@ export function ChatPanel({ messages }: ChatPanelProps) {
     setMessages(currentMessages => [...currentMessages, responseMessage as any])
   }
 
-  const handleClear = () => {
-    router.push('/')
+  const handleClear = async () => {
+    await startNewChat()
   }
 
   useEffect(() => {

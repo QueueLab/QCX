@@ -47,17 +47,18 @@ export async function clearChats(
   userId: string = 'anonymous'
 ): Promise<{ error?: string }> {
   const chats: string[] = await redis.zrange(`user:chat:${userId}`, 0, -1)
-  if (!chats.length) {
-    return { error: 'No chats to clear' }
-  }
-  const pipeline = redis.pipeline()
 
-  for (const chat of chats) {
-    pipeline.del(chat)
-    pipeline.zrem(`user:chat:${userId}`, chat)
-  }
+  // Only create and execute pipeline if chats exist
+  if (chats.length) {
+    const pipeline = redis.pipeline()
 
-  await pipeline.exec()
+    for (const chat of chats) {
+      pipeline.del(chat)
+      pipeline.zrem(`user:chat:${userId}`, chat)
+    }
+
+    await pipeline.exec()
+  }
 
   revalidatePath('/')
   redirect('/')
@@ -98,4 +99,9 @@ export async function shareChat(id: string, userId: string = 'anonymous') {
   await redis.hmset(`chat:${id}`, payload)
 
   return payload
+}
+
+export async function startNewChat() {
+  await clearChats()
+  // clearChats handles redirect, so no explicit return needed here
 }
