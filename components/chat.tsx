@@ -45,12 +45,12 @@ export function Chat({ id }: ChatProps) {
     }
   }, [id, path, messages])
 
-  useEffect(() => {
-    if (aiState.messages[aiState.messages.length - 1]?.type === 'response') {
-      // Refresh the page to chat history updates
-      router.refresh()
-    }
-  }, [aiState, router])
+// useEffect(() => {
+//   if (aiState.messages[aiState.messages.length - 1]?.type === 'response') {
+//     // Refresh the page to chat history updates
+//     router.refresh()
+//   }
+// }, [aiState, router])
 
   // Mobile layout
   if (isMobile) {
