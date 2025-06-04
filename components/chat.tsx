@@ -79,6 +79,7 @@ export function Chat({ id }: ChatProps) {
                 submitMessage={message => {
                   setInput(message)
                 }}
++                isEmptyHistory={!!id}
               />
             ) : (
               <ChatMessages messages={messages} />
