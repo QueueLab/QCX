@@ -11,6 +11,8 @@ export enum MapToggleEnum {
 interface MapToggleContextType {
   mapType: MapToggleEnum;
   setMapType: (type: MapToggleEnum) => void;
+  isAttachedImageVisible: boolean;
+  setIsAttachedImageVisible: (isVisible: boolean) => void;
 }
 
 const MapToggleContext = createContext<MapToggleContextType | undefined>(undefined);
@@ -21,13 +23,21 @@ interface MapToggleProviderProps {
 
 export const MapToggleProvider: React.FC<MapToggleProviderProps> = ({ children }) => {
   const [mapToggleState, setMapToggle] = useState<MapToggleEnum>(MapToggleEnum.FreeMode);
+  const [isAttachedImageVisible, setIsAttachedImageVisible] = useState<boolean>(true);
 
   const setMapType = (type: MapToggleEnum) => {
     setMapToggle(type);
   }
 
   return (
-    <MapToggleContext.Provider value={{ mapType: mapToggleState, setMapType }}>
+    <MapToggleContext.Provider
+      value={{
+        mapType: mapToggleState,
+        setMapType,
+        isAttachedImageVisible,
+        setIsAttachedImageVisible
+      }}
+    >
       {children}
     </MapToggleContext.Provider>
   );
