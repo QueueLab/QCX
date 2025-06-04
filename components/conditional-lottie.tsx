@@ -4,8 +4,8 @@ import LottiePlayer from '@/components/ui/lottie-player';
 import { useMapLoading } from '@/components/map-loading-context';
 
 const ConditionalLottie = () => {
-  const { isMapLoaded } = useMapLoading();
-  return <LottiePlayer isVisible={!isMapLoaded} />;
+  const { isMapLoaded, hasAppInitiallyLoaded } = useMapLoading();
+  return <LottiePlayer isVisible={!isMapLoaded && !hasAppInitiallyLoaded} />;
 };
 
 export default ConditionalLottie;

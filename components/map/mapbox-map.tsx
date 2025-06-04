@@ -33,7 +33,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   const drawingFeatures = useRef<any>(null)
   const { mapType } = useMapToggle()
   const { mapData } = useMapData(); // Consume the new context
-  const { setIsMapLoaded } = useMapLoading(); // Get setIsMapLoaded from context
+  const { setIsMapLoaded, hasAppInitiallyLoaded } = useMapLoading(); // Get setIsMapLoaded and hasAppInitiallyLoaded from context
   const previousMapTypeRef = useRef<MapToggleEnum | null>(null)
   // const [isMapLoaded, setIsMapLoaded] = useState(false); // Removed local state
 
@@ -450,7 +450,9 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         Object.values(lineLabelsRef.current).forEach(marker => marker.remove())
         
         stopRotation()
-        setIsMapLoaded(false) // Reset map loaded state on cleanup
+        if (!hasAppInitiallyLoaded) {
+          setIsMapLoaded(false); // Reset map loaded state on cleanup only if not initially loaded
+        }
         map.current.remove()
         map.current = null
       }
@@ -469,7 +471,8 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     setupGeolocationWatcher, 
     captureMapCenter, 
     setupDrawingTools,
-    setIsMapLoaded // Added missing dependency
+    setIsMapLoaded, // Added missing dependency
+    hasAppInitiallyLoaded // Added hasAppInitiallyLoaded to dependency array
   ])
 
   // Handle position updates from props
