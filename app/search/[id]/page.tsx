@@ -1,7 +1,8 @@
 import { notFound, redirect } from 'next/navigation';
 import { Chat } from '@/components/chat';
 import { getChat } from '@/lib/actions/chat';
-import { AI, type AIMessage } from '@/app/actions'; // Ensure AIMessage is imported if it's used by Chat type, or import from lib/types
+import { AI } from '@/app/actions';
+import { type AIMessage } from '@/lib/types';
 
 export const maxDuration = 60;
 
@@ -15,6 +16,23 @@ export async function generateMetadata({ params }: SearchPageProps) {
   return {
     title: chat?.title.toString().slice(0, 50) || 'Search',
   };
+}
+
+// Helper type guards
+function isAIMessage(obj: any): obj is AIMessage {
+  return (
+    obj &&
+    typeof obj.id === 'string' &&
+    typeof obj.role === 'string' &&
+    typeof obj.content === 'string' &&
+    // Optional: Add checks for other mandatory fields if strict validation is needed
+    (obj.type === undefined || typeof obj.type === 'string') &&
+    (obj.name === undefined || typeof obj.name === 'string')
+  );
+}
+
+function isAIMessageArray(obj: any): obj is AIMessage[] {
+  return Array.isArray(obj) && obj.every(isAIMessage);
 }
 
 export default async function SearchPage({ params }: SearchPageProps) {
@@ -35,7 +53,13 @@ export default async function SearchPage({ params }: SearchPageProps) {
   // Check if chat.messages exists and is a string before trying to parse
   if (chat.messages && typeof chat.messages === 'string') {
     try {
-      parsedMessages = JSON.parse(chat.messages);
+      const parsedJson = JSON.parse(chat.messages);
+      if (isAIMessageArray(parsedJson)) {
+        parsedMessages = parsedJson;
+      } else {
+        console.warn('Parsed chat.messages is not a valid AIMessage array.');
+        parsedMessages = [];
+      }
     } catch (error) {
       console.error('Failed to parse chat.messages from string:', error);
       parsedMessages = []; // Fallback to empty array on error
