@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Map, Pencil, Eye, EyeOff } from 'lucide-react' // Added Eye, EyeOff
 import { useMapToggle, MapToggleEnum } from './map-toggle-context'
-import { useMapData } from '../map/map-data-context'; // Added useMapData
+import { useMapData } from './map/map-data-context'; // Corrected path
 
 export function MapToggle() {
   const { mapType, setMapType, isAttachedImageVisible, setIsAttachedImageVisible } = useMapToggle();
