@@ -32,6 +32,7 @@ export default async function SearchPage({ params }: SearchPageProps) {
 
   return (
     <AI
+      key={id}
       initialAIState={{
         chatId: chat.id,
         messages: chat.messages,
