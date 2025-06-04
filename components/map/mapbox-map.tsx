@@ -31,9 +31,9 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     position?.latitude ?? 0
   ])
   const drawingFeatures = useRef<any>(null)
-  const { mapType } = useMapToggle()
+  const { mapType, isAttachedImageVisible } = useMapToggle() // Added isAttachedImageVisible
   const { mapData } = useMapData(); // Consume the new context
-  const { setIsMapLoaded } = useMapLoading(); // Get setIsMapLoaded from context
+  const { isMapLoaded, setIsMapLoaded } = useMapLoading(); // Get isMapLoaded and setIsMapLoaded from context
   const previousMapTypeRef = useRef<MapToggleEnum | null>(null)
   // const [isMapLoaded, setIsMapLoaded] = useState(false); // Removed local state
 
@@ -498,6 +498,68 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     //   drawRoute(mapData.mapFeature.route_geometry); // Implement drawRoute function if needed
     // }
   }, [mapData.targetPosition, mapData.mapFeature, updateMapPosition]);
+
+  // Effect to handle attached image rendering
+  useEffect(() => {
+    if (!map.current || !isMapLoaded) return;
+
+    const imageSourceId = 'attached-image-source';
+    const imageLayerId = 'attached-image-layer';
+    const currentMap = map.current; // Store map.current for stable reference
+
+    // Function to remove image layer and source
+    const removeImage = () => {
+      if (currentMap.getLayer(imageLayerId)) {
+        currentMap.removeLayer(imageLayerId);
+      }
+      if (currentMap.getSource(imageSourceId)) {
+        currentMap.removeSource(imageSourceId);
+      }
+    };
+
+    if (mapData.attachedImage && typeof mapData.attachedImage === 'string') {
+      // If source doesn't exist, or URL has changed, remove and re-add source
+      // This simple check might not be enough if coordinates also change and need to update source
+      const existingSource = currentMap.getSource(imageSourceId) as mapboxgl.ImageSource;
+      if (!existingSource || existingSource.url !== mapData.attachedImage) {
+        if (existingSource) {
+          removeImage(); // Remove layer and source before re-adding
+        }
+
+        const placeholderCoordinates = [
+          [-74.0445, 40.6892],
+          [-73.9851, 40.6892],
+          [-73.9851, 40.7580],
+          [-74.0445, 40.7580]
+        ];
+        currentMap.addSource(imageSourceId, {
+          type: 'image',
+          url: mapData.attachedImage,
+          coordinates: placeholderCoordinates as [[number, number], [number, number], [number, number], [number, number]]
+        });
+      }
+
+      // If layer doesn't exist, add it
+      if (!currentMap.getLayer(imageLayerId)) {
+        currentMap.addLayer({
+          id: imageLayerId,
+          type: 'raster',
+          source: imageSourceId,
+          paint: {
+            'raster-fade-duration': 0
+          }
+        });
+      }
+
+      // Set visibility based on isAttachedImageVisible
+      // This needs to run even if the image/source hasn't changed but visibility has
+      currentMap.setLayoutProperty(imageLayerId, 'visibility', isAttachedImageVisible ? 'visible' : 'none');
+
+    } else {
+      // No attached image, so remove any existing layer and source
+      removeImage();
+    }
+  }, [mapData.attachedImage, isMapLoaded, isAttachedImageVisible]); // Added isAttachedImageVisible
 
   return (
     <div className="relative h-full w-full">
