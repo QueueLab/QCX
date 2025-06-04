@@ -19,11 +19,6 @@ export async function researcher(
 ) {
   let fullResponse = ''
   let hasError = false
-  const answerSection = (
-    <Section title="response">
-      <BotMessage content={streamText.value} />
-    </Section>
-  )
 
   const currentDate = new Date().toLocaleString()
   const system_prompt = `As a comprehensive AI assistant, you can search the web, retrieve information from URLs, and understand geospatial queries to assist the user and display information on a map.
@@ -65,10 +60,10 @@ Match the language of your response to the user's language.`;
       case 'text-delta':
         if (delta.textDelta) {
           // If the first text delta is available, add a UI section
-          if (fullResponse.length === 0 && delta.textDelta.length > 0) {
-            // Update the UI
-            uiStream.update(answerSection)
-          }
+          // if (fullResponse.length === 0 && delta.textDelta.length > 0) {
+          //   // Update the UI
+          //   uiStream.update(answerSection)
+          // }
 
           fullResponse += delta.textDelta
           streamText.update(fullResponse)
@@ -79,9 +74,9 @@ Match the language of your response to the user's language.`;
         break
       case 'tool-result':
         // Append the answer section if the specific model is not used
-        if (!useSpecificModel && toolResponses.length === 0 && delta.result) {
-          uiStream.append(answerSection)
-        }
+        // if (!useSpecificModel && toolResponses.length === 0 && delta.result) {
+        //   uiStream.append(answerSection)
+        // }
         if (!delta.result) {
           hasError = true
         }
