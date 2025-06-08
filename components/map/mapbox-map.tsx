@@ -31,9 +31,9 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     position?.latitude ?? 0
   ])
   const drawingFeatures = useRef<any>(null)
-  const { mapType } = useMapToggle()
+  const { mapType, isAttachedImageVisible } = useMapToggle() // Added isAttachedImageVisible
   const { mapData } = useMapData(); // Consume the new context
-  const { setIsMapLoaded } = useMapLoading(); // Get setIsMapLoaded from context
+  const { isMapLoaded, setIsMapLoaded } = useMapLoading(); // Get isMapLoaded and setIsMapLoaded from context
   const previousMapTypeRef = useRef<MapToggleEnum | null>(null)
   // const [isMapLoaded, setIsMapLoaded] = useState(false); // Removed local state
 
@@ -498,6 +498,88 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     //   drawRoute(mapData.mapFeature.route_geometry); // Implement drawRoute function if needed
     // }
   }, [mapData.targetPosition, mapData.mapFeature, updateMapPosition]);
+
+  // Effect to handle attached image rendering
+  useEffect(() => {
+    if (!map.current || !isMapLoaded) return;
+
+    const imageSourceId = 'attached-image-source';
+    const imageLayerId = 'attached-image-layer';
+    const currentMap = map.current; // Store map.current for stable reference
+
+    // Function to remove image layer and source
+    const removeImage = () => {
+      if (currentMap.getLayer(imageLayerId)) {
+        currentMap.removeLayer(imageLayerId);
+      }
+      if (currentMap.getSource(imageSourceId)) {
+        currentMap.removeSource(imageSourceId);
+      }
+    };
+
+    // Main condition: image string, bounding box, and no error related to this image processing
+    if (mapData.attachedImage && typeof mapData.attachedImage === 'string' && mapData.imageBoundingBox && !mapData.error) {
+      const bb = mapData.imageBoundingBox;
+      const dynamicCoordinates: mapboxgl.ImageSourceSpecification['coordinates'] = [
+        [bb.southWest.lon, bb.northEast.lat], // Top-left
+        [bb.northEast.lon, bb.northEast.lat], // Top-right
+        [bb.northEast.lon, bb.southWest.lat], // Bottom-right
+        [bb.southWest.lon, bb.southWest.lat]  // Bottom-left
+      ];
+
+      const existingSource = currentMap.getSource(imageSourceId) as mapboxgl.ImageSource;
+
+      // Check if source needs update (url or coordinates changed)
+      let sourceNeedsUpdate = false;
+      if (existingSource) {
+        if (existingSource.url !== mapData.attachedImage) {
+          sourceNeedsUpdate = true;
+        } else {
+          // Compare coordinates (simple stringify for basic check, could be more robust)
+          const existingCoords = JSON.stringify(existingSource.coordinates);
+          const newCoords = JSON.stringify(dynamicCoordinates);
+          if (existingCoords !== newCoords) {
+            sourceNeedsUpdate = true;
+          }
+        }
+      }
+
+      if (!existingSource || sourceNeedsUpdate) {
+        if (existingSource) {
+          removeImage(); // Remove layer and source before re-adding/updating
+        }
+        currentMap.addSource(imageSourceId, {
+          type: 'image',
+          url: mapData.attachedImage,
+          coordinates: dynamicCoordinates
+        });
+      }
+
+      if (!currentMap.getLayer(imageLayerId)) {
+        currentMap.addLayer({
+          id: imageLayerId,
+          type: 'raster',
+          source: imageSourceId,
+          paint: {
+            'raster-fade-duration': 0
+          }
+        });
+      }
+
+      currentMap.setLayoutProperty(imageLayerId, 'visibility', isAttachedImageVisible ? 'visible' : 'none');
+
+    } else {
+      // Conditions not met (no image, no bounding box, or there's an error)
+      // Ensure any existing image is removed
+      removeImage();
+    }
+  }, [
+    mapData.attachedImage,
+    mapData.imageBoundingBox,
+    mapData.error,
+    isMapLoaded,
+    isAttachedImageVisible
+  ]);
 
   return (
     <div className="relative h-full w-full">
