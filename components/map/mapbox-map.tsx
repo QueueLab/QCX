@@ -520,7 +520,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     // Main condition: image string, bounding box, and no error related to this image processing
     if (mapData.attachedImage && typeof mapData.attachedImage === 'string' && mapData.imageBoundingBox && !mapData.error) {
       const bb = mapData.imageBoundingBox;
-      const dynamicCoordinates: mapboxgl.ImageSourceOptions['coordinates'] = [
+      const dynamicCoordinates: mapboxgl.ImageSourceSpecification['coordinates'] = [
         [bb.southWest.lon, bb.northEast.lat], // Top-left
         [bb.northEast.lon, bb.northEast.lat], // Top-right
         [bb.northEast.lon, bb.southWest.lat], // Bottom-right

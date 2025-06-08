@@ -111,7 +111,7 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
         content: [
           {
             type: 'text',
-            text: "Analyze this image. Is it primarily a map? If yes, provide a JSON object with two keys: 'isMap' (boolean) and 'boundingBox'. The 'boundingBox' should define the geographical area of the map with 'northEast' and 'southWest' latitude/longitude coordinates. If it's not a map or you cannot determine the bounding box, set 'isMap' to false and omit 'boundingBox'. Example for a map: {\\"isMap\\": true, \\"boundingBox\\": {\\"northEast\\": {\\"lat\\": 40.785, \\"lon\\": -73.960}, \\"southWest\\": {\\"lat\\": 40.768, \\"lon\\": -73.982}}}"
+            text: `Analyze this image. Is it primarily a map? If yes, provide a JSON object with two keys: 'isMap' (boolean) and 'boundingBox'. The 'boundingBox' should define the geographical area of the map with 'northEast' and 'southWest' latitude/longitude coordinates. If it's not a map or you cannot determine the bounding box, set 'isMap' to false and omit 'boundingBox'. Example for a map: {"isMap": true, "boundingBox": {"northEast": {"lat": 40.785, "lon": -73.960}, "southWest": {"lat": 40.768, "lon": -73.982}}}`
           },
           {
             type: 'image',
@@ -300,7 +300,7 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
             disabled={isProcessingImage}
             title="Attach image"
           >
-            {isProcessingImage ? <Spinner className="h-5 w-5" /> : <Paperclip size={isMobile ? 18 : 20} />}
+            {isProcessingImage ? <Spinner /> : <Paperclip size={isMobile ? 18 : 20} />}
           </Button>
           {mapData.attachedImage && !isProcessingImage && ( // Hide remove button during processing
             <Button
