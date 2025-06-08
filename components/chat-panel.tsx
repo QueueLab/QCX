@@ -5,12 +5,14 @@ import { useRouter } from 'next/navigation'
 import type { AI, UIState } from '@/app/actions'
 import { useMapData } from './map/map-data-context' // Corrected path
 import { useUIState, useActions } from 'ai/rsc'
-import { cn } from '@/lib/utils'
+import { cn, getModel } from '@/lib/utils' // Added getModel
 import { UserMessage } from './user-message'
 import { Button } from './ui/button'
 import { ArrowRight, Plus, Paperclip, XCircle } from 'lucide-react' // Added XCircle
 import Textarea from 'react-textarea-autosize'
 import { nanoid } from 'nanoid'
+import { CoreMessage, generateText } from 'ai' // AI SDK imports
+import { Spinner } from './ui/spinner' // Spinner import
 
 interface ChatPanelProps {
   messages: UIState
@@ -26,6 +28,7 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { mapData, setMapData } = useMapData() // Added mapData here
+  const [isProcessingImage, setIsProcessingImage] = useState(false); // Loading state for AI processing
   const router = useRouter()
 
   // Detect mobile layout
@@ -67,23 +70,125 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
     router.push('/')
   }
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setMapData(prev => ({ ...prev, attachedImage: reader.result as string }))
+    if (!file) return;
+
+    setIsProcessingImage(true);
+    // Clear previous error messages
+    setMapData(prev => ({ ...prev, error: null, imageBoundingBox: null }));
+
+
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const imageDataUrl = reader.result as string;
+      try {
+        await getMapInfoFromImage(imageDataUrl);
+      } catch (error) {
+        console.error("Error processing image:", error);
+        setMapData(prev => ({
+          ...prev,
+          attachedImage: imageDataUrl, // Keep the image even if processing fails
+          imageBoundingBox: null,
+          error: 'Failed to analyze image with AI.'
+        }));
+      } finally {
+        setIsProcessingImage(false);
+        // Reset file input value to allow selecting the same file again
+        if (event.target) {
+          event.target.value = '';
+        }
       }
-      reader.readAsDataURL(file)
-      // Reset file input value to allow selecting the same file again
-      if (event.target) {
-        event.target.value = ''
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const getMapInfoFromImage = async (imageDataUrl: string) => {
+    const model = getModel();
+    const messages: CoreMessage[] = [
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: "Analyze this image. Is it primarily a map? If yes, provide a JSON object with two keys: 'isMap' (boolean) and 'boundingBox'. The 'boundingBox' should define the geographical area of the map with 'northEast' and 'southWest' latitude/longitude coordinates. If it's not a map or you cannot determine the bounding box, set 'isMap' to false and omit 'boundingBox'. Example for a map: {\\"isMap\\": true, \\"boundingBox\\": {\\"northEast\\": {\\"lat\\": 40.785, \\"lon\\": -73.960}, \\"southWest\\": {\\"lat\\": 40.768, \\"lon\\": -73.982}}}"
+          },
+          {
+            type: 'image',
+            image: new URL(imageDataUrl)
+          }
+        ]
       }
+    ];
+
+    try {
+      const { text } = await generateText({ model, messages });
+      console.log("AI Response Text:", text);
+
+      let parsedData;
+      let isMap = false;
+      let boundingBox = null;
+      let parseError = null;
+
+      try {
+        parsedData = JSON.parse(text);
+        if (parsedData && typeof parsedData.isMap === 'boolean') {
+          isMap = parsedData.isMap;
+          if (isMap && parsedData.boundingBox) {
+            // Basic validation for boundingBox structure (can be more thorough)
+            if (parsedData.boundingBox.northEast && parsedData.boundingBox.southWest &&
+                typeof parsedData.boundingBox.northEast.lat === 'number' &&
+                typeof parsedData.boundingBox.northEast.lon === 'number' &&
+                typeof parsedData.boundingBox.southWest.lat === 'number' &&
+                typeof parsedData.boundingBox.southWest.lon === 'number') {
+              boundingBox = parsedData.boundingBox;
+            } else {
+              parseError = 'Invalid boundingBox structure received from AI.';
+              isMap = false; // Treat as not a map if bbox is invalid
+            }
+          } else if (isMap && !parsedData.boundingBox) {
+            // isMap is true but no boundingBox
+            parseError = 'AI indicated it is a map but did not provide a bounding box.';
+            isMap = false; // Treat as not a map if bbox is missing
+          }
+        } else {
+          parseError = 'AI response did not include a valid isMap boolean.';
+        }
+      } catch (e) {
+        console.error("Error parsing AI response JSON:", e);
+        parseError = "Could not parse AI response. Is it valid JSON?";
+      }
+
+      console.log("Parsed AI Data:", { isMap, boundingBox, parseError });
+
+      if (isMap && boundingBox) {
+        setMapData(prev => ({
+          ...prev,
+          attachedImage: imageDataUrl,
+          imageBoundingBox: boundingBox, // This field needs to be added to MapData interface
+          error: parseError // Store parse error if any, even if bbox is found
+        }));
+      } else {
+        setMapData(prev => ({
+          ...prev,
+          attachedImage: imageDataUrl,
+          imageBoundingBox: null,
+          error: parseError || "AI could not determine map coordinates or it's not a map."
+        }));
+      }
+    } catch (modelError) {
+      console.error("Error calling AI model:", modelError);
+      setMapData(prev => ({
+        ...prev,
+        attachedImage: imageDataUrl, // Keep image
+        imageBoundingBox: null,
+        error: 'Error communicating with AI model.'
+      }));
     }
-  }
+  };
 
   const removeAttachedImage = () => {
-    setMapData(prev => ({ ...prev, attachedImage: null }));
+    setMapData(prev => ({ ...prev, attachedImage: null, imageBoundingBox: null, error: null }));
   };
 
   useEffect(() => {
@@ -191,12 +296,13 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
               'absolute top-1/2 transform -translate-y-1/2',
               isMobile ? 'right-8' : 'right-10' // Paperclip button
             )}
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => !isProcessingImage && fileInputRef.current?.click()}
+            disabled={isProcessingImage}
             title="Attach image"
           >
-            <Paperclip size={isMobile ? 18 : 20} />
+            {isProcessingImage ? <Spinner className="h-5 w-5" /> : <Paperclip size={isMobile ? 18 : 20} />}
           </Button>
-          {mapData.attachedImage && (
+          {mapData.attachedImage && !isProcessingImage && ( // Hide remove button during processing
             <Button
               type="button"
               variant={'ghost'}
@@ -219,12 +325,17 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
               'absolute top-1/2 transform -translate-y-1/2',
               isMobile ? 'right-1' : 'right-2' // Send button
             )}
-            disabled={input.length === 0}
+            disabled={input.length === 0 || isProcessingImage}
             title="Send message"
           >
             <ArrowRight size={isMobile ? 18 : 20} />
           </Button>
         </div>
+        {mapData.error && (
+          <div className="mt-2 text-xs text-red-500 text-center w-full">
+            {mapData.error}
+          </div>
+        )}
       </form>
     </div>
   )

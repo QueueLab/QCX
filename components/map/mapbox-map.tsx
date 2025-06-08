@@ -517,29 +517,44 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
       }
     };
 
-    if (mapData.attachedImage && typeof mapData.attachedImage === 'string') {
-      // If source doesn't exist, or URL has changed, remove and re-add source
-      // This simple check might not be enough if coordinates also change and need to update source
-      const existingSource = currentMap.getSource(imageSourceId) as mapboxgl.ImageSource;
-      if (!existingSource || existingSource.url !== mapData.attachedImage) {
-        if (existingSource) {
-          removeImage(); // Remove layer and source before re-adding
-        }
+    // Main condition: image string, bounding box, and no error related to this image processing
+    if (mapData.attachedImage && typeof mapData.attachedImage === 'string' && mapData.imageBoundingBox && !mapData.error) {
+      const bb = mapData.imageBoundingBox;
+      const dynamicCoordinates: mapboxgl.ImageSourceOptions['coordinates'] = [
+        [bb.southWest.lon, bb.northEast.lat], // Top-left
+        [bb.northEast.lon, bb.northEast.lat], // Top-right
+        [bb.northEast.lon, bb.southWest.lat], // Bottom-right
+        [bb.southWest.lon, bb.southWest.lat]  // Bottom-left
+      ];
 
-        const placeholderCoordinates = [
-          [-74.0445, 40.6892],
-          [-73.9851, 40.6892],
-          [-73.9851, 40.7580],
-          [-74.0445, 40.7580]
-        ];
+      const existingSource = currentMap.getSource(imageSourceId) as mapboxgl.ImageSource;
+
+      // Check if source needs update (url or coordinates changed)
+      let sourceNeedsUpdate = false;
+      if (existingSource) {
+        if (existingSource.url !== mapData.attachedImage) {
+          sourceNeedsUpdate = true;
+        } else {
+          // Compare coordinates (simple stringify for basic check, could be more robust)
+          const existingCoords = JSON.stringify(existingSource.coordinates);
+          const newCoords = JSON.stringify(dynamicCoordinates);
+          if (existingCoords !== newCoords) {
+            sourceNeedsUpdate = true;
+          }
+        }
+      }
+
+      if (!existingSource || sourceNeedsUpdate) {
+        if (existingSource) {
+          removeImage(); // Remove layer and source before re-adding/updating
+        }
         currentMap.addSource(imageSourceId, {
           type: 'image',
           url: mapData.attachedImage,
-          coordinates: placeholderCoordinates as [[number, number], [number, number], [number, number], [number, number]]
+          coordinates: dynamicCoordinates
         });
       }
 
-      // If layer doesn't exist, add it
       if (!currentMap.getLayer(imageLayerId)) {
         currentMap.addLayer({
           id: imageLayerId,
@@ -551,15 +566,20 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         });
       }
 
-      // Set visibility based on isAttachedImageVisible
-      // This needs to run even if the image/source hasn't changed but visibility has
       currentMap.setLayoutProperty(imageLayerId, 'visibility', isAttachedImageVisible ? 'visible' : 'none');
 
     } else {
-      // No attached image, so remove any existing layer and source
+      // Conditions not met (no image, no bounding box, or there's an error)
+      // Ensure any existing image is removed
       removeImage();
     }
-  }, [mapData.attachedImage, isMapLoaded, isAttachedImageVisible]); // Added isAttachedImageVisible
+  }, [
+    mapData.attachedImage,
+    mapData.imageBoundingBox,
+    mapData.error,
+    isMapLoaded,
+    isAttachedImageVisible
+  ]);
 
   return (
     <div className="relative h-full w-full">
