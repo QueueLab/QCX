@@ -4,7 +4,7 @@ import { MapboxServer } from '@/mapbox_mcp/src/server/main';
 // It's assumed that MapboxServer and its handlers will pick up
 // MAPBOX_ACCESS_TOKEN from process.env if needed.
 // The check for mapboxAccessToken can remain as a safeguard for the app.
-const mapboxAccessToken = process.env.MAPBOX_ACCESS_TOKEN;
+const mapboxAccessToken = process.env.NEXT_PUBLIC_NEXT_PUBLIC_MAPBOX_ACCESS_TOKENMAPBOX_ACCESS_TOKEN;
 if (!mapboxAccessToken) {
   // This error will stop the app from building/starting if the token isn't set,
   // which is good, even if MapboxServer itself might also check for it.
