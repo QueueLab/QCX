@@ -24,7 +24,7 @@ export const geospatialTool = ({ uiStream, fullResponse }: ToolProps) => ({
          uiStream.append(<BotMessage content={uiFeedbackStream.value} />);
 
     // MCP Client setup and tool call
-    const mcpServerUrl = '/api/mcp'; // Use the local MCP server
+    const mcpServerUrl = 'mapbox_mcp/src/server/main.ts'; // Use the local MCP server
     let client: any; // Define client here to be accessible in finally
     let mcpData: {
       location: {
