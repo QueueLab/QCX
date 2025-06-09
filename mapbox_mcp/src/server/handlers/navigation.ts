@@ -4,19 +4,19 @@
  * @Date: 2024-12-21 23:58:32
  * @Description:
  */
-import { BaseHandler } from "./base.js";
-import { DirectionsArgsSchema } from "../../schemas/navigation/direction.js";
-import { DirectionsByPlacesArgsSchema } from "../../schemas/navigation/direction-by-places.js";
-import { MatrixArgsSchema } from "../../schemas/navigation/matrix.js";
-import { MatrixByPlacesArgsSchema } from "../../schemas/navigation/matrix-by-places.js";
-import { handleDirections } from "../../tools/handlers/navigation/direction.js";
-import { handleDirectionsByPlaces } from "../../tools/handlers/navigation/direction-by-places.js";
-import { handleMatrix } from "../../tools/handlers/navigation/matrix.js";
-import { handleMatrixByPlaces } from "../../tools/handlers/navigation/matrix-by-places.js";
-import { DIRECTIONS_TOOL } from "../../tools/definitions/navigation/direction.js";
-import { DIRECTIONS_BY_PLACES_TOOL } from "../../tools/definitions/navigation/direction-by-places.js";
-import { MATRIX_TOOL } from "../../tools/definitions/navigation/matrix.js";
-import { MATRIX_BY_PLACES_TOOL } from "../../tools/definitions/navigation/matrix-by-places.js";
+import { BaseHandler } from "./base";
+import { DirectionsArgsSchema } from "../../schemas/navigation/direction";
+import { DirectionsByPlacesArgsSchema } from "../../schemas/navigation/direction-by-places";
+import { MatrixArgsSchema } from "../../schemas/navigation/matrix";
+import { MatrixByPlacesArgsSchema } from "../../schemas/navigation/matrix-by-places";
+import { handleDirections } from "../../tools/handlers/navigation/direction";
+import { handleDirectionsByPlaces } from "../../tools/handlers/navigation/direction-by-places";
+import { handleMatrix } from "../../tools/handlers/navigation/matrix";
+import { handleMatrixByPlaces } from "../../tools/handlers/navigation/matrix-by-places";
+import { DIRECTIONS_TOOL } from "../../tools/definitions/navigation/direction";
+import { DIRECTIONS_BY_PLACES_TOOL } from "../../tools/definitions/navigation/direction-by-places";
+import { MATRIX_TOOL } from "../../tools/definitions/navigation/matrix";
+import { MATRIX_BY_PLACES_TOOL } from "../../tools/definitions/navigation/matrix-by-places";
 
 export class NavigationHandler extends BaseHandler {
   constructor() {

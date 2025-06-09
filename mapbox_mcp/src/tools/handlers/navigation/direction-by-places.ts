@@ -6,10 +6,10 @@
  */
 
 import { z } from "zod";
-import { DirectionsByPlacesArgsSchema } from "../../../schemas/navigation/direction-by-places.js";
-import { handleGeocoding } from "../../handlers/search/geocoding.js";
-import { handleDirections } from "./direction.js";
-import { DirectionsByPlacesError } from "../../../types/navigation/direction-by-places.js";
+import { DirectionsByPlacesArgsSchema } from "../../../schemas/navigation/direction-by-places";
+import { handleGeocoding } from "../../handlers/search/geocoding";
+import { handleDirections } from "./direction";
+import { DirectionsByPlacesError } from "../../../types/navigation/direction-by-places";
 
 /**
  * Handle Directions By Places API

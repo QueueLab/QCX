@@ -4,10 +4,10 @@
  * @Date: 2024-12-21 23:58:32
  * @Description: Search Handler
  */
-import { BaseHandler } from "./base.js";
-import { GeocodingArgsSchema } from "../../schemas/search/geocoding.js";
-import { handleGeocoding } from "../../tools/handlers/search/geocoding.js";
-import { GEOCODING_TOOL } from "../../tools/definitions/search/geocoding.js";
+import { BaseHandler } from "./base";
+import { GeocodingArgsSchema } from "../../schemas/search/geocoding";
+import { handleGeocoding } from "../../tools/handlers/search/geocoding";
+import { GEOCODING_TOOL } from "../../tools/definitions/search/geocoding";
 
 export class SearchHandler extends BaseHandler {
   constructor() {

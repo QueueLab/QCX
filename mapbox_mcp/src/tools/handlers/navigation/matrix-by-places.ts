@@ -6,10 +6,10 @@
  */
 
 import { z } from "zod";
-import { MatrixByPlacesArgsSchema } from "../../../schemas/navigation/matrix-by-places.js";
-import { handleGeocoding } from "../../handlers/search/geocoding.js";
-import { handleMatrix } from "./matrix.js";
-import { MatrixByPlacesError } from "../../../types/navigation/matrix-by-places.js";
+import { MatrixByPlacesArgsSchema } from "../../../schemas/navigation/matrix-by-places";
+import { handleGeocoding } from "../../handlers/search/geocoding";
+import { handleMatrix } from "./matrix";
+import { MatrixByPlacesError } from "../../../types/navigation/matrix-by-places";
 
 /**
  * Handle Matrix By Places API

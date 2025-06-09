@@ -6,9 +6,9 @@
  */
 
 import { z } from "zod";
-import { MapboxGeocodingResponse } from "../../../types/search/geocoding.js";
-import { GeocodingArgsSchema } from "../../../schemas/search/geocoding.js";
-import { MAPBOX_ACCESS_TOKEN } from "../../../config/index.js";
+import { MapboxGeocodingResponse } from "../../../types/search/geocoding";
+import { GeocodingArgsSchema } from "../../../schemas/search/geocoding";
+import { MAPBOX_ACCESS_TOKEN } from "../../../config/index";
 
 /**
  * Handle Geocoding API

@@ -6,9 +6,9 @@
  */
 
 import { z } from "zod";
-import { MapboxMatrixResponse } from "../../../types/navigation/matrix.js";
-import { MatrixArgsSchema } from "../../../schemas/navigation/matrix.js";
-import { MAPBOX_ACCESS_TOKEN } from "../../../config/index.js";
+import { MapboxMatrixResponse } from "../../../types/navigation/matrix";
+import { MatrixArgsSchema } from "../../../schemas/navigation/matrix";
+import { MAPBOX_ACCESS_TOKEN } from "../../../config/index";
 
 /**
  * Handle Matrix API

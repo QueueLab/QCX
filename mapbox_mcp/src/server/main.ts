@@ -1,8 +1,8 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { HandlerRegistry } from "./registry.js";
-import { NavigationHandler } from "./handlers/navigation.js";
-import { SearchHandler } from "./handlers/search.js";
+import { HandlerRegistry } from "./registry";
+import { NavigationHandler } from "./handlers/navigation";
+import { SearchHandler } from "./handlers/search";
 
 export class MapboxServer {
   private server: Server;
@@ -32,6 +32,10 @@ export class MapboxServer {
 
     // Register all handlers to the server
     this.registry.registerAll(this.server);
+  }
+
+  public getMcpServer(): Server {
+    return this.server;
   }
 
   async start() {
