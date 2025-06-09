@@ -29,7 +29,7 @@ const handler = createMcpHandler(
   },
   {
     // Optional MCP adapter config
-    basePath: '/api/mcp', // Adjusted to match the route file's location
+    basePath: 'mapbox_mcp/src/server/main.ts', // Adjusted to match the route file's location
     maxDuration: 60, // Default from docs
     verboseLogs: process.env.NODE_ENV === 'development',
     // redisUrl: process.env.REDIS_URL, // No Redis for now
