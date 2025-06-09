@@ -13,10 +13,10 @@
 function getApiKey(): string {
   const apiKey = process.env.MAPBOX_ACCESS_TOKEN;
   if (!apiKey) {
-    console.error("MAPBOX_ACCESS_TOKEN environment variable is not set");
-    process.exit(1);
+    console.warn("Warning: MAPBOX_ACCESS_TOKEN environment variable is not set. This is required for runtime Mapbox API calls. If this message appears during a build, ensure the variable is set in your deployment environment. A placeholder token will be used for now, which will cause runtime failures if not replaced by a real token in the environment.");
+    return "dummy_token_placeholder_for_build"; // Placeholder to allow build to pass
   }
   return apiKey;
 }
 
-export const MAPBOX_ACCESS_TOKEN = getApiKey();
+export const MAPBOX_ACCESS_TOKEN: string = getApiKey();
