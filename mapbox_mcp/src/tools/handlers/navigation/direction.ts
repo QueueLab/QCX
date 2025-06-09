@@ -6,9 +6,9 @@
  */
 
 import { z } from "zod";
-import { MapboxDirectionsResponse } from "../../../types/index.js";
-import { CoordinatesSchema } from "../../../schemas/index.js";
-import { MAPBOX_ACCESS_TOKEN } from "../../../config/index.js";
+import { MapboxDirectionsResponse } from "../../../types/index";
+import { CoordinatesSchema } from "../../../schemas/index";
+import { MAPBOX_ACCESS_TOKEN } from "../../../config/index";
 
 /**
  * Handle Directions API

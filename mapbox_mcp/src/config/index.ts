@@ -4,4 +4,4 @@
  * @Date: 2024-12-21 22:44:40
  * @Description: Configuration
  */
-export * from "./mapbox.js";
+export * from "./mapbox";

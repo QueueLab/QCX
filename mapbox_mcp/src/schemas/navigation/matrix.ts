@@ -5,7 +5,7 @@
  * @Description: Matrix Schema
  */
 import { z } from "zod";
-import { CoordinateSchema } from "../navigation/direction.js";
+import { CoordinateSchema } from "../navigation/direction";
 
 const BearingSchema = z.object({
   angle: z

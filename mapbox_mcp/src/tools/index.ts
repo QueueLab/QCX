@@ -5,11 +5,11 @@
  * @Description: Tools
  */
 
-import { DIRECTIONS_TOOL } from "./definitions/navigation/direction.js";
-import { DIRECTIONS_BY_PLACES_TOOL } from "./definitions/navigation/direction-by-places.js";
-import { MATRIX_TOOL } from "./definitions/navigation/matrix.js";
-import { MATRIX_BY_PLACES_TOOL } from "./definitions/navigation/matrix-by-places.js";
-import { GEOCODING_TOOL } from "./definitions/search/geocoding.js";
+import { DIRECTIONS_TOOL } from "./definitions/navigation/direction";
+import { DIRECTIONS_BY_PLACES_TOOL } from "./definitions/navigation/direction-by-places";
+import { MATRIX_TOOL } from "./definitions/navigation/matrix";
+import { MATRIX_BY_PLACES_TOOL } from "./definitions/navigation/matrix-by-places";
+import { GEOCODING_TOOL } from "./definitions/search/geocoding";
 
 export const MAPBOX_TOOLS = [
   DIRECTIONS_TOOL,

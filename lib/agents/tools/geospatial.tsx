@@ -24,7 +24,7 @@ export const geospatialTool = ({ uiStream, fullResponse }: ToolProps) => ({
          uiStream.append(<BotMessage content={uiFeedbackStream.value} />);
 
     // MCP Client setup and tool call
-    const mcpServerUrl = 'mapbox_mcp/src/server/main.ts'; // Use the local MCP server
+    const mcpServerUrl = '/api/mcp'; // Use the local MCP server
     let client: any; // Define client here to be accessible in finally
     let mcpData: {
       location: {
@@ -47,8 +47,8 @@ export const geospatialTool = ({ uiStream, fullResponse }: ToolProps) => ({
       console.log("✅ Successfully connected to MCP server.");
 
       const geocodeParams = { query, includeMapPreview: true };
-      console.log("📞 Attempting to call 'geocode_location' tool with params:", geocodeParams);
-      const geocodeResult = await client.callTool('geocode_location', geocodeParams);
+      console.log("📞 Attempting to call 'mapbox_geocoding' tool with params:", geocodeParams);
+      const geocodeResult = await client.callTool('mapbox_geocoding', geocodeParams);
       // console.log("🗺️ Geocode Result from MCP:", JSON.stringify(geocodeResult, null, 2)); // Removed verbose log
 
       if (geocodeResult && geocodeResult.content && Array.isArray(geocodeResult.content)) {

@@ -5,8 +5,8 @@
  * @Description: Matrix By Places Interface
  */
 
-import { MapboxMatrixResponse } from "./matrix.js";
-import { MapboxGeocodingResponse } from "../search/geocoding.js";
+import { MapboxMatrixResponse } from "./matrix";
+import { MapboxGeocodingResponse } from "../search/geocoding";
 
 export interface MatrixByPlacesError {
   place: string;

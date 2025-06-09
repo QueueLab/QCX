@@ -5,7 +5,7 @@
  * @Description: Base Handler
  */
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { IHandler } from "../registry.js";
+import { IHandler } from "../registry";
 import { Tool } from "@modelcontextprotocol/sdk/types.js";
 
 /**

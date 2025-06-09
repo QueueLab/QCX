@@ -4,7 +4,7 @@
  * @Date: 2024-12-20 09:34:01
  * @Description: Mapbox MCP server
  */
-import { MapboxServer } from "./server/main.js";
+import { MapboxServer } from "./server/main";
 
 async function runServer() {
   const server = new MapboxServer();

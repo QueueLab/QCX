@@ -5,8 +5,8 @@
  * @Description: Type Definitions
  */
 
-export * from "./navigation/direction.js";
-export * from "./navigation/direction-by-places.js";
-export * from "./navigation/matrix.js";
-export * from "./navigation/matrix-by-places.js";
-export * from "./search/geocoding.js";
+export * from "./navigation/direction";
+export * from "./navigation/direction-by-places";
+export * from "./navigation/matrix";
+export * from "./navigation/matrix-by-places";
+export * from "./search/geocoding";

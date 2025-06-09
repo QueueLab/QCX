@@ -5,8 +5,8 @@
  * @Description: Direction By Places Interface
  */
 
-import { MapboxDirectionsResponse } from "./direction.js";
-import { MapboxGeocodingResponse } from "../search/geocoding.js";
+import { MapboxDirectionsResponse } from "./direction";
+import { MapboxGeocodingResponse } from "../search/geocoding";
 
 export interface DirectionsByPlacesError {
   place: string;
