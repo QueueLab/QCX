@@ -12,7 +12,6 @@ export interface BoundingBox {
 // Define the shape of the map data you want to share
 export interface MapData {
   targetPosition?: LngLatLike | null; // For flying to a location
-  // TODO: Add other relevant map data types later (e.g., routeGeoJSON, poiList)
   mapFeature?: any | null; // Generic feature from MCP hook's processLocationQuery
   attachedImage?: string | File | null; // Field for the attached image
   imageBoundingBox?: BoundingBox | null; // Bounding box for the attached image
