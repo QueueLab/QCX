@@ -29,6 +29,7 @@ export const MobileIconsBar: React.FC = () => {
       <Button variant="ghost" size="icon" onClick={handleNewChat}>
         <Plus className="h-[1.2rem] w-[1.2rem]" />
       </Button>
+      <History location="header" />
       <Button variant="ghost" size="icon">
         <CircleUserRound className="h-[1.2rem] w-[1.2rem]" />
       </Button>
@@ -48,7 +49,6 @@ export const MobileIconsBar: React.FC = () => {
       <Button variant="ghost" size="icon">
         <ArrowRight className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>
-      <History location="header" />
       <ModeToggle />
     </div>
   )
