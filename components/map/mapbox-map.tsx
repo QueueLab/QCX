@@ -275,39 +275,17 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     map.current.on('draw.delete', updateMeasurementLabels)
     map.current.on('draw.update', updateMeasurementLabels)
     
-    // Restore drawings:
-
-    // Prioritize mapData.drawnFeatures from context first.
-    // This is crucial for restoring drawings when Mapbox component remounts.
-    if (mapData.drawnFeatures && mapData.drawnFeatures.length > 0) {
-      mapData.drawnFeatures.forEach((featureData: any) => {
-        // Construct a valid GeoJSON Feature object for MapboxDraw.add().
-        const feature = {
-          id: featureData.id,
-          type: 'Feature' as const, // GeoJSON Feature type
-          properties: {
-            measurement: featureData.measurement
-          },
-          geometry: featureData.geometry
-        };
-        if (drawRef.current) {
-          drawRef.current.add(feature);
-        }
-      });
-      // Update labels for restored features
-      setTimeout(updateMeasurementLabels, 100);
-
-    } else if (drawingFeatures.current && drawingFeatures.current.features.length > 0) {
-      // Fallback to drawingFeatures.current.
+    // Restore previous drawings if they exist
+    if (drawingFeatures.current && drawingFeatures.current.features.length > 0) {
+      // Add each feature back to the draw tool
       drawingFeatures.current.features.forEach((feature: any) => {
-        if (drawRef.current) {
-          drawRef.current.add(feature);
-        }
-      });
-      // Update labels for restored features
-      setTimeout(updateMeasurementLabels, 100);
+        drawRef.current?.add(feature)
+      })
+
+      // Update labels after restoring features
+      setTimeout(updateMeasurementLabels, 100)
     }
-  }, [updateMeasurementLabels, mapData.drawnFeatures])
+  }, [updateMeasurementLabels])
 
   // Set up geolocation watcher
   const setupGeolocationWatcher = useCallback(() => {
@@ -341,12 +319,9 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
       const center = map.current.getCenter();
       const zoom = map.current.getZoom();
       const pitch = map.current.getPitch();
-      const bearing = map.current.getBearing();
-      const newViewport = { center: [center.lng, center.lat] as [number, number], zoom, pitch, bearing };
-      currentMapCenterRef.current = { center: newViewport.center, zoom, pitch }; // Keep this for local use if needed
-      setMapData(prev => ({ ...prev, viewport: newViewport }));
+      currentMapCenterRef.current = { center: [center.lng, center.lat], zoom, pitch };
     }
-  }, [setMapData])
+  }, [])
 
   // Set up idle rotation checker
   useEffect(() => {
@@ -414,6 +389,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   }, [mapType, updateMeasurementLabels, setupGeolocationWatcher, captureMapCenter, setupDrawingTools])
 
   // Initialize map
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (map.current || !mapContainer.current) { // If map already exists or container not ready, do nothing
       return;
@@ -471,7 +447,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     newMap.on('zoom', handleUserInteraction);
 
     newMap.on('load', () => {
-      if (!map.current) return; // Should be newMap, but map.current is now set
+      if (!map.current) return;
 
       map.current.addSource('mapbox-dem', {
         type: 'raster-dem',
@@ -490,7 +466,6 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         },
       });
 
-      // Restore drawings using setupDrawingTools, which reads from mapData.drawnFeatures
       if (mapType === MapToggleEnum.DrawingMode) {
         setupDrawingTools();
       }
@@ -507,7 +482,6 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     newMap.addControl(new mapboxgl.NavigationControl(), 'top-left');
 
     return () => {
-      // Cleanup logic: always remove the map instance on unmount
       if (map.current) {
         map.current.off('moveend', captureMapCenter);
         map.current.off('mousedown', handleUserInteraction);
@@ -516,10 +490,8 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         map.current.off('drag', handleUserInteraction);
         map.current.off('zoom', handleUserInteraction);
 
-        // Cleanup MapboxDraw if it exists
         if (drawRef.current) {
           try {
-            // Check if map still has the control before removing
             if (map.current.hasControl(drawRef.current as mapboxgl.IControl)) {
                map.current.off('draw.create', updateMeasurementLabels);
                map.current.off('draw.delete', updateMeasurementLabels);
@@ -532,18 +504,17 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
           drawRef.current = null;
         }
 
-        // Clean up any existing labels
         Object.values(polygonLabelsRef.current).forEach(marker => marker.remove());
         Object.values(lineLabelsRef.current).forEach(marker => marker.remove());
         polygonLabelsRef.current = {};
         lineLabelsRef.current = {};
 
         stopRotation();
-        map.current.remove(); // Destroy the map instance
+        map.current.remove();
       }
       
-      map.current = null; // Nullify the local ref
-      initializedRef.current = false; // Reset initialization status
+      map.current = null;
+      initializedRef.current = false;
       setIsMapLoaded(false);
 
       if (geolocationWatchIdRef.current !== null) {
@@ -552,16 +523,9 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
       }
     };
   }, [
-    // Key dependencies that trigger re-creation of the map IF THE COMPONENT KEY CHANGES
-    // For a map that's always new on mount, these might not be strictly necessary
-    // if the component itself is remounted (e.g. via a key change on parent).
-    // However, if this useEffect is meant to react to context changes to re-init the map
-    // (which it's not, with current always-new-map logic), then they would be.
-    // For now, keep relevant ones that define initial state or behavior.
-    setMapData, // To save initial viewport if derived from defaults
-    viewport, // Used for initial map state
-    mapType, // Determines initial setup like drawing tools, rotation
-    // Callbacks: these should be stable via useCallback
+    setMapData,
+    // viewport, // INTENTIONALLY REMOVED to prevent re-render loop from captureMapCenter updates
+    mapType,
     handleUserInteraction, 
     startRotation, 
     stopRotation, 
@@ -569,8 +533,8 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     setupGeolocationWatcher, 
     captureMapCenter, 
     setupDrawingTools,
-    setIsMapLoaded
-    // mapData.drawnFeatures is used by setupDrawingTools, which is a dep.
+    setIsMapLoaded,
+    mapData.drawnFeatures
   ]);
 
   // Handle position updates from props
@@ -626,18 +590,54 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   }, []);
 
   // Cleanup for the main useEffect
-  // This useEffect was problematic. The main useEffect already has a cleanup function.
-  // Consolidating cleanup into the main useEffect's return statement.
-  // If there's specific cleanup for longPressTimerRef, it should be handled separately if its lifecycle is different.
   useEffect(() => {
-    // Cleanup for longPressTimerRef if component unmounts
+    // ... existing useEffect logic ...
     return () => {
-      if (longPressTimerRef.current) {
+      // ... existing cleanup logic ...
+      if (longPressTimerRef.current) { // Cleanup timer on component unmount
         clearTimeout(longPressTimerRef.current);
         longPressTimerRef.current = null;
       }
+      // ... existing cleanup logic for map and geolocation ...
+      if (map.current) {
+        map.current.off('moveend', captureMapCenter)
+
+        if (drawRef.current) {
+          try {
+            map.current.off('draw.create', updateMeasurementLabels)
+            map.current.off('draw.delete', updateMeasurementLabels)
+            map.current.off('draw.update', updateMeasurementLabels)
+            map.current.removeControl(drawRef.current)
+          } catch (e) {
+            console.log('Draw control already removed')
+          }
+        }
+
+        Object.values(polygonLabelsRef.current).forEach(marker => marker.remove())
+        Object.values(lineLabelsRef.current).forEach(marker => marker.remove())
+
+        stopRotation()
+        setIsMapLoaded(false)
+        map.current.remove()
+        map.current = null
+      }
+
+      if (geolocationWatchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(geolocationWatchIdRef.current)
+        geolocationWatchIdRef.current = null
+      }
     };
-  }, []); // Empty dependency array means this runs once on mount and cleans up on unmount.
+  }, [
+    handleUserInteraction,
+    startRotation,
+    stopRotation,
+    mapType, // mapType is already here, good.
+    updateMeasurementLabels,
+    setupGeolocationWatcher,
+    captureMapCenter,
+    setupDrawingTools,
+    setIsMapLoaded
+  ]);
 
 
   return (
