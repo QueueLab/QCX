@@ -5,9 +5,10 @@ import { usePathname, useRouter } from 'next/navigation'
 import { ChatPanel } from './chat-panel'
 import { ChatMessages } from './chat-messages'
 import { EmptyScreen } from './empty-screen'
-import { Mapbox } from './map/mapbox-map'
+// import { Mapbox } from './map/mapbox-map' // Replaced with dynamic import
 import { useUIState, useAIState } from 'ai/rsc'
 import MobileIconsBar from './mobile-icons-bar'
+import dynamic from 'next/dynamic'; // Added for dynamic import
 import { useProfileToggle, ProfileToggleEnum } from "@/components/profile-toggle-context";
 import SettingsView from "@/components/settings/settings-view";
 import { MapDataProvider, useMapData } from './map/map-data-context'; // Add this and useMapData
@@ -16,6 +17,11 @@ import { updateDrawingContext } from '@/lib/actions/chat'; // Import the server 
 type ChatProps = {
   id?: string // This is the chatId
 }
+
+const Mapbox = dynamic(() => import('./map/mapbox-map').then(mod => mod.Mapbox), {
+  ssr: false,
+  loading: () => <div className="h-full w-full flex items-center justify-center"><p>Loading map...</p></div>
+});
 
 export function Chat({ id }: ChatProps) {
   const router = useRouter()
