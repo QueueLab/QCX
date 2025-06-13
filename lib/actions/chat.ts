@@ -29,7 +29,7 @@ export async function getChats(userId?: string | null) {
 
     const results = await pipeline.exec()
 
-    return results as Chat[]
+    return results.filter(chat => chat !== null) as Chat[]
   } catch (error) {
     return []
   }
@@ -65,7 +65,7 @@ export async function clearChats(
   redirect('/')
 }
 
-export async function saveChat(chat: Chat, userId: string = 'anonymous') {
+export async function saveChat(chat: Chat) {
   const pipeline = redis.pipeline()
   pipeline.hmset(`chat:${chat.id}`, chat)
   pipeline.zadd(`user:chat:${chat.userId}`, {
@@ -137,7 +137,7 @@ export async function updateDrawingContext(chatId: string, drawnFeatures: any[])
   const updatedChat: Chat = { ...chat, messages: updatedMessages };
 
   try {
-    await saveChat(updatedChat, userId); // saveChat expects userId
+    await saveChat(updatedChat);
     console.log('Drawing context message added to chat:', chatId);
     // Optionally, revalidate relevant paths if this change should immediately reflect elsewhere
     // revalidatePath(`/search/${chatId}`);

@@ -12,6 +12,7 @@ import { useProfileToggle, ProfileToggleEnum } from "@/components/profile-toggle
 import SettingsView from "@/components/settings/settings-view";
 import { MapDataProvider, useMapData } from './map/map-data-context'; // Add this and useMapData
 import { updateDrawingContext } from '@/lib/actions/chat'; // Import the server action
+import { Sidebar } from './sidebar';
 
 type ChatProps = {
   id?: string // This is the chatId
@@ -116,6 +117,7 @@ export function Chat({ id }: ChatProps) {
           style={{ zIndex: 10 }} // Added z-index
         >
           {activeView ? <SettingsView /> : <Mapbox />}
+          <Sidebar />
         </div>
       </div>
     </MapDataProvider>
