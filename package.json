@@ -51,6 +51,7 @@
     "lottie-react": "^2.4.1",
     "lucide-react": "^0.507.0",
     "mapbox-gl": "^3.11.0",
+    "mapbox-gl-draw-circle": "^1.1.2",
     "next": "^15.3.3",
     "next-themes": "^0.3.0",
     "open-codex": "^0.1.30",
