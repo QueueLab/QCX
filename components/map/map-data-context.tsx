@@ -14,7 +14,7 @@ export interface MapData {
     measurement: string;
     geometry: any;
   }>;
-  mapInstance?: mapboxgl.Map | null;
+  // mapInstance?: mapboxgl.Map | null; // Removed as per request
   viewport?: { center: [number, number]; zoom: number; pitch: number; bearing: number };
 }
 
@@ -28,7 +28,7 @@ const MapDataContext = createContext<MapDataContextType | undefined>(undefined);
 export const MapDataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [mapData, setMapData] = useState<MapData>({
     drawnFeatures: [],
-    mapInstance: null,
+    // mapInstance: null, // Removed
     viewport: {
       center: [0, 0],
       zoom: 2,

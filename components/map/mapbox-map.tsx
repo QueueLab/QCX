@@ -30,7 +30,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   const drawingFeatures = useRef<any>(null)
   const { mapType, setMapType } = useMapToggle() // Get setMapType
   const { mapData, setMapData } = useMapData(); // Consume the new context, get setMapData
-  const { mapInstance, viewport } = mapData; // Destructure mapInstance and viewport
+  const { viewport } = mapData; // mapInstance is no longer in mapData, viewport is used for initial state
   const { setIsMapLoaded } = useMapLoading(); // Get setIsMapLoaded from context
   const previousMapTypeRef = useRef<MapToggleEnum | null>(null)
 
@@ -413,205 +413,101 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     }
   }, [mapType, updateMeasurementLabels, setupGeolocationWatcher, captureMapCenter, setupDrawingTools])
 
-  // Initialize map (only once)
+  // Initialize map
   useEffect(() => {
-    if (!mapContainer.current) return;
+    if (map.current || !mapContainer.current) { // If map already exists or container not ready, do nothing
+      return;
+    }
 
-    const initializeNewMap = () => {
-      let initialZoom = 2;
-      if (typeof window !== 'undefined' && window.innerWidth < 768) {
-        initialZoom = 1.3;
-      }
+    // Determine initial viewport state
+    // Prioritize viewport from context, then local ref, then hardcoded defaults.
+    let initialPitch = 0;
+    let initialBearing = 0;
 
-      // Use viewport from context if available, otherwise use currentMapCenterRef or defaults
-      const initialMapState = viewport || {
+    if (viewport) { // mapData.viewport
+        currentMapCenterRef.current = { // Update local ref to match context if context is source
+            center: viewport.center,
+            zoom: viewport.zoom,
+            pitch: viewport.pitch
+        };
+        initialPitch = viewport.pitch;
+        initialBearing = viewport.bearing;
+    } else if (currentMapCenterRef.current) {
+        initialPitch = currentMapCenterRef.current.pitch;
+        // currentMapCenterRef doesn't store bearing, so it defaults to 0 unless set otherwise
+    }
+
+    const initialViewportState = viewport || {
         center: currentMapCenterRef.current.center,
         zoom: currentMapCenterRef.current.zoom,
-        pitch: currentMapCenterRef.current.pitch,
-        bearing: 0,
-      };
-
-      const newMap = new mapboxgl.Map({
-        container: mapContainer.current!,
-        style: 'mapbox://styles/mapbox/satellite-streets-v12',
-        center: initialMapState.center,
-        zoom: initialMapState.zoom,
-        pitch: initialMapState.pitch,
-        bearing: initialMapState.bearing,
-        maxZoom: 22,
-        attributionControl: true,
-      });
-
-      map.current = newMap;
-      setMapData(prev => ({ ...prev, mapInstance: newMap, viewport: initialMapState }));
-
-      newMap.addControl(new mapboxgl.NavigationControl(), 'top-left');
-
-      newMap.on('load', () => {
-        if (!map.current) return;
-
-        map.current.addSource('mapbox-dem', {
-          type: 'raster-dem',
-          url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
-          tileSize: 512,
-          maxzoom: 14,
-        });
-        map.current.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
-        map.current.addLayer({
-          id: 'sky',
-          type: 'sky',
-          paint: {
-            'sky-type': 'atmosphere',
-            'sky-atmosphere-sun': [0.0, 0.0],
-            'sky-atmosphere-sun-intensity': 15,
-          },
-        });
-
-        if (mapType === MapToggleEnum.DrawingMode) {
-          setupDrawingTools();
-        }
-        if (mapType !== MapToggleEnum.RealTimeMode) {
-          startRotation();
-        }
-        initializedRef.current = true;
-        setIsMapLoaded(true);
-        setupGeolocationWatcher();
-      });
+        pitch: initialPitch,
+        bearing: initialBearing,
     };
 
-    if (mapInstance && mapContainer.current) { // Ensure mapContainer.current is also available
-      map.current = mapInstance;
-      const newContainer = mapContainer.current;
-      const mapCanvas = map.current.getCanvas();
+    // If mapData.viewport was undefined, save the derived initialViewportState (which might be from defaults) to context.
+    if (!viewport && mapContainer.current) { // Check mapContainer to ensure this isn't an effect of unmounting
+        setMapData(prev => ({ ...prev, viewport: initialViewportState }));
+    }
 
-      // 1. Re-parent the canvas if it's not already in the current container
-      if (!newContainer.contains(mapCanvas)) {
-        // Clear the new container of any previous content
-        while (newContainer.firstChild) {
-          newContainer.removeChild(newContainer.firstChild);
-        }
-        // Append the map's canvas
-        newContainer.appendChild(mapCanvas);
-      }
+    const newMap = new mapboxgl.Map({
+      container: mapContainer.current!,
+      style: 'mapbox://styles/mapbox/satellite-streets-v12',
+      center: initialViewportState.center,
+      zoom: initialViewportState.zoom,
+      pitch: initialViewportState.pitch,
+      bearing: initialViewportState.bearing,
+      maxZoom: 22,
+      attributionControl: true,
+    });
 
-      // 2. Defer resize and check map responsiveness
-      setTimeout(() => {
-        if (map.current && map.current.getCanvas()) { // Ensure map instance is still valid
-            map.current.resize(); // Initial resize
+    map.current = newMap; // Set local ref to the new map instance
 
-            if (!map.current.isStyleLoaded()) {
-                console.warn("Map style not loaded on remount. Attempting to reload style...");
-                const currentStyle = map.current.getStyle();
+    // Event listeners for the new map
+    newMap.on('moveend', captureMapCenter);
+    newMap.on('mousedown', handleUserInteraction);
+    newMap.on('touchstart', handleUserInteraction);
+    newMap.on('wheel', handleUserInteraction);
+    newMap.on('drag', handleUserInteraction);
+    newMap.on('zoom', handleUserInteraction);
 
-                map.current.setStyle(currentStyle);
+    newMap.on('load', () => {
+      if (!map.current) return; // Should be newMap, but map.current is now set
 
-                map.current.once('styledata', () => { // Wait for the style to be fully processed
-                    console.log("Style reloaded. Re-applying DEM, sky, viewport, and drawing tools.");
+      map.current.addSource('mapbox-dem', {
+        type: 'raster-dem',
+        url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
+        tileSize: 512,
+        maxzoom: 14,
+      });
+      map.current.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
+      map.current.addLayer({
+        id: 'sky',
+        type: 'sky',
+        paint: {
+          'sky-type': 'atmosphere',
+          'sky-atmosphere-sun': [0.0, 0.0],
+          'sky-atmosphere-sun-intensity': 15,
+        },
+      });
 
-                    // Re-add DEM source and terrain
-                    if (map.current && !map.current.getSource('mapbox-dem')) {
-                        map.current.addSource('mapbox-dem', {
-                            type: 'raster-dem',
-                            url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
-                            tileSize: 512,
-                            maxzoom: 14,
-                        });
-                    }
-                    if (map.current) map.current.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
-
-                    // Re-add sky layer
-                    if (map.current && !map.current.getLayer('sky')) {
-                        map.current.addLayer({
-                            id: 'sky',
-                            type: 'sky',
-                            paint: {
-                                'sky-type': 'atmosphere',
-                                'sky-atmosphere-sun': [0.0, 0.0],
-                                'sky-atmosphere-sun-intensity': 15,
-                            },
-                        });
-                    }
-
-                    // Restore viewport
-                    if (map.current && viewport) { // mapData.viewport is 'viewport' here
-                        map.current.setCenter(viewport.center);
-                        map.current.setZoom(viewport.zoom);
-                        map.current.setPitch(viewport.pitch);
-                        map.current.setBearing(viewport.bearing);
-                    }
-
-                    // Re-setup drawing tools if in drawing mode
-                    if (map.current && mapType === MapToggleEnum.DrawingMode) {
-                        setupDrawingTools();
-                    }
-
-                    if (map.current) map.current.resize(); // Resize again after all layers/sources are set up
-                });
-            } else {
-                // Style was already loaded, just ensure viewport is set correctly.
-                if (map.current && viewport) { // mapData.viewport is 'viewport' here
-                    map.current.setCenter(viewport.center);
-                    map.current.setZoom(viewport.zoom);
-                    map.current.setPitch(viewport.pitch);
-                    map.current.setBearing(viewport.bearing);
-                }
-                // Call resize again for good measure even if style was loaded.
-                if (map.current) map.current.resize();
-            }
-        }
-      }, 100); // 100ms delay
-
-      // Re-attach event listeners (moved outside timeout, should be fine as map.current is set)
-      map.current.on('moveend', captureMapCenter);
-      map.current.on('mousedown', handleUserInteraction);
-      map.current.on('touchstart', handleUserInteraction);
-      map.current.on('wheel', handleUserInteraction);
-      map.current.on('drag', handleUserInteraction);
-      map.current.on('zoom', handleUserInteraction);
-
-      // Re-setup drawing tools if in DrawingMode
+      // Restore drawings using setupDrawingTools, which reads from mapData.drawnFeatures
       if (mapType === MapToggleEnum.DrawingMode) {
         setupDrawingTools();
-      } else {
-        if (drawRef.current && map.current) {
-          try {
-            map.current.removeControl(drawRef.current);
-            drawRef.current = null;
-          } catch (e) { console.log('Error removing draw control when reusing map instance:', e); }
-        }
+      }
+
+      if (mapType !== MapToggleEnum.RealTimeMode) {
+        startRotation();
       }
 
       initializedRef.current = true;
-      setIsMapLoaded(true); // Set map loaded state
-
+      setIsMapLoaded(true);
       setupGeolocationWatcher();
-      if (mapType !== MapToggleEnum.RealTimeMode && !isRotatingRef.current) {
-         const idleTime = Date.now() - lastInteractionRef.current;
-         if (idleTime > 30000) startRotation();
-      }
+    });
 
-    } else if (!mapInstance && !map.current) { // Modified condition to ensure it only runs if mapInstance is null AND map.current is null
-      initializeNewMap();
-    }
-
-    // Event listeners that are always active when this component is mounted
-    // This block seems redundant if listeners are added in both mapInstance and initializeNewMap blocks.
-    // However, keeping it for now as per original structure, but it might be a candidate for cleanup.
-    // and map.current is set.
-    // The main map 'load' event won't fire again for an existing instance,
-    // so some setup might need to be duplicated or handled outside 'load'.
-    if (map.current) {
-      map.current.on('moveend', captureMapCenter);
-      map.current.on('mousedown', handleUserInteraction);
-      map.current.on('touchstart', handleUserInteraction);
-      map.current.on('wheel', handleUserInteraction);
-      map.current.on('drag', handleUserInteraction);
-      map.current.on('zoom', handleUserInteraction);
-    }
-
+    newMap.addControl(new mapboxgl.NavigationControl(), 'top-left');
 
     return () => {
-      // Detach event listeners that were added in this component instance
+      // Cleanup logic: always remove the map instance on unmount
       if (map.current) {
         map.current.off('moveend', captureMapCenter);
         map.current.off('mousedown', handleUserInteraction);
@@ -619,60 +515,63 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         map.current.off('wheel', handleUserInteraction);
         map.current.off('drag', handleUserInteraction);
         map.current.off('zoom', handleUserInteraction);
-      }
 
-      // Cleanup draw control if it exists and this component instance created it
-      // This part is tricky because drawRef is local. If the map instance persists,
-      // draw control might need to persist with it or be managed by context too.
-      // For now, assume draw control is tied to this component's lifecycle or mapType.
-      if (drawRef.current && map.current) {
-        try {
-          // Check if map still has the control before removing
-          // This check might be too simplistic if mapbox-gl-draw doesn't expose hasControl
-          if (map.current.hasControl(drawRef.current as mapboxgl.IControl)) {
-             map.current.off('draw.create', updateMeasurementLabels);
-             map.current.off('draw.delete', updateMeasurementLabels);
-             map.current.off('draw.update', updateMeasurementLabels);
-             map.current.removeControl(drawRef.current);
+        // Cleanup MapboxDraw if it exists
+        if (drawRef.current) {
+          try {
+            // Check if map still has the control before removing
+            if (map.current.hasControl(drawRef.current as mapboxgl.IControl)) {
+               map.current.off('draw.create', updateMeasurementLabels);
+               map.current.off('draw.delete', updateMeasurementLabels);
+               map.current.off('draw.update', updateMeasurementLabels);
+               map.current.removeControl(drawRef.current);
+            }
+          } catch (e) {
+            console.log('Error during drawRef cleanup on map remove:', e);
           }
-        } catch (e) {
-          console.log('Error during drawRef cleanup:', e);
+          drawRef.current = null;
         }
-        drawRef.current = null; // Nullify local ref
+
+        // Clean up any existing labels
+        Object.values(polygonLabelsRef.current).forEach(marker => marker.remove());
+        Object.values(lineLabelsRef.current).forEach(marker => marker.remove());
+        polygonLabelsRef.current = {};
+        lineLabelsRef.current = {};
+
+        stopRotation();
+        map.current.remove(); // Destroy the map instance
       }
       
-      // Clean up any existing labels
-      Object.values(polygonLabelsRef.current).forEach(marker => marker.remove());
-      Object.values(lineLabelsRef.current).forEach(marker => marker.remove());
-      polygonLabelsRef.current = {};
-      lineLabelsRef.current = {};
-
-      stopRotation(); // Stop rotation animation
-      // Do NOT remove map.current.remove() if map instance is from context.
-      // map.current = null; // Nullify the local ref, but the instance in context persists.
-
-      setIsMapLoaded(false); // Reset map loaded state for this component instance
+      map.current = null; // Nullify the local ref
+      initializedRef.current = false; // Reset initialization status
+      setIsMapLoaded(false);
 
       if (geolocationWatchIdRef.current !== null) {
         navigator.geolocation.clearWatch(geolocationWatchIdRef.current);
         geolocationWatchIdRef.current = null;
       }
-      // initializedRef.current = false; // This might be problematic if component re-mounts
     };
   }, [
-    mapInstance, // Add mapInstance as a dependency
-    viewport,    // Add viewport as a dependency
-    setMapData,  // Add setMapData
+    // Key dependencies that trigger re-creation of the map IF THE COMPONENT KEY CHANGES
+    // For a map that's always new on mount, these might not be strictly necessary
+    // if the component itself is remounted (e.g. via a key change on parent).
+    // However, if this useEffect is meant to react to context changes to re-init the map
+    // (which it's not, with current always-new-map logic), then they would be.
+    // For now, keep relevant ones that define initial state or behavior.
+    setMapData, // To save initial viewport if derived from defaults
+    viewport, // Used for initial map state
+    mapType, // Determines initial setup like drawing tools, rotation
+    // Callbacks: these should be stable via useCallback
     handleUserInteraction, 
     startRotation, 
     stopRotation, 
-    mapType, 
     updateMeasurementLabels, 
     setupGeolocationWatcher, 
     captureMapCenter, 
     setupDrawingTools,
     setIsMapLoaded
-  ])
+    // mapData.drawnFeatures is used by setupDrawingTools, which is a dep.
+  ]);
 
   // Handle position updates from props
   useEffect(() => {
