@@ -16,12 +16,43 @@ import {
 import { History } from '@/components/history'
 import { MapToggle } from './map-toggle'
 import { ModeToggle } from './mode-toggle'
+import { getEnhancedPrompt, getNewExamplePrompts } from '@/lib/actions/suggestions'; // Import server actions
+import { LucideIcon } from 'lucide-react'; // For icon typing
 
-export const MobileIconsBar: React.FC = () => {
+interface MobileIconsBarProps {
+  currentInput: string;
+  setInput: (value: string) => void;
+  examplePrompts: Array<{ heading: string; message: string; icon?: LucideIcon }>; // Receive current prompts
+  setExamplePrompts: (prompts: Array<{ heading: string; message: string; icon?: LucideIcon }>) => void; // Setter for prompts
+}
+
+export const MobileIconsBar: React.FC<MobileIconsBarProps> = ({
+  currentInput,
+  setInput,
+  examplePrompts, // Destructure examplePrompts
+  setExamplePrompts
+}) => {
   const router = useRouter()
 
   const handleNewChat = () => {
     router.push('/')
+  }
+
+  const handleMagnifyPrompt = async () => {
+    if (currentInput) {
+      const enhancedPromptText = await getEnhancedPrompt(currentInput);
+      setInput(enhancedPromptText);
+    } else {
+      const existingPromptMessages = examplePrompts.map(p => p.message);
+      const newPromptStrings = await getNewExamplePrompts(existingPromptMessages);
+      // Map new prompt strings to the state structure. Icons are not available for these dynamic prompts.
+      const newPromptsForState = newPromptStrings.map(prompt => ({
+        heading: prompt,
+        message: prompt
+        // No icon for dynamically generated prompts by default
+      }));
+      setExamplePrompts(newPromptsForState);
+    }
   }
 
   return (
@@ -36,7 +67,7 @@ export const MobileIconsBar: React.FC = () => {
       <Button variant="ghost" size="icon">
         <CalendarDays className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>
-      <Button variant="ghost" size="icon">
+      <Button variant="ghost" size="icon" onClick={handleMagnifyPrompt}>
         <Search className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>
       <Button variant="ghost" size="icon">
