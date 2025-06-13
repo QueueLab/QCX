@@ -479,33 +479,89 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
       });
     };
 
-    if (mapInstance) {
-      // Use existing map instance from context
+    if (mapInstance && mapContainer.current) { // Ensure mapContainer.current is also available
       map.current = mapInstance;
-
-      // Ensure the map is attached to the current container.
-      const mapCanvas = mapInstance.getCanvas();
       const newContainer = mapContainer.current;
+      const mapCanvas = map.current.getCanvas();
 
-      if (newContainer && !newContainer.contains(mapCanvas)) {
-        // Clear the new container before appending
+      // 1. Re-parent the canvas if it's not already in the current container
+      if (!newContainer.contains(mapCanvas)) {
+        // Clear the new container of any previous content
         while (newContainer.firstChild) {
           newContainer.removeChild(newContainer.firstChild);
         }
+        // Append the map's canvas
         newContainer.appendChild(mapCanvas);
       }
-      // Always trigger resize to ensure the map adapts to the container
-      mapInstance.resize();
 
-      // Restore viewport
-      if (viewport && map.current) {
-        map.current.setCenter(viewport.center);
-        map.current.setZoom(viewport.zoom);
-        map.current.setPitch(viewport.pitch);
-        map.current.setBearing(viewport.bearing);
-      }
+      // 2. Defer resize and check map responsiveness
+      setTimeout(() => {
+        if (map.current && map.current.getCanvas()) { // Ensure map instance is still valid
+            map.current.resize(); // Initial resize
 
-      // Re-attach event listeners as they are cleaned up in the return function
+            if (!map.current.isStyleLoaded()) {
+                console.warn("Map style not loaded on remount. Attempting to reload style...");
+                const currentStyle = map.current.getStyle();
+
+                map.current.setStyle(currentStyle);
+
+                map.current.once('styledata', () => { // Wait for the style to be fully processed
+                    console.log("Style reloaded. Re-applying DEM, sky, viewport, and drawing tools.");
+
+                    // Re-add DEM source and terrain
+                    if (map.current && !map.current.getSource('mapbox-dem')) {
+                        map.current.addSource('mapbox-dem', {
+                            type: 'raster-dem',
+                            url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
+                            tileSize: 512,
+                            maxzoom: 14,
+                        });
+                    }
+                    if (map.current) map.current.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
+
+                    // Re-add sky layer
+                    if (map.current && !map.current.getLayer('sky')) {
+                        map.current.addLayer({
+                            id: 'sky',
+                            type: 'sky',
+                            paint: {
+                                'sky-type': 'atmosphere',
+                                'sky-atmosphere-sun': [0.0, 0.0],
+                                'sky-atmosphere-sun-intensity': 15,
+                            },
+                        });
+                    }
+
+                    // Restore viewport
+                    if (map.current && viewport) { // mapData.viewport is 'viewport' here
+                        map.current.setCenter(viewport.center);
+                        map.current.setZoom(viewport.zoom);
+                        map.current.setPitch(viewport.pitch);
+                        map.current.setBearing(viewport.bearing);
+                    }
+
+                    // Re-setup drawing tools if in drawing mode
+                    if (map.current && mapType === MapToggleEnum.DrawingMode) {
+                        setupDrawingTools();
+                    }
+
+                    if (map.current) map.current.resize(); // Resize again after all layers/sources are set up
+                });
+            } else {
+                // Style was already loaded, just ensure viewport is set correctly.
+                if (map.current && viewport) { // mapData.viewport is 'viewport' here
+                    map.current.setCenter(viewport.center);
+                    map.current.setZoom(viewport.zoom);
+                    map.current.setPitch(viewport.pitch);
+                    map.current.setBearing(viewport.bearing);
+                }
+                // Call resize again for good measure even if style was loaded.
+                if (map.current) map.current.resize();
+            }
+        }
+      }, 100); // 100ms delay
+
+      // Re-attach event listeners (moved outside timeout, should be fine as map.current is set)
       map.current.on('moveend', captureMapCenter);
       map.current.on('mousedown', handleUserInteraction);
       map.current.on('touchstart', handleUserInteraction);
@@ -515,9 +571,8 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
 
       // Re-setup drawing tools if in DrawingMode
       if (mapType === MapToggleEnum.DrawingMode) {
-        setupDrawingTools(); // This should also restore drawings from mapData.drawnFeatures
+        setupDrawingTools();
       } else {
-        // Ensure drawing tools are removed if not in drawing mode
         if (drawRef.current && map.current) {
           try {
             map.current.removeControl(drawRef.current);
@@ -527,21 +582,21 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
       }
 
       initializedRef.current = true;
-      setIsMapLoaded(true);
-      // Geolocation watcher and rotation are handled by mapType useEffect
-      setupGeolocationWatcher(); // Call this to ensure it's set based on current mapType
+      setIsMapLoaded(true); // Set map loaded state
+
+      setupGeolocationWatcher();
       if (mapType !== MapToggleEnum.RealTimeMode && !isRotatingRef.current) {
-         // Check if rotation should start, e.g. if auto-rotation was on
          const idleTime = Date.now() - lastInteractionRef.current;
          if (idleTime > 30000) startRotation();
       }
 
-
-    } else if (!map.current) { // Only initialize if map.current is also null (it should be if mapInstance is null)
+    } else if (!mapInstance && !map.current) { // Modified condition to ensure it only runs if mapInstance is null AND map.current is null
       initializeNewMap();
     }
 
     // Event listeners that are always active when this component is mounted
+    // This block seems redundant if listeners are added in both mapInstance and initializeNewMap blocks.
+    // However, keeping it for now as per original structure, but it might be a candidate for cleanup.
     // and map.current is set.
     // The main map 'load' event won't fire again for an existing instance,
     // so some setup might need to be duplicated or handled outside 'load'.
