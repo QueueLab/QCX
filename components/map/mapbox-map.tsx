@@ -30,6 +30,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   const drawingFeatures = useRef<any>(null)
   const { mapType, setMapType } = useMapToggle() // Get setMapType
   const { mapData, setMapData } = useMapData(); // Consume the new context, get setMapData
+  const { viewport } = mapData; // mapInstance is no longer in mapData, viewport is used for initial state
   const { setIsMapLoaded } = useMapLoading(); // Get setIsMapLoaded from context
   const previousMapTypeRef = useRef<MapToggleEnum | null>(null)
 
@@ -280,7 +281,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
       drawingFeatures.current.features.forEach((feature: any) => {
         drawRef.current?.add(feature)
       })
-      
+
       // Update labels after restoring features
       setTimeout(updateMeasurementLabels, 100)
     }
@@ -387,115 +388,154 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     }
   }, [mapType, updateMeasurementLabels, setupGeolocationWatcher, captureMapCenter, setupDrawingTools])
 
-  // Initialize map (only once)
+  // Initialize map
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (mapContainer.current && !map.current) {
-      let initialZoom = 2;
-      if (typeof window !== 'undefined' && window.innerWidth < 768) {
-        initialZoom = 1.3;
-      }
+    if (map.current || !mapContainer.current) { // If map already exists or container not ready, do nothing
+      return;
+    }
 
-      map.current = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/satellite-streets-v12',
+    // Determine initial viewport state
+    // Prioritize viewport from context, then local ref, then hardcoded defaults.
+    let initialPitch = 0;
+    let initialBearing = 0;
+
+    if (viewport) { // mapData.viewport
+        currentMapCenterRef.current = { // Update local ref to match context if context is source
+            center: viewport.center,
+            zoom: viewport.zoom,
+            pitch: viewport.pitch
+        };
+        initialPitch = viewport.pitch;
+        initialBearing = viewport.bearing;
+    } else if (currentMapCenterRef.current) {
+        initialPitch = currentMapCenterRef.current.pitch;
+        // currentMapCenterRef doesn't store bearing, so it defaults to 0 unless set otherwise
+    }
+
+    const initialViewportState = viewport || {
         center: currentMapCenterRef.current.center,
         zoom: currentMapCenterRef.current.zoom,
-        pitch: currentMapCenterRef.current.pitch,
-        bearing: 0,
-        maxZoom: 22,
-        attributionControl: true
-      })
+        pitch: initialPitch,
+        bearing: initialBearing,
+    };
 
-      map.current.addControl(new mapboxgl.NavigationControl(), 'top-left')
-
-      // Register event listeners
-      map.current.on('moveend', captureMapCenter)
-      map.current.on('mousedown', handleUserInteraction)
-      map.current.on('touchstart', handleUserInteraction)
-      map.current.on('wheel', handleUserInteraction)
-      map.current.on('drag', handleUserInteraction)
-      map.current.on('zoom', handleUserInteraction)
-
-      map.current.on('load', () => {
-        if (!map.current) return
-
-        // Add terrain and sky
-        map.current.addSource('mapbox-dem', {
-          type: 'raster-dem',
-          url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
-          tileSize: 512,
-          maxzoom: 14,
-        })
-
-        map.current.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 })
-
-        map.current.addLayer({
-          id: 'sky',
-          type: 'sky',
-          paint: {
-            'sky-type': 'atmosphere',
-            'sky-atmosphere-sun': [0.0, 0.0],
-            'sky-atmosphere-sun-intensity': 15,
-          },
-        })
-
-        // Initialize drawing tools based on initial mode
-        if (mapType === MapToggleEnum.DrawingMode) {
-          setupDrawingTools()
-        }
-
-        // If not in real-time mode, start rotation
-        if (mapType !== MapToggleEnum.RealTimeMode) {
-          startRotation()
-        }
-
-        initializedRef.current = true
-        setIsMapLoaded(true) // Set map loaded state to true
-        setupGeolocationWatcher()
-      })
+    // If mapData.viewport was undefined, save the derived initialViewportState (which might be from defaults) to context.
+    if (!viewport && mapContainer.current) { // Check mapContainer to ensure this isn't an effect of unmounting
+        setMapData(prev => ({ ...prev, viewport: initialViewportState }));
     }
+
+    const newMap = new mapboxgl.Map({
+      container: mapContainer.current!,
+      style: 'mapbox://styles/mapbox/satellite-streets-v12',
+      center: initialViewportState.center,
+      zoom: initialViewportState.zoom,
+      pitch: initialViewportState.pitch,
+      bearing: initialViewportState.bearing,
+      maxZoom: 22,
+      attributionControl: true,
+    });
+
+    map.current = newMap; // Set local ref to the new map instance
+
+    // Event listeners for the new map
+    newMap.on('moveend', captureMapCenter);
+    newMap.on('mousedown', handleUserInteraction);
+    newMap.on('touchstart', handleUserInteraction);
+    newMap.on('wheel', handleUserInteraction);
+    newMap.on('drag', handleUserInteraction);
+    newMap.on('zoom', handleUserInteraction);
+
+    newMap.on('load', () => {
+      if (!map.current) return;
+
+      map.current.addSource('mapbox-dem', {
+        type: 'raster-dem',
+        url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
+        tileSize: 512,
+        maxzoom: 14,
+      });
+      map.current.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 });
+      map.current.addLayer({
+        id: 'sky',
+        type: 'sky',
+        paint: {
+          'sky-type': 'atmosphere',
+          'sky-atmosphere-sun': [0.0, 0.0],
+          'sky-atmosphere-sun-intensity': 15,
+        },
+      });
+
+      if (mapType === MapToggleEnum.DrawingMode) {
+        setupDrawingTools();
+      }
+
+      if (mapType !== MapToggleEnum.RealTimeMode) {
+        startRotation();
+      }
+
+      initializedRef.current = true;
+      setIsMapLoaded(true);
+      setupGeolocationWatcher();
+    });
+
+    newMap.addControl(new mapboxgl.NavigationControl(), 'top-left');
 
     return () => {
       if (map.current) {
-        map.current.off('moveend', captureMapCenter)
-        
+        map.current.off('moveend', captureMapCenter);
+        map.current.off('mousedown', handleUserInteraction);
+        map.current.off('touchstart', handleUserInteraction);
+        map.current.off('wheel', handleUserInteraction);
+        map.current.off('drag', handleUserInteraction);
+        map.current.off('zoom', handleUserInteraction);
+
         if (drawRef.current) {
           try {
-            map.current.off('draw.create', updateMeasurementLabels)
-            map.current.off('draw.delete', updateMeasurementLabels)
-            map.current.off('draw.update', updateMeasurementLabels)
-            map.current.removeControl(drawRef.current)
+            if (map.current.hasControl(drawRef.current as mapboxgl.IControl)) {
+               map.current.off('draw.create', updateMeasurementLabels);
+               map.current.off('draw.delete', updateMeasurementLabels);
+               map.current.off('draw.update', updateMeasurementLabels);
+               map.current.removeControl(drawRef.current);
+            }
           } catch (e) {
-            console.log('Draw control already removed')
+            console.log('Error during drawRef cleanup on map remove:', e);
           }
+          drawRef.current = null;
         }
-        
-        // Clean up any existing labels
-        Object.values(polygonLabelsRef.current).forEach(marker => marker.remove())
-        Object.values(lineLabelsRef.current).forEach(marker => marker.remove())
-        
-        stopRotation()
-        setIsMapLoaded(false) // Reset map loaded state on cleanup
-        map.current.remove()
-        map.current = null
+
+        Object.values(polygonLabelsRef.current).forEach(marker => marker.remove());
+        Object.values(lineLabelsRef.current).forEach(marker => marker.remove());
+        polygonLabelsRef.current = {};
+        lineLabelsRef.current = {};
+
+        stopRotation();
+        map.current.remove();
       }
       
+      map.current = null;
+      initializedRef.current = false;
+      setIsMapLoaded(false);
+
       if (geolocationWatchIdRef.current !== null) {
-        navigator.geolocation.clearWatch(geolocationWatchIdRef.current)
-        geolocationWatchIdRef.current = null
+        navigator.geolocation.clearWatch(geolocationWatchIdRef.current);
+        geolocationWatchIdRef.current = null;
       }
-    }
+    };
   }, [
+    setMapData,
+    // viewport, // INTENTIONALLY REMOVED to prevent re-render loop from captureMapCenter updates
+    mapType,
     handleUserInteraction, 
     startRotation, 
     stopRotation, 
-    mapType, 
     updateMeasurementLabels, 
     setupGeolocationWatcher, 
     captureMapCenter, 
     setupDrawingTools,
-    setIsMapLoaded // Added missing dependency
-  ])
+    setIsMapLoaded
+    // mapData.drawnFeatures // INTENTIONALLY REMOVED to prevent re-initialization on drawing changes
+  ]);
 
   // Handle position updates from props
   useEffect(() => {

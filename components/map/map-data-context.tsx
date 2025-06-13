@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { LngLatLike } from 'mapbox-gl'; // Import LngLatLike
+import mapboxgl, { LngLatLike } from 'mapbox-gl'; // Import LngLatLike and mapboxgl
 
 // Define the shape of the map data you want to share
 export interface MapData {
@@ -14,6 +14,8 @@ export interface MapData {
     measurement: string;
     geometry: any;
   }>;
+  // mapInstance?: mapboxgl.Map | null; // Removed as per request
+  viewport?: { center: [number, number]; zoom: number; pitch: number; bearing: number };
 }
 
 interface MapDataContextType {
@@ -24,7 +26,16 @@ interface MapDataContextType {
 const MapDataContext = createContext<MapDataContextType | undefined>(undefined);
 
 export const MapDataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [mapData, setMapData] = useState<MapData>({ drawnFeatures: [] });
+  const [mapData, setMapData] = useState<MapData>({
+    drawnFeatures: [],
+    // mapInstance: null, // Removed
+    viewport: {
+      center: [0, 0],
+      zoom: 2,
+      pitch: 0,
+      bearing: 0,
+    },
+  });
 
   return (
     <MapDataContext.Provider value={{ mapData, setMapData }}>
