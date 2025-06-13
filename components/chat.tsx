@@ -8,7 +8,8 @@ import { EmptyScreen } from './empty-screen'
 // import { Mapbox } from './map/mapbox-map' // Replaced with dynamic import
 import { useUIState, useAIState } from 'ai/rsc'
 import MobileIconsBar from './mobile-icons-bar'
-import dynamic from 'next/dynamic'; // Added for dynamic import
+// import dynamic from 'next/dynamic'; // Removed as ClientOnlyMapbox handles dynamic import
+import ClientOnlyMapbox from './map/client-only-mapbox'; // Added static import for the wrapper
 import { useProfileToggle, ProfileToggleEnum } from "@/components/profile-toggle-context";
 import SettingsView from "@/components/settings/settings-view";
 import { MapDataProvider, useMapData } from './map/map-data-context'; // Add this and useMapData
@@ -18,10 +19,10 @@ type ChatProps = {
   id?: string // This is the chatId
 }
 
-const Mapbox = dynamic(() => import('./map/mapbox-map').then(mod => mod.Mapbox), {
-  ssr: false,
-  loading: () => <div className="h-full w-full flex items-center justify-center"><p>Loading map...</p></div>
-});
+// const Mapbox = dynamic(() => import('./map/mapbox-map').then(mod => mod.Mapbox), {
+//   ssr: false,
+//   loading: () => <div className="h-full w-full flex items-center justify-center"><p>Loading map...</p></div>
+// }); // Removed old dynamic import
 
 export function Chat({ id }: ChatProps) {
   const router = useRouter()
@@ -83,7 +84,7 @@ export function Chat({ id }: ChatProps) {
       <MapDataProvider> {/* Add Provider */}
         <div className="mobile-layout-container">
           <div className="mobile-map-section">
-            {activeView ? <SettingsView /> : <Mapbox />}
+            {activeView ? <SettingsView /> : <ClientOnlyMapbox />}
           </div>
           <div className="mobile-icons-bar">
             <MobileIconsBar />
@@ -121,7 +122,7 @@ export function Chat({ id }: ChatProps) {
           className="w-1/2 p-4 fixed h-[calc(100vh-0.5in)] top-0 right-0 mt-[0.5in]"
           style={{ zIndex: 10 }} // Added z-index
         >
-          {activeView ? <SettingsView /> : <Mapbox />}
+          {activeView ? <SettingsView /> : <ClientOnlyMapbox />}
         </div>
       </div>
     </MapDataProvider>
