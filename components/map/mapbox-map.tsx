@@ -533,8 +533,8 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     setupGeolocationWatcher, 
     captureMapCenter, 
     setupDrawingTools,
-    setIsMapLoaded,
-    mapData.drawnFeatures
+    setIsMapLoaded
+    // mapData.drawnFeatures // INTENTIONALLY REMOVED to prevent re-initialization on drawing changes
   ]);
 
   // Handle position updates from props
