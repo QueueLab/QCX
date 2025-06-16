@@ -53,7 +53,7 @@ export const searchTool = ({ uiStream, fullResponse }: ToolProps) => ({
   }
 })
 
-async function tavilySearch(
+export async function tavilySearch(
   query: string,
   maxResults: number = 10,
   searchDepth: 'basic' | 'advanced' = 'basic'

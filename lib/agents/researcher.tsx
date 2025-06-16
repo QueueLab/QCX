@@ -26,7 +26,14 @@ export async function researcher(
     </Section>
   )
 
-  const currentDate = new Date().toLocaleString()
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = (now.getMonth() + 1).toString().padStart(2, '0');
+  const day = now.getDate().toString().padStart(2, '0');
+  const hours = now.getHours().toString().padStart(2, '0');
+  const minutes = now.getMinutes().toString().padStart(2, '0');
+  const seconds = now.getSeconds().toString().padStart(2, '0');
+  const currentDate = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
   // Default system prompt, used if dynamicSystemPrompt is not provided
   const default_system_prompt = `As a comprehensive AI assistant, you can search the web, retrieve information from URLs, and understand geospatial queries to assist the user and display information on a map.
 Current date and time: ${currentDate}.
