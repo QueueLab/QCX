@@ -2,9 +2,9 @@ import { createStreamableValue } from 'ai/rsc';
 import { experimental_createMCPClient } from 'ai'; // Import for MCP Client from 'ai'
 import { BotMessage } from '@/components/message'; // For UI feedback
 import { geospatialQuerySchema } from '@/lib/schema/geospatial';
-import { ToolProps } from '.'; // Assuming ToolProps is exported from './index.tsx'
+import { ToolProps } from '.'; // ToolProps now includes currentUserLocation
 
-export const geospatialTool = ({ uiStream, fullResponse }: ToolProps) => ({
+export const geospatialTool = ({ uiStream, fullResponse, currentUserLocation }: ToolProps) => ({
   description: `Use this tool for any queries that involve locations, places, addresses, distances between places, directions, or finding points of interest on a map. This includes questions like:
 - 'Where is [place name/address]?'
 - 'Show me [place name/address] on the map.'
@@ -16,12 +16,23 @@ export const geospatialTool = ({ uiStream, fullResponse }: ToolProps) => ({
 - Any query that implies needing a map or spatial understanding.`,
   parameters: geospatialQuerySchema,
   execute: async ({ query }: { query: string }) => {
-         // Provide immediate UI feedback by creating a streamable value for the message.
-         const uiFeedbackStream = createStreamableValue<string>();
-         // Set the content of the stream and mark it as done.
-         uiFeedbackStream.done(`Looking up map information for: "${query}"...`); 
-         // Append the BotMessage component with the streamable value to the UI stream.
-         uiStream.append(<BotMessage content={uiFeedbackStream.value} />);
+    let augmentedQuery = query;
+    if (currentUserLocation?.place_name) {
+      // Heuristic: if query is generic (e.g., "find cafes", "parks"), append location.
+      // Generic if it doesn't contain prepositions of location or common address characters like ','.
+      const isGenericQuery = !/\b(near|in|at|from|to)\b/i.test(query) && !query.includes(',');
+      if (isGenericQuery) {
+        augmentedQuery = `${query} near ${currentUserLocation.place_name}`;
+        console.log(`[GeospatialTool] Augmented query from "${query}" to "${augmentedQuery}" using current location.`);
+      }
+    }
+
+    // Provide immediate UI feedback by creating a streamable value for the message.
+    const uiFeedbackStream = createStreamableValue<string>();
+    // Set the content of the stream and mark it as done.
+    uiFeedbackStream.done(`Looking up map information for: "${augmentedQuery}"...`);
+    // Append the BotMessage component with the streamable value to the UI stream.
+    uiStream.append(<BotMessage content={uiFeedbackStream.value} />);
 
     // Log environment variable placeholders
     console.log(`[GeospatialTool] Attempting to use SMITHERY_PROFILE_ID: "${process.env.SMITHERY_PROFILE_ID}"`);
@@ -56,8 +67,8 @@ export const geospatialTool = ({ uiStream, fullResponse }: ToolProps) => ({
       console.log("✅ Successfully connected to MCP server.");
 
       const geocodeParams = { query, includeMapPreview: true };
-      console.log("📞 Attempting to call 'geocode_location' tool with params:", geocodeParams);
-      const geocodeResult = await client.callTool('geocode_location', geocodeParams);
+      console.log("📞 Attempting to call 'geocode_location' tool with params:", { query: augmentedQuery, includeMapPreview: true });
+      const geocodeResult = await client.callTool('geocode_location', { query: augmentedQuery, includeMapPreview: true });
       // console.log("🗺️ Geocode Result from MCP:", JSON.stringify(geocodeResult, null, 2)); // Removed verbose log
 
       if (geocodeResult && geocodeResult.content && Array.isArray(geocodeResult.content)) {
@@ -113,7 +124,7 @@ export const geospatialTool = ({ uiStream, fullResponse }: ToolProps) => ({
     // Return a marker object for client-side processing, now including MCP data
     return {
       type: "MAP_QUERY_TRIGGER", // Or a new type like "GEOSPATIAL_DATA_RESULT"
-      originalUserInput: query,
+      originalUserInput: augmentedQuery, // Return the query that was actually used
       timestamp: new Date().toISOString(),
       mcp_response: mcpData // Include the parsed MCP data
     };
