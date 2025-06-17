@@ -63,7 +63,7 @@ export async function researcher(
   const currentDate = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
   // Default system prompt, used if dynamicSystemPrompt is not provided
   const default_system_prompt = `As a comprehensive AI assistant, you can search the web, retrieve information from URLs, and understand geospatial queries to assist the user and display information on a map.
-Current date and time: ${currentDate}.
+Current date and time: ${currentDate}. You can use this information directly to answer questions about the current time or date.
 
 Tool Usage Guide:
 - For general web searches for factual information: Use the 'search' tool.
@@ -204,6 +204,27 @@ Match the language of your response to the user's language.`;
 
   if (toolResponses.length > 0) {
     messages.push({ role: 'tool', content: toolResponses });
+  }
+
+  // === Add holding message if necessary before simulated location flow ===
+  if (locationRequestContext && fullResponse.trim() === '') {
+    let holdingMessage = "Your request is being processed, and I may need to confirm location preferences. Please wait a moment.";
+
+    fullResponse = holdingMessage;
+    streamText.update(fullResponse);
+
+    // Ensure the answerSection is displayed with this holding message.
+    // The initial answerSection was defined with streamText.value, which has now been updated.
+    // Re-creating it ensures the BotMessage component gets the latest streamText.value.
+    const currentAnswerSection = (
+      <Section title="response">
+        <BotMessage content={streamText.value} />
+      </Section>
+    );
+    // uiStream.update is called when the first text-delta normally arrives.
+    // If fullResponse was empty, that call might not have happened or was with an empty value.
+    // Calling it here ensures the section with the holding message is rendered.
+    uiStream.update(currentAnswerSection);
   }
 
   // === Handling of simulated location request AFTER processing the stream ===
