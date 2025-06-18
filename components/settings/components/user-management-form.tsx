@@ -14,9 +14,10 @@ import type { SettingsFormValues } from './settings';
 
 interface UserManagementFormProps {
   form: UseFormReturn<SettingsFormValues>;
+  userId: string;
 }
 
-export function UserManagementForm({ form }: UserManagementFormProps) {
+export function UserManagementForm({ form, userId }: UserManagementFormProps) {
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "users",
@@ -53,7 +54,7 @@ export function UserManagementForm({ form }: UserManagementFormProps) {
     form.clearErrors("newUserEmail");
 
     try {
-      const result = await addUser('default-user', { email: newUserEmail, role: newUserRole });
+      const result = await addUser(userId, { email: newUserEmail, role: newUserRole });
 
       if (result.error) {
         toast({ title: 'Error adding user', description: result.error, variant: 'destructive' });

@@ -17,6 +17,7 @@ import { UserManagementForm } from './user-management-form';
 import { Form } from "@/components/ui/form"
 import { useToast } from "@/components/ui/hooks/use-toast"
 import { getSystemPrompt, saveSystemPrompt } from "../../../lib/actions/chat" // Added import
+import { getUsers } from "../../../lib/actions/users" // Added import
 
 // Define the form schema
 const settingsFormSchema = z.object({
@@ -49,10 +50,7 @@ const defaultValues: Partial<SettingsFormValues> = {
   systemPrompt:
     "You are a planetary copilot, an AI assistant designed to help users with information about planets, space exploration, and astronomy. Provide accurate, educational, and engaging responses about our solar system and beyond.",
   selectedModel: "gpt-4o",
-  users: [
-    { id: "1", email: "admin@example.com", role: "admin" },
-    { id: "2", email: "user@example.com", role: "editor" },
-  ],
+  users: [],
 }
 
 interface SettingsProps {
@@ -86,6 +84,18 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
     }
     fetchPrompt();
   }, [form, userId]);
+
+  useEffect(() => {
+    async function fetchUsers() {
+      const result = await getUsers(userId);
+      if (result.users) {
+        form.setValue('users', result.users || [], { shouldValidate: true, shouldDirty: false });
+      }
+    }
+    if (userId && form.setValue) {
+      fetchUsers();
+    }
+  }, [userId, form.setValue]);
 
   async function onSubmit(data: SettingsFormValues) {
     setIsLoading(true)
@@ -166,7 +176,7 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
             </Tabs.Content>
 
             <Tabs.Content value="user-management">
-              <UserManagementForm form={form} />
+              <UserManagementForm form={form} userId={userId} />
             </Tabs.Content>
           </Tabs.Root>
 

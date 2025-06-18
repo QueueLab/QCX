@@ -16,7 +16,7 @@ export interface User {
 }
 
 let usersStore: Record<string, Array<User>> = {
-  'default-user': [ // Simulate a default user having some initial users
+  'sample-data-user': [ // Simulate a sample data user having some initial users
     { id: '1', email: 'admin@example.com', role: 'admin' },
     { id: '2', email: 'editor@example.com', role: 'editor' },
   ],
