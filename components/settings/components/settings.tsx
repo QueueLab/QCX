@@ -83,7 +83,7 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
       }
     }
     fetchPrompt();
-  }, [form, userId]);
+  }, [form, userId]); // form is added here as per eslint warning, though setValue is stable
 
   useEffect(() => {
     async function fetchUsers() {
@@ -92,10 +92,10 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
         form.setValue('users', result.users || [], { shouldValidate: true, shouldDirty: false });
       }
     }
-    if (userId && form.setValue) {
+    if (userId) { // Removed form.setValue from condition
       fetchUsers();
     }
-  }, [userId, form.setValue]);
+  }, [userId, form]); // form.setValue is stable, but ESLint prefers 'form'
 
   async function onSubmit(data: SettingsFormValues) {
     setIsLoading(true)
