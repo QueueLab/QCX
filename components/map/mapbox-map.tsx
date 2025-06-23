@@ -3,6 +3,12 @@
 import { useEffect, useRef, useCallback } from 'react' // Removed useState
 import mapboxgl from 'mapbox-gl'
 import MapboxDraw from '@mapbox/mapbox-gl-draw'
+import {
+  CircleMode,
+  DragCircleMode,
+  DirectMode,
+  SimpleSelectMode,
+} from "mapbox-gl-draw-circle";
 import * as turf from '@turf/turf'
 import { toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
@@ -21,6 +27,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   const rotationFrameRef = useRef<number | null>(null)
   const polygonLabelsRef = useRef<{ [id: string]: mapboxgl.Marker }>({})
   const lineLabelsRef = useRef<{ [id: string]: mapboxgl.Marker }>({})
+  const circleLabelsRef = useRef<{ [id: string]: mapboxgl.Marker }>({}) // Added circleLabelsRef
   const lastInteractionRef = useRef<number>(Date.now())
   const isRotatingRef = useRef<boolean>(false)
   const isUpdatingPositionRef = useRef<boolean>(false)
@@ -65,21 +72,58 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     // Remove existing labels
     Object.values(polygonLabelsRef.current).forEach(marker => marker.remove())
     Object.values(lineLabelsRef.current).forEach(marker => marker.remove())
+    Object.values(circleLabelsRef.current).forEach(marker => marker.remove()); // Clear circle labels
     polygonLabelsRef.current = {}
     lineLabelsRef.current = {}
+    circleLabelsRef.current = {}; // Clear circle labels ref
 
     const features = drawRef.current.getAll().features
-    const currentDrawnFeatures: Array<{ id: string; type: 'Polygon' | 'LineString'; measurement: string; geometry: any }> = []
+    const currentDrawnFeatures: Array<{ id: string; type: 'Polygon' | 'LineString' | 'Circle'; measurement: string; geometry: any, properties?: any }> = []
 
     features.forEach(feature => {
       const id = feature.id as string
-      let featureType: 'Polygon' | 'LineString' | null = null;
+      let featureType: 'Polygon' | 'LineString' | 'Circle' | null = null;
       let measurement = '';
+      let featureProperties = feature.properties;
 
-      if (feature.geometry.type === 'Polygon') {
+      // According to mapbox-gl-draw-circle documentation, circles are Polygons with isCircle property.
+      if (feature.properties?.isCircle && feature.geometry.type === 'Polygon' && feature.properties.center) {
+        featureType = 'Circle';
+        const radiusInKm = feature.properties.radiusInKm;
+        const radiusInM = radiusInKm * 1000;
+        const formattedRadius = formatMeasurement(radiusInM, false);
+        measurement = `Radius: ${formattedRadius}`;
+        // Preserve essential circle properties, especially if other properties might be on the feature
+        featureProperties = {
+          isCircle: true,
+          radiusInKm: radiusInKm,
+          center: feature.properties.center
+        };
+
+        const coordinates = feature.properties.center; // Use feature.properties.center for label placement
+
+        const el = document.createElement('div');
+        el.className = 'radius-label'; // Use a distinct class if needed
+        el.style.background = 'rgba(255, 255, 255, 0.8)';
+        el.style.padding = '4px 8px';
+        el.style.borderRadius = '4px';
+        el.style.fontSize = '12px';
+        el.style.fontWeight = 'bold';
+        el.style.color = '#333333';
+        el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+        el.style.pointerEvents = 'none';
+        el.textContent = measurement;
+
+        if (map.current) {
+          const marker = new mapboxgl.Marker({ element: el })
+            .setLngLat(coordinates as [number, number])
+            .addTo(map.current);
+          circleLabelsRef.current[id] = marker;
+        }
+      } else if (feature.geometry.type === 'Polygon') {
         featureType = 'Polygon';
         // Calculate area for polygons
-        const area = turf.area(feature)
+        const area = turf.area(feature);
         const formattedArea = formatMeasurement(area, true)
         measurement = formattedArea;
         
@@ -155,6 +199,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
           type: featureType,
           measurement,
           geometry: feature.geometry,
+          properties: featureProperties // Store properties for circles
         });
       }
     })
@@ -247,8 +292,10 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         // Clean up any existing labels
         Object.values(polygonLabelsRef.current).forEach(marker => marker.remove())
         Object.values(lineLabelsRef.current).forEach(marker => marker.remove())
+        Object.values(circleLabelsRef.current).forEach(marker => marker.remove()); // Cleanup circle labels
         polygonLabelsRef.current = {}
         lineLabelsRef.current = {}
+        circleLabelsRef.current = {}; // Cleanup circle labels ref
       } catch (e) {
         console.log('Error removing draw control:', e)
       }
@@ -260,10 +307,19 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
       controls: {
         polygon: true,
         trash: true,
-        line_string: true
+        line_string: true,
+        draw_circle: true, // Added circle control
       },
       // Start in polygon mode by default
-      defaultMode: 'draw_polygon'
+      defaultMode: 'draw_polygon',
+      userProperties: true, // IMPORTANT: must be true for mapbox-gl-draw-circle to work
+      modes: {
+        ...MapboxDraw.modes,
+        draw_circle: CircleMode,
+        drag_circle: DragCircleMode,
+        direct_select: DirectMode,
+        simple_select: SimpleSelectMode,
+      },
     })
     
     // Add control to map
@@ -370,8 +426,10 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
             // Clean up any existing labels
             Object.values(polygonLabelsRef.current).forEach(marker => marker.remove())
             Object.values(lineLabelsRef.current).forEach(marker => marker.remove())
+            Object.values(circleLabelsRef.current).forEach(marker => marker.remove()); // Cleanup circle labels
             polygonLabelsRef.current = {}
             lineLabelsRef.current = {}
+            circleLabelsRef.current = {}; // Cleanup circle labels ref
           } catch (e) {
             console.log('Error removing draw control:', e)
           }
@@ -473,6 +531,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         // Clean up any existing labels
         Object.values(polygonLabelsRef.current).forEach(marker => marker.remove())
         Object.values(lineLabelsRef.current).forEach(marker => marker.remove())
+        Object.values(circleLabelsRef.current).forEach(marker => marker.remove()); // Cleanup circle labels
         
         stopRotation()
         setIsMapLoaded(false) // Reset map loaded state on cleanup
@@ -575,6 +634,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
 
         Object.values(polygonLabelsRef.current).forEach(marker => marker.remove())
         Object.values(lineLabelsRef.current).forEach(marker => marker.remove())
+        Object.values(circleLabelsRef.current).forEach(marker => marker.remove()); // Cleanup circle labels
 
         stopRotation()
         setIsMapLoaded(false)
