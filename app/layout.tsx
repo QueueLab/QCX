@@ -10,7 +10,7 @@ import { Toaster } from '@/components/ui/sonner'
 import { MapToggleProvider } from '@/components/map-toggle-context'
 import { ProfileToggleProvider } from '@/components/profile-toggle-context'
 import { MapLoadingProvider } from '@/components/map-loading-context';
-import ConditionalLottie from '@/components/conditional-lottie';
+import LoadingSpinner from '@/components/loading-spinner';
 
 const fontSans = FontSans({
   subsets: ['latin'],
@@ -63,7 +63,7 @@ export default function RootLayout({
             >
               <MapLoadingProvider>
                 <Header />
-                <ConditionalLottie />
+                <LoadingSpinner />
                 {children}
                 <Sidebar />
                 <Footer />

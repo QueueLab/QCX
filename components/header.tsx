@@ -4,6 +4,8 @@ import { ModeToggle } from './mode-toggle'
 import { cn } from '@/lib/utils'
 import HistoryContainer from './history-container'
 import { Button } from '@/components/ui/button'
+import { useMapLoading } from '@/components/map-loading-context'
+import '@/app/loading.css'
 import {
   Search,
   CircleUserRound,
@@ -15,6 +17,8 @@ import { MapToggle } from './map-toggle'
 import { ProfileToggle } from './profile-toggle'
 
 export const Header = () => {
+  const { isMapLoaded } = useMapLoading()
+
   return (
     <header className="fixed w-full p-1 md:p-2 flex justify-between items-center z-10 backdrop-blur md:backdrop-blur-none bg-background/80 md:bg-transparent">
       <div>
@@ -25,7 +29,13 @@ export const Header = () => {
       
       <div className="absolute left-1">
         <Button variant="ghost" size="icon">
-          <Image src="/images/logo.svg" alt="Logo" width={24} height={24} className="h-6 w-auto" />
+          <Image
+            src="/images/logo.svg"
+            alt="Logo"
+            width={24}
+            height={24}
+            className={cn('h-6 w-auto', { spinning: !isMapLoaded })}
+          />
         </Button>
       </div>
       
