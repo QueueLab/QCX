@@ -5,7 +5,7 @@ import { ModeToggle } from './mode-toggle'
 import { cn } from '@/lib/utils'
 import HistoryContainer from './history-container'
 import { Button } from '@/components/ui/button'
-import { useMapLoading } from '@/components/map-loading-context'
+import { useChatLoading } from '@/components/chat-loading-context'
 import '@/app/loading.css'
 import {
   Search,
@@ -18,7 +18,7 @@ import { MapToggle } from './map-toggle'
 import { ProfileToggle } from './profile-toggle'
 
 export const Header = () => {
-  const { isMapLoaded } = useMapLoading()
+  const { isChatLoading } = useChatLoading()
 
   return (
     <header className="fixed w-full p-1 md:p-2 flex justify-between items-center z-10 backdrop-blur md:backdrop-blur-none bg-background/80 md:bg-transparent">
@@ -35,7 +35,7 @@ export const Header = () => {
             alt="Logo"
             width={24}
             height={24}
-            className={cn('h-6 w-auto', { spinning: !isMapLoaded })}
+            className={cn('h-6 w-auto', { spinning: isChatLoading })}
           />
         </Button>
       </div>

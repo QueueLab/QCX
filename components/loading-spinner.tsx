@@ -1,30 +1,30 @@
 'use client'
 
-import { useMapLoading } from '@/components/map-loading-context'
+import { useChatLoading } from '@/components/chat-loading-context'
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import '@/app/loading.css'
 
 const LoadingSpinner = () => {
-  const { isMapLoaded } = useMapLoading()
-  const [isVisible, setIsVisible] = useState(!isMapLoaded)
+  const { isChatLoading } = useChatLoading()
+  const [isVisible, setIsVisible] = useState(isChatLoading)
 
   useEffect(() => {
     let timer: NodeJS.Timeout
-    if (!isMapLoaded) {
+    if (isChatLoading) {
       setIsVisible(true)
     } else {
       timer = setTimeout(() => setIsVisible(false), 500) // Corresponds to fadeOut duration
     }
     return () => clearTimeout(timer)
-  }, [isMapLoaded])
+  }, [isChatLoading])
 
   if (!isVisible) return null
 
   return (
     <div
       className={`fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 ${
-        isMapLoaded ? 'fade-out' : 'fade-in'
+        !isChatLoading ? 'fade-out' : 'fade-in'
       }`}
     >
       <Image
