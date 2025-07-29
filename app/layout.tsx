@@ -10,7 +10,8 @@ import { Toaster } from '@/components/ui/sonner'
 import { MapToggleProvider } from '@/components/map-toggle-context'
 import { ProfileToggleProvider } from '@/components/profile-toggle-context'
 import { MapLoadingProvider } from '@/components/map-loading-context';
-import ConditionalLottie from '@/components/conditional-lottie';
+import { ChatLoadingProvider } from '@/components/chat-loading-context';
+import LoadingSpinner from '@/components/loading-spinner';
 
 const fontSans = FontSans({
   subsets: ['latin'],
@@ -62,12 +63,14 @@ export default function RootLayout({
               themes={['light', 'dark', 'earth']}
             >
               <MapLoadingProvider>
-                <Header />
-                <ConditionalLottie />
-                {children}
-                <Sidebar />
-                <Footer />
-                <Toaster />
+                <ChatLoadingProvider>
+                  <Header />
+                  <LoadingSpinner />
+                  {children}
+                  <Sidebar />
+                  <Footer />
+                  <Toaster />
+                </ChatLoadingProvider>
               </MapLoadingProvider>
             </ThemeProvider>
           </ProfileToggleProvider>

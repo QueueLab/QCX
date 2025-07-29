@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import type { AI, UIState } from '@/app/actions'
 import { useUIState, useActions } from 'ai/rsc'
+import { useChatLoading } from '@/components/chat-loading-context'
 // Removed import of useGeospatialToolMcp as it's no longer used/available
 import { cn } from '@/lib/utils'
 import { UserMessage } from './user-message'
@@ -21,6 +22,7 @@ interface ChatPanelProps {
 export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
   const [, setMessages] = useUIState<typeof AI>()
   const { submit } = useActions()
+  const { setIsChatLoading } = useChatLoading()
   // Removed mcp instance as it's no longer passed to submit
   const [isButtonPressed, setIsButtonPressed] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
@@ -58,8 +60,10 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
       }
     ])
     const formData = new FormData(e.currentTarget)
+    setIsChatLoading(true)
     // Removed mcp argument from submit call
     const responseMessage = await submit(formData)
+    setIsChatLoading(false)
     setMessages(currentMessages => [...currentMessages, responseMessage as any])
   }
 
