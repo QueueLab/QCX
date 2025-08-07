@@ -16,12 +16,33 @@ export function generateUUID(): string {
   return uuidv4();
 }
 
-export function getModel() {
+export function getModel(modelId?: 'reasoning' | 'default') {
   const xaiApiKey = process.env.XAI_API_KEY
   const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID
   const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY
   const awsRegion = process.env.AWS_REGION
   const bedrockModelId = ''
+
+  if (modelId === 'reasoning') {
+    if (xaiApiKey) {
+      const xai = createXai({
+        apiKey: xaiApiKey,
+        baseURL: 'https://api.x.ai/v1',
+      })
+      try {
+        return xai('grok-4')
+      } catch (error) {
+        console.warn('grok-4 unavailable, falling back to grok-3-fast-beta:', error)
+        try {
+          return xai('grok-3-fast-beta')
+        } catch (fallbackError) {
+          console.warn('xAI API unavailable, falling back to OpenAI:', fallbackError)
+        }
+      }
+    } else {
+      console.warn('XAI_API_KEY not found, falling back to OpenAI for reasoning.')
+    }
+  }
 
   if (xaiApiKey) {
     const xai = createXai({

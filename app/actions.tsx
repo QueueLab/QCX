@@ -19,6 +19,7 @@ import { saveChat, getSystemPrompt } from '@/lib/actions/chat'; // Added getSyst
 import { Chat, AIMessage } from '@/lib/types';
 import { UserMessage } from '@/components/user-message';
 import { BotMessage } from '@/components/message';
+import { ReasoningMessage } from '@/components/reasoning-message';
 import { SearchSection } from '@/components/search-section';
 import SearchRelated from '@/components/search-related';
 import { CopilotDisplay } from '@/components/copilot-display';
@@ -32,7 +33,7 @@ type RelatedQueries = {
 };
 
 // Removed mcp parameter from submit, as geospatialTool now handles its client.
-async function submit(formData?: FormData, skip?: boolean) {
+async function submit(formData?: FormData, skip?: boolean, showReasoning?: boolean) {
 'use server';
 
   // TODO: Update agent function signatures in lib/agents/researcher.tsx and lib/agents/writer.tsx
@@ -101,9 +102,25 @@ async function submit(formData?: FormData, skip?: boolean) {
   const currentSystemPrompt = (await getSystemPrompt(userId)) || ''; // Default to empty string if null
 
   async function processEvents() {
-    let action: any = { object: { next: 'proceed' } };
+    let action: any = { object: { next: 'proceed', reasoning: '' } };
     // If the user skips the task, we proceed to the search
     if (!skip) action = (await taskManager(messages)) ?? action;
+
+    const reasoning = action.object.reasoning;
+    if (showReasoning && reasoning) {
+      aiState.update({
+        ...aiState.get(),
+        messages: [
+          ...aiState.get().messages,
+          {
+            id: nanoid(),
+            role: 'assistant',
+            content: reasoning,
+            type: 'reasoning',
+          },
+        ],
+      });
+    }
 
     if (action.object.next === 'inquire') {
       // Generate inquiry
@@ -411,6 +428,14 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                     <FollowupPanel />
                   </Section>
                 ),
+              };
+            case 'reasoning':
+              const isCollapsed = createStreamableValue();
+              isCollapsed.done(true);
+              return {
+                id,
+                component: <ReasoningMessage content={content} />,
+                isCollapsed: isCollapsed.value,
               };
           }
           break;

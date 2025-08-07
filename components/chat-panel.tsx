@@ -44,6 +44,15 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
     }
   }, [isButtonPressed])
 
+  const [showReasoning, setShowReasoning] = useState(false)
+
+  useEffect(() => {
+    const storedValue = localStorage.getItem('showReasoning')
+    if (storedValue) {
+      setShowReasoning(JSON.parse(storedValue))
+    }
+  }, [])
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (isButtonPressed) {
@@ -59,7 +68,7 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
     ])
     const formData = new FormData(e.currentTarget)
     // Removed mcp argument from submit call
-    const responseMessage = await submit(formData)
+    const responseMessage = await submit(formData, false, showReasoning)
     setMessages(currentMessages => [...currentMessages, responseMessage as any])
   }
 

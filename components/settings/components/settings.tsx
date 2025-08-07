@@ -31,6 +31,7 @@ const settingsFormSchema = z.object({
   selectedModel: z.string({
     required_error: "Please select a model.",
   }),
+  showReasoning: z.boolean(),
   users: z.array(
     z.object({
       id: z.string(),
@@ -49,6 +50,7 @@ const defaultValues: Partial<SettingsFormValues> = {
   systemPrompt:
     "You are a planetary copilot, an AI assistant designed to help users with information about planets, space exploration, and astronomy. Provide accurate, educational, and engaging responses about our solar system and beyond.",
   selectedModel: "gpt-4o",
+  showReasoning: false,
   users: [
     { id: "1", email: "admin@example.com", role: "admin" },
     { id: "2", email: "user@example.com", role: "editor" },
@@ -83,9 +85,18 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
       if (existingPrompt) {
         form.setValue("systemPrompt", existingPrompt, { shouldValidate: true, shouldDirty: false });
       }
+      const showReasoning = localStorage.getItem("showReasoning");
+      if (showReasoning) {
+        form.setValue("showReasoning", JSON.parse(showReasoning), { shouldValidate: true, shouldDirty: false });
+      }
     }
     fetchPrompt();
   }, [form, userId]);
+
+  const showReasoning = form.watch("showReasoning");
+  useEffect(() => {
+    localStorage.setItem("showReasoning", JSON.stringify(showReasoning));
+  }, [showReasoning]);
 
   async function onSubmit(data: SettingsFormValues) {
     setIsLoading(true)
