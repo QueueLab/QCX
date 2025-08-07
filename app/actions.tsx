@@ -102,7 +102,7 @@ async function submit(formData?: FormData, skip?: boolean, showReasoning?: boole
   const currentSystemPrompt = (await getSystemPrompt(userId)) || ''; // Default to empty string if null
 
   async function processEvents() {
-    let action: any = { object: { next: 'proceed', reasoning: '' } };
+    let action: any = { object: { next: 'proceed' } };
     // If the user skips the task, we proceed to the search
     if (!skip) action = (await taskManager(messages)) ?? action;
 
@@ -405,7 +405,7 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                 id,
                 component: (
                   <Section title="response">
-                    <BotMessage content={answer.value} />
+                    <BotMessage content={answer} />
                   </Section>
                 ),
               };
@@ -430,11 +430,13 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                 ),
               };
             case 'reasoning':
+              const reasoningContent = createStreamableValue();
+              reasoningContent.done(content);
               const isCollapsed = createStreamableValue();
               isCollapsed.done(true);
               return {
                 id,
-                component: <ReasoningMessage content={content} />,
+                component: <ReasoningMessage content={reasoningContent} />,
                 isCollapsed: isCollapsed.value,
               };
           }
