@@ -122,7 +122,7 @@ export function ModelSelectionForm({ form }: ModelSelectionFormProps) {
             <div className="space-y-0.5">
               <FormLabel className="text-base">Show Reasoning</FormLabel>
               <FormDescription>
-                Display the reasoning behind the AI's decisions.
+                Display the reasoning behind the AI&apos;s decisions.
               </FormDescription>
             </div>
             <FormControl>
