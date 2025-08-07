@@ -397,7 +397,7 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
           }
           break;
         case 'assistant':
-          const answer = createStreamableValue();
+          const answer: StreamableValue<string> = createStreamableValue();
           answer.done(content);
           switch (type) {
             case 'response':
@@ -430,7 +430,8 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                 ),
               };
             case 'reasoning':
-              const reasoningContent = createStreamableValue();
+              const reasoningContent: StreamableValue<string> =
+                createStreamableValue();
               reasoningContent.done(content);
               const isCollapsed = createStreamableValue();
               isCollapsed.done(true);
