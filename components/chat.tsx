@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react' // useState is already here, ensure it's used
 import { usePathname, useRouter } from 'next/navigation'
+import { TreePine, Sun, Rocket, Moon, LucideIcon } from 'lucide-react' // Import icons, LucideIcon for typing
 import { ChatPanel } from './chat-panel'
 import { ChatMessages } from './chat-messages'
 import { EmptyScreen } from './empty-screen'
@@ -26,7 +27,22 @@ export function Chat({ id }: ChatProps) {
   const { activeView } = useProfileToggle();
   const [input, setInput] = useState('')
   const [showEmptyScreen, setShowEmptyScreen] = useState(false)
-  
+
+  // Define a type for the example messages to ensure consistency
+  interface ExampleMessage {
+    heading: string;
+    message: string;
+    icon?: LucideIcon; // Icon is optional
+  }
+
+  const initialExampleMessages: ExampleMessage[] = [
+    { heading: 'What are the best nature parks here?', message: 'What are the best nature parks here?', icon: TreePine },
+    { heading: 'Plan me a trip in the tropics', message: 'Plan me a trip in the tropics', icon: Sun },
+    { heading: 'When is the next lunar eclipse?', message: 'When is the next lunar eclipse?', icon: Moon },
+    { heading: 'How far is Mars?', message: 'How far is Mars?', icon: Rocket },
+  ];
+  const [exampleMessages, setExampleMessages] = useState<ExampleMessage[]>(initialExampleMessages);
+
   useEffect(() => {
     setShowEmptyScreen(messages.length === 0)
   }, [messages])
@@ -80,7 +96,12 @@ export function Chat({ id }: ChatProps) {
             {activeView ? <SettingsView /> : <Mapbox />}
           </div>
           <div className="mobile-icons-bar">
-            <MobileIconsBar />
+            <MobileIconsBar
+              currentInput={input}
+              setInput={setInput}
+              examplePrompts={exampleMessages}
+              setExamplePrompts={setExampleMessages}
+            />
           </div>
           <div className="mobile-chat-input-area">
             <ChatPanel messages={messages} input={input} setInput={setInput} />
@@ -91,6 +112,7 @@ export function Chat({ id }: ChatProps) {
                 submitMessage={message => {
                   setInput(message)
                 }}
+                exampleMessages={exampleMessages} // Pass exampleMessages here
               />
             ) : (
               <ChatMessages messages={messages} />
