@@ -202,9 +202,9 @@ export const geospatialTool = ({
       uiStream.update(<BotMessage content={uiFeedbackStream.value} />);
 
       const toolName = queryType === 'directions' ? 'mapbox_directions' : 'mapbox_geocoding';
-      const toolArgs = { 
-        query, 
-        includeMapPreview: includeMap !== false
+      const toolArgs = {
+        searchText: query,
+        includeMapPreview: includeMap !== false,
       };
 
       console.log('[GeospatialTool] Calling tool:', toolName, 'with args:', toolArgs);
