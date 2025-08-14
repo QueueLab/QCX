@@ -76,7 +76,11 @@ async function getConnectedMcpClient(): Promise<McpClient | null> {
   let client;
   
   try {
-    transport = new StreamableHTTPClientTransport(serverUrlToUse);
+    transport = new StreamableHTTPClientTransport(serverUrlToUse, {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+    });
     console.log('[GeospatialTool] Transport created successfully');
   } catch (transportError: any) {
     console.error('[GeospatialTool] Failed to create transport:', transportError.message);
