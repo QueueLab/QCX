@@ -50,7 +50,7 @@ async function getConnectedMcpClient(): Promise<McpClient | null> {
   }
 
   const smitheryUrlOptions = { config, apiKey, profileId };
-  const mcpServerBaseUrl = `https://server.smithery.ai/@ngoiyaeric/mapbox-mcp-server`;
+  const mcpServerBaseUrl = `https://server.smithery.ai/@ngoiyaeric/mapbox-mcp-server?api_key=${smitheryUrlOptions.apiKey}&profile=${smitheryUrlOptions.profileId}`;
 
   let serverUrlToUse;
   try {
@@ -75,12 +75,9 @@ async function getConnectedMcpClient(): Promise<McpClient | null> {
   let transport;
   let client;
   
-  try {
-    transport = new StreamableHTTPClientTransport(serverUrlToUse, {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-      },
-    });
+
+    transport = new StreamableHTTPClientTransport(serverUrlToUse); 
+
     console.log('[GeospatialTool] Transport created successfully');
   } catch (transportError: any) {
     console.error('[GeospatialTool] Failed to create transport:', transportError.message);
