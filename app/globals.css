@@ -224,3 +224,53 @@
 .mapboxgl-ctrl-group button {
   pointer-events: auto !important;
 }
+
+/* Tablet layout specific styles */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .tablet-layout-container {
+    display: flex;
+    height: 100vh;
+    width: 100%;
+    background-color: hsl(var(--background));
+  }
+
+  .tablet-map-and-icons-section {
+    width: 50%;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+
+  .tablet-map-section {
+    flex-grow: 1;
+    background-color: hsl(var(--secondary));
+    z-index: 10;
+  }
+
+  .tablet-icons-bar {
+    height: 60px;
+    background-color: hsl(var(--background));
+    border-top: 1px solid hsl(var(--border));
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    z-index: 20;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+  }
+
+  .tablet-icons-bar::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Edge */
+  }
+
+  .tablet-chat-section {
+    width: 50%;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    border-left: 1px solid hsl(var(--border));
+    padding: 12px;
+    overflow-y: auto;
+  }
+}

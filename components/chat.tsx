@@ -22,7 +22,8 @@ export function Chat({ id }: ChatProps) {
   const path = usePathname()
   const [messages] = useUIState()
   const [aiState] = useAIState()
-  const [isMobile, setIsMobile] = useState(false)
+  const [isMobile, setIsMobile] = useState(false);
+  const [isTablet, setIsTablet] = useState(false);
   const { activeView } = useProfileToggle();
   const [input, setInput] = useState('')
   const [showEmptyScreen, setShowEmptyScreen] = useState(false)
@@ -32,20 +33,16 @@ export function Chat({ id }: ChatProps) {
   }, [messages])
 
   useEffect(() => {
-    // Check if device is mobile
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 1024)
-    }
+    const checkDevice = () => {
+      const width = window.innerWidth;
+      setIsMobile(width <= 768);
+      setIsTablet(width > 768 && width <= 1024);
+    };
     
-    // Initial check
-    checkMobile()
-    
-    // Add event listener for window resize
-    window.addEventListener('resize', checkMobile)
-    
-    // Cleanup
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [])
+    checkDevice();
+    window.addEventListener('resize', checkDevice);
+    return () => window.removeEventListener('resize', checkDevice);
+  }, []);
 
   useEffect(() => {
     if (!path.includes('search') && messages.length === 1) {
@@ -95,6 +92,28 @@ export function Chat({ id }: ChatProps) {
             ) : (
               <ChatMessages messages={messages} />
             )}
+          </div>
+        </div>
+      </MapDataProvider>
+    );
+  }
+
+  // Tablet layout
+  if (isTablet) {
+    return (
+      <MapDataProvider>
+        <div className="tablet-layout-container">
+          <div className="tablet-map-and-icons-section">
+            <div className="tablet-map-section">
+              {activeView ? <SettingsView /> : <Mapbox />}
+            </div>
+            <div className="tablet-icons-bar">
+              <MobileIconsBar />
+            </div>
+          </div>
+          <div className="tablet-chat-section">
+            <ChatMessages messages={messages} />
+            <ChatPanel messages={messages} input={input} setInput={setInput} />
           </div>
         </div>
       </MapDataProvider>
