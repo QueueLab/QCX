@@ -430,6 +430,13 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
               };
             }
 
+            if (toolOutput.type === 'DRAWING') {
+              return {
+                id,
+                component: null, // Replace with a new DrawingHandler component if needed
+              };
+            }
+
             // Existing tool handling
             const searchResults = createStreamableValue();
             searchResults.done(JSON.stringify(toolOutput));
@@ -453,6 +460,11 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                     <VideoSearchSection result={searchResults.value} />
                   ),
                   isCollapsed: isCollapsed.value,
+                };
+              case 'drawing':
+                return {
+                  id,
+                  component: null, // No UI component for drawing tool
                 };
               // Add a default case for other tools if any, or if the specific tool is not found
               default:

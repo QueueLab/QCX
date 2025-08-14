@@ -11,6 +11,8 @@ import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css'
 import { useMapToggle, MapToggleEnum } from '../map-toggle-context'
 import { useMapData } from './map-data-context'; // Add this import
 import { useMapLoading } from '../map-loading-context'; // Import useMapLoading
+import { useAIState } from 'ai/rsc';
+import { AIState } from '@/app/actions';
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN as string;
 
@@ -32,6 +34,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   const { mapData, setMapData } = useMapData(); // Consume the new context, get setMapData
   const { setIsMapLoaded } = useMapLoading(); // Get setIsMapLoaded from context
   const previousMapTypeRef = useRef<MapToggleEnum | null>(null)
+  const [aiState] = useAIState<AIState>();
 
   // Refs for long-press functionality
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -523,6 +526,74 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     //   drawRoute(mapData.mapFeature.route_geometry); // Implement drawRoute function if needed
     // }
   }, [mapData.targetPosition, mapData.mapFeature, updateMapPosition]);
+
+  useEffect(() => {
+    if (map.current && aiState.messages) {
+      aiState.messages.forEach(message => {
+        if (message.name === 'drawing' && message.role === 'tool') {
+          try {
+            const { geojson } = JSON.parse(message.content);
+            const sourceId = `geojson-source-${message.id}`;
+            const layerId = `geojson-layer-${message.id}`;
+
+            if (map.current?.getSource(sourceId)) {
+              // Source already exists, no need to re-add
+              return;
+            }
+
+            map.current?.addSource(sourceId, {
+              type: 'geojson',
+              data: geojson,
+            });
+
+            geojson.features.forEach((feature: any) => {
+              const featureLayerId = `${layerId}-${feature.geometry.type}`;
+              if (feature.geometry.type === 'Point' || feature.geometry.type === 'MultiPoint') {
+                map.current?.addLayer({
+                  id: featureLayerId,
+                  type: 'circle',
+                  source: sourceId,
+                  paint: {
+                    'circle-radius': 6,
+                    'circle-color': '#B42222',
+                  },
+                  filter: ['==', '$type', 'Point'],
+                });
+              } else if (feature.geometry.type === 'LineString' || feature.geometry.type === 'MultiLineString') {
+                map.current?.addLayer({
+                  id: featureLayerId,
+                  type: 'line',
+                  source: sourceId,
+                  layout: {
+                    'line-join': 'round',
+                    'line-cap': 'round',
+                  },
+                  paint: {
+                    'line-color': '#B42222',
+                    'line-width': 4,
+                  },
+                  filter: ['==', '$type', 'LineString'],
+                });
+              } else if (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon') {
+                map.current?.addLayer({
+                  id: featureLayerId,
+                  type: 'fill',
+                  source: sourceId,
+                  paint: {
+                    'fill-color': '#B42222',
+                    'fill-opacity': 0.5,
+                  },
+                  filter: ['==', '$type', 'Polygon'],
+                });
+              }
+            });
+          } catch (error) {
+            console.error('Error parsing or adding GeoJSON data:', error);
+          }
+        }
+      });
+    }
+  }, [aiState.messages, map.current]);
 
   // Long-press handlers
   const handleMouseDown = useCallback(() => {
