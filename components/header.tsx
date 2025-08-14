@@ -6,13 +6,11 @@ import HistoryContainer from './history-container'
 import { Button } from '@/components/ui/button'
 import {
   Search,
-  CircleUserRound,
   Map,
   CalendarDays,
   TentTree
 } from 'lucide-react'
 import { MapToggle } from './map-toggle'
-import { ProfileToggle } from './profile-toggle'
 
 export const Header = () => {
   return (
@@ -30,8 +28,6 @@ export const Header = () => {
       </div>
       
       <div className="w-1/2 gap-20 hidden md:flex justify-between px-10 items-center z-10">
-        
-          <ProfileToggle/>
         
         <MapToggle />
         
@@ -58,8 +54,6 @@ export const Header = () => {
           <Search className="h-4 w-4 mr-2" />
           Search
         </Button>
-        
-        <ProfileToggle/>
       </div>
     </header>
   )
