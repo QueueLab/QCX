@@ -461,11 +461,6 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                   ),
                   isCollapsed: isCollapsed.value,
                 };
-              case 'drawing':
-                return {
-                  id,
-                  component: null, // No UI component for drawing tool
-                };
               // Add a default case for other tools if any, or if the specific tool is not found
               default:
                 console.warn(`Unhandled tool result in getUIStateFromAIState: ${name}`);

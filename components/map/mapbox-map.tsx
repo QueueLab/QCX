@@ -528,70 +528,78 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   }, [mapData.targetPosition, mapData.mapFeature, updateMapPosition]);
 
   useEffect(() => {
-    if (map.current && aiState && (aiState as AIState).messages) {
-      (aiState as AIState).messages.forEach(message => {
-        if (message.name === 'drawing' && message.role === 'tool') {
-          try {
-            const { geojson } = JSON.parse(message.content);
-            const sourceId = `geojson-source-${message.id}`;
-            const layerId = `geojson-layer-${message.id}`;
+    if (!map.current) return;
 
-            if (map.current?.getSource(sourceId)) {
-              // Source already exists, no need to re-add
-              return;
-            }
+    const drawFeatures = () => {
+      if (!map.current || !map.current.isStyleLoaded()) {
+        // Style not loaded yet, wait for it
+        map.current?.once('styledata', drawFeatures);
+        return;
+      }
 
+      const drawingMessages = (aiState as AIState).messages.filter(
+        msg => msg.name === 'drawing' && msg.role === 'tool'
+      );
+
+      drawingMessages.forEach(message => {
+        try {
+          const { geojson } = JSON.parse(message.content);
+          if (!geojson || !geojson.features) return;
+
+          const sourceId = `geojson-source-${message.id}`;
+          const source = map.current?.getSource(sourceId);
+
+          if (source) {
+            // Source exists, update data
+            (source as mapboxgl.GeoJSONSource).setData(geojson);
+          } else {
+            // Source does not exist, add new source
             map.current?.addSource(sourceId, {
               type: 'geojson',
               data: geojson,
             });
-
-            geojson.features.forEach((feature: any) => {
-              const featureLayerId = `${layerId}-${feature.geometry.type}`;
-              if (feature.geometry.type === 'Point' || feature.geometry.type === 'MultiPoint') {
-                map.current?.addLayer({
-                  id: featureLayerId,
-                  type: 'circle',
-                  source: sourceId,
-                  paint: {
-                    'circle-radius': 6,
-                    'circle-color': '#B42222',
-                  },
-                  filter: ['==', '$type', 'Point'],
-                });
-              } else if (feature.geometry.type === 'LineString' || feature.geometry.type === 'MultiLineString') {
-                map.current?.addLayer({
-                  id: featureLayerId,
-                  type: 'line',
-                  source: sourceId,
-                  layout: {
-                    'line-join': 'round',
-                    'line-cap': 'round',
-                  },
-                  paint: {
-                    'line-color': '#B42222',
-                    'line-width': 4,
-                  },
-                  filter: ['==', '$type', 'LineString'],
-                });
-              } else if (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon') {
-                map.current?.addLayer({
-                  id: featureLayerId,
-                  type: 'fill',
-                  source: sourceId,
-                  paint: {
-                    'fill-color': '#B42222',
-                    'fill-opacity': 0.5,
-                  },
-                  filter: ['==', '$type', 'Polygon'],
-                });
-              }
-            });
-          } catch (error) {
-            console.error('Error parsing or adding GeoJSON data:', error);
           }
+
+          // Layer definitions
+          const layers = [
+            {
+              id: `points-layer-${message.id}`,
+              type: 'circle',
+              filter: ['==', '$type', 'Point'],
+              paint: { 'circle-radius': 6, 'circle-color': '#B42222' },
+            },
+            {
+              id: `lines-layer-${message.id}`,
+              type: 'line',
+              filter: ['==', '$type', 'LineString'],
+              paint: { 'line-color': '#B42222', 'line-width': 4 },
+              layout: { 'line-join': 'round', 'line-cap': 'round' },
+            },
+            {
+              id: `polygons-layer-${message.id}`,
+              type: 'fill',
+              filter: ['==', '$type', 'Polygon'],
+              paint: { 'fill-color': '#B42222', 'fill-opacity': 0.5 },
+            },
+          ];
+
+          layers.forEach(layer => {
+            if (!map.current?.getLayer(layer.id)) {
+              map.current?.addLayer({
+                ...layer,
+                source: sourceId,
+              } as mapboxgl.AnyLayer);
+            }
+          });
+
+        } catch (error) {
+          console.error('Error parsing or adding GeoJSON data:', error);
         }
       });
+    };
+
+    if (aiState && (aiState as AIState).messages) {
+      drawFeatures();
     }
   }, [aiState]);
 
