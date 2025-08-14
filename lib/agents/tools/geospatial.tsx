@@ -33,7 +33,7 @@ async function getConnectedMcpClient(): Promise<McpClient | null> {
 
   let config;
   try {
-    const mapboxMcpConfig = await import('QCX/mapbox_mcp_config.json');
+    const mapboxMcpConfig = await import('../../../mapbox_mcp_config.json');
     config = { 
       ...mapboxMcpConfig.default || mapboxMcpConfig, 
       mapboxAccessToken 

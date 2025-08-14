@@ -2,15 +2,18 @@ import { createStreamableUI } from 'ai/rsc'
 import { retrieveTool } from './retrieve'
 import { searchTool } from './search'
 import { videoSearchTool } from './video-search'
-import { geospatialTool } from './geospatial' // Removed useGeospatialToolMcp import
+import { geospatialTool } from './geospatial'
+import { mapboxGeocodingTool } from './mapbox/geocoding'
+import { mapboxDirectionsTool } from './mapbox/directions'
+import { mapboxMatrixTool } from './mapbox/matrix'
+import { mapboxIsochroneTool } from './mapbox/isochrone'
+import { mapboxStaticImageTool } from './mapbox/static-image'
 
 export interface ToolProps {
   uiStream: ReturnType<typeof createStreamableUI>
   fullResponse: string
-  // mcp?: any; // Removed mcp property as it's no longer passed down for geospatialTool
 }
 
-// Removed mcp from parameters
 export const getTools = ({ uiStream, fullResponse }: ToolProps) => {
   const tools: any = {
     search: searchTool({
@@ -21,10 +24,28 @@ export const getTools = ({ uiStream, fullResponse }: ToolProps) => {
       uiStream,
       fullResponse
     }),
-    // geospatialTool now only requires uiStream
     geospatialQueryTool: geospatialTool({
       uiStream
-      // mcp: mcp || null // Removed mcp argument
+    }),
+    mapboxGeocoding: mapboxGeocodingTool({
+      uiStream,
+      fullResponse
+    }),
+    mapboxDirections: mapboxDirectionsTool({
+      uiStream,
+      fullResponse
+    }),
+    mapboxMatrix: mapboxMatrixTool({
+      uiStream,
+      fullResponse
+    }),
+    mapboxIsochrone: mapboxIsochroneTool({
+      uiStream,
+      fullResponse
+    }),
+    mapboxStaticImage: mapboxStaticImageTool({
+      uiStream,
+      fullResponse
     })
   }
 
