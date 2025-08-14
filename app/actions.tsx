@@ -336,7 +336,7 @@ export const AI = createAI<AIState, UIState>({
       title,
       messages: updatedMessages,
     };
-    await saveChat(chat, actualUserId); // Pass actualUserId to saveChat
+    // await saveChat(chat, actualUserId); // Pass actualUserId to saveChat
   },
 });
 
@@ -427,6 +427,13 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                 id, // message id
                 component: <MapQueryHandler toolOutput={toolOutput} />, 
                 isCollapsed: false, // Allow handler to be active
+              };
+            }
+
+            if (toolOutput.type === 'DRAWING') {
+              return {
+                id,
+                component: null, // Replace with a new DrawingHandler component if needed
               };
             }
 
