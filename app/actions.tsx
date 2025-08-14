@@ -336,7 +336,7 @@ export const AI = createAI<AIState, UIState>({
       title,
       messages: updatedMessages,
     };
-    await saveChat(chat, actualUserId); // Pass actualUserId to saveChat
+    // await saveChat(chat, actualUserId); // Pass actualUserId to saveChat
   },
 });
 
