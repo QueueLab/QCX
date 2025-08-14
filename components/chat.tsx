@@ -101,22 +101,20 @@ export function Chat({ id }: ChatProps) {
   // Tablet layout
   if (isTablet) {
     return (
-      <MapDataProvider>
-        <div className="tablet-layout-container">
-          <div className="tablet-map-and-icons-section">
-            <div className="tablet-map-section">
-              {activeView ? <SettingsView /> : <Mapbox />}
-            </div>
-            <div className="tablet-icons-bar">
-              <MobileIconsBar />
-            </div>
+      <div className="tablet-layout-container">
+        <div className="tablet-map-and-icons-section">
+          <div className="tablet-map-section">
+            {activeView ? <SettingsView /> : <Mapbox />}
           </div>
-          <div className="tablet-chat-section">
-            <ChatMessages messages={messages} />
-            <ChatPanel messages={messages} input={input} setInput={setInput} />
+          <div className="tablet-icons-bar">
+            <MobileIconsBar />
           </div>
         </div>
-      </MapDataProvider>
+        <div className="tablet-chat-section">
+          <ChatMessages messages={messages} />
+          <ChatPanel messages={messages} input={input} setInput={setInput} />
+        </div>
+      </div>
     );
   }
   
