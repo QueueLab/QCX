@@ -175,9 +175,9 @@ async function submit(formData?: FormData, skip?: boolean) {
       }
     }
 
-    // If useSpecificAPI is enabled, generate the answer using the specific model
-    if (useSpecificAPI && answer.length === 0) {
-      // Modify the messages to be used by the specific model
+    // If the researcher returns tool outputs, but no answer,
+    // generate a new response from the tool outputs using the writer agent.
+    if (toolOutputs.length > 0 && answer.length === 0) {
       const modifiedMessages = aiState.get().messages.map((msg) =>
         msg.role === 'tool'
           ? {
@@ -190,18 +190,6 @@ async function submit(formData?: FormData, skip?: boolean) {
       ) as CoreMessage[];
       const latestMessages = modifiedMessages.slice(maxMessages * -1);
       answer = await writer(currentSystemPrompt, uiStream, streamText, latestMessages);
-    } else if (toolOutputs.length > 0 && answer.length === 0) {
-      // If the researcher returns tool outputs, but no answer,
-      // generate a new response from the tool outputs
-      const { fullResponse } = await researcher(
-        currentSystemPrompt,
-        uiStream,
-        streamText,
-        aiState.get().messages as CoreMessage[],
-        useSpecificAPI,
-      );
-      answer = fullResponse;
-      streamText.done();
     } else {
       streamText.done();
     }
