@@ -63,9 +63,9 @@ async function getConnectedMcpClient(): Promise<McpClient | null> {
     console.log('[GeospatialTool] Using fallback config');
   }
 
-  // Create Smithery URL without API key in query parameters
-  const mcpServerBaseUrl = `https://server.smithery.ai/@ngoiyaeric/mapbox-mcp-server?profile=${profileId}`;
-  const smitheryUrlOptions = { config, profileId };
+  // Create Smithery URL with API key and profile ID
+  const mcpServerBaseUrl = `https://server.smithery.ai/@ngoiyaeric/mapbox-mcp-server?api_key=${apiKey}&profile=${profileId}`;
+  const smitheryUrlOptions = { config, apiKey, profileId };
   let serverUrlToUse: URL;
 
   try {
@@ -82,26 +82,18 @@ async function getConnectedMcpClient(): Promise<McpClient | null> {
     console.error('[GeospatialTool] URL options:', {
       baseUrl: mcpServerBaseUrl,
       hasConfig: !!config,
+      hasApiKey: !!apiKey,
       hasProfileId: !!profileId,
     });
     return null;
   }
 
-  // Initialize transport with authentication headers
+  // Initialize transport
   let transport;
   let client;
-  const headers = {
-    Authorization: `Bearer ${apiKey}`,
-    'X-Profile-ID': profileId,
-    'Content-Type': 'application/json',
-  };
-
   try {
-    console.log('[GeospatialTool] Initializing transport with headers:', {
-      Authorization: `Bearer ${apiKey.substring(0, 8)}...`,
-      'X-Profile-ID': profileId.substring(0, 8) + '...',
-    });
-    transport = new StreamableHTTPClientTransport(serverUrlToUse, { headers });
+    console.log('[GeospatialTool] Initializing transport for:', serverUrlToUse.toString());
+    transport = new StreamableHTTPClientTransport(serverUrlToUse);
     console.log('[GeospatialTool] Transport created successfully');
   } catch (transportError: any) {
     console.error('[GeospatialTool] Failed to create transport:', transportError.message);
