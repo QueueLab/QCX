@@ -19,19 +19,9 @@ export function FollowupPanel() {
     event.preventDefault()
     const formData = new FormData(event.currentTarget as HTMLFormElement)
 
-    const userMessage = {
-      id: Date.now(),
-      isGenerating: false,
-      component: <UserMessage message={input} />
-    }
-
     // Removed mcp argument from submit call
     const responseMessage = await submit(formData)
-    setMessages(currentMessages => [
-      ...currentMessages,
-      userMessage,
-      responseMessage
-    ])
+    setMessages(currentMessages => [...currentMessages, responseMessage])
 
     setInput('')
   }

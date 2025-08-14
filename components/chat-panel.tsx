@@ -50,13 +50,6 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
       handleClear()
       setIsButtonPressed(false)
     }
-    setMessages(currentMessages => [
-      ...currentMessages,
-      {
-        id: nanoid(),
-        component: <UserMessage message={input} />
-      }
-    ])
     const formData = new FormData(e.currentTarget)
     // Removed mcp argument from submit call
     const responseMessage = await submit(formData)

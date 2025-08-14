@@ -4,51 +4,36 @@ import { CoreMessage, LanguageModel, streamObject } from 'ai';
 import { PartialInquiry, inquirySchema } from '@/lib/schema/inquiry';
 import { getModel } from '../utils';
 
-// Define a plain object type for the inquiry prop
-interface InquiryProp {
-  value: PartialInquiry;
-}
-
 export async function inquire(
   uiStream: ReturnType<typeof createStreamableUI>,
   messages: CoreMessage[]
-) {
-  const objectStream = createStreamableValue<PartialInquiry>();
-  let currentInquiry: PartialInquiry = {};
+): Promise<any> {
+  const objectStream = createStreamableValue<PartialInquiry>()
+  uiStream.update(<Copilot inquiry={objectStream.value} />)
 
-  // Update the UI stream with the Copilot component, passing only the serializable value
-  uiStream.update(
-    <Copilot inquiry={{ value: currentInquiry }} />
-  );
+  let finalInquiry: PartialInquiry = {}
+  try {
+    const result = await streamObject({
+      model: getModel() as LanguageModel,
+      system: `As a professional writer, your job is to generate a comprehensive and informative, yet concise answer of 400 words or less for the given question based solely on the provided search results (URL and content). You must only use information from the provided search results. Use an unbiased and journalistic tone. Combine search results together into a coherent answer. Do not repeat text. If there are any images relevant to your answer, be sure to include them as well. Aim to directly address the user's question, augmenting your response with insights gleaned from the search results.
+    Whenever quoting or referencing information from a specific URL, always cite the source URL explicitly. Please match the language of the response to the user's language.
+    Always answer in Markdown format. Links and images must follow the correct format.
+    Link format: [link text](url)
+    Image format: ![alt text](url)
+    `,
+      messages,
+      schema: inquirySchema
+    })
 
-  let finalInquiry: PartialInquiry = {};
-  const result = await streamObject({
-    model: getModel() as LanguageModel,
-    system: `...`, // Your system prompt remains unchanged
-    messages,
-    schema: inquirySchema,
-  });
-
-  for await (const obj of result.partialObjectStream) {
-    if (obj) {
-      // Update the local state
-      currentInquiry = obj;
-      // Update the stream with the new serializable value
-      objectStream.update(obj);
-      finalInquiry = obj;
-
-      // Update the UI stream with the new inquiry value
-      uiStream.update(
-        <Copilot inquiry={{ value: currentInquiry }} />
-      );
+    for await (const obj of result.partialObjectStream) {
+      if (obj) {
+        objectStream.update(obj)
+        finalInquiry = obj
+      }
     }
+  } finally {
+    objectStream.done()
   }
 
-  objectStream.done();
-  // Final UI update
-  uiStream.update(
-    <Copilot inquiry={{ value: finalInquiry }} />
-  );
-
-  return finalInquiry;
+  return finalInquiry
 }

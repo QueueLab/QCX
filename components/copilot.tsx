@@ -16,16 +16,17 @@ import {
  } from './ui/icons'
 import { cn } from '@/lib/utils'
 
+import { StreamableValue } from 'ai/rsc'
+
 export type CopilotProps = {
-  inquiry: { value: PartialInquiry };
+  inquiry: StreamableValue<PartialInquiry>
 }
 
-export const Copilot: React.FC<CopilotProps> = ({ inquiry }: CopilotProps) => {
-  const { value } = inquiry;
+export const Copilot: React.FC<CopilotProps> = ({ inquiry }) => {
+  const [data, error, pending] = useStreamableValue<PartialInquiry>(inquiry)
   const [completed, setCompleted] = useState(false)
   const [query, setQuery] = useState('')
   const [skipped, setSkipped] = useState(false)
-  const [data, error, pending] = useStreamableValue<PartialInquiry>()
   const [checkedOptions, setCheckedOptions] = useState<{
     [key: string]: boolean
   }>({})
@@ -121,14 +122,12 @@ export const Copilot: React.FC<CopilotProps> = ({ inquiry }: CopilotProps) => {
       <Card className="p-4 rounded-lg w-full mx-auto">
         <div className="mb-4">
           <p className="text-lg text-foreground text-semibold ml-2">
-            {data?.question || value.question}
-            
-            
+            {data?.question}
           </p>
         </div>
         <form onSubmit={onFormSubmit}>
           <div className="flex flex-wrap justify-start mb-4">
-            {value.options?.map((option, index) => (
+            {data?.options?.map((option, index) => (
               <div
                 key={`option-${index}`}
                 className="flex items-center space-x-1.5 mb-2"
@@ -152,14 +151,14 @@ export const Copilot: React.FC<CopilotProps> = ({ inquiry }: CopilotProps) => {
           {data?.allowsInput && (
             <div className="mb-6 flex flex-col space-y-2 text-sm">
               <label className="text-muted-foreground" htmlFor="query">
-                {data?.inputLabel || value.inputLabel}
+                {data?.inputLabel}
               </label>
               <Input
                 type="text"
                 name="additional_query"
                 className="w-full"
                 id="query"
-                placeholder={data?.inputPlaceholder || value.inputPlaceholder}
+                placeholder={data?.inputPlaceholder}
                 value={query}
                 onChange={handleInputChange}
               />
