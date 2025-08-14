@@ -41,18 +41,9 @@ export const SearchRelated: React.FC<SearchRelatedProps> = ({
       query = submitter.value
     }
 
-    const userMessage = {
-      id: Date.now(),
-      component: <UserMessage message={query} />
-    }
-
     // Removed mcp argument from submit call
     const responseMessage = await submit(formData)
-    setMessages(currentMessages => [
-      ...currentMessages,
-      userMessage,
-      responseMessage
-    ])
+    setMessages(currentMessages => [...currentMessages, responseMessage])
   }
 
   return (

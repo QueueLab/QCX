@@ -71,7 +71,11 @@ Match the language of your response to the user's language.`;
       case 'text-delta':
         if (delta.textDelta) {
           // If the first text delta is available, add a UI section
-          if (fullResponse.length === 0 && delta.textDelta.length > 0) {
+          if (
+            fullResponse.length === 0 &&
+            delta.textDelta.length > 0 &&
+            !useSpecificModel
+          ) {
             // Update the UI
             uiStream.update(answerSection)
           }
