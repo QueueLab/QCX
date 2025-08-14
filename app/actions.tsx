@@ -190,6 +190,18 @@ async function submit(formData?: FormData, skip?: boolean) {
       ) as CoreMessage[];
       const latestMessages = modifiedMessages.slice(maxMessages * -1);
       answer = await writer(currentSystemPrompt, uiStream, streamText, latestMessages);
+    } else if (toolOutputs.length > 0 && answer.length === 0) {
+      // If the researcher returns tool outputs, but no answer,
+      // generate a new response from the tool outputs
+      const { fullResponse } = await researcher(
+        currentSystemPrompt,
+        uiStream,
+        streamText,
+        aiState.get().messages as CoreMessage[],
+        useSpecificAPI,
+      );
+      answer = fullResponse;
+      streamText.done();
     } else {
       streamText.done();
     }
