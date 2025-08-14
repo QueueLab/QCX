@@ -64,7 +64,7 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
   }
 
   const handleClear = () => {
-    router.push('/')
+    window.location.assign('/')
   }
 
   useEffect(() => {
@@ -72,7 +72,7 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
   }, [])
 
   // New chat button (appears when there are messages)
-  if (messages.length > 0 && !isButtonPressed && !isMobile) {
+  if (messages.length > 0 && !isButtonPressed) {
     return (
       <div
         className={cn(
