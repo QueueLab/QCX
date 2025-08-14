@@ -273,4 +273,8 @@
     padding: 12px;
     overflow-y: auto;
   }
+
+  .tablet-icons-bar .mobile-icons-bar-content {
+    justify-content: flex-start;
+  }
 }
