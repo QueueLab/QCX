@@ -34,7 +34,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   const { mapData, setMapData } = useMapData(); // Consume the new context, get setMapData
   const { setIsMapLoaded } = useMapLoading(); // Get setIsMapLoaded from context
   const previousMapTypeRef = useRef<MapToggleEnum | null>(null)
-  const [aiState] = useAIState<AIState>();
+  const [aiState] = useAIState();
 
   // Refs for long-press functionality
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -528,8 +528,8 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   }, [mapData.targetPosition, mapData.mapFeature, updateMapPosition]);
 
   useEffect(() => {
-    if (map.current && aiState.messages) {
-      aiState.messages.forEach(message => {
+    if (map.current && aiState && (aiState as AIState).messages) {
+      (aiState as AIState).messages.forEach(message => {
         if (message.name === 'drawing' && message.role === 'tool') {
           try {
             const { geojson } = JSON.parse(message.content);
@@ -593,7 +593,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         }
       });
     }
-  }, [aiState.messages, map.current]);
+  }, [aiState]);
 
   // Long-press handlers
   const handleMouseDown = useCallback(() => {
