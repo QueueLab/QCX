@@ -229,7 +229,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         isUpdatingPositionRef.current = false
       }
     }
-  }, [mapType, startRotation, stopRotation])
+  }, [mapType, startRotation, stopRotation, rotateMap])
 
   // Set up drawing tools
   const setupDrawingTools = useCallback(() => {
@@ -507,7 +507,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   // Effect to handle map updates from MapDataContext
   useEffect(() => {
     if (mapData.targetPosition && map.current) {
-      // console.log("Mapbox.tsx: Received new targetPosition from context:", mapData.targetPosition);
+      console.log("Mapbox.tsx: Received new targetPosition from context:", mapData.targetPosition);
       // targetPosition is LngLatLike, which can be [number, number]
       // updateMapPosition expects (latitude, longitude)
       const [lng, lat] = mapData.targetPosition as [number, number]; // Assuming LngLatLike is [lng, lat]
