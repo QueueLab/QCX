@@ -10,7 +10,7 @@ import { useUIState, useAIState } from 'ai/rsc'
 import MobileIconsBar from './mobile-icons-bar'
 import { useProfileToggle, ProfileToggleEnum } from "@/components/profile-toggle-context";
 import SettingsView from "@/components/settings/settings-view";
-import { MapDataProvider, useMapData } from './map/map-data-context'; // Add this and useMapData
+import { useMapData } from './map/map-data-context'; // Add this and useMapData
 import { updateDrawingContext } from '@/lib/actions/chat'; // Import the server action
 
 type ChatProps = {
@@ -74,50 +74,46 @@ export function Chat({ id }: ChatProps) {
   // Mobile layout
   if (isMobile) {
     return (
-      <MapDataProvider> {/* Add Provider */}
-        <div className="mobile-layout-container">
-          <div className="mobile-map-section">
-            {activeView ? <SettingsView /> : <Mapbox />}
-          </div>
-          <div className="mobile-icons-bar">
-            <MobileIconsBar />
-          </div>
-          <div className="mobile-chat-input-area">
-            <ChatPanel messages={messages} input={input} setInput={setInput} />
-          </div>
-          <div className="mobile-chat-messages-area">
-            {showEmptyScreen ? (
-              <EmptyScreen
-                submitMessage={message => {
-                  setInput(message)
-                }}
-              />
-            ) : (
-              <ChatMessages messages={messages} />
-            )}
-          </div>
+      <div className="mobile-layout-container">
+        <div className="mobile-map-section">
+          {activeView ? <SettingsView /> : <Mapbox />}
         </div>
-      </MapDataProvider>
+        <div className="mobile-icons-bar">
+          <MobileIconsBar />
+        </div>
+        <div className="mobile-chat-input-area">
+          <ChatPanel messages={messages} input={input} setInput={setInput} />
+        </div>
+        <div className="mobile-chat-messages-area">
+          {showEmptyScreen ? (
+            <EmptyScreen
+              submitMessage={message => {
+                setInput(message)
+              }}
+            />
+          ) : (
+            <ChatMessages messages={messages} />
+          )}
+        </div>
+      </div>
     );
   }
   
   // Desktop layout
   return (
-    <MapDataProvider> {/* Add Provider */}
-      <div className="flex justify-start items-start">
-        {/* This is the new div for scrolling */}
-        <div className="w-1/2 flex flex-col space-y-3 md:space-y-4 px-8 sm:px-12 pt-12 md:pt-14 pb-4 h-[calc(100vh-0.5in)] overflow-y-auto">
-          {/* TODO: Add EmptyScreen for desktop if needed */}
-          <ChatMessages messages={messages} />
-          <ChatPanel messages={messages} input={input} setInput={setInput} />
-        </div>
-        <div
-          className="w-1/2 p-4 fixed h-[calc(100vh-0.5in)] top-0 right-0 mt-[0.5in]"
-          style={{ zIndex: 10 }} // Added z-index
-        >
-          {activeView ? <SettingsView /> : <Mapbox />}
-        </div>
+    <div className="flex justify-start items-start">
+      {/* This is the new div for scrolling */}
+      <div className="w-1/2 flex flex-col space-y-3 md:space-y-4 px-8 sm:px-12 pt-12 md:pt-14 pb-4 h-[calc(100vh-0.5in)] overflow-y-auto">
+        {/* TODO: Add EmptyScreen for desktop if needed */}
+        <ChatMessages messages={messages} />
+        <ChatPanel messages={messages} input={input} setInput={setInput} />
       </div>
-    </MapDataProvider>
+      <div
+        className="w-1/2 p-4 fixed h-[calc(100vh-0.5in)] top-0 right-0 mt-[0.5in]"
+        style={{ zIndex: 10 }} // Added z-index
+      >
+        {activeView ? <SettingsView /> : <Mapbox />}
+      </div>
+    </div>
   );
 }
