@@ -422,6 +422,8 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
 
             // Check if this is our map query trigger
             if (toolOutput.type === "MAP_QUERY_TRIGGER" && name === "geospatialQueryTool") {
+              console.log('[getUIStateFromAIState] Matched geospatialQueryTool, rendering MapQueryHandler.');
+              console.log('[getUIStateFromAIState] toolOutput:', JSON.stringify(toolOutput, null, 2));
               // The MapQueryHandler now expects the entire toolOutput object
               return {
                 id, // message id

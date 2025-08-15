@@ -151,8 +151,9 @@ export const geospatialTool = ({ uiStream }: { uiStream: ReturnType<typeof creat
 - Geographic information lookup`,
   parameters: geospatialQuerySchema,
   execute: async (params: z.infer<typeof geospatialQuerySchema>) => {
+    console.log('[GeospatialTool] Execute called with:', JSON.stringify(params, null, 2));
+
     const { queryType, includeMap = true } = params;
-    console.log('[GeospatialTool] Execute called with:', params);
 
     const uiFeedbackStream = createStreamableValue<string>();
     uiStream.append(<BotMessage content={uiFeedbackStream.value} />);
@@ -162,11 +163,14 @@ export const geospatialTool = ({ uiStream }: { uiStream: ReturnType<typeof creat
 
     const mcpClient = await getConnectedMcpClient();
     if (!mcpClient) {
-      feedbackMessage = 'Geospatial functionality is unavailable. Please check configuration.';
-      uiFeedbackStream.update(feedbackMessage);
+      const errorMsg = 'Geospatial functionality is unavailable. Please check configuration.';
+      console.error(`[GeospatialTool] ${errorMsg}`);
+      uiFeedbackStream.update(errorMsg);
       uiFeedbackStream.done();
       uiStream.update(<BotMessage content={uiFeedbackStream.value} />);
-      return { type: 'MAP_QUERY_TRIGGER', originalUserInput: JSON.stringify(params), timestamp: new Date().toISOString(), mcp_response: null, error: 'MCP client initialization failed' };
+      const result = { type: 'MAP_QUERY_TRIGGER', originalUserInput: JSON.stringify(params), timestamp: new Date().toISOString(), mcp_response: null, error: 'MCP client initialization failed' };
+      console.log('[GeospatialTool] Returning error:', JSON.stringify(result, null, 2));
+      return result;
     }
 
     let mcpData: McpResponse | null = null;
@@ -176,7 +180,6 @@ export const geospatialTool = ({ uiStream }: { uiStream: ReturnType<typeof creat
       feedbackMessage = `Connected to mapping service. Processing ${queryType} query...`;
       uiFeedbackStream.update(feedbackMessage);
 
-      // Pick appropriate tool
       const toolName = await (async () => {
         const { tools } = await mcpClient.listTools().catch(() => ({ tools: [] }));
         const names = new Set(tools?.map((t: any) => t.name) || []);
@@ -191,7 +194,6 @@ export const geospatialTool = ({ uiStream }: { uiStream: ReturnType<typeof creat
         }
       })();
 
-      // Build arguments
       const toolArgs = (() => {
         switch (queryType) {
           case 'directions':
@@ -203,9 +205,8 @@ export const geospatialTool = ({ uiStream }: { uiStream: ReturnType<typeof creat
         }
       })();
 
-      console.log('[GeospatialTool] Calling tool:', toolName, 'with args:', toolArgs);
+      console.log('[GeospatialTool] Calling tool:', toolName, 'with args:', JSON.stringify(toolArgs, null, 2));
 
-      // Retry logic
       const MAX_RETRIES = 3;
       let retryCount = 0;
       let toolCallResult;
@@ -224,7 +225,8 @@ export const geospatialTool = ({ uiStream }: { uiStream: ReturnType<typeof creat
         }
       }
 
-      // Extract & parse content
+      console.log('[GeospatialTool] Raw MCP Response:', JSON.stringify(toolCallResult, null, 2));
+
       const serviceResponse = toolCallResult as { content?: Array<{ text?: string | null } | { [k: string]: any }> };
       const blocks = serviceResponse?.content || [];
       const textBlocks = blocks.map(b => (typeof b.text === 'string' ? b.text : null)).filter((t): t is string => !!t && t.trim().length > 0);
@@ -235,10 +237,13 @@ export const geospatialTool = ({ uiStream }: { uiStream: ReturnType<typeof creat
       const match = content.match(jsonRegex);
       if (match) content = match[1].trim();
 
-      try { content = JSON.parse(content); }
-      catch { console.warn('[GeospatialTool] Content is not JSON, using as string:', content); }
+      try {
+        content = JSON.parse(content);
+        console.log('[GeospatialTool] Parsed MCP Response Content:', JSON.stringify(content, null, 2));
+      } catch {
+        console.warn('[GeospatialTool] Content is not JSON, using as string:', content);
+      }
 
-      // Process results
       if (typeof content === 'object' && content !== null) {
         const parsedData = content as any;
         if (parsedData.results?.length > 0) {
@@ -249,7 +254,9 @@ export const geospatialTool = ({ uiStream }: { uiStream: ReturnType<typeof creat
         } else {
           throw new Error("Response missing required 'location' or 'results' field");
         }
-      } else throw new Error('Unexpected response format from mapping service');
+      } else {
+        throw new Error('Unexpected response format from mapping service');
+      }
 
       feedbackMessage = `Successfully processed ${queryType} query for: ${mcpData.location.place_name || JSON.stringify(params)}`;
       uiFeedbackStream.update(feedbackMessage);
@@ -264,6 +271,8 @@ export const geospatialTool = ({ uiStream }: { uiStream: ReturnType<typeof creat
       uiStream.update(<BotMessage content={uiFeedbackStream.value} />);
     }
 
-    return { type: 'MAP_QUERY_TRIGGER', originalUserInput: JSON.stringify(params), queryType, timestamp: new Date().toISOString(), mcp_response: mcpData, error: toolError };
+    const result = { type: 'MAP_QUERY_TRIGGER', originalUserInput: JSON.stringify(params), queryType, timestamp: new Date().toISOString(), mcp_response: mcpData, error: toolError };
+    console.log('[GeospatialTool] Returning result:', JSON.stringify(result, null, 2));
+    return result;
   },
 });
