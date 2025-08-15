@@ -148,6 +148,40 @@ export async function createMessage(messageData: NewMessage): Promise<Message | 
 }
 
 /**
+ * Updates a chat's visibility to 'public'.
+ * @param id - The ID of the chat to share.
+ * @param userId - The ID of the user requesting the share, for authorization.
+ * @returns The updated chat object or null if not found or not authorized.
+ */
+export async function shareChat(id: string, userId: string): Promise<Chat | null> {
+  if (!userId) {
+    console.error('shareChat called without userId.');
+    return null;
+  }
+
+  try {
+    // First, verify the user owns the chat
+    const chat = await db.select().from(chats).where(and(eq(chats.id, id), eq(chats.userId, userId))).limit(1);
+    if (!chat.length) {
+      console.error(`shareChat: Chat not found or user ${userId} is not the owner of chat ${id}.`);
+      return null;
+    }
+
+    // Update the visibility to 'public'
+    const result = await db
+      .update(chats)
+      .set({ visibility: 'public' })
+      .where(and(eq(chats.id, id), eq(chats.userId, userId))) // Redundant check, but safe
+      .returning();
+
+    return result[0] || null;
+  } catch (error) {
+    console.error('Error sharing chat:', error);
+    return null;
+  }
+}
+
+/**
  * Deletes a specific chat and its associated messages (due to cascade delete).
  * @param id - The ID of the chat to delete.
  * @param userId - The ID of the user requesting deletion, for authorization.

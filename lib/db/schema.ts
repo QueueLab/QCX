@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, varchar, jsonb, boolean } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, uuid, varchar, jsonb, boolean, pgEnum } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 // Users Table (assuming Supabase Auth uses its own users table,
@@ -13,13 +13,15 @@ export const users = pgTable('users', {
   // Other profile fields if necessary
 });
 
+export const chatVisibility = pgEnum('chat_visibility', ['private', 'public']);
+
 export const chats = pgTable('chats', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }), // References a user ID
   title: varchar('title', { length: 256 }).notNull().default('Untitled Chat'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   // RLS in Supabase will use policies, but marking public visibility can be a column
-  visibility: varchar('visibility', { length: 50 }).default('private'), // e.g., 'private', 'public'
+  visibility: chatVisibility('visibility').default('private').notNull(),
   // any other metadata for the chat
 });
 

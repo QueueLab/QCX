@@ -15,10 +15,8 @@ export interface SearchPageProps {
 
 export async function generateMetadata({ params }: SearchPageProps) {
   const { id } = await params; // Keep as is for now
-  // TODO: Metadata generation might need authenticated user if chats are private
-  // For now, assuming getChat can be called or it handles anon access for metadata appropriately
-  const userId = await getCurrentUserIdOnServer(); // Attempt to get user for metadata
-  const chat = await getChat(id, userId || 'anonymous'); // Pass userId or 'anonymous' if none
+  const userId = await getCurrentUserIdOnServer();
+  const chat = await getChat(id, userId || 'anonymous');
   return {
     title: chat?.title?.toString().slice(0, 50) || 'Search',
   };
@@ -28,13 +26,7 @@ export default async function SearchPage({ params }: SearchPageProps) {
   const { id } = await params; // Keep as is for now
   const userId = await getCurrentUserIdOnServer();
 
-  if (!userId) {
-    // If no user, redirect to login or show appropriate page
-    // For now, redirecting to home, but a login page would be better.
-    redirect('/');
-  }
-
-  const chat = await getChat(id, userId);
+  const chat = await getChat(id, userId || 'anonymous');
 
   if (!chat) {
     // If chat doesn't exist or user doesn't have access (handled by getChat)

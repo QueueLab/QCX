@@ -10,6 +10,7 @@ import {
   saveChat as dbSaveChat,
   createMessage as dbCreateMessage,
   getMessagesByChatId as dbGetMessagesByChatId, // Added
+  shareChat as dbShareChat,
   type Chat as DrizzleChat,
   type Message as DrizzleMessage, // Added
   type NewChat as DbNewChat,
@@ -135,32 +136,28 @@ export async function saveChat(chat: OldChatType, userId: string): Promise<strin
   }
 }
 
-// TODO: Re-evaluate sharing functionality with Supabase if needed.
-// PR #533 removes the share page, so these are likely deprecated for now.
-// export async function getSharedChat(id: string) {
-//   // This would need to be reimplemented using dbGetChat with public visibility logic
-//   // const chat = await dbGetChat(id, ''); // Need a way to signify public access
-//   // if (!chat || chat.visibility !== 'public') { // Assuming 'public' visibility for shared
-//   //   return null;
-//   // }
-//   // return chat;
-//   console.warn("getSharedChat is deprecated and needs reimplementation with new DB structure.");
-//   return null;
-// }
+export async function getSharedChat(id: string): Promise<DrizzleChat | null> {
+  const chat = await dbGetChat(id, 'anonymous'); // Use a marker for anonymous access
+  if (!chat || chat.visibility !== 'public') {
+    return null;
+  }
+  return chat;
+}
 
-// export async function shareChat(id: string, userId: string) {
-//   // This would involve updating a chat's visibility to 'public' in the DB
-//   // and potentially creating a unique share link if `sharePath` is not just derived.
-//   // const chat = await dbGetChat(id, userId);
-//   // if (!chat) {
-//   //   return null;
-//   // }
-//   // // Update chat visibility to public
-//   // // const updatedChat = await db.update(chatsTable).set({ visibility: 'public' }).where(eq(chatsTable.id, id)).returning();
-//   // // return updatedChat[0];
-//   console.warn("shareChat is deprecated and needs reimplementation with new DB structure.");
-//   return null;
-// }
+export async function shareChat(id: string): Promise<{ sharePath?: string; error?: string }> {
+  const userId = await getCurrentUserIdOnServer();
+  if (!userId) {
+    return { error: 'User not authenticated' };
+  }
+
+  const chat = await dbShareChat(id, userId);
+
+  if (!chat) {
+    return { error: 'Failed to share chat' };
+  }
+
+  return { sharePath: `/search/${chat.id}` };
+}
 
 export async function updateDrawingContext(chatId: string, drawnFeatures: any[]) {
   'use server';
