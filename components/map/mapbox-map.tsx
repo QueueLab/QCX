@@ -219,17 +219,16 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
           })
         })
         setTimeout(() => {
-          if (mapType === MapToggleEnum.RealTimeMode) {
-            startRotation()
-          }
+          startRotation()
           isUpdatingPositionRef.current = false
         }, 500)
       } catch (error) {
         console.error('Error updating map position:', error)
+      } finally {
         isUpdatingPositionRef.current = false
       }
     }
-  }, [mapType, startRotation, stopRotation])
+  }, [startRotation, stopRotation])
 
   // Set up drawing tools
   const setupDrawingTools = useCallback(() => {
@@ -507,6 +506,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   // Effect to handle map updates from MapDataContext
   useEffect(() => {
     if (mapData.targetPosition && map.current) {
+      stopRotation();
       // console.log("Mapbox.tsx: Received new targetPosition from context:", mapData.targetPosition);
       // targetPosition is LngLatLike, which can be [number, number]
       // updateMapPosition expects (latitude, longitude)
@@ -522,7 +522,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     // if (mapData.mapFeature && mapData.mapFeature.route_geometry && typeof drawRoute === 'function') {
     //   drawRoute(mapData.mapFeature.route_geometry); // Implement drawRoute function if needed
     // }
-  }, [mapData.targetPosition, mapData.mapFeature, updateMapPosition]);
+  }, [mapData.targetPosition, mapData.mapFeature, updateMapPosition, stopRotation]);
 
   // Long-press handlers
   const handleMouseDown = useCallback(() => {
