@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import type { AI, UIState } from '@/app/actions'
 import { useUIState, useActions } from 'ai/rsc'
+import { useMapData } from './map/map-data-context'
 // Removed import of useGeospatialToolMcp as it's no longer used/available
 import { cn } from '@/lib/utils'
 import { UserMessage } from './user-message'
@@ -21,6 +22,7 @@ interface ChatPanelProps {
 export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
   const [, setMessages] = useUIState<typeof AI>()
   const { submit } = useActions()
+  const { mapData } = useMapData()
   // Removed mcp instance as it's no longer passed to submit
   const [isButtonPressed, setIsButtonPressed] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
@@ -58,6 +60,9 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
       }
     ])
     const formData = new FormData(e.currentTarget)
+    if (mapData) {
+      formData.append('map_data', JSON.stringify(mapData))
+    }
     // Removed mcp argument from submit call
     const responseMessage = await submit(formData)
     setMessages(currentMessages => [...currentMessages, responseMessage as any])

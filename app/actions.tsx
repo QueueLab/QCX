@@ -63,6 +63,9 @@ async function submit(formData?: FormData, skip?: boolean) {
     ? `{"action": "skip"}`
     : (formData?.get('input') as string);
 
+  const mapDataString = formData?.get('map_data') as string | undefined;
+  const mapData = mapDataString ? JSON.parse(mapDataString) : undefined;
+
   const content = skip
     ? userInput
     : formData
@@ -149,7 +152,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         uiStream,
         streamText,
         messages,
-        // mcp, // mcp instance is no longer passed down
+        mapData, // Pass mapData here
         useSpecificAPI
       );
       answer = fullResponse;

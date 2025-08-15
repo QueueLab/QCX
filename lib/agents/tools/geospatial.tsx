@@ -2,6 +2,7 @@
  * Fixed geospatial tool with improved error handling and schema
  */
 import { createStreamableUI, createStreamableValue } from 'ai/rsc';
+import { MapData } from '@/components/map/map-data-context';
 import { BotMessage } from '@/components/message';
 import { geospatialQuerySchema } from '@/lib/schema/geospatial';
 import { Client as MCPClientClass } from '@modelcontextprotocol/sdk/client/index.js';
@@ -141,7 +142,7 @@ async function closeClient(client: McpClient | null) {
 /**
  * Main geospatial tool executor.
  */
-export const geospatialTool = ({ uiStream }: { uiStream: ReturnType<typeof createStreamableUI> }) => ({
+export const geospatialTool = ({ uiStream, mapData }: { uiStream: ReturnType<typeof createStreamableUI>, mapData?: MapData }) => ({
   description: `Use this tool for location-based queries including:
 - Finding specific places, addresses, or landmarks
 - Getting coordinates for locations

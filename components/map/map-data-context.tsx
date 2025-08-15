@@ -14,6 +14,9 @@ export interface MapData {
     measurement: string;
     geometry: any;
   }>;
+  center?: [number, number];
+  zoom?: number;
+  pitch?: number;
 }
 
 interface MapDataContextType {

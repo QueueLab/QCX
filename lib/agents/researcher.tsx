@@ -11,12 +11,14 @@ import { BotMessage } from '@/components/message'
 import { getTools } from './tools'
 import { getModel } from '../utils'
 
+import { MapData } from '@/components/map/map-data-context'
+
 export async function researcher(
   dynamicSystemPrompt: string, // New parameter
   uiStream: ReturnType<typeof createStreamableUI>,
   streamText: ReturnType<typeof createStreamableValue<string>>,
   messages: CoreMessage[],
-  // mcp: any, // Removed mcp parameter
+  mapData: MapData | undefined, // Add mapData parameter
   useSpecificModel?: boolean
 ) {
   let fullResponse = ''
@@ -28,11 +30,24 @@ export async function researcher(
   )
 
   const currentDate = new Date().toLocaleString()
+  let mapContext = '';
+  if (mapData) {
+    mapContext += 'The user is currently viewing a map with the following properties:\n';
+    if (mapData.center) {
+      mapContext += `- Center: [${mapData.center.join(', ')}]\n`;
+    }
+    if (mapData.zoom) {
+      mapContext += `- Zoom level: ${mapData.zoom}\n`;
+    }
+    if (mapData.drawnFeatures && mapData.drawnFeatures.length > 0) {
+      mapContext += `- Drawn features on map: ${JSON.stringify(mapData.drawnFeatures.map(f => ({ type: f.type, measurement: f.measurement })))} \n`;
+    }
+  }
   // Default system prompt, used if dynamicSystemPrompt is not provided
   const default_system_prompt = `As a comprehensive AI assistant, you can search the web, retrieve information from URLs, and understand geospatial queries to assist the user and display information on a map.
 Current date and time: ${currentDate}.
 
-Tool Usage Guide:
+${mapContext}Tool Usage Guide:
 - For general web searches for factual information: Use the 'search' tool.
 - For retrieving content from specific URLs provided by the user: Use the 'retrieve' tool. (Do not use this for URLs found in search results).
 - **For any questions involving locations, places, addresses, geographical features, finding businesses or points of interest, distances between locations, or directions: You MUST use the 'geospatialQueryTool'. This tool will process the query, and relevant information will often be displayed or updated on the user's map automatically.**
@@ -56,7 +71,7 @@ Match the language of your response to the user's language.`;
        tools: getTools({
       uiStream,
       fullResponse,
-      // mcp // mcp parameter is no longer passed to getTools
+      mapData
     })
   })
 
