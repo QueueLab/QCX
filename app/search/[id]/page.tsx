@@ -60,17 +60,17 @@ export default async function SearchPage({ params }: SearchPageProps) {
   });
 
   return (
-    <AI
-      initialAIState={{
-        chatId: chat.id,
-        messages: initialMessages, // Use the transformed messages from the database
-        // isSharePage: true, // This was in PR#533, but share functionality is removed.
-                             // If needed for styling or other logic, it can be set.
-      }}
-    >
-      <MapDataProvider>
+    <MapDataProvider>
+      <AI
+        initialAIState={{
+          chatId: chat.id,
+          messages: initialMessages, // Use the transformed messages from the database
+          // isSharePage: true, // This was in PR#533, but share functionality is removed.
+                               // If needed for styling or other logic, it can be set.
+        }}
+      >
         <Chat id={id} />
-      </MapDataProvider>
-    </AI>
+      </AI>
+    </MapDataProvider>
   );
 }
