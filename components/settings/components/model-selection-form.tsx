@@ -22,7 +22,7 @@ const models = [
   {
     id: "QCX-Terra",
     name: "QCX-Terra",
-    description: "Geospatial foundational model",
+    description: "Language to Maps",
     icon: Earth,
     badge: "Recommended",
     badgeVariant: "default" as const,
