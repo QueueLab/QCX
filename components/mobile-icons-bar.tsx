@@ -21,7 +21,7 @@ export const MobileIconsBar: React.FC = () => {
   const router = useRouter()
 
   const handleNewChat = () => {
-    router.push('/')
+    window.location.href = '/'
   }
 
   return (
