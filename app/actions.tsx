@@ -435,13 +435,9 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
             searchResults.done(JSON.stringify(toolOutput));
             switch (name) {
               case 'search':
-                const searchResult = JSON.parse(searchResults.value);
-                if (toolOutput.position) {
-                  searchResult.position = toolOutput.position;
-                }
                 return {
                   id,
-                  component: <SearchSection result={JSON.stringify(searchResult)} />,
+                  component: <SearchSection result={searchResults.value} />,
                   isCollapsed: isCollapsed.value,
                 };
               case 'retrieve':
