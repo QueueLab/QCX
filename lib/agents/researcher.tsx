@@ -16,8 +16,8 @@ export async function researcher(
   uiStream: ReturnType<typeof createStreamableUI>,
   streamText: ReturnType<typeof createStreamableValue<string>>,
   messages: CoreMessage[],
-  // mcp: any, // Removed mcp parameter
-  useSpecificModel?: boolean
+  useSpecificModel?: boolean,
+  mapLocation?: object
 ) {
   let fullResponse = ''
   let hasError = false
@@ -56,7 +56,7 @@ Match the language of your response to the user's language.`;
        tools: getTools({
       uiStream,
       fullResponse,
-      // mcp // mcp parameter is no longer passed to getTools
+      mapLocation
     })
   })
 

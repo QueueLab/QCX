@@ -123,8 +123,8 @@ Focus on extracting and presenting factual data from the tools.`,
       const coordMatch = response.text.match(coordPattern);
       if (coordMatch) {
         mapLocation = {
-          lat: parseFloat(coordMatch[1]),
-          lng: parseFloat(coordMatch[2]),
+          latitude: parseFloat(coordMatch[1]),
+          longitude: parseFloat(coordMatch[2]),
           zoom: 12,
         };
         shouldShowMap = true;

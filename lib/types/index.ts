@@ -2,6 +2,10 @@ export type SearchResults = {
   images: string[]
   results: SearchResultItem[]
   query: string
+  position?: {
+    latitude: number
+    longitude: number
+  }
 }
 
 export type ExaSearchResults = {

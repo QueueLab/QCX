@@ -32,7 +32,7 @@ type RelatedQueries = {
 };
 
 // Removed mcp parameter from submit, as geospatialTool now handles its client.
-async function submit(formData?: FormData, skip?: boolean) {
+async function submit(formData?: FormData, mapLocation?: object, skip?: boolean) {
 'use server';
 
   // TODO: Update agent function signatures in lib/agents/researcher.tsx and lib/agents/writer.tsx
@@ -149,8 +149,8 @@ async function submit(formData?: FormData, skip?: boolean) {
         uiStream,
         streamText,
         messages,
-        // mcp, // mcp instance is no longer passed down
-        useSpecificAPI
+        useSpecificAPI,
+        mapLocation,
       );
       answer = fullResponse;
       toolOutputs = toolResponses;
@@ -435,9 +435,13 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
             searchResults.done(JSON.stringify(toolOutput));
             switch (name) {
               case 'search':
+                const searchResult = JSON.parse(searchResults.value);
+                if (toolOutput.position) {
+                  searchResult.position = toolOutput.position;
+                }
                 return {
                   id,
-                  component: <SearchSection result={searchResults.value} />,
+                  component: <SearchSection result={JSON.stringify(searchResult)} />,
                   isCollapsed: isCollapsed.value,
                 };
               case 'retrieve':

@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import type { AI, UIState } from '@/app/actions'
 import { useUIState, useActions } from 'ai/rsc'
-// Removed import of useGeospatialToolMcp as it's no longer used/available
+import { useMCPMapClient } from '@/mapbox_mcp/hooks'
 import { cn } from '@/lib/utils'
 import { UserMessage } from './user-message'
 import { Button } from './ui/button'
@@ -21,7 +21,7 @@ interface ChatPanelProps {
 export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
   const [, setMessages] = useUIState<typeof AI>()
   const { submit } = useActions()
-  // Removed mcp instance as it's no longer passed to submit
+  const { processLocationQuery } = useMCPMapClient()
   const [isButtonPressed, setIsButtonPressed] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -57,9 +57,11 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
         component: <UserMessage message={input} />
       }
     ])
+
+    const { mapLocation } = await processLocationQuery(input)
+
     const formData = new FormData(e.currentTarget)
-    // Removed mcp argument from submit call
-    const responseMessage = await submit(formData)
+    const responseMessage = await submit(formData, mapLocation)
     setMessages(currentMessages => [...currentMessages, responseMessage as any])
   }
 

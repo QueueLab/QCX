@@ -7,15 +7,16 @@ import { geospatialTool } from './geospatial' // Removed useGeospatialToolMcp im
 export interface ToolProps {
   uiStream: ReturnType<typeof createStreamableUI>
   fullResponse: string
-  // mcp?: any; // Removed mcp property as it's no longer passed down for geospatialTool
+  mapLocation?: object
 }
 
 // Removed mcp from parameters
-export const getTools = ({ uiStream, fullResponse }: ToolProps) => {
+export const getTools = ({ uiStream, fullResponse, mapLocation }: ToolProps) => {
   const tools: any = {
     search: searchTool({
       uiStream,
-      fullResponse
+      fullResponse,
+      mapLocation
     }),
     retrieve: retrieveTool({
       uiStream,

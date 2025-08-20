@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card'
 import { SearchSection } from '@/components/search-section'
 import { ToolProps } from '.'
 
-export const searchTool = ({ uiStream, fullResponse }: ToolProps) => ({
+export const searchTool = ({ uiStream, fullResponse, mapLocation }: ToolProps) => ({
   description: 'Search the web for information',
   parameters: searchSchema,
   execute: async ({
@@ -45,6 +45,10 @@ export const searchTool = ({ uiStream, fullResponse }: ToolProps) => ({
         </Card>
       )
       return searchResult
+    }
+
+    if (mapLocation) {
+      searchResult.position = mapLocation
     }
 
     streamResults.done(JSON.stringify(searchResult))

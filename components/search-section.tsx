@@ -3,6 +3,7 @@
 import { SearchResults } from './search-results'
 import { SearchSkeleton } from './search-skeleton'
 import { SearchResultsImageSection } from './search-results-image'
+import { GeneratedMap } from './map/generated-map'
 import { Section } from './section'
 import { ToolBadge } from './tool-badge'
 import type { SearchResults as TypeSearchResults } from '@/lib/types'
@@ -24,10 +25,19 @@ export function SearchSection({ result }: SearchSectionProps) {
           </Section>
           {searchResults.images && searchResults.images.length > 0 && (
             <Section title="Images">
-              <SearchResultsImageSection
-                images={searchResults.images}
-                query={searchResults.query}
-              />
+              <div className="flex space-x-4">
+                <div className="w-1/2">
+                  <SearchResultsImageSection
+                    images={searchResults.images}
+                    query={searchResults.query}
+                  />
+                </div>
+                {searchResults.position && (
+                  <div className="w-1/2 h-64">
+                    <GeneratedMap position={searchResults.position} />
+                  </div>
+                )}
+              </div>
             </Section>
           )}
           <Section title="Sources">
