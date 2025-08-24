@@ -509,13 +509,14 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
 
   // Effect to handle map updates from MapDataContext
   useEffect(() => {
-    if (!map.current) return;
+    const mapInstance = map.current;
+    if (!mapInstance) return;
 
     const renderOptions = mapData.renderOptions;
 
     // Handle style change
     if (renderOptions?.style) {
-      map.current.setStyle(`mapbox://styles/mapbox/${renderOptions.style}`);
+      mapInstance.setStyle(`mapbox://styles/mapbox/${renderOptions.style}`);
     }
 
     // Handle camera and position change
@@ -527,7 +528,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
       }
     } else if (renderOptions?.zoom || renderOptions?.pitch || renderOptions?.bearing) {
         // If no target position, but camera options are present, fly to current center with new camera
-        const center = map.current.getCenter();
+        const center = mapInstance.getCenter();
         const { zoom, pitch, bearing } = renderOptions;
         updateMapPosition(center.lat, center.lng, { zoom, pitch, bearing });
     }
@@ -535,18 +536,18 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     // Handle layers
     if (renderOptions?.layers) {
       renderOptions.layers.forEach(layer => {
-        if (map.current.getLayer(layer.id)) {
-          map.current.removeLayer(layer.id);
+        if (mapInstance.getLayer(layer.id)) {
+          mapInstance.removeLayer(layer.id);
         }
-        if (map.current.getSource(layer.id)) {
-            map.current.removeSource(layer.id)
+        if (mapInstance.getSource(layer.id)) {
+            mapInstance.removeSource(layer.id)
         }
 
-        map.current.addSource(layer.id, {
+        mapInstance.addSource(layer.id, {
             type: 'geojson',
             data: layer.source as any
         });
-        map.current.addLayer({
+        mapInstance.addLayer({
             ...layer,
             source: layer.id
         } as mapboxgl.AnyLayer);
