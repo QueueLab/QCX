@@ -318,9 +318,16 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
       const center = map.current.getCenter();
       const zoom = map.current.getZoom();
       const pitch = map.current.getPitch();
-      currentMapCenterRef.current = { center: [center.lng, center.lat], zoom, pitch };
+      const newCenter: [number, number] = [center.lng, center.lat];
+      currentMapCenterRef.current = { center: newCenter, zoom, pitch };
+      setMapData(prevData => ({
+        ...prevData,
+        center: newCenter,
+        zoom: zoom,
+        pitch: pitch,
+      }));
     }
-  }, [])
+  }, [setMapData])
 
   // Set up idle rotation checker
   useEffect(() => {
