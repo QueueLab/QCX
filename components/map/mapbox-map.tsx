@@ -510,7 +510,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   // Effect to handle map updates from MapDataContext
   useEffect(() => {
     const mapInstance = map.current;
-    if (!mapInstance) return;
+    if (!mapInstance || !initializedRef.current) return;
 
     const renderOptions = mapData.renderOptions;
 
