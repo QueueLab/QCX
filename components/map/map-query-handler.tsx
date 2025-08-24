@@ -31,46 +31,39 @@ export const MapQueryHandler: React.FC<MapQueryHandlerProps> = ({ toolOutput }) 
   const { setMapData } = useMapData();
 
   useEffect(() => {
+    console.log('[MapQueryHandler] useEffect triggered. toolOutput:', JSON.stringify(toolOutput, null, 2));
+
     if (toolOutput && toolOutput.mcp_response && toolOutput.mcp_response.location) {
       const { latitude, longitude, place_name } = toolOutput.mcp_response.location;
 
       if (typeof latitude === 'number' && typeof longitude === 'number') {
-        console.log(`MapQueryHandler: Received data from geospatialTool. Place: ${place_name}, Lat: ${latitude}, Lng: ${longitude}`);
+        const newMapData = {
+          targetPosition: [longitude, latitude] as [number, number],
+          mapFeature: {
+            place_name,
+            mapUrl: toolOutput.mcp_response?.mapUrl,
+          },
+        };
+        console.log('[MapQueryHandler] Calling setMapData with:', JSON.stringify(newMapData, null, 2));
         setMapData(prevData => ({
           ...prevData,
-          // Ensure coordinates are in [lng, lat] format for MapboxGL
-          targetPosition: [longitude, latitude], 
-          // Optionally store more info from mcp_response if needed by MapboxMap component later
-          mapFeature: { 
-            place_name, 
-            // Potentially add mapUrl or other details from toolOutput.mcp_response
-            mapUrl: toolOutput.mcp_response?.mapUrl 
-          } 
+          ...newMapData,
         }));
       } else {
-        console.warn("MapQueryHandler: Invalid latitude/longitude in toolOutput.mcp_response:", toolOutput.mcp_response.location);
-        // Clear target position if data is invalid
+        console.warn('[MapQueryHandler] Invalid latitude/longitude in toolOutput.mcp_response:', toolOutput.mcp_response.location);
         setMapData(prevData => ({
           ...prevData,
           targetPosition: null,
-          mapFeature: null
+          mapFeature: null,
         }));
       }
     } else {
-      // This case handles when toolOutput or its critical parts are missing.
-      // Depending on requirements, could fall back to originalUserInput and useMCPMapClient,
-      // or simply log that no valid data was provided from the tool.
-      // For this subtask, we primarily focus on using the new toolOutput.
-      if (toolOutput) { // It exists, but data is not as expected
-        console.warn("MapQueryHandler: toolOutput provided, but mcp_response or location data is missing.", toolOutput);
+      if (toolOutput) {
+        console.warn('[MapQueryHandler] toolOutput provided, but mcp_response or location data is missing.', toolOutput);
+      } else {
+        console.log('[MapQueryHandler] toolOutput is null or undefined.');
       }
-      // If toolOutput is null/undefined, this component might not need to do anything,
-      // or it's an indication that it shouldn't have been rendered/triggered.
-      // For now, if no valid toolOutput, we clear map data or leave it as is.
-      // setMapData(prevData => ({ ...prevData, targetPosition: null, mapFeature: null }));
     }
-    // The dependencies for this useEffect should be based on the props that trigger its logic.
-    // If originalUserInput and the old MCP client were still used as a fallback, they'd be dependencies.
   }, [toolOutput, setMapData]);
 
   // This component is a handler and does not render any visible UI itself.

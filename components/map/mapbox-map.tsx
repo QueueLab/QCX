@@ -219,17 +219,16 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
           })
         })
         setTimeout(() => {
-          if (mapType === MapToggleEnum.RealTimeMode) {
-            startRotation()
-          }
+          startRotation()
           isUpdatingPositionRef.current = false
         }, 500)
       } catch (error) {
         console.error('Error updating map position:', error)
+      } finally {
         isUpdatingPositionRef.current = false
       }
     }
-  }, [mapType, startRotation, stopRotation])
+  }, [startRotation, stopRotation])
 
   // Set up drawing tools
   const setupDrawingTools = useCallback(() => {
@@ -507,23 +506,18 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
 
   // Effect to handle map updates from MapDataContext
   useEffect(() => {
+    console.log('[Mapbox] useEffect for mapData triggered. mapData:', JSON.stringify(mapData, null, 2));
     if (mapData.targetPosition && map.current) {
-      // console.log("Mapbox.tsx: Received new targetPosition from context:", mapData.targetPosition);
-      // targetPosition is LngLatLike, which can be [number, number]
-      // updateMapPosition expects (latitude, longitude)
-      const [lng, lat] = mapData.targetPosition as [number, number]; // Assuming LngLatLike is [lng, lat]
+      stopRotation();
+      const [lng, lat] = mapData.targetPosition as [number, number];
       if (typeof lat === 'number' && typeof lng === 'number') {
+        console.log(`[Mapbox] Calling updateMapPosition with lat: ${lat}, lng: ${lng}`);
         updateMapPosition(lat, lng);
       } else {
-        // console.error("Mapbox.tsx: Invalid targetPosition format in mapData", mapData.targetPosition);
+        console.error("[Mapbox] Invalid targetPosition format in mapData", mapData.targetPosition);
       }
     }
-    // TODO: Handle mapData.mapFeature for drawing routes, polygons, etc. in a future step.
-    // For example:
-    // if (mapData.mapFeature && mapData.mapFeature.route_geometry && typeof drawRoute === 'function') {
-    //   drawRoute(mapData.mapFeature.route_geometry); // Implement drawRoute function if needed
-    // }
-  }, [mapData.targetPosition, mapData.mapFeature, updateMapPosition]);
+  }, [mapData, updateMapPosition, stopRotation]);
 
   // Long-press handlers
   const handleMouseDown = useCallback(() => {
