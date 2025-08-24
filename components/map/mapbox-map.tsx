@@ -197,7 +197,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     }
   }, [stopRotation])
 
-  const updateMapPosition = useCallback(async (latitude: number, longitude: number) => {
+  const updateMapPosition = useCallback(async (latitude: number, longitude: number, options: { zoom?: number; pitch?: number; bearing?: number } = {}) => {
     if (map.current && !isUpdatingPositionRef.current) {
       isUpdatingPositionRef.current = true
       stopRotation()
@@ -209,7 +209,9 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         await new Promise<void>((resolve) => {
           map.current?.flyTo({
             center: [longitude, latitude],
-            zoom: 12,
+            zoom: options.zoom ?? 12,
+            pitch: options.pitch,
+            bearing: options.bearing,
             essential: true,
             speed: 0.5,
             curve: 1,
@@ -507,23 +509,56 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
 
   // Effect to handle map updates from MapDataContext
   useEffect(() => {
-    if (mapData.targetPosition && map.current) {
-      // console.log("Mapbox.tsx: Received new targetPosition from context:", mapData.targetPosition);
-      // targetPosition is LngLatLike, which can be [number, number]
-      // updateMapPosition expects (latitude, longitude)
-      const [lng, lat] = mapData.targetPosition as [number, number]; // Assuming LngLatLike is [lng, lat]
-      if (typeof lat === 'number' && typeof lng === 'number') {
-        updateMapPosition(lat, lng);
-      } else {
-        // console.error("Mapbox.tsx: Invalid targetPosition format in mapData", mapData.targetPosition);
-      }
+    if (!map.current) return;
+
+    const renderOptions = mapData.renderOptions;
+
+    // Handle style change
+    if (renderOptions?.style) {
+      map.current.setStyle(`mapbox://styles/mapbox/${renderOptions.style}`);
     }
+
+    // Handle camera and position change
+    if (mapData.targetPosition) {
+      const [lng, lat] = mapData.targetPosition as [number, number];
+      if (typeof lat === 'number' && typeof lng === 'number') {
+        const { zoom, pitch, bearing } = renderOptions || {};
+        updateMapPosition(lat, lng, { zoom, pitch, bearing });
+      }
+    } else if (renderOptions?.zoom || renderOptions?.pitch || renderOptions?.bearing) {
+        // If no target position, but camera options are present, fly to current center with new camera
+        const center = map.current.getCenter();
+        const { zoom, pitch, bearing } = renderOptions;
+        updateMapPosition(center.lat, center.lng, { zoom, pitch, bearing });
+    }
+
+    // Handle layers
+    if (renderOptions?.layers) {
+      renderOptions.layers.forEach(layer => {
+        if (map.current.getLayer(layer.id)) {
+          map.current.removeLayer(layer.id);
+        }
+        if (map.current.getSource(layer.id)) {
+            map.current.removeSource(layer.id)
+        }
+
+        map.current.addSource(layer.id, {
+            type: 'geojson',
+            data: layer.source as any
+        });
+        map.current.addLayer({
+            ...layer,
+            source: layer.id
+        } as mapboxgl.AnyLayer);
+      });
+    }
+
     // TODO: Handle mapData.mapFeature for drawing routes, polygons, etc. in a future step.
     // For example:
     // if (mapData.mapFeature && mapData.mapFeature.route_geometry && typeof drawRoute === 'function') {
     //   drawRoute(mapData.mapFeature.route_geometry); // Implement drawRoute function if needed
     // }
-  }, [mapData.targetPosition, mapData.mapFeature, updateMapPosition]);
+  }, [mapData.targetPosition, mapData.mapFeature, mapData.renderOptions, updateMapPosition]);
 
   // Long-press handlers
   const handleMouseDown = useCallback(() => {

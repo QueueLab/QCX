@@ -3,6 +3,8 @@
 import { useEffect } from 'react';
 // Removed useMCPMapClient as we'll use data passed via props
 import { useMapData } from './map-data-context'; 
+import { z } from 'zod';
+import { renderSchema } from '@/lib/schema/geospatial';
 
 // Define the expected structure of the mcp_response from geospatialTool
 interface McpResponseData {
@@ -13,6 +15,7 @@ interface McpResponseData {
     address?: string;
   };
   mapUrl?: string;
+  render?: z.infer<typeof renderSchema>;
 }
 
 interface GeospatialToolOutput {
@@ -33,6 +36,7 @@ export const MapQueryHandler: React.FC<MapQueryHandlerProps> = ({ toolOutput }) 
   useEffect(() => {
     if (toolOutput && toolOutput.mcp_response && toolOutput.mcp_response.location) {
       const { latitude, longitude, place_name } = toolOutput.mcp_response.location;
+      const { render } = toolOutput.mcp_response;
 
       if (typeof latitude === 'number' && typeof longitude === 'number') {
         console.log(`MapQueryHandler: Received data from geospatialTool. Place: ${place_name}, Lat: ${latitude}, Lng: ${longitude}`);
@@ -45,7 +49,8 @@ export const MapQueryHandler: React.FC<MapQueryHandlerProps> = ({ toolOutput }) 
             place_name, 
             // Potentially add mapUrl or other details from toolOutput.mcp_response
             mapUrl: toolOutput.mcp_response?.mapUrl 
-          } 
+          },
+          renderOptions: render
         }));
       } else {
         console.warn("MapQueryHandler: Invalid latitude/longitude in toolOutput.mcp_response:", toolOutput.mcp_response.location);
@@ -53,7 +58,8 @@ export const MapQueryHandler: React.FC<MapQueryHandlerProps> = ({ toolOutput }) 
         setMapData(prevData => ({
           ...prevData,
           targetPosition: null,
-          mapFeature: null
+          mapFeature: null,
+          renderOptions: undefined
         }));
       }
     } else {
