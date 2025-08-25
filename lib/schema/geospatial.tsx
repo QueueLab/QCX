@@ -1,14 +1,19 @@
 import { z } from 'zod';
 
-// Improved schema using discriminatedUnion for better type safety and conditional requirements
-// - Enforces required fields based on queryType (e.g., destination for directions/distance)
-// - Renames 'query' to 'location' for clarity in most cases, but uses 'origin' and 'destination' for directions/distance
-// - Makes 'coordinates' required for 'reverse' and optional for 'search' (as proximity)
-// - Adds 'mode' for directions (e.g., driving, walking) assuming tool support can be added
-// - Integrates 'radius' and 'maxResults' for 'search', assuming future tool arg expansion
-// - Keeps 'includeMap' consistent across all
-// - Defaults queryType removed; now required to encourage explicit typing
-// - For 'map', treats as general query similar to geocode/search
+// ADD RENDER OPTIONS TO SCHEMA
+export const renderSchema = z.object({
+  style: z.enum(['streets-v12', 'satellite-v9', 'light-v11', 'dark-v11', 'outdoors-v12', 'satellite-streets-v12']).optional().describe("Map style to apply"),
+  zoom: z.number().min(0).max(22).optional().describe("Zoom level"),
+  pitch: z.number().min(0).max(85).optional().describe("Map pitch in degrees"),
+  bearing: z.number().optional().describe("Map bearing in degrees"),
+  layers: z.array(z.object({
+    id: z.string().describe("Unique layer ID"),
+    type: z.enum(['fill', 'line', 'symbol', 'circle', 'heatmap', 'fill-extrusion', 'raster', 'hillshade', 'background']).describe("Layer type"),
+    source: z.any().describe("Layer source data (URL or GeoJSON)"),
+    paint: z.record(z.any()).optional().describe("Layer paint properties"),
+    layout: z.record(z.any()).optional().describe("Layer layout properties")
+  })).optional().describe("Layers to add to the map")
+}).optional().describe("Map rendering instructions");
 
 export const geospatialQuerySchema = z.discriminatedUnion('queryType', [
     z.object({
@@ -37,6 +42,7 @@ export const geospatialQuerySchema = z.discriminatedUnion('queryType', [
       .optional()
       .default(true)
       .describe("Whether to include a map preview/URL in the response"),
+    render: renderSchema,
   }),
   z.object({
     queryType: z.literal('geocode'),
@@ -54,6 +60,7 @@ export const geospatialQuerySchema = z.discriminatedUnion('queryType', [
       .optional()
       .default(5)
       .describe("Maximum number of results to return"),
+    render: renderSchema,
   }),
   z.object({
     queryType: z.literal('reverse'),
@@ -73,6 +80,7 @@ export const geospatialQuerySchema = z.discriminatedUnion('queryType', [
       .optional()
       .default(5)
       .describe("Maximum number of results to return"),
+    render: renderSchema,
   }),
   z.object({
     queryType: z.literal('directions'),
@@ -90,6 +98,7 @@ export const geospatialQuerySchema = z.discriminatedUnion('queryType', [
       .optional()
       .default(true)
       .describe("Whether to include a map preview/URL in the response"),
+    render: renderSchema,
   }),
   z.object({
     queryType: z.literal('distance'),
@@ -107,6 +116,7 @@ export const geospatialQuerySchema = z.discriminatedUnion('queryType', [
       .optional()
       .default(true)
       .describe("Whether to include a map preview/URL in the response"),
+    render: renderSchema,
   }),
   z.object({
     queryType: z.literal('map'),
@@ -117,6 +127,7 @@ export const geospatialQuerySchema = z.discriminatedUnion('queryType', [
       .optional()
       .default(true)
       .describe("Whether to include a map preview/URL in the response"),
+    render: renderSchema,
   })
 ]);
 

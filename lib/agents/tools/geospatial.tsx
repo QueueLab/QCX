@@ -3,7 +3,7 @@
  */
 import { createStreamableUI, createStreamableValue } from 'ai/rsc';
 import { BotMessage } from '@/components/message';
-import { geospatialQuerySchema } from '@/lib/schema/geospatial';
+import { geospatialQuerySchema, renderSchema } from '@/lib/schema/geospatial';
 import { Client as MCPClientClass } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { createSmitheryUrl } from '@smithery/sdk';
@@ -22,6 +22,7 @@ interface Location {
 interface McpResponse {
   location: Location;
   mapUrl?: string;
+  render?: z.infer<typeof renderSchema>;
 }
 
 interface MapboxConfig {
@@ -151,7 +152,7 @@ export const geospatialTool = ({ uiStream }: { uiStream: ReturnType<typeof creat
 - Geographic information lookup`,
   parameters: geospatialQuerySchema,
   execute: async (params: z.infer<typeof geospatialQuerySchema>) => {
-    const { queryType, includeMap = true } = params;
+    const { queryType, includeMap = true, render } = params;
     console.log('[GeospatialTool] Execute called with:', params);
 
     const uiFeedbackStream = createStreamableValue<string>();
@@ -193,13 +194,14 @@ export const geospatialTool = ({ uiStream }: { uiStream: ReturnType<typeof creat
 
       // Build arguments
       const toolArgs = (() => {
+        const baseArgs = { includeMapPreview: includeMap, render };
         switch (queryType) {
           case 'directions':
-          case 'distance': return { places: [params.origin, params.destination], includeMapPreview: includeMap, mode: params.mode || 'driving' };
-          case 'reverse': return { searchText: `${params.coordinates.latitude},${params.coordinates.longitude}`, includeMapPreview: includeMap, maxResults: params.maxResults || 5 };
-          case 'search': return { searchText: params.query, includeMapPreview: includeMap, maxResults: params.maxResults || 5, ...(params.coordinates && { proximity: `${params.coordinates.latitude},${params.coordinates.longitude}` }), ...(params.radius && { radius: params.radius }) };
+          case 'distance': return { ...baseArgs, places: [params.origin, params.destination], mode: params.mode || 'driving' };
+          case 'reverse': return { ...baseArgs, searchText: `${params.coordinates.latitude},${params.coordinates.longitude}`, maxResults: params.maxResults || 5 };
+          case 'search': return { ...baseArgs, searchText: params.query, maxResults: params.maxResults || 5, ...(params.coordinates && { proximity: `${params.coordinates.latitude},${params.coordinates.longitude}` }), ...(params.radius && { radius: params.radius }) };
           case 'geocode':
-          case 'map': return { searchText: params.location, includeMapPreview: includeMap, maxResults: queryType === 'geocode' ? params.maxResults || 5 : undefined };
+          case 'map': return { ...baseArgs, searchText: params.location, maxResults: queryType === 'geocode' ? params.maxResults || 5 : undefined };
         }
       })();
 
@@ -243,9 +245,9 @@ export const geospatialTool = ({ uiStream }: { uiStream: ReturnType<typeof creat
         const parsedData = content as any;
         if (parsedData.results?.length > 0) {
           const firstResult = parsedData.results[0];
-          mcpData = { location: { latitude: firstResult.coordinates?.latitude, longitude: firstResult.coordinates?.longitude, place_name: firstResult.name || firstResult.place_name, address: firstResult.full_address || firstResult.address }, mapUrl: parsedData.mapUrl };
+          mcpData = { location: { latitude: firstResult.coordinates?.latitude, longitude: firstResult.coordinates?.longitude, place_name: firstResult.name || firstResult.place_name, address: firstResult.full_address || firstResult.address }, mapUrl: parsedData.mapUrl, render: parsedData.render };
         } else if (parsedData.location) {
-          mcpData = { location: { latitude: parsedData.location.latitude, longitude: parsedData.location.longitude, place_name: parsedData.location.place_name || parsedData.location.name, address: parsedData.location.address || parsedData.location.formatted_address }, mapUrl: parsedData.mapUrl || parsedData.map_url };
+          mcpData = { location: { latitude: parsedData.location.latitude, longitude: parsedData.location.longitude, place_name: parsedData.location.place_name || parsedData.location.name, address: parsedData.location.address || parsedData.location.formatted_address }, mapUrl: parsedData.mapUrl || parsedData.map_url, render: parsedData.render };
         } else {
           throw new Error("Response missing required 'location' or 'results' field");
         }

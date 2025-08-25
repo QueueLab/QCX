@@ -2,6 +2,8 @@
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { LngLatLike } from 'mapbox-gl'; // Import LngLatLike
+import { z } from 'zod';
+import { renderSchema } from '@/lib/schema/geospatial';
 
 // Define the shape of the map data you want to share
 export interface MapData {
@@ -14,6 +16,7 @@ export interface MapData {
     measurement: string;
     geometry: any;
   }>;
+  renderOptions?: z.infer<typeof renderSchema>;
 }
 
 interface MapDataContextType {
