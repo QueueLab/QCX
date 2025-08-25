@@ -100,15 +100,22 @@ Match the language of your response to the user's language.`;
         break
     }
   }
-  messages.push({
+  const newMessages: CoreMessage[] = []
+  // Add assistant message
+  const content: ({ type: 'text'; text: string } | ToolCallPart)[] = []
+  if (fullResponse.trim()) {
+    content.push({ type: 'text', text: fullResponse })
+  }
+  content.push(...toolCalls)
+  newMessages.push({
     role: 'assistant',
-    content: [{ type: 'text', text: fullResponse }, ...toolCalls]
+    content: content
   })
 
+  // Add tool responses if any
   if (toolResponses.length > 0) {
-    // Add tool responses to the messages
-    messages.push({ role: 'tool', content: toolResponses })
+    newMessages.push({ role: 'tool', content: toolResponses })
   }
 
-  return { result, fullResponse, hasError, toolResponses }
+  return { result, fullResponse, hasError, toolResponses, newMessages }
 }
