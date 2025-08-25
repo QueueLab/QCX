@@ -1,3 +1,5 @@
+import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import {
   StreamableValue,
   createAI,
@@ -248,6 +250,12 @@ async function submit(formData?: FormData, skip?: boolean) {
   };
 }
 
+async function newChat() {
+  'use server';
+  revalidatePath('/');
+  redirect('/');
+}
+
 export type AIState = {
   messages: AIMessage[];
   chatId: string;
@@ -272,6 +280,7 @@ const initialUIState: UIState = [];
 export const AI = createAI<AIState, UIState>({
   actions: {
     submit,
+    newChat,
   },
   initialUIState,
   initialAIState,

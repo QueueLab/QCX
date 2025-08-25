@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { useRouter } from 'next/navigation'
 import type { AI, UIState } from '@/app/actions'
 import { useUIState, useActions } from 'ai/rsc'
 // Removed import of useGeospatialToolMcp as it's no longer used/available
@@ -20,12 +19,11 @@ interface ChatPanelProps {
 
 export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
   const [, setMessages] = useUIState<typeof AI>()
-  const { submit } = useActions()
+  const { submit, newChat } = useActions()
   // Removed mcp instance as it's no longer passed to submit
   const [isButtonPressed, setIsButtonPressed] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const inputRef = useRef<HTMLTextAreaElement>(null)
-  const router = useRouter()
 
   // Detect mobile layout
   useEffect(() => {
@@ -64,7 +62,7 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
   }
 
   const handleClear = () => {
-    router.push('/')
+    newChat()
   }
 
   useEffect(() => {
