@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { useRouter } from 'next/navigation'
+import { useActions } from 'ai/rsc'
 import { Button } from '@/components/ui/button'
 import {
   Search,
@@ -18,10 +18,11 @@ import { MapToggle } from './map-toggle'
 import { ModeToggle } from './mode-toggle'
 
 export const MobileIconsBar: React.FC = () => {
-  const router = useRouter()
+  const { newChat } = useActions()
 
-  const handleNewChat = () => {
-    router.push('/')
+  const handleNewChat = async () => {
+    await newChat()
+    window.location.href = '/'
   }
 
   return (

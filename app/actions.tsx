@@ -248,6 +248,18 @@ async function submit(formData?: FormData, skip?: boolean) {
   };
 }
 
+async function newChat() {
+  'use server'
+  const aiState = getMutableAIState<typeof AI>()
+
+  // Update AI state to a new session.
+  aiState.done({
+    ...initialAIState,
+    chatId: nanoid(),
+    messages: []
+  })
+}
+
 export type AIState = {
   messages: AIMessage[];
   chatId: string;
@@ -272,6 +284,7 @@ const initialUIState: UIState = [];
 export const AI = createAI<AIState, UIState>({
   actions: {
     submit,
+    newChat,
   },
   initialUIState,
   initialAIState,
