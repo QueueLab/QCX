@@ -101,9 +101,14 @@ Match the language of your response to the user's language.`;
   }
   const newMessages: CoreMessage[] = []
   // Add assistant message
+  const content: ({ type: 'text'; text: string } | ToolCallPart)[] = []
+  if (fullResponse.trim()) {
+    content.push({ type: 'text', text: fullResponse })
+  }
+  content.push(...toolCalls)
   newMessages.push({
     role: 'assistant',
-    content: [{ type: 'text', text: fullResponse }, ...toolCalls]
+    content: content
   })
 
   // Add tool responses if any

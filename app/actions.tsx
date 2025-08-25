@@ -156,7 +156,11 @@ async function submit(formData?: FormData, skip?: boolean) {
       errorOccurred = hasError;
 
       if (newMessages) {
-        messages.push(...newMessages);
+        // Filter out tool messages and append the rest
+        const nonToolMessages = newMessages.filter(
+          (msg) => msg.role !== 'tool'
+        );
+        messages.push(...nonToolMessages);
       }
 
       if (toolOutputs.length > 0) {
