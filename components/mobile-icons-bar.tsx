@@ -22,6 +22,7 @@ export const MobileIconsBar: React.FC = () => {
 
   const handleNewChat = async () => {
     await newChat()
+    window.location.href = '/'
   }
 
   return (

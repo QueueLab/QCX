@@ -1,4 +1,3 @@
-import { redirect } from 'next/navigation';
 import {
   StreamableValue,
   createAI,
@@ -259,8 +258,6 @@ async function newChat() {
     chatId: nanoid(),
     messages: []
   })
-
-  redirect('/')
 }
 
 export type AIState = {

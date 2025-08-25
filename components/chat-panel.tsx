@@ -63,6 +63,7 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
 
   const handleClear = async () => {
     await newChat()
+    window.location.href = '/'
   }
 
   useEffect(() => {
