@@ -1,4 +1,3 @@
-import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import {
   StreamableValue,
@@ -251,9 +250,17 @@ async function submit(formData?: FormData, skip?: boolean) {
 }
 
 async function newChat() {
-  'use server';
-  revalidatePath('/');
-  redirect('/');
+  'use server'
+  const aiState = getMutableAIState<typeof AI>()
+
+  // Update AI state to a new session.
+  aiState.done({
+    ...initialAIState,
+    chatId: nanoid(),
+    messages: []
+  })
+
+  redirect('/')
 }
 
 export type AIState = {

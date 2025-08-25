@@ -45,7 +45,7 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (isButtonPressed) {
-      handleClear()
+      await handleClear()
       setIsButtonPressed(false)
     }
     setMessages(currentMessages => [
@@ -61,8 +61,8 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
     setMessages(currentMessages => [...currentMessages, responseMessage as any])
   }
 
-  const handleClear = () => {
-    newChat()
+  const handleClear = async () => {
+    await newChat()
   }
 
   useEffect(() => {

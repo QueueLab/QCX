@@ -20,8 +20,8 @@ import { ModeToggle } from './mode-toggle'
 export const MobileIconsBar: React.FC = () => {
   const { newChat } = useActions()
 
-  const handleNewChat = () => {
-    newChat()
+  const handleNewChat = async () => {
+    await newChat()
   }
 
   return (
