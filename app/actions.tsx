@@ -143,21 +143,24 @@ async function submit(formData?: FormData, skip?: boolean) {
         : answer.length === 0 && !errorOccurred
     ) {
       // Search the web and generate the answer
-      // Removed mcp argument from researcher call
-      const { fullResponse, hasError, toolResponses } = await researcher(
-        currentSystemPrompt,
-        uiStream,
-        streamText,
-        messages,
-        // mcp, // mcp instance is no longer passed down
-        useSpecificAPI
-      );
+      const { fullResponse, hasError, toolResponses, newMessages } =
+        await researcher(
+          currentSystemPrompt,
+          uiStream,
+          streamText,
+          messages,
+          useSpecificAPI,
+        );
       answer = fullResponse;
       toolOutputs = toolResponses;
       errorOccurred = hasError;
 
+      if (newMessages) {
+        messages.push(...newMessages);
+      }
+
       if (toolOutputs.length > 0) {
-        toolOutputs.map((output) => {
+        toolOutputs.map(output => {
           aiState.update({
             ...aiState.get(),
             messages: [
