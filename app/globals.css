@@ -118,10 +118,10 @@
 
   .mobile-icons-bar-content {
     display: flex;
-    gap: 20px;
+    width: 100%;
     padding: 0 10px;
     min-width: max-content;
-    /* justify-content: space-between; */
+    justify-content: space-between;
   }
 
   /*
