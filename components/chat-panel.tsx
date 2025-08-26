@@ -20,7 +20,7 @@ interface ChatPanelProps {
 
 export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
   const [, setMessages] = useUIState<typeof AI>()
-  const { submit } = useActions()
+  const { submit, newChat } = useActions() as any
   // Removed mcp instance as it's no longer passed to submit
   const [isButtonPressed, setIsButtonPressed] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
@@ -63,12 +63,20 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
     setMessages(currentMessages => [...currentMessages, responseMessage as any])
   }
 
-  const handleClear = () => {
+  const handleClear = async () => {
+    try {
+      await newChat()
+    } catch (e) {
+      // ignore
+    }
+    setMessages([] as any)
+    setInput('')
     router.push('/')
+    router.refresh()
   }
 
   useEffect(() => {
-    inputRef.current?.focus(); 
+    inputRef.current?.focus()
   }, [])
 
   // New chat button (appears when there are messages)
@@ -106,7 +114,10 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
     >
       <form
         onSubmit={handleSubmit}
-        className={cn('max-w-full w-full', isMobile ? 'px-2 pb-2 pt-1 h-full flex flex-col justify-center' : '')}
+        className={cn(
+          'max-w-full w-full',
+          isMobile ? 'px-2 pb-2 pt-1 h-full flex flex-col justify-center' : ''
+        )}
       >
         <div
           className={cn(

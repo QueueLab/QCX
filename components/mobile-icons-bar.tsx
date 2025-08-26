@@ -16,12 +16,23 @@ import {
 import { History } from '@/components/history'
 import { MapToggle } from './map-toggle'
 import { ModeToggle } from './mode-toggle'
+import { useActions, useUIState } from 'ai/rsc'
+import type { AI } from '@/app/actions'
 
 export const MobileIconsBar: React.FC = () => {
   const router = useRouter()
+  const [, setMessages] = useUIState<typeof AI>()
+  const { newChat } = useActions() as any
 
   const handleNewChat = () => {
-    router.push('/')
+    Promise.resolve()
+      .then(() => newChat?.())
+      .catch(() => {})
+      .finally(() => {
+        setMessages([] as any)
+        router.push('/')
+        router.refresh()
+      })
   }
 
   return (
