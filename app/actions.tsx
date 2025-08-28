@@ -18,6 +18,7 @@ import { writer } from '@/lib/agents/writer';
 import { saveChat, getSystemPrompt } from '@/lib/actions/chat'; // Added getSystemPrompt
 import { Chat, AIMessage } from '@/lib/types';
 import { UserMessage } from '@/components/user-message';
+import { SwipeableMessage } from '@/components/swipeable-message';
 import { BotMessage } from '@/components/message';
 import { SearchSection } from '@/components/search-section';
 import SearchRelated from '@/components/search-related';
@@ -269,9 +270,29 @@ const initialAIState: AIState = {
 const initialUIState: UIState = [];
 
 // AI is a provider you wrap your application with so you can access AI and UI state in your components.
+async function hideMessage(id: string) {
+  'use server'
+
+  const aiState = getMutableAIState<typeof AI>()
+
+  aiState.update({
+    ...aiState.get(),
+    messages: aiState.get().messages.map(msg => {
+      if (msg.id === id) {
+        return {
+          ...msg,
+          isHidden: true
+        }
+      }
+      return msg
+    })
+  })
+}
+
 export const AI = createAI<AIState, UIState>({
   actions: {
     submit,
+    hideMessage
   },
   initialUIState,
   initialAIState,
@@ -344,6 +365,7 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
   const chatId = aiState.chatId;
   const isSharePage = aiState.isSharePage;
   return aiState.messages
+    .filter(message => !message.isHidden)
     .map((message, index) => {
       const { role, content, id, type, name } = message;
 
@@ -365,11 +387,13 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
               return {
                 id,
                 component: (
-                  <UserMessage
-                    message={value}
-                    chatId={chatId}
-                    showShare={index === 0 && !isSharePage}
-                  />
+                  <SwipeableMessage messageId={id}>
+                    <UserMessage
+                      message={value}
+                      chatId={chatId}
+                      showShare={index === 0 && !isSharePage}
+                    />
+                  </SwipeableMessage>
                 ),
               };
             case 'inquiry':
@@ -387,9 +411,11 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
               return {
                 id,
                 component: (
-                  <Section title="response">
-                    <BotMessage content={answer.value} />
-                  </Section>
+                  <SwipeableMessage messageId={id}>
+                    <Section title="response">
+                      <BotMessage content={answer.value} />
+                    </Section>
+                  </SwipeableMessage>
                 ),
               };
             case 'related':
