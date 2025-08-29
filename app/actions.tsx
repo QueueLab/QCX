@@ -32,6 +32,25 @@ type RelatedQueries = {
 };
 
 // Removed mcp parameter from submit, as geospatialTool now handles its client.
+async function hideMessage(messageId: string) {
+  'use server'
+
+  const aiState = getMutableAIState<typeof AI>()
+
+  aiState.update({
+    ...aiState.get(),
+    messages: aiState.get().messages.map(msg => {
+      if (msg.id === messageId) {
+        return {
+          ...msg,
+          isHidden: true
+        }
+      }
+      return msg
+    })
+  })
+}
+
 async function submit(formData?: FormData, skip?: boolean) {
 'use server';
 
@@ -272,6 +291,7 @@ const initialUIState: UIState = [];
 export const AI = createAI<AIState, UIState>({
   actions: {
     submit,
+    hideMessage,
   },
   initialUIState,
   initialAIState,
@@ -344,6 +364,7 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
   const chatId = aiState.chatId;
   const isSharePage = aiState.isSharePage;
   return aiState.messages
+    .filter(message => !message.isHidden)
     .map((message, index) => {
       const { role, content, id, type, name } = message;
 
