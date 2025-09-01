@@ -11,6 +11,8 @@ import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css'
 import { useMapToggle, MapToggleEnum } from '../map-toggle-context'
 import { useMapData } from './map-data-context'; // Add this import
 import { useMapLoading } from '../map-loading-context'; // Import useMapLoading
+import { useAIState } from 'ai/rsc';
+import { AIState } from '@/app/actions';
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN as string;
 
@@ -32,6 +34,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   const { mapData, setMapData } = useMapData(); // Consume the new context, get setMapData
   const { setIsMapLoaded } = useMapLoading(); // Get setIsMapLoaded from context
   const previousMapTypeRef = useRef<MapToggleEnum | null>(null)
+  const [aiState] = useAIState();
 
   // Refs for long-press functionality
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -524,6 +527,82 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     //   drawRoute(mapData.mapFeature.route_geometry); // Implement drawRoute function if needed
     // }
   }, [mapData.targetPosition, mapData.mapFeature, updateMapPosition]);
+
+  useEffect(() => {
+    if (!map.current) return;
+
+    const drawFeatures = () => {
+      if (!map.current || !map.current.isStyleLoaded()) {
+        // Style not loaded yet, wait for it
+        map.current?.once('styledata', drawFeatures);
+        return;
+      }
+
+      const drawingMessages = (aiState as AIState).messages.filter(
+        msg => msg.name === 'drawing' && msg.role === 'tool'
+      );
+
+      drawingMessages.forEach(message => {
+        try {
+          const { geojson } = JSON.parse(message.content);
+          if (!geojson || !geojson.features) return;
+
+          const sourceId = `geojson-source-${message.id}`;
+          const source = map.current?.getSource(sourceId);
+
+          if (source) {
+            // Source exists, update data
+            (source as mapboxgl.GeoJSONSource).setData(geojson);
+          } else {
+            // Source does not exist, add new source
+            map.current?.addSource(sourceId, {
+              type: 'geojson',
+              data: geojson,
+            });
+          }
+
+          // Layer definitions
+          const layers = [
+            {
+              id: `points-layer-${message.id}`,
+              type: 'circle',
+              filter: ['==', '$type', 'Point'],
+              paint: { 'circle-radius': 6, 'circle-color': '#B42222' },
+            },
+            {
+              id: `lines-layer-${message.id}`,
+              type: 'line',
+              filter: ['==', '$type', 'LineString'],
+              paint: { 'line-color': '#B42222', 'line-width': 4 },
+              layout: { 'line-join': 'round', 'line-cap': 'round' },
+            },
+            {
+              id: `polygons-layer-${message.id}`,
+              type: 'fill',
+              filter: ['==', '$type', 'Polygon'],
+              paint: { 'fill-color': '#B42222', 'fill-opacity': 0.5 },
+            },
+          ];
+
+          layers.forEach(layer => {
+            if (!map.current?.getLayer(layer.id)) {
+              map.current?.addLayer({
+                ...layer,
+                source: sourceId,
+              } as mapboxgl.AnyLayer);
+            }
+          });
+
+        } catch (error) {
+          console.error('Error parsing or adding GeoJSON data:', error);
+        }
+      });
+    };
+
+    if (aiState && (aiState as AIState).messages) {
+      drawFeatures();
+    }
+  }, [aiState]);
 
   // Long-press handlers
   const handleMouseDown = useCallback(() => {
