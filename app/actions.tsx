@@ -31,45 +31,31 @@ type RelatedQueries = {
   items: { query: string }[];
 };
 
-// Action to update a user message
 async function updateMessage(messageId: string, newContent: string) {
   'use server'
 
   const aiState = getMutableAIState<typeof AI>()
+  const currentState = aiState.get()
 
-  // Update the AI state
-  aiState.update({
-    ...aiState.get(),
-    messages: aiState.get().messages.map(msg => {
-      if (msg.id === messageId && msg.role === 'user') {
-        // User messages content is a JSON string like `{"input":"...","other_data":"..."}`
-        // We need to parse it, update the input, and stringify it back.
-        try {
-          // TODO: This assumes the content is always a JSON string for user messages.
-          // This is true for form submissions, but might need to be more robust.
-          const content = JSON.parse(msg.content)
+  const newMessages = currentState.messages.map(msg => {
+    if (msg.id === messageId && msg.role === 'user') {
+      try {
+        const content = JSON.parse(msg.content)
+        if (content.input !== undefined) {
           content.input = newContent
-          return {
-            ...msg,
-            content: JSON.stringify(content)
-          }
-        } catch (e) {
-          console.error('Error updating message content:', e)
-          // Return original message if parsing fails
-          return msg
+          return { ...msg, content: JSON.stringify(content) }
         }
+      } catch (e) {
+        console.error('Error updating message content:', e)
       }
-      return msg
-    })
+    }
+    return msg
   })
 
-  // Create a new UI stream to force a re-render
-  const uiStream = createStreamableUI();
-  uiStream.done();
-  return {
-    id: nanoid(),
-    component: uiStream.value,
-  }
+  aiState.done({
+    ...currentState,
+    messages: newMessages,
+  })
 }
 
 // Removed mcp parameter from submit, as geospatialTool now handles its client.

@@ -1,3 +1,5 @@
+'use client'
+
 import React, { useState } from 'react'
 import { ChatShare } from './chat-share'
 import { Button } from './ui/button'
@@ -5,11 +7,11 @@ import { Pencil, Check, X } from 'lucide-react'
 import TextareaAutosize from 'react-textarea-autosize'
 
 type UserMessageProps = {
-  id: string
+  id?: string
   message: string
   chatId?: string
   showShare?: boolean
-  onUpdateMessage: (messageId: string, newContent: string) => void
+  onUpdateMessage?: (messageId: string, newContent: string) => void
 }
 
 export const UserMessage: React.FC<UserMessageProps> = ({
@@ -28,7 +30,9 @@ export const UserMessage: React.FC<UserMessageProps> = ({
   }
 
   const handleSaveClick = () => {
-    onUpdateMessage(id, editedMessage)
+    if (id && onUpdateMessage) {
+      onUpdateMessage(id, editedMessage)
+    }
     setIsEditing(false)
   }
 
@@ -59,11 +63,13 @@ export const UserMessage: React.FC<UserMessageProps> = ({
       ) : (
         <>
           <div className="text-xl flex-1 break-words">{message}</div>
-          <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
-            <Button size="icon" variant="ghost" onClick={handleEditClick}>
-              <Pencil className="h-4 w-4" />
-            </Button>
-          </div>
+          {id && onUpdateMessage && (
+            <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
+              <Button size="icon" variant="ghost" onClick={handleEditClick}>
+                <Pencil className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
           {enableShare && showShare && chatId && <ChatShare chatId={chatId} />}
         </>
       )}
