@@ -31,6 +31,47 @@ type RelatedQueries = {
   items: { query: string }[];
 };
 
+// Action to update a user message
+async function updateMessage(messageId: string, newContent: string) {
+  'use server'
+
+  const aiState = getMutableAIState<typeof AI>()
+
+  // Update the AI state
+  aiState.update({
+    ...aiState.get(),
+    messages: aiState.get().messages.map(msg => {
+      if (msg.id === messageId && msg.role === 'user') {
+        // User messages content is a JSON string like `{"input":"...","other_data":"..."}`
+        // We need to parse it, update the input, and stringify it back.
+        try {
+          // TODO: This assumes the content is always a JSON string for user messages.
+          // This is true for form submissions, but might need to be more robust.
+          const content = JSON.parse(msg.content)
+          content.input = newContent
+          return {
+            ...msg,
+            content: JSON.stringify(content)
+          }
+        } catch (e) {
+          console.error('Error updating message content:', e)
+          // Return original message if parsing fails
+          return msg
+        }
+      }
+      return msg
+    })
+  })
+
+  // Create a new UI stream to force a re-render
+  const uiStream = createStreamableUI();
+  uiStream.done();
+  return {
+    id: nanoid(),
+    component: uiStream.value,
+  }
+}
+
 // Removed mcp parameter from submit, as geospatialTool now handles its client.
 async function submit(formData?: FormData, skip?: boolean) {
 'use server';
@@ -272,6 +313,7 @@ const initialUIState: UIState = [];
 export const AI = createAI<AIState, UIState>({
   actions: {
     submit,
+    updateMessage
   },
   initialUIState,
   initialAIState,
@@ -366,9 +408,11 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                 id,
                 component: (
                   <UserMessage
+                    id={id}
                     message={value}
                     chatId={chatId}
                     showShare={index === 0 && !isSharePage}
+                    onUpdateMessage={updateMessage}
                   />
                 ),
               };
