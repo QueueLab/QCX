@@ -52,7 +52,7 @@ async function updateMessage(messageId: string, newContent: string) {
     return msg
   })
 
-  aiState.done({
+  aiState.update({
     ...currentState,
     messages: newMessages,
   })
