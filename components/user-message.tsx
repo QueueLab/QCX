@@ -42,7 +42,7 @@ export const UserMessage: React.FC<UserMessageProps> = ({
   }
 
   return (
-    <div className="group relative flex items-start w-full space-x-2 mt-2 min-h-10">
+    <div className="relative flex items-start w-full space-x-2 mt-2 min-h-10">
       {isEditing ? (
         <div className="flex flex-col w-full">
           <TextareaAutosize

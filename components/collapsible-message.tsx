@@ -44,6 +44,7 @@ export const CollapsibleMessage: React.FC<CollapsibleMessageProps> = ({
       onOpenChange={value => {
         setOpen(value)
       }}
+      className="group"
     >
       <CollapsibleTrigger asChild>
         <div
