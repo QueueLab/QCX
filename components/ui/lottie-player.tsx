@@ -13,18 +13,7 @@ const LottiePlayer: React.FC<LottiePlayerProps> = ({ isVisible }) => {
   }
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      width: '100vw',
-      height: '100vh',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: 'rgba(255, 255, 255, 0.8)', // Optional: background overlay
-      zIndex: 9999 // Ensure it's on top
-    }}>
+    <div className="fixed top-0 left-0 w-screen h-screen flex justify-center items-center bg-background/80 backdrop-blur-lg md:backdrop-blur-sm z-[9999]">
       <Lottie animationData={animationData} style={{ width: 300, height: 300 }} loop={true} />
     </div>
   );
