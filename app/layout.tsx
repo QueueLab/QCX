@@ -7,6 +7,7 @@ import Header from '@/components/header'
 import Footer from '@/components/footer'
 import { Sidebar } from '@/components/sidebar'
 import { Analytics } from "@vercel/analytics/next"
+import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Toaster } from '@/components/ui/sonner'
 import { MapToggleProvider } from '@/components/map-toggle-context'
 import { ProfileToggleProvider } from '@/components/profile-toggle-context'
@@ -74,6 +75,7 @@ export default function RootLayout({
           </ProfileToggleProvider>
         </MapToggleProvider>
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   )
