@@ -239,19 +239,8 @@ export const geospatialTool = ({ uiStream }: { uiStream: ReturnType<typeof creat
       catch { console.warn('[GeospatialTool] Content is not JSON, using as string:', content); }
 
       // Process results
-      if (typeof content === 'object' && content !== null) {
-        const parsedData = content as any;
-        if (parsedData.results?.length > 0) {
-          const firstResult = parsedData.results[0];
-          mcpData = { location: { latitude: firstResult.coordinates?.latitude, longitude: firstResult.coordinates?.longitude, place_name: firstResult.name || firstResult.place_name, address: firstResult.full_address || firstResult.address }, mapUrl: parsedData.mapUrl };
-        } else if (parsedData.location) {
-          mcpData = { location: { latitude: parsedData.location.latitude, longitude: parsedData.location.longitude, place_name: parsedData.location.place_name || parsedData.location.name, address: parsedData.location.address || parsedData.location.formatted_address }, mapUrl: parsedData.mapUrl || parsedData.map_url };
-        } else {
-          throw new Error("Response missing required 'location' or 'results' field");
-        }
-      } else throw new Error('Unexpected response format from mapping service');
-
-      feedbackMessage = `Successfully processed ${queryType} query for: ${mcpData.location.place_name || JSON.stringify(params)}`;
+      mcpData = content;
+      feedbackMessage = `Successfully processed ${queryType} query`;
       uiFeedbackStream.update(feedbackMessage);
 
     } catch (error: any) {

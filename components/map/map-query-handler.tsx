@@ -2,24 +2,18 @@
 
 import { useEffect } from 'react';
 // Removed useMCPMapClient as we'll use data passed via props
-import { useMapData } from './map-data-context'; 
+import { useMapData, MapData } from './map-data-context'; 
 
 // Define the expected structure of the mcp_response from geospatialTool
-interface McpResponseData {
-  location: {
-    latitude?: number;
-    longitude?: number;
-    place_name?: string;
-    address?: string;
-  };
-  mapUrl?: string;
-}
+type McpResponseData = any;
 
 interface GeospatialToolOutput {
-  type: string; // e.g., "MAP_QUERY_TRIGGER"
+  type: string;
   originalUserInput: string;
   timestamp: string;
+  queryType: string;
   mcp_response: McpResponseData | null;
+  error?: string;
 }
 
 interface MapQueryHandlerProps {
