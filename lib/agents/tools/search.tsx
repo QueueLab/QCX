@@ -1,11 +1,7 @@
-import { createStreamableValue } from 'ai/rsc'
 import Exa from 'exa-js'
 import { searchSchema } from '@/lib/schema/search'
-import { Card } from '@/components/ui/card'
-import { SearchSection } from '@/components/search-section'
-import { ToolProps } from '.'
 
-export const searchTool = ({ uiStream, fullResponse }: ToolProps) => ({
+export const searchTool = () => ({
   description: 'Search the web for information',
   parameters: searchSchema,
   execute: async ({
@@ -17,11 +13,6 @@ export const searchTool = ({ uiStream, fullResponse }: ToolProps) => ({
     max_results: number
     search_depth: 'basic' | 'advanced'
   }) => {
-    let hasError = false
-    // Append the search section
-    const streamResults = createStreamableValue<string>()
-    uiStream.append(<SearchSection result={streamResults.value} />)
-
     // Tavily API requires a minimum of 5 characters in the query
     const filledQuery =
       query.length < 5 ? query + ' '.repeat(5 - query.length) : query
@@ -34,20 +25,8 @@ export const searchTool = ({ uiStream, fullResponse }: ToolProps) => ({
           : await exaSearch(query)
     } catch (error) {
       console.error('Search API error:', error)
-      hasError = true
+      searchResult = { error: 'An error occurred while searching.' }
     }
-
-    if (hasError) {
-      fullResponse += `\nAn error occurred while searching for "${query}.`
-      uiStream.update(
-        <Card className="p-4 mt-2 text-sm">
-          {`An error occurred while searching for "${query}".`}
-        </Card>
-      )
-      return searchResult
-    }
-
-    streamResults.done(JSON.stringify(searchResult))
 
     return searchResult
   }

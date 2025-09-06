@@ -4,20 +4,23 @@ import {
   LanguageModel,
   ToolCallPart,
   ToolResultPart,
-  streamText as nonexperimental_streamText
+  streamText
 } from 'ai'
 import { Section } from '@/components/section'
 import { BotMessage } from '@/components/message'
 import { getTools } from './tools'
 import { getModel } from '../utils'
+import {
+  Reasoning,
+  ReasoningContent,
+  ReasoningTrigger
+} from '@/components/ai-elements/reasoning'
 
 export async function researcher(
-  dynamicSystemPrompt: string, // New parameter
   uiStream: ReturnType<typeof createStreamableUI>,
   streamText: ReturnType<typeof createStreamableValue<string>>,
   messages: CoreMessage[],
-  // mcp: any, // Removed mcp parameter
-  useSpecificModel?: boolean
+  dynamicSystemPrompt?: string
 ) {
   let fullResponse = ''
   let hasError = false
@@ -28,7 +31,6 @@ export async function researcher(
   )
 
   const currentDate = new Date().toLocaleString()
-  // Default system prompt, used if dynamicSystemPrompt is not provided
   const default_system_prompt = `As a comprehensive AI assistant, you can search the web, retrieve information from URLs, and understand geospatial queries to assist the user and display information on a map.
 Current date and time: ${currentDate}.
 
@@ -47,18 +49,14 @@ When tools are not needed, provide direct, helpful answers based on your knowled
 Always aim to directly address the user's question. If using information from a tool (like web search), cite the source URL.
 Match the language of your response to the user's language.`;
 
-     const systemToUse = dynamicSystemPrompt && dynamicSystemPrompt.trim() !== '' ? dynamicSystemPrompt : default_system_prompt;
+  const systemToUse = dynamicSystemPrompt && dynamicSystemPrompt.trim() !== '' ? dynamicSystemPrompt : default_system_prompt;
 
-     const result = await nonexperimental_streamText({
-       model: getModel() as LanguageModel,
-       maxTokens: 2500,
-       system: systemToUse, // Use the dynamic or default system prompt
-       messages,
-       tools: getTools({
-      uiStream,
-      fullResponse,
-      // mcp // mcp parameter is no longer passed to getTools
-    })
+  const result = await streamText({
+    model: getModel() as LanguageModel,
+    maxTokens: 2500,
+    system: systemToUse,
+    messages,
+    tools: getTools(),
   })
 
   // Remove the spinner
@@ -67,13 +65,12 @@ Match the language of your response to the user's language.`;
   // Process the response
   const toolCalls: ToolCallPart[] = []
   const toolResponses: ToolResultPart[] = []
+  let reasoningContent = ''
   for await (const delta of result.fullStream) {
     switch (delta.type) {
       case 'text-delta':
         if (delta.textDelta) {
-          // If the first text delta is available, add a UI section
           if (fullResponse.length === 0 && delta.textDelta.length > 0) {
-            // Update the UI
             uiStream.update(answerSection)
           }
 
@@ -81,12 +78,22 @@ Match the language of your response to the user's language.`;
           streamText.update(fullResponse)
         }
         break
+      case 'reasoning':
+        if ('textDelta' in delta) {
+          reasoningContent += delta.textDelta
+        }
+        uiStream.update(
+          <Reasoning isStreaming={true} className="w-full">
+            <ReasoningTrigger />
+            <ReasoningContent>{reasoningContent}</ReasoningContent>
+          </Reasoning>
+        )
+        break
       case 'tool-call':
         toolCalls.push(delta)
         break
       case 'tool-result':
-        // Append the answer section if the specific model is not used
-        if (!useSpecificModel && toolResponses.length === 0 && delta.result) {
+        if (toolResponses.length === 0 && delta.result) {
           uiStream.append(answerSection)
         }
         if (!delta.result) {
@@ -106,9 +113,8 @@ Match the language of your response to the user's language.`;
   })
 
   if (toolResponses.length > 0) {
-    // Add tool responses to the messages
     messages.push({ role: 'tool', content: toolResponses })
   }
 
-  return { result, fullResponse, hasError, toolResponses }
+  return { result, fullResponse, hasError, toolResponses, reasoningContent }
 }

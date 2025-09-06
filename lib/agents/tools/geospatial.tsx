@@ -1,8 +1,6 @@
 /**
  * Fixed geospatial tool with improved error handling and schema
  */
-import { createStreamableUI, createStreamableValue } from 'ai/rsc';
-import { BotMessage } from '@/components/message';
 import { geospatialQuerySchema } from '@/lib/schema/geospatial';
 import { Client as MCPClientClass } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
@@ -141,7 +139,7 @@ async function closeClient(client: McpClient | null) {
 /**
  * Main geospatial tool executor.
  */
-export const geospatialTool = ({ uiStream }: { uiStream: ReturnType<typeof createStreamableUI> }) => ({
+export const geospatialTool = () => ({
   description: `Use this tool for location-based queries including:
 - Finding specific places, addresses, or landmarks
 - Getting coordinates for locations
@@ -154,18 +152,8 @@ export const geospatialTool = ({ uiStream }: { uiStream: ReturnType<typeof creat
     const { queryType, includeMap = true } = params;
     console.log('[GeospatialTool] Execute called with:', params);
 
-    const uiFeedbackStream = createStreamableValue<string>();
-    uiStream.append(<BotMessage content={uiFeedbackStream.value} />);
-
-    let feedbackMessage = `Processing geospatial query (type: ${queryType})... Connecting to mapping service...`;
-    uiFeedbackStream.update(feedbackMessage);
-
     const mcpClient = await getConnectedMcpClient();
     if (!mcpClient) {
-      feedbackMessage = 'Geospatial functionality is unavailable. Please check configuration.';
-      uiFeedbackStream.update(feedbackMessage);
-      uiFeedbackStream.done();
-      uiStream.update(<BotMessage content={uiFeedbackStream.value} />);
       return { type: 'MAP_QUERY_TRIGGER', originalUserInput: JSON.stringify(params), timestamp: new Date().toISOString(), mcp_response: null, error: 'MCP client initialization failed' };
     }
 
@@ -173,9 +161,6 @@ export const geospatialTool = ({ uiStream }: { uiStream: ReturnType<typeof creat
     let toolError: string | null = null;
 
     try {
-      feedbackMessage = `Connected to mapping service. Processing ${queryType} query...`;
-      uiFeedbackStream.update(feedbackMessage);
-
       // Pick appropriate tool
       const toolName = await (async () => {
         const { tools } = await mcpClient.listTools().catch(() => ({ tools: [] }));
@@ -251,17 +236,11 @@ export const geospatialTool = ({ uiStream }: { uiStream: ReturnType<typeof creat
         }
       } else throw new Error('Unexpected response format from mapping service');
 
-      feedbackMessage = `Successfully processed ${queryType} query for: ${mcpData.location.place_name || JSON.stringify(params)}`;
-      uiFeedbackStream.update(feedbackMessage);
-
     } catch (error: any) {
       toolError = `Mapping service error: ${error.message}`;
-      uiFeedbackStream.update(toolError);
       console.error('[GeospatialTool] Tool execution failed:', error);
     } finally {
       await closeClient(mcpClient);
-      uiFeedbackStream.done();
-      uiStream.update(<BotMessage content={uiFeedbackStream.value} />);
     }
 
     return { type: 'MAP_QUERY_TRIGGER', originalUserInput: JSON.stringify(params), queryType, timestamp: new Date().toISOString(), mcp_response: mcpData, error: toolError };

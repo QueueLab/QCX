@@ -2,26 +2,19 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import type { AI, UIState } from '@/app/actions'
-import { useUIState, useActions } from 'ai/rsc'
-// Removed import of useGeospatialToolMcp as it's no longer used/available
 import { cn } from '@/lib/utils'
-import { UserMessage } from './user-message'
 import { Button } from './ui/button'
 import { ArrowRight, Plus, Paperclip } from 'lucide-react'
 import Textarea from 'react-textarea-autosize'
-import { nanoid } from 'nanoid'
+import { AIMessage } from '@/lib/types'
 
 interface ChatPanelProps {
-  messages: UIState
+  messages: AIMessage[]
   input: string
-  setInput: (value: string) => void
+  setInput: (e: React.ChangeEvent<HTMLTextAreaElement>) => void
 }
 
 export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
-  const [, setMessages] = useUIState<typeof AI>()
-  const { submit } = useActions()
-  // Removed mcp instance as it's no longer passed to submit
   const [isButtonPressed, setIsButtonPressed] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -43,25 +36,6 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
       setIsButtonPressed(false)
     }
   }, [isButtonPressed])
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    if (isButtonPressed) {
-      handleClear()
-      setIsButtonPressed(false)
-    }
-    setMessages(currentMessages => [
-      ...currentMessages,
-      {
-        id: nanoid(),
-        component: <UserMessage message={input} />
-      }
-    ])
-    const formData = new FormData(e.currentTarget)
-    // Removed mcp argument from submit call
-    const responseMessage = await submit(formData)
-    setMessages(currentMessages => [...currentMessages, responseMessage as any])
-  }
 
   const handleClear = () => {
     router.push('/')
@@ -104,8 +78,7 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
           : 'sticky bottom-0 bg-background z-10 w-full border-t border-border px-2 py-3 md:px-4'
       )}
     >
-      <form
-        onSubmit={handleSubmit}
+      <div
         className={cn('max-w-full w-full', isMobile ? 'px-2 pb-2 pt-1 h-full flex flex-col justify-center' : '')}
       >
         <div
@@ -129,9 +102,7 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
                 ? 'mobile-chat-input input bg-background' // Use mobile input styles
                 : 'bg-muted pr-20'
             )}
-            onChange={e => {
-              setInput(e.target.value)
-            }}
+            onChange={setInput}
             onKeyDown={e => {
               if (
                 e.key === 'Enter' &&
@@ -183,7 +154,7 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
             <ArrowRight size={isMobile ? 18 : 20} />
           </Button>
         </div>
-      </form>
+      </div>
     </div>
   )
 }

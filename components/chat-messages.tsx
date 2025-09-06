@@ -1,11 +1,17 @@
 'use client'
 
-import { StreamableValue, useUIState } from 'ai/rsc'
-import type { AI, UIState } from '@/app/actions'
-import { CollapsibleMessage } from './collapsible-message'
+import { AIMessage } from '@/lib/types'
+import {
+  Reasoning,
+  ReasoningContent,
+  ReasoningTrigger,
+} from '@/components/ai-elements/reasoning';
+import { Response } from '@/components/ai-elements/response';
+import { BotMessage } from './message';
+import { UserMessage } from './user-message';
 
 interface ChatMessagesProps {
-  messages: UIState
+  messages: AIMessage[]
 }
 
 export function ChatMessages({ messages }: ChatMessagesProps) {
@@ -13,58 +19,39 @@ export function ChatMessages({ messages }: ChatMessagesProps) {
     return null
   }
 
-  // Group messages based on ID, and if there are multiple messages with the same ID, combine them into one message
-  const groupedMessages = messages.reduce(
-    (acc: { [key: string]: any }, message) => {
-      if (!acc[message.id]) {
-        acc[message.id] = {
-          id: message.id,
-          components: [],
-          isCollapsed: message.isCollapsed
-        }
-      }
-      acc[message.id].components.push(message.component)
-      return acc
-    },
-    {}
-  )
-
-  // Convert grouped messages into an array with explicit type
-  const groupedMessagesArray = Object.values(groupedMessages).map(group => ({
-    ...group,
-    components: group.components as React.ReactNode[]
-  })) as {
-    id: string
-    components: React.ReactNode[]
-    isCollapsed?: StreamableValue<boolean>
-  }[]
-
   return (
     <>
-      {groupedMessagesArray.map(
-        (
-          groupedMessage: {
-            id: string
-            components: React.ReactNode[]
-            isCollapsed?: StreamableValue<boolean>
-          },
-          index
-        ) => (
-          <CollapsibleMessage
-            key={`${groupedMessage.id}`}
-            message={{
-              id: groupedMessage.id,
-              component: groupedMessage.components.map((component, i) => (
-                <div key={`${groupedMessage.id}-${i}`}>{component}</div>
-              )),
-              isCollapsed: groupedMessage.isCollapsed
-            }}
-            isLastMessage={
-              groupedMessage.id === messages[messages.length - 1].id
-            }
-          />
-        )
-      )}
+      {messages.map((message, index) => (
+        <div key={index}>
+          {message.role === 'user' && <UserMessage message={message.content} />}
+          {message.role === 'assistant' && (
+            // @ts-ignore
+            <BotMessage content={message.content}>
+              {message.parts?.map((part, i) => {
+                switch (part.type) {
+                  case 'text':
+                    return (
+                      <Response key={`${message.id}-${i}`}>
+                        {part.text}
+                      </Response>
+                    );
+                  case 'reasoning':
+                    return (
+                      <Reasoning
+                        key={`${message.id}-${i}`}
+                        className="w-full"
+                        isStreaming={false}
+                      >
+                        <ReasoningTrigger />
+                        <ReasoningContent>{part.text}</ReasoningContent>
+                      </Reasoning>
+                    );
+                }
+              })}
+            </BotMessage>
+          )}
+        </div>
+      ))}
     </>
   )
 }

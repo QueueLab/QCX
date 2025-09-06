@@ -70,5 +70,10 @@ export type AIMessage = {
     | 'tool'
     | 'followup'
     | 'end'
+    | 'reasoning'
     | 'drawing_context' // Added custom type for drawing context messages
+  parts?: {
+    type: 'text' | 'reasoning';
+    text: string;
+  }[];
 }
