@@ -22,7 +22,6 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
   const [, setMessages] = useUIState<typeof AI>()
   const { submit } = useActions()
   // Removed mcp instance as it's no longer passed to submit
-  const [isButtonPressed, setIsButtonPressed] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
@@ -38,19 +37,8 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
-  useEffect(() => {
-    if (isButtonPressed) {
-      inputRef.current?.focus()
-      setIsButtonPressed(false)
-    }
-  }, [isButtonPressed])
-
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (isButtonPressed) {
-      handleClear()
-      setIsButtonPressed(false)
-    }
     setMessages(currentMessages => [
       ...currentMessages,
       {
@@ -73,7 +61,7 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
   }, [])
 
   // New chat button (appears when there are messages)
-  if (messages.length > 0 && !isButtonPressed && !isMobile) {
+  if (messages.length > 0 && !isMobile) {
     return (
       <div
         className={cn(
