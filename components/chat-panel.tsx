@@ -25,6 +25,7 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
   const [isButtonPressed, setIsButtonPressed] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const formRef = useRef<HTMLFormElement>(null)
   const router = useRouter()
 
   // Detect mobile layout
@@ -105,6 +106,7 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
       )}
     >
       <form
+        ref={formRef}
         onSubmit={handleSubmit}
         className={cn('max-w-full w-full', isMobile ? 'px-2 pb-2 pt-1 h-full flex flex-col justify-center' : '')}
       >
@@ -143,8 +145,7 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
                   return
                 }
                 e.preventDefault()
-                const textarea = e.target as HTMLTextAreaElement
-                textarea.form?.requestSubmit()
+                formRef.current?.requestSubmit()
               }
             }}
             onHeightChange={height => {
