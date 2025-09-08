@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { useRouter } from 'next/navigation'
 import type { AI, UIState } from '@/app/actions'
 import { useUIState, useActions } from 'ai/rsc'
 // Removed import of useGeospatialToolMcp as it's no longer used/available
@@ -20,13 +19,11 @@ interface ChatPanelProps {
 
 export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
   const [, setMessages] = useUIState<typeof AI>()
-  const { submit } = useActions()
+  const { submit, clearChat } = useActions()
   // Removed mcp instance as it's no longer passed to submit
-  const [isButtonPressed, setIsButtonPressed] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
-  const router = useRouter()
 
   // Detect mobile layout
   useEffect(() => {
@@ -38,19 +35,8 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
-  useEffect(() => {
-    if (isButtonPressed) {
-      inputRef.current?.focus()
-      setIsButtonPressed(false)
-    }
-  }, [isButtonPressed])
-
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (isButtonPressed) {
-      handleClear()
-      setIsButtonPressed(false)
-    }
     setMessages(currentMessages => [
       ...currentMessages,
       {
@@ -64,8 +50,9 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
     setMessages(currentMessages => [...currentMessages, responseMessage as any])
   }
 
-  const handleClear = () => {
-    router.push('/')
+  const handleClear = async () => {
+    setMessages([])
+    await clearChat()
   }
 
   useEffect(() => {
@@ -73,7 +60,7 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
   }, [])
 
   // New chat button (appears when there are messages)
-  if (messages.length > 0 && !isButtonPressed && !isMobile) {
+  if (messages.length > 0 && !isMobile) {
     return (
       <div
         className={cn(
