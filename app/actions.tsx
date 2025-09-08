@@ -248,6 +248,17 @@ async function submit(formData?: FormData, skip?: boolean) {
   };
 }
 
+async function clearChat() {
+  'use server'
+
+  const aiState = getMutableAIState<typeof AI>()
+
+  aiState.done({
+    chatId: nanoid(),
+    messages: []
+  })
+}
+
 export type AIState = {
   messages: AIMessage[];
   chatId: string;
@@ -272,6 +283,7 @@ const initialUIState: UIState = [];
 export const AI = createAI<AIState, UIState>({
   actions: {
     submit,
+    clearChat,
   },
   initialUIState,
   initialAIState,
