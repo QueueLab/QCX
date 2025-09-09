@@ -82,10 +82,15 @@
 
 /* Mobile layout specific styles */
 @media (max-width: 1024px) {
+  body {
+    overflow: auto;
+    height: auto;
+  }
+
   .mobile-layout-container {
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    min-height: 100vh;
     width: 100%;
     background-color: hsl(var(--background));
   }
