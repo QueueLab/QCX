@@ -6,234 +6,110 @@
   :root {
     --background: 0 0% 100%;
     --foreground: 0 0% 3.9%;
+
     --card: 0 0% 96.1%;
     --card-foreground: 0 0% 45.1%;
+
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 3.9%;
+
     --primary: 0 0% 9%;
     --primary-foreground: 0 0% 98%;
+
     --secondary: 0 0% 96.1%;
     --secondary-foreground: 0 0% 9%;
+
     --muted: 0 0% 96.1%;
     --muted-foreground: 0 0% 45.1%;
+
     --accent: 0 0% 96.1%;
     --accent-foreground: 0 0% 9%;
+
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
+
     --border: 0 0% 89.8%;
     --input: 0 0% 89.8%;
     --ring: 0 0% 89.8%;
+
     --radius: 0.5rem;
+
+    --chart-1: 12 76% 61%;
+
+    --chart-2: 173 58% 39%;
+
+    --chart-3: 197 37% 24%;
+
+    --chart-4: 43 74% 66%;
+
+    --chart-5: 27 87% 67%;
+
+    --accent-blue: 210 100% 97%;
+    --accent-blue-foreground: 210 100% 50%;
+    --accent-blue-border: 210 100% 90%;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
   .dark {
     --background: 0 0% 3.9%;
     --foreground: 0 0% 98%;
+
     --card: 0 0% 14.9%;
     --card-foreground: 0 0% 63.9%;
+
     --popover: 0 0% 3.9%;
     --popover-foreground: 0 0% 98%;
+
     --primary: 0 0% 98%;
     --primary-foreground: 0 0% 9%;
+
     --secondary: 0 0% 14.9%;
     --secondary-foreground: 0 0% 98%;
+
     --muted: 0 0% 14.9%;
     --muted-foreground: 0 0% 63.9%;
+
     --accent: 0 0% 14.9%;
     --accent-foreground: 0 0% 98%;
+
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
+
     --border: 0 0% 14.9%;
     --input: 0 0% 14.9%;
     --ring: 0 0% 14.9%;
-  }
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
 
-  .earth {
-    --background: 34 35% 91%;
-    --foreground: 120 50% 30%;
-    --card: 120 20% 80%;
-    --card-foreground: 120 25% 30%;
-    --popover: 34 35% 91%;
-    --popover-foreground: 34 35% 9%;
-    --primary: 120 50% 30%;
-    --primary-foreground: 34 60% 9%;
-    --secondary: 34 35% 75%;
-    --secondary-foreground: 52 21% 30%;
-    --muted: 34 35% 75%;
-    --muted-foreground: 52 21% 30%;
-    --accent: 34 35% 75%;
-    --accent-foreground: 120 50% 30%;
-    --destructive: 34 35% 9%;
-    --destructive-foreground: 34 60% 9%;
-    --border: 34 35% 75%;
-    --input: 34 35% 75%;
-    --ring: 34 35% 75%;
+    --accent-blue: 210 100% 10%;
+    --accent-blue-foreground: 210 100% 80%;
+    --accent-blue-border: 210 100% 25%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
+}
 
+@layer base {
+  * {
+    @apply border-border;
+  }
   body {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
-    margin: 0;
-    padding: 0;
-    height: 100vh;
-    overflow: hidden;
+    @apply bg-background text-foreground;
   }
-}
-
-/* Mobile layout specific styles */
-@media (max-width: 1024px) {
-  .mobile-layout-container {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    width: 100%;
-    background-color: hsl(var(--background));
-  }
-
-  .mobile-map-section {
-    height: 40vh;
-    width: 100%;
-    background-color: hsl(var(--secondary));
-    z-index: 10;
-  }
-
-  .mobile-icons-bar {
-    height: 60px;
-    width: 100%;
-    background-color: hsl(var(--background));
-    border-top: 1px solid hsl(var(--border));
-    border-bottom: 1px solid hsl(var(--border));
-    display: flex;
-    align-items: center;
-    padding: 0 10px;
-    z-index: 20;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none; /* Firefox */
-  }
-
-  .mobile-icons-bar::-webkit-scrollbar {
-    display: none; /* Chrome, Safari, Edge */
-  }
-
-  .mobile-icons-bar-content {
-    display: flex;
-    gap: 20px;
-    padding: 0 10px;
-    min-width: max-content;
-    /* justify-content: space-between; */
-  }
-
-  .mobile-icons-bar-content > * {
-    flex-shrink: 0;
-  }
-
-  /* Tablet overrides (spaced-out) */
-  @media (min-width: 768px) {
-    .mobile-icons-bar-content {
-      min-width: 0;
-      width: 100%;
-      justify-content: space-between;
-      gap: 0; /* Remove gap if using space-between */
-    }
-  }
-
-  /*
-  .mobile-chat-section {
-    flex: 1; 
-    width: 100%;
-    overflow-y: auto;
-    padding: 12px;
-    padding-bottom: 60px; 
-    box-sizing: border-box;
-    background-color: hsl(var(--card));
-    color: hsl(var(--card-foreground));
-  }
-  */
-
-  .mobile-chat-messages-area {
-    flex: 1; /* Changed from height: 40vh to take available space */
-    overflow-y: auto;
-    padding: 12px;
-    background-color: hsl(var(--card));
-    color: hsl(var(--card-foreground));
-    box-sizing: border-box;
-  }
-
-  .mobile-chat-input-area {
-    height: 70px;
-    padding: 10px;
-    background-color: hsl(var(--background));
-    /* border-top: 1px solid hsl(var(--border)); */ /* Removed for cleaner separation */
-    border-bottom: 1px solid hsl(var(--border)); /* Added for separation from messages area below */
-    box-sizing: border-box;
-    /* z-index: 30; */ /* No longer needed as it's in flow */
-    display: flex;
-    align-items: center;
-  }
-
-  .mobile-chat-input {
-    /* position: relative; */ /* No longer fixed to bottom */
-    /* bottom: 0; */
-    /* left: 0; */ /* Handled by parent flex */
-    /* right: 0; */ /* Handled by parent flex */
-    width: 100%; /* Ensure it takes full width of its container */
-    padding: 10px;
-    background-color: hsl(var(--background));
-    /* border-top: 1px solid hsl(var(--border)); */ /* Removed to avoid double border */
-    /* z-index: 30; */ /* No longer needed */
-  }
-
-  .mobile-chat-input input {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid hsl(var(--input));
-    border-radius: var(--radius);
-    background-color: hsl(var(--input));
-    color: hsl(var(--foreground));
-    box-sizing: border-box;
-  }
-
-  .mobile-icons-bar-content .icon-button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background-color: hsl(var(--secondary));
-    color: hsl(var(--secondary-foreground));
-    cursor: pointer;
-  }
-
-  .mobile-icons-bar-content .icon-button:hover {
-    background-color: hsl(var(--secondary-foreground));
-    color: hsl(var(--secondary));
-  }
-
-  .mobile-chat-input .icon-button {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    background-color: transparent;
-    border: none;
-    cursor: pointer;
-  }
-
-  .mobile-chat-input .icon-button.paperclip {
-    right: 40px;
-  }
-
-  .mobile-chat-input .icon-button.arrow-right {
-    right: 10px;
-  }
-}
-
-/* Added for MapboxDraw controls */
-.mapboxgl-ctrl-group {
-  z-index: 20 !important; /* Higher than the map container's z-index */
-  pointer-events: auto !important;
-}
-.mapboxgl-ctrl-group button {
-  pointer-events: auto !important;
 }

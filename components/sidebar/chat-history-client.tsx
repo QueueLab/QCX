@@ -1,161 +1,147 @@
-'use client';
+'use client'
 
-import React, { useEffect, useState, useTransition } from 'react';
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
+
+import { toast } from 'sonner'
+
+import { Chat } from '@/lib/types'
+
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger
-} from '@/components/ui/alert-dialog';
-import { toast } from 'sonner';
-import { Spinner } from '@/components/ui/spinner';
-import HistoryItem from '@/components/history-item'; // Adjust path if HistoryItem is moved or renamed
-import type { Chat as DrizzleChat } from '@/lib/actions/chat-db'; // Use the Drizzle-based Chat type
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarMenu
+} from '@/components/ui/sidebar'
 
-interface ChatHistoryClientProps {
-  // userId is no longer passed as prop; API route will use authenticated user
+import { ChatHistorySkeleton } from './chat-history-skeleton'
+import { ChatMenuItem } from './chat-menu-item'
+import { ClearHistoryAction } from './clear-history-action'
+
+// interface ChatHistoryClientProps {} // Removed empty interface
+
+interface ChatPageResponse {
+  chats: Chat[]
+  nextOffset: number | null
 }
 
-export function ChatHistoryClient({}: ChatHistoryClientProps) {
-  const [chats, setChats] = useState<DrizzleChat[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isClearPending, startClearTransition] = useTransition();
-  const [isAlertDialogOpen, setIsAlertDialogOpen] = useState(false);
-  const router = useRouter();
+export function ChatHistoryClient() {
+  // Removed props from function signature
+  const [chats, setChats] = useState<Chat[]>([])
+  const [nextOffset, setNextOffset] = useState<number | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const loadMoreRef = useRef<HTMLDivElement>(null)
+  const [isPending, startTransition] = useTransition()
+
+  const fetchInitialChats = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const response = await fetch(`/api/chats?offset=0&limit=20`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch initial chat history')
+      }
+      const { chats: newChats, nextOffset: newNextOffset } =
+        (await response.json()) as ChatPageResponse
+
+      setChats(newChats)
+      setNextOffset(newNextOffset)
+    } catch (error) {
+      console.error('Failed to load initial chats:', error)
+      toast.error('Failed to load chat history.')
+      setNextOffset(null)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
-    async function fetchChats() {
-      setIsLoading(true);
-      setError(null);
-      try {
-        // API route /api/chats uses getCurrentUserId internally
-        const response = await fetch('/api/chats?limit=50&offset=0'); // Example limit/offset
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || `Failed to fetch chats: ${response.statusText}`);
+    fetchInitialChats()
+  }, [fetchInitialChats])
+
+  useEffect(() => {
+    const handleHistoryUpdate = () => {
+      startTransition(() => {
+        fetchInitialChats()
+      })
+    }
+    window.addEventListener('chat-history-updated', handleHistoryUpdate)
+    return () => {
+      window.removeEventListener('chat-history-updated', handleHistoryUpdate)
+    }
+  }, [fetchInitialChats])
+
+  const fetchMoreChats = useCallback(async () => {
+    if (isLoading || nextOffset === null) return
+
+    setIsLoading(true)
+    try {
+      const response = await fetch(`/api/chats?offset=${nextOffset}&limit=20`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch more chat history')
+      }
+      const { chats: newChats, nextOffset: newNextOffset } =
+        (await response.json()) as ChatPageResponse
+
+      setChats(prevChats => [...prevChats, ...newChats])
+      setNextOffset(newNextOffset)
+    } catch (error) {
+      console.error('Failed to load more chats:', error)
+      toast.error('Failed to load more chat history.')
+      setNextOffset(null)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [nextOffset, isLoading])
+
+  useEffect(() => {
+    const observerRefValue = loadMoreRef.current
+    if (!observerRefValue || nextOffset === null || isPending) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !isLoading && !isPending) {
+          fetchMoreChats()
         }
-        const data: { chats: DrizzleChat[], nextOffset: number | null } = await response.json();
-        setChats(data.chats);
-      } catch (err) {
-        if (err instanceof Error) {
-          setError(err.message);
-          toast.error(`Error fetching chats: ${err.message}`);
-        } else {
-          setError('An unknown error occurred.');
-          toast.error('Error fetching chats: An unknown error occurred.');
-        }
-      } finally {
-        setIsLoading(false);
+      },
+      { threshold: 0.1 }
+    )
+
+    observer.observe(observerRefValue)
+
+    return () => {
+      if (observerRefValue) {
+        observer.unobserve(observerRefValue)
       }
     }
-    fetchChats();
-  }, []);
+  }, [fetchMoreChats, nextOffset, isLoading, isPending])
 
-  const handleClearHistory = async () => {
-    startClearTransition(async () => {
-      try {
-        // We need a new API endpoint for clearing history
-        // Example: DELETE /api/chats (or POST /api/clear-history)
-        // This endpoint will call clearHistory(userId) from chat-db.ts
-        const response = await fetch('/api/chats/all', { // Placeholder for the actual clear endpoint
-          method: 'DELETE',
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to clear history');
-        }
-
-        toast.success('History cleared');
-        setChats([]); // Clear chats from UI
-        setIsAlertDialogOpen(false);
-        router.refresh(); // Refresh to reflect changes, potentially redirect if on a chat page
-        // Consider redirecting to '/' if current page is a chat that got deleted.
-        // The old clearChats action did redirect('/');
-      } catch (err) {
-        if (err instanceof Error) {
-          toast.error(err.message);
-        } else {
-          toast.error('An unknown error occurred while clearing history.');
-        }
-        setIsAlertDialogOpen(false);
-      }
-    });
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex flex-col flex-1 space-y-3 h-full items-center justify-center">
-        <Spinner />
-        <p className="text-sm text-muted-foreground">Loading history...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    // Optionally provide a retry button
-    return (
-      <div className="flex flex-col flex-1 space-y-3 h-full items-center justify-center text-destructive">
-        <p>Error loading chat history: {error}</p>
-      </div>
-    );
-  }
+  const isHistoryEmpty = !isLoading && !chats.length && nextOffset === null
 
   return (
-    <div className="flex flex-col flex-1 space-y-3 h-full">
-      <div className="flex flex-col gap-2 flex-1 overflow-y-auto">
-        {!chats?.length ? (
-          <div className="text-foreground/30 text-sm text-center py-4">
+    <div className="flex flex-col flex-1 h-full">
+      <SidebarGroup>
+        <div className="flex items-center justify-between w-full">
+          <SidebarGroupLabel className="p-0">History</SidebarGroupLabel>
+          <ClearHistoryAction empty={isHistoryEmpty} />
+        </div>
+      </SidebarGroup>
+      <div className="flex-1 overflow-y-auto mb-2 relative">
+        {isHistoryEmpty && !isPending ? (
+          <div className="px-2 text-foreground/30 text-sm text-center py-4">
             No search history
           </div>
         ) : (
-          chats.map((chat) => (
-            // Assuming HistoryItem is adapted for DrizzleChat and expects chat.id and chat.title
-            // Also, chat.path will need to be constructed, e.g., `/search/${chat.id}`
-            <HistoryItem key={chat.id} chat={{...chat, path: `/search/${chat.id}`}} />
-          ))
+          <SidebarMenu>
+            {chats.map(
+              (chat: Chat) => chat && <ChatMenuItem key={chat.id} chat={chat} />
+            )}
+          </SidebarMenu>
+        )}
+        <div ref={loadMoreRef} style={{ height: '1px' }} />
+        {(isLoading || isPending) && (
+          <div className="py-2">
+            <ChatHistorySkeleton />
+          </div>
         )}
       </div>
-      <div className="mt-auto">
-        <AlertDialog open={isAlertDialogOpen} onOpenChange={setIsAlertDialogOpen}>
-          <AlertDialogTrigger asChild>
-            <Button variant="outline" className="w-full" disabled={!chats?.length || isClearPending}>
-              {isClearPending ? <Spinner /> : 'Clear History'}
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete your
-                chat history.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={isClearPending} onClick={() => setIsAlertDialogOpen(false)}>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                disabled={isClearPending}
-                onClick={(event) => {
-                  event.preventDefault();
-                  handleClearHistory();
-                }}
-              >
-                {isClearPending ? <Spinner /> : 'Clear'}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </div>
     </div>
-  );
+  )
 }

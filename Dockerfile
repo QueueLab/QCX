@@ -1,28 +1,27 @@
-FROM oven/bun:1.1.3-alpine
+# Base image
+FROM oven/bun:1.2.12 AS builder
 
-# Install dependencies
-RUN apk add --no-cache nodejs npm git
+WORKDIR /app
 
-# Clone the repository
-RUN git clone --depth=1 https://github.com/queuelab/MapGPT /app
-
-# Set the working directory
-WORKDIR /app/MapGPT
-
-# Remove the .git directory
-RUN rm -rf .git
-
-# Verify the presence of package.json
-RUN if [ ! -f package.json ]; then echo "package.json not found"; exit 1; fi
-
-# Print the contents of package.json for debugging
-RUN cat package.json
-
-# Install dependencies using bun
+# Install dependencies (separated for better cache utilization)
+COPY package.json bun.lock ./
 RUN bun install
 
-# Disable Next.js telemetry
+# Copy source code and build
+COPY . .
 RUN bun next telemetry disable
+RUN bun run build
 
-# Set the default command
-CMD ["bun", "dev"]
+# Runtime stage
+FROM oven/bun:1.2.12 AS runner
+WORKDIR /app
+
+# Copy only necessary files from builder
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/bun.lock ./bun.lock
+COPY --from=builder /app/node_modules ./node_modules
+
+# Start production server
+CMD ["bun", "start", "-H", "0.0.0.0"]

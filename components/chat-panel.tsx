@@ -1,176 +1,232 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
-import type { AI, UIState } from '@/app/actions'
-import { useUIState, useActions } from 'ai/rsc'
-// Removed import of useGeospatialToolMcp as it's no longer used/available
-import { cn } from '@/lib/utils'
-import { UserMessage } from './user-message'
-import { Button } from './ui/button'
-import { ArrowRight, Plus, Paperclip } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import Textarea from 'react-textarea-autosize'
-import { nanoid } from 'nanoid'
+import { useRouter } from 'next/navigation'
+
+import { Message } from 'ai'
+import { ArrowUp, ChevronDown, MessageCirclePlus, Square } from 'lucide-react'
+
+import { Model } from '@/lib/types/models'
+import { cn } from '@/lib/utils'
+
+import { useArtifact } from './artifact/artifact-context'
+import { Button } from './ui/button'
+import { IconLogo } from './ui/icons'
+import { EmptyScreen } from './empty-screen'
+import { ModelSelector } from './model-selector'
+import { SearchModeToggle } from './search-mode-toggle'
 
 interface ChatPanelProps {
-  messages: UIState
   input: string
-  setInput: (value: string) => void
+  handleInputChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void
+  handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void
+  isLoading: boolean
+  messages: Message[]
+  setMessages: (messages: Message[]) => void
+  query?: string
+  stop: () => void
+  append: (message: any) => void
+  models?: Model[]
+  /** Whether to show the scroll to bottom button */
+  showScrollToBottomButton: boolean
+  /** Reference to the scroll container */
+  scrollContainerRef: React.RefObject<HTMLDivElement>
 }
 
-export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
-  const [, setMessages] = useUIState<typeof AI>()
-  const { submit, clearChat } = useActions()
-  // Removed mcp instance as it's no longer passed to submit
-  const [isMobile, setIsMobile] = useState(false)
+export function ChatPanel({
+  input,
+  handleInputChange,
+  handleSubmit,
+  isLoading,
+  messages,
+  setMessages,
+  query,
+  stop,
+  append,
+  models,
+  showScrollToBottomButton,
+  scrollContainerRef
+}: ChatPanelProps) {
+  const [showEmptyScreen, setShowEmptyScreen] = useState(false)
+  const router = useRouter()
   const inputRef = useRef<HTMLTextAreaElement>(null)
-  const formRef = useRef<HTMLFormElement>(null)
+  const isFirstRender = useRef(true)
+  const [isComposing, setIsComposing] = useState(false) // Composition state
+  const [enterDisabled, setEnterDisabled] = useState(false) // Disable Enter after composition ends
+  const { close: closeArtifact } = useArtifact()
 
-  // Detect mobile layout
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 1024)
-    }
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [])
+  const handleCompositionStart = () => setIsComposing(true)
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    setMessages(currentMessages => [
-      ...currentMessages,
-      {
-        id: nanoid(),
-        component: <UserMessage message={input} />
-      }
-    ])
-    const formData = new FormData(e.currentTarget)
-    // Removed mcp argument from submit call
-    const responseMessage = await submit(formData)
-    setMessages(currentMessages => [...currentMessages, responseMessage as any])
+  const handleCompositionEnd = () => {
+    setIsComposing(false)
+    setEnterDisabled(true)
+    setTimeout(() => {
+      setEnterDisabled(false)
+    }, 300)
   }
 
-  const handleClear = async () => {
+  const handleNewChat = () => {
     setMessages([])
-    await clearChat()
+    closeArtifact()
+    router.push('/')
   }
 
-  useEffect(() => {
-    inputRef.current?.focus(); 
-  }, [])
+  const isToolInvocationInProgress = () => {
+    if (!messages.length) return false
 
-  // New chat button (appears when there are messages)
-  if (messages.length > 0 && !isMobile) {
+    const lastMessage = messages[messages.length - 1]
+    if (lastMessage.role !== 'assistant' || !lastMessage.parts) return false
+
+    const parts = lastMessage.parts
+    const lastPart = parts[parts.length - 1]
+
     return (
-      <div
-        className={cn(
-          'fixed bottom-2 left-2 flex justify-start items-center pointer-events-none',
-          isMobile ? 'w-full px-2' : 'md:bottom-8'
-        )}
-      >
-        <Button
-          type="button"
-          variant={'secondary'}
-          className="rounded-full bg-secondary/80 group transition-all hover:scale-105 pointer-events-auto"
-          onClick={() => handleClear()}
-        >
-          <span className="text-sm mr-2 group-hover:block hidden animate-in fade-in duration-300">
-            New
-          </span>
-          <Plus size={18} className="group-hover:rotate-90 transition-all" />
-        </Button>
-      </div>
+      lastPart?.type === 'tool-invocation' &&
+      lastPart?.toolInvocation?.state === 'call'
     )
+  }
+
+  // if query is not empty, submit the query
+  useEffect(() => {
+    if (isFirstRender.current && query && query.trim().length > 0) {
+      append({
+        role: 'user',
+        content: query
+      })
+      isFirstRender.current = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query])
+
+  // Scroll to the bottom of the container
+  const handleScrollToBottom = () => {
+    const scrollContainer = scrollContainerRef.current
+    if (scrollContainer) {
+      scrollContainer.scrollTo({
+        top: scrollContainer.scrollHeight,
+        behavior: 'smooth'
+      })
+    }
   }
 
   return (
     <div
       className={cn(
-        'flex flex-col items-start',
-        isMobile
-          ? 'w-full h-full'
-          : 'sticky bottom-0 bg-background z-10 w-full border-t border-border px-2 py-3 md:px-4'
+        'w-full bg-background group/form-container shrink-0',
+        messages.length > 0 ? 'sticky bottom-0 px-2 pb-4' : 'px-6'
       )}
     >
+      {messages.length === 0 && (
+        <div className="mb-10 flex flex-col items-center gap-4">
+          <IconLogo className="size-12 text-muted-foreground" />
+          <p className="text-center text-3xl font-semibold">
+            How can I help you today?
+          </p>
+        </div>
+      )}
       <form
-        ref={formRef}
         onSubmit={handleSubmit}
-        className={cn('max-w-full w-full', isMobile ? 'px-2 pb-2 pt-1 h-full flex flex-col justify-center' : '')}
+        className={cn('max-w-3xl w-full mx-auto relative')}
       >
-        <div
-          className={cn(
-            'relative flex items-start w-full',
-            isMobile && 'mobile-chat-input' // Apply mobile chat input styling
-          )}
-        >
+        {/* Scroll to bottom button - only shown when showScrollToBottomButton is true */}
+        {showScrollToBottomButton && messages.length > 0 && (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="absolute -top-10 right-4 z-20 size-8 rounded-full shadow-md"
+            onClick={handleScrollToBottom}
+            title="Scroll to bottom"
+          >
+            <ChevronDown size={16} />
+          </Button>
+        )}
+
+        <div className="relative flex flex-col w-full gap-2 bg-muted rounded-3xl border border-input">
           <Textarea
             ref={inputRef}
             name="input"
-            rows={1}
-            maxRows={isMobile ? 3 : 5}
+            rows={2}
+            maxRows={5}
             tabIndex={0}
-            placeholder="Explore"
+            onCompositionStart={handleCompositionStart}
+            onCompositionEnd={handleCompositionEnd}
+            placeholder="Ask a question..."
             spellCheck={false}
             value={input}
-            className={cn(
-              'resize-none w-full min-h-12 rounded-fill border border-input pl-4 pr-20 pt-3 pb-1 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
-              isMobile
-                ? 'mobile-chat-input input bg-background' // Use mobile input styles
-                : 'bg-muted pr-20'
-            )}
+            disabled={isLoading || isToolInvocationInProgress()}
+            className="resize-none w-full min-h-12 bg-transparent border-0 p-4 text-sm placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
             onChange={e => {
-              setInput(e.target.value)
+              handleInputChange(e)
+              setShowEmptyScreen(e.target.value.length === 0)
             }}
             onKeyDown={e => {
               if (
                 e.key === 'Enter' &&
                 !e.shiftKey &&
-                !e.nativeEvent.isComposing
+                !isComposing &&
+                !enterDisabled
               ) {
                 if (input.trim().length === 0) {
                   e.preventDefault()
                   return
                 }
                 e.preventDefault()
-                formRef.current?.requestSubmit()
+                const textarea = e.target as HTMLTextAreaElement
+                textarea.form?.requestSubmit()
               }
             }}
-            onHeightChange={height => {
-              if (!inputRef.current) return
-              const initialHeight = 70
-              const initialBorder = 32
-              const multiple = (height - initialHeight) / 20
-              const newBorder = initialBorder - 4 * multiple
-              inputRef.current.style.borderRadius =
-                Math.max(8, newBorder) + 'px'
-            }}
+            onFocus={() => setShowEmptyScreen(true)}
+            onBlur={() => setShowEmptyScreen(false)}
           />
-          {!isMobile && (
-            <Button
-              type="button"
-              variant={'ghost'}
-              size={'icon'}
-              className={cn(
-                'absolute top-1/2 transform -translate-y-1/2',
-                isMobile ? 'right-8' : 'right-10'
+
+          {/* Bottom menu area */}
+          <div className="flex items-center justify-between p-3">
+            <div className="flex items-center gap-2">
+              <ModelSelector models={models || []} />
+              <SearchModeToggle />
+            </div>
+            <div className="flex items-center gap-2">
+              {messages.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleNewChat}
+                  className="shrink-0 rounded-full group"
+                  type="button"
+                  disabled={isLoading || isToolInvocationInProgress()}
+                >
+                  <MessageCirclePlus className="size-4 group-hover:rotate-12 transition-all" />
+                </Button>
               )}
-            >
-              <Paperclip size={isMobile ? 18 : 20} />
-            </Button>
-          )}
-          <Button
-            type="submit"
-            size={'icon'}
-            variant={'ghost'}
-            className={cn(
-              'absolute top-1/2 transform -translate-y-1/2',
-              isMobile ? 'right-1' : 'right-2'
-            )}
-            disabled={input.length === 0}
-          >
-            <ArrowRight size={isMobile ? 18 : 20} />
-          </Button>
+              <Button
+                type={isLoading ? 'button' : 'submit'}
+                size={'icon'}
+                variant={'outline'}
+                className={cn(isLoading && 'animate-pulse', 'rounded-full')}
+                disabled={
+                  (input.length === 0 && !isLoading) ||
+                  isToolInvocationInProgress()
+                }
+                onClick={isLoading ? stop : undefined}
+              >
+                {isLoading ? <Square size={20} /> : <ArrowUp size={20} />}
+              </Button>
+            </div>
+          </div>
         </div>
+
+        {messages.length === 0 && (
+          <EmptyScreen
+            submitMessage={message => {
+              handleInputChange({
+                target: { value: message }
+              } as React.ChangeEvent<HTMLTextAreaElement>)
+            }}
+            className={cn(showEmptyScreen ? 'visible' : 'invisible')}
+          />
+        )}
       </form>
     </div>
   )

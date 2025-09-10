@@ -1,8 +1,11 @@
 'use client'
 
-import { cn } from '@/lib/utils'
+import React from 'react'
+
 import {
   BookCheck,
+  Check,
+  File,
   Film,
   Image,
   MessageCircleMore,
@@ -10,8 +13,13 @@ import {
   Repeat2,
   Search
 } from 'lucide-react'
-import React from 'react'
+
+import { cn } from '@/lib/utils'
+
+import { Badge } from './ui/badge'
 import { Separator } from './ui/separator'
+import { StatusIndicator } from './ui/status-indicator'
+import { ToolBadge } from './tool-badge'
 
 type SectionProps = {
   children: React.ReactNode
@@ -28,29 +36,38 @@ export const Section: React.FC<SectionProps> = ({
   title,
   separator = false
 }) => {
+  const iconSize = 16
+  const iconClassName = 'mr-1.5 text-muted-foreground'
   let icon: React.ReactNode
+  let type: 'text' | 'badge' = 'text'
   switch (title) {
     case 'Images':
       // eslint-disable-next-line jsx-a11y/alt-text
-      icon = <Image size={18} className="mr-2" />
+      icon = <Image size={iconSize} className={iconClassName} />
       break
     case 'Videos':
-      icon = <Film size={18} className="mr-2" />
+      icon = <Film size={iconSize} className={iconClassName} />
+      type = 'badge'
       break
     case 'Sources':
-      icon = <Newspaper size={18} className="mr-2" />
+      icon = <Newspaper size={iconSize} className={iconClassName} />
+      type = 'badge'
       break
     case 'Answer':
-      icon = <BookCheck size={18} className="mr-2" />
+      icon = <BookCheck size={iconSize} className={iconClassName} />
       break
     case 'Related':
-      icon = <Repeat2 size={18} className="mr-2" />
+      icon = <Repeat2 size={iconSize} className={iconClassName} />
       break
     case 'Follow-up':
-      icon = <MessageCircleMore size={18} className="mr-2" />
+      icon = <MessageCircleMore size={iconSize} className={iconClassName} />
+      break
+    case 'Content':
+      icon = <File size={iconSize} className={iconClassName} />
+      type = 'badge'
       break
     default:
-      icon = <Search size={18} className="mr-2" />
+      icon = <Search size={iconSize} className={iconClassName} />
   }
 
   return (
@@ -62,14 +79,44 @@ export const Section: React.FC<SectionProps> = ({
           className
         )}
       >
-        {title && (
-          <h2 className="flex items-center text-lg leading-none py-2">
+        {title && type === 'text' && (
+          <h2 className="flex items-center leading-none py-2">
             {icon}
             {title}
           </h2>
         )}
+        {title && type === 'badge' && (
+          <Badge variant="secondary" className="mb-2">
+            {icon}
+            {title}
+          </Badge>
+        )}
         {children}
       </section>
     </>
+  )
+}
+
+export function ToolArgsSection({
+  children,
+  tool,
+  number
+}: {
+  children: React.ReactNode
+  tool: string
+  number?: number
+}) {
+  return (
+    <Section
+      size="sm"
+      className="py-0 flex items-center justify-between w-full"
+    >
+      <ToolBadge tool={tool}>{children}</ToolBadge>
+      {number && number > 0 && (
+        <StatusIndicator icon={Check} iconClassName="text-green-500">
+          {number} results
+        </StatusIndicator>
+      )}
+    </Section>
   )
 }

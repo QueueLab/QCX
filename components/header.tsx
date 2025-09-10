@@ -1,65 +1,37 @@
+'use client'
+
+// import Link from 'next/link' // No longer needed directly here for Sign In button
 import React from 'react'
-import Image from 'next/image'
-import { ModeToggle } from './mode-toggle'
+
+import { User } from '@supabase/supabase-js'
+
 import { cn } from '@/lib/utils'
-import HistoryContainer from './history-container'
-import { Button } from '@/components/ui/button'
-import {
-  Search,
-  CircleUserRound,
-  Map,
-  CalendarDays,
-  TentTree
-} from 'lucide-react'
-import { MapToggle } from './map-toggle'
-import { ProfileToggle } from './profile-toggle'
 
-export const Header = () => {
+import { useSidebar } from '@/components/ui/sidebar'
+
+// import { Button } from './ui/button' // No longer needed directly here for Sign In button
+import GuestMenu from './guest-menu' // Import the new GuestMenu component
+import UserMenu from './user-menu'
+
+interface HeaderProps {
+  user: User | null
+}
+
+export const Header: React.FC<HeaderProps> = ({ user }) => {
+  const { open } = useSidebar()
   return (
-    <header className="fixed w-full p-1 md:p-2 flex justify-between items-center z-10 backdrop-blur md:backdrop-blur-none bg-background/80 md:bg-transparent">
-      <div>
-        <a href="/">
-          <span className="sr-only">Chat</span>
-        </a>
-      </div>
-      
-      <div className="absolute left-1">
-        <Button variant="ghost" size="icon">
-          <Image src="/images/logo.svg" alt="Logo" width={24} height={24} className="h-6 w-auto" />
-        </Button>
-      </div>
-      
-      <div className="w-1/2 gap-20 hidden md:flex justify-between px-10 items-center z-10">
-        
-          <ProfileToggle/>
-        
-        <MapToggle />
-        
-        <Button variant="ghost" size="icon">
-          <CalendarDays className="h-[1.2rem] w-[1.2rem]" />
-        </Button>
-        
-        <Button variant="ghost" size="icon">
-          <Search className="h-[1.2rem] w-[1.2rem]" />
-        </Button>
-        
-        <Button variant="ghost" size="icon">
-          <TentTree className="h-[1.2rem] w-[1.2rem]" />
-        </Button>
-        
-        <ModeToggle />
-        
-        <HistoryContainer location="header" />
-      </div>
+    <header
+      className={cn(
+        'absolute top-0 right-0 p-2 flex justify-between items-center z-10 backdrop-blur lg:backdrop-blur-none bg-background/80 lg:bg-transparent transition-[width] duration-200 ease-linear',
+        open ? 'md:w-[calc(100%-var(--sidebar-width))]' : 'md:w-full',
+        'w-full'
+      )}
+    >
+      {/* This div can be used for a logo or title on the left if needed */}
+      <div></div>
 
-      {/* Mobile menu buttons */}
-      <div className="flex md:hidden gap-2">
-        <Button variant="ghost" size="sm">
-          <Search className="h-4 w-4 mr-2" />
-          Search
-        </Button>
-        
-        <ProfileToggle/>
+      <div className="flex items-center gap-2">
+        {user ? <UserMenu user={user} /> : <GuestMenu />}
       </div>
     </header>
   )

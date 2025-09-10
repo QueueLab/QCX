@@ -2,253 +2,252 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { type Chat as OldChatType, type AIMessage } from '@/lib/types' // Added AIMessage, OldChatType for transition
-import {
-  getChatsPage as dbGetChatsPage,
-  getChat as dbGetChat,
-  clearHistory as dbClearHistory,
-  saveChat as dbSaveChat,
-  createMessage as dbCreateMessage,
-  getMessagesByChatId as dbGetMessagesByChatId, // Added
-  type Chat as DrizzleChat,
-  type Message as DrizzleMessage, // Added
-  type NewChat as DbNewChat,
-  type NewMessage as DbNewMessage
-} from '@/lib/actions/chat-db'
-import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user' // For operations needing current user
 
-// TODO: Migrate Redis-based functions below (saveSystemPrompt, getSystemPrompt) if needed.
-// const redis = new Redis({
-//   url: process.env.UPSTASH_REDIS_REST_URL?.trim() || '',
-//   token: process.env.UPSTASH_REDIS_REST_TOKEN || ''
-// })
+import { getRedisClient, RedisWrapper } from '@/lib/redis/config'
+import { type Chat } from '@/lib/types'
 
-export async function getChats(userId?: string | null): Promise<DrizzleChat[]> {
+async function getRedis(): Promise<RedisWrapper> {
+  return await getRedisClient()
+}
+
+const CHAT_VERSION = 'v2'
+function getUserChatKey(userId: string) {
+  return `user:${CHAT_VERSION}:chat:${userId}`
+}
+
+export async function getChats(userId?: string | null) {
   if (!userId) {
-    console.warn('getChats called without userId, returning empty array.')
     return []
   }
 
   try {
-    // Using a default limit and offset for now
-    const { chats } = await dbGetChatsPage(userId, 20, 0)
-    return chats
+    const redis = await getRedis()
+    const chats = await redis.zrange(getUserChatKey(userId), 0, -1, {
+      rev: true
+    })
+
+    if (chats.length === 0) {
+      return []
+    }
+
+    const results = await Promise.all(
+      chats.map(async chatKey => {
+        const chat = await redis.hgetall(chatKey)
+        return chat
+      })
+    )
+
+    return results
+      .filter((result): result is Record<string, any> => {
+        if (result === null || Object.keys(result).length === 0) {
+          return false
+        }
+        return true
+      })
+      .map(chat => {
+        const plainChat = { ...chat }
+        if (typeof plainChat.messages === 'string') {
+          try {
+            plainChat.messages = JSON.parse(plainChat.messages)
+          } catch (error) {
+            plainChat.messages = []
+          }
+        }
+        if (plainChat.createdAt && !(plainChat.createdAt instanceof Date)) {
+          plainChat.createdAt = new Date(plainChat.createdAt)
+        }
+        return plainChat as Chat
+      })
   } catch (error) {
-    console.error('Error fetching chats from DB:', error)
     return []
   }
 }
 
-export async function getChat(id: string, userId: string): Promise<DrizzleChat | null> {
-  // userId is now mandatory for dbGetChat to check ownership or public status
-  if (!userId) {
-    console.warn('getChat called without userId.')
-    // Optionally, could try to fetch only public chat if that's a use case
-    // return await dbGetChat(id, ''); // Pass empty or a specific marker for anonymous
-    return null;
-  }
+export async function getChatsPage(
+  userId: string,
+  limit = 20,
+  offset = 0
+): Promise<{ chats: Chat[]; nextOffset: number | null }> {
   try {
-    const chat = await dbGetChat(id, userId)
-    return chat
+    const redis = await getRedis()
+    const userChatKey = getUserChatKey(userId)
+    const start = offset
+    const end = offset + limit - 1
+
+    const chatKeys = await redis.zrange(userChatKey, start, end, {
+      rev: true
+    })
+
+    if (chatKeys.length === 0) {
+      return { chats: [], nextOffset: null }
+    }
+
+    const results = await Promise.all(
+      chatKeys.map(async chatKey => {
+        const chat = await redis.hgetall(chatKey)
+        return chat
+      })
+    )
+
+    const chats = results
+      .filter((result): result is Record<string, any> => {
+        if (result === null || Object.keys(result).length === 0) {
+          return false
+        }
+        return true
+      })
+      .map(chat => {
+        const plainChat = { ...chat }
+        if (typeof plainChat.messages === 'string') {
+          try {
+            plainChat.messages = JSON.parse(plainChat.messages)
+          } catch (error) {
+            plainChat.messages = []
+          }
+        }
+        if (plainChat.createdAt && !(plainChat.createdAt instanceof Date)) {
+          plainChat.createdAt = new Date(plainChat.createdAt)
+        }
+        return plainChat as Chat
+      })
+
+    const nextOffset = chatKeys.length === limit ? offset + limit : null
+    return { chats, nextOffset }
   } catch (error) {
-    console.error(`Error fetching chat ${id} from DB:`, error)
+    console.error('Error fetching chat page:', error)
+    return { chats: [], nextOffset: null }
+  }
+}
+
+export async function getChat(id: string, userId: string = 'anonymous') {
+  const redis = await getRedis()
+  const chat = await redis.hgetall<Chat>(`chat:${id}`)
+
+  if (!chat) {
     return null
   }
-}
 
-/**
- * Retrieves all messages for a specific chat.
- * @param chatId The ID of the chat.
- * @returns A promise that resolves to an array of DrizzleMessage objects.
- */
-export async function getChatMessages(chatId: string): Promise<DrizzleMessage[]> {
-  if (!chatId) {
-    console.warn('getChatMessages called without chatId');
-    return [];
+  // Parse the messages if they're stored as a string
+  if (typeof chat.messages === 'string') {
+    try {
+      chat.messages = JSON.parse(chat.messages)
+    } catch (error) {
+      chat.messages = []
+    }
   }
-  try {
-    return dbGetMessagesByChatId(chatId);
-  } catch (error) {
-    console.error(`Error fetching messages for chat ${chatId} in getChatMessages:`, error);
-    return [];
+
+  // Ensure messages is always an array
+  if (!Array.isArray(chat.messages)) {
+    chat.messages = []
   }
+
+  return chat
 }
 
 export async function clearChats(
-  userId?: string | null // Changed to optional, will try to get current user if not provided
-): Promise<{ error?: string } | void> { // void for success
-  const currentUserId = userId || (await getCurrentUserIdOnServer())
-  if (!currentUserId) {
-    console.error('clearChats: No user ID provided or found.')
-    return { error: 'User ID is required to clear chats' }
+  userId: string = 'anonymous'
+): Promise<{ error?: string }> {
+  const redis = await getRedis()
+  const userChatKey = getUserChatKey(userId)
+  const chats = await redis.zrange(userChatKey, 0, -1)
+  if (!chats.length) {
+    return { error: 'No chats to clear' }
+  }
+  const pipeline = redis.pipeline()
+
+  for (const chat of chats) {
+    pipeline.del(chat)
+    pipeline.zrem(userChatKey, chat)
   }
 
+  await pipeline.exec()
+
+  revalidatePath('/')
+  redirect('/')
+}
+
+export async function deleteChat(
+  chatId: string,
+  userId = 'anonymous'
+): Promise<{ error?: string }> {
   try {
-    const success = await dbClearHistory(currentUserId)
-    if (!success) {
-      return { error: 'Failed to clear chats from database.' }
+    const redis = await getRedis()
+    const userKey = getUserChatKey(userId)
+    const chatKey = `chat:${chatId}`
+
+    const chatDetails = await redis.hgetall<Chat>(chatKey)
+    if (!chatDetails || Object.keys(chatDetails).length === 0) {
+      console.warn(`Attempted to delete non-existent chat: ${chatId}`)
+      return { error: 'Chat not found' }
     }
-    // Revalidation and redirect should ideally be handled by the caller (e.g., Server Action, API route)
-    // For now, keeping them as they were, but this makes the function less reusable.
+
+    // Optional: Check if the chat actually belongs to the user if userId is provided and matters
+    // if (chatDetails.userId !== userId) {
+    //  console.warn(`Unauthorized attempt to delete chat ${chatId} by user ${userId}`)
+    //  return { error: 'Unauthorized' }
+    // }
+
+    const pipeline = redis.pipeline()
+    pipeline.del(chatKey)
+    pipeline.zrem(userKey, chatKey) // Use chatKey consistently
+    await pipeline.exec()
+
+    // Revalidate the root path where the chat history is displayed
     revalidatePath('/')
-    redirect('/')
+
+    return {}
   } catch (error) {
-    console.error('Error clearing chats from DB:', error)
-    return { error: 'Failed to clear chat history' }
+    console.error(`Error deleting chat ${chatId}:`, error)
+    return { error: 'Failed to delete chat' }
   }
 }
 
-export async function saveChat(chat: OldChatType, userId: string): Promise<string | null> {
-  // This function now maps the old Chat type to new Drizzle types
-  // and calls the new dbSaveChat function.
-  if (!userId && !chat.userId) {
-    console.error('saveChat: userId is required either as a parameter or in chat object.')
-    return null;
-  }
-  const effectiveUserId = userId || chat.userId;
-
-  const newChatData: DbNewChat = {
-    id: chat.id, // Keep existing ID if present (for updates)
-    userId: effectiveUserId,
-    title: chat.title || 'Untitled Chat',
-    createdAt: chat.createdAt ? new Date(chat.createdAt) : new Date(), // Ensure Date object
-    visibility: 'private', // Default or map from old chat if available
-    // sharePath: chat.sharePath, // sharePath is not in new schema by default
-  };
-
-  const newMessagesData: Omit<DbNewMessage, 'chatId'>[] = chat.messages.map(msg => ({
-    id: msg.id, // Keep existing ID
-    userId: effectiveUserId, // Ensure messages have a userId
-    role: msg.role, // Allow all AIMessage roles to pass through
-    content: msg.content,
-    createdAt: msg.createdAt ? new Date(msg.createdAt) : new Date(),
-    // attachments: (msg as any).attachments, // If AIMessage had attachments
-    // type: (msg as any).type // If AIMessage had a type
-  }));
-
+export async function saveChat(chat: Chat, userId: string = 'anonymous') {
   try {
-    const savedChatId = await dbSaveChat(newChatData, newMessagesData);
-    return savedChatId;
-  } catch (error) {
-    console.error('Error saving chat to DB:', error);
-    return null;
-  }
-}
+    const redis = await getRedis()
+    const pipeline = redis.pipeline()
 
-// TODO: Re-evaluate sharing functionality with Supabase if needed.
-// PR #533 removes the share page, so these are likely deprecated for now.
-// export async function getSharedChat(id: string) {
-//   // This would need to be reimplemented using dbGetChat with public visibility logic
-//   // const chat = await dbGetChat(id, ''); // Need a way to signify public access
-//   // if (!chat || chat.visibility !== 'public') { // Assuming 'public' visibility for shared
-//   //   return null;
-//   // }
-//   // return chat;
-//   console.warn("getSharedChat is deprecated and needs reimplementation with new DB structure.");
-//   return null;
-// }
-
-// export async function shareChat(id: string, userId: string) {
-//   // This would involve updating a chat's visibility to 'public' in the DB
-//   // and potentially creating a unique share link if `sharePath` is not just derived.
-//   // const chat = await dbGetChat(id, userId);
-//   // if (!chat) {
-//   //   return null;
-//   // }
-//   // // Update chat visibility to public
-//   // // const updatedChat = await db.update(chatsTable).set({ visibility: 'public' }).where(eq(chatsTable.id, id)).returning();
-//   // // return updatedChat[0];
-//   console.warn("shareChat is deprecated and needs reimplementation with new DB structure.");
-//   return null;
-// }
-
-export async function updateDrawingContext(chatId: string, drawnFeatures: any[]) {
-  'use server';
-  console.log('[Action] updateDrawingContext called for chatId:', chatId);
-
-  const userId = await getCurrentUserIdOnServer(); // Essential for creating a user-associated message
-  if (!userId) {
-    console.error('updateDrawingContext: Could not get current user ID. User must be authenticated.');
-    return { error: 'User not authenticated' };
-  }
-
-  // The old version fetched the whole chat. Now we just create a new message.
-  // The AIMessage type might be from '@/lib/types' and need mapping to DbNewMessage
-  const newDrawingMessage: Omit<DbNewMessage, 'chatId'> = {
-    // id: `drawnData-${Date.now().toString()}`, // Let DB generate UUID
-    userId: userId,
-    role: 'data' as 'user' | 'assistant' | 'system' | 'tool' | 'data', // Cast 'data' if not in standard roles
-    content: JSON.stringify(drawnFeatures), // Store features as stringified JSON
-    // type: 'drawing_context', // This field is not in the Drizzle 'messages' schema.
-    // If `type` is important, the schema needs to be updated or content needs to reflect it.
-    // For now, we'll assume 'content' holds the necessary info and role='data' signifies it.
-    createdAt: new Date(),
-  };
-
-  try {
-    // We need to ensure the message is associated with the chat.
-    // dbCreateMessage requires chatId.
-    const messageToSave: DbNewMessage = {
-      ...newDrawingMessage,
-      chatId: chatId,
-    };
-    const savedMessage = await dbCreateMessage(messageToSave);
-    if (!savedMessage) {
-      throw new Error('Failed to save drawing context message.');
+    const chatToSave = {
+      ...chat,
+      messages: JSON.stringify(chat.messages)
     }
-    console.log('Drawing context message added to chat:', chatId, 'messageId:', savedMessage.id);
-    return { success: true, messageId: savedMessage.id };
+
+    pipeline.hmset(`chat:${chat.id}`, chatToSave)
+    pipeline.zadd(getUserChatKey(userId), Date.now(), `chat:${chat.id}`)
+
+    const results = await pipeline.exec()
+
+    return results
   } catch (error) {
-    console.error('updateDrawingContext: Error saving drawing context message:', error);
-    return { error: 'Failed to save drawing context message' };
+    throw error
   }
 }
 
-// TODO: These Redis-based functions for system prompt need to be migrated
-// if their functionality is still required and intended to use the new DB.
-// For now, they are left as is, but will likely fail if Redis config is removed.
-// @ts-ignore - Ignoring Redis import error for now as it might be removed or replaced
-import { Redis } from '@upstash/redis'; // This will cause issues if REDIS_URL is not configured.
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL?.trim() || '',
-  token: process.env.UPSTASH_REDIS_REST_TOKEN || ''
-});
+export async function getSharedChat(id: string) {
+  const redis = await getRedis()
+  const chat = await redis.hgetall<Chat>(`chat:${id}`)
 
-
-export async function saveSystemPrompt(
-  userId: string,
-  prompt: string
-): Promise<{ success?: boolean; error?: string }> {
-  if (!userId) {
-    return { error: 'User ID is required' }
+  if (!chat || !chat.sharePath) {
+    return null
   }
 
-  if (!prompt) {
-    return { error: 'Prompt is required' }
-  }
-
-  try {
-    await redis.set(`system_prompt:${userId}`, prompt)
-    return { success: true }
-  } catch (error) {
-    console.error('saveSystemPrompt: Error saving system prompt:', error)
-    return { error: 'Failed to save system prompt' }
-  }
+  return chat
 }
 
-export async function getSystemPrompt(
-  userId: string
-): Promise<string | null> {
-  if (!userId) {
-    console.error('getSystemPrompt: User ID is required')
+export async function shareChat(id: string, userId: string = 'anonymous') {
+  const redis = await getRedis()
+  const chat = await redis.hgetall<Chat>(`chat:${id}`)
+
+  if (!chat || chat.userId !== userId) {
     return null
   }
 
-  try {
-    const prompt = await redis.get<string>(`system_prompt:${userId}`)
-    return prompt
-  } catch (error) {
-    console.error('getSystemPrompt: Error retrieving system prompt:', error)
-    return null
+  const payload = {
+    ...chat,
+    sharePath: `/share/${id}`
   }
+
+  await redis.hmset(`chat:${id}`, payload)
+
+  return payload
 }

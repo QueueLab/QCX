@@ -1,8 +1,21 @@
+import { CoreMessage, JSONValue, Message } from 'ai'
+
 export type SearchResults = {
-  images: string[]
+  images: SearchResultImage[]
   results: SearchResultItem[]
+  number_of_results?: number
   query: string
 }
+
+// If enabled the include_images_description is true, the images will be an array of { url: string, description: string }
+// Otherwise, the images will be an array of strings
+export type SearchResultImage =
+  | string
+  | {
+      url: string
+      description: string
+      number_of_results?: number
+    }
 
 export type ExaSearchResults = {
   results: ExaSearchResultItem[]
@@ -50,8 +63,14 @@ export interface Chat extends Record<string, any> {
   createdAt: Date
   userId: string
   path: string
-  messages: AIMessage[]
+  messages: ExtendedCoreMessage[] // Note: Changed from AIMessage to ExtendedCoreMessage
   sharePath?: string
+}
+
+// ExtendedCoreMessage for saveing annotations
+export type ExtendedCoreMessage = Omit<CoreMessage, 'role' | 'content'> & {
+  role: CoreMessage['role'] | 'data'
+  content: CoreMessage['content'] | JSONValue
 }
 
 export type AIMessage = {
@@ -59,9 +78,8 @@ export type AIMessage = {
   content: string
   id: string
   name?: string
-  createdAt?: Date // Added optional createdAt timestamp
   type?:
-    | 'response'
+    | 'answer'
     | 'related'
     | 'skip'
     | 'inquiry'
@@ -70,5 +88,28 @@ export type AIMessage = {
     | 'tool'
     | 'followup'
     | 'end'
-    | 'drawing_context' // Added custom type for drawing context messages
+}
+
+export interface SearXNGResult {
+  title: string
+  url: string
+  content: string
+  img_src?: string
+  publishedDate?: string
+  score?: number
+}
+
+export interface SearXNGResponse {
+  query: string
+  number_of_results: number
+  results: SearXNGResult[]
+}
+
+export type SearXNGImageResult = string
+
+export type SearXNGSearchResults = {
+  images: SearXNGImageResult[]
+  results: SearchResultItem[]
+  number_of_results?: number
+  query: string
 }

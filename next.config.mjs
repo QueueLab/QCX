@@ -1,11 +1,21 @@
-/** @type {import('next').NextConfig} */  
-const nextConfig = {  
-  experimental: {  
-    serverActions: {  
-      allowedOrigins: ["localhost:3000", "https://planet.queue.cx/"]  
-    },  
-  },  
-  transpilePackages: ['QCX', 'mapbox_mcp'], // Added to transpile local packages
-};  
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'i.ytimg.com',
+        port: '',
+        pathname: '/vi/**'
+      },
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+        port: '',
+        pathname: '/a/**' // Google user content often follows this pattern
+      }
+    ]
+  }
+}
 
 export default nextConfig

@@ -1,34 +1,34 @@
-import { NextResponse, NextRequest } from 'next/server';
-import { getChatsPage } from '@/lib/actions/chat-db';
-import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user';
+import { NextRequest, NextResponse } from 'next/server'
+
+import { getChatsPage } from '@/lib/actions/chat'
+import { getCurrentUserId } from '@/lib/auth/get-current-user'
+import { type Chat } from '@/lib/types'
+
+interface ChatPageResponse {
+  chats: Chat[]
+  nextOffset: number | null
+}
 
 export async function GET(request: NextRequest) {
+  const enableSaveChatHistory = process.env.ENABLE_SAVE_CHAT_HISTORY === 'true'
+  if (!enableSaveChatHistory) {
+    return NextResponse.json<ChatPageResponse>({ chats: [], nextOffset: null })
+  }
+
+  const { searchParams } = new URL(request.url)
+  const offset = parseInt(searchParams.get('offset') || '0', 10)
+  const limit = parseInt(searchParams.get('limit') || '20', 10)
+
+  const userId = await getCurrentUserId()
+
   try {
-    const userId = await getCurrentUserIdOnServer();
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { searchParams } = new URL(request.url);
-
-    const DEFAULT_LIMIT = 20;
-    const MAX_LIMIT = 100;
-    const DEFAULT_OFFSET = 0;
-
-    let limit = parseInt(searchParams.get('limit') || '', 10);
-    if (isNaN(limit) || limit < 1 || limit > MAX_LIMIT) {
-      limit = DEFAULT_LIMIT;
-    }
-
-    let offset = parseInt(searchParams.get('offset') || '', 10);
-    if (isNaN(offset) || offset < 0) {
-      offset = DEFAULT_OFFSET;
-    }
-
-    const result = await getChatsPage(userId, limit, offset);
-    return NextResponse.json(result);
+    const result = await getChatsPage(userId, limit, offset)
+    return NextResponse.json<ChatPageResponse>(result)
   } catch (error) {
-    console.error('Error fetching chats:', error);
-    return NextResponse.json({ error: 'Internal Server Error fetching chats' }, { status: 500 });
+    console.error('API route error fetching chats:', error)
+    return NextResponse.json<ChatPageResponse>(
+      { chats: [], nextOffset: null },
+      { status: 500 }
+    )
   }
 }

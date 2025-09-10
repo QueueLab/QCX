@@ -1,44 +1,86 @@
 'use client'
 
-import { SearchResults } from './search-results'
-import { SearchSkeleton } from './search-skeleton'
-import { SearchResultsImageSection } from './search-results-image'
-import { Section } from './section'
-import { ToolBadge } from './tool-badge'
-import type { SearchResults as TypeSearchResults } from '@/lib/types'
-import { StreamableValue, useStreamableValue } from 'ai/rsc'
+import { useChat } from '@ai-sdk/react'
+import { ToolInvocation } from 'ai'
 
-export type SearchSectionProps = {
-  result?: StreamableValue<string>
+import type { SearchResults as TypeSearchResults } from '@/lib/types'
+
+import { useArtifact } from '@/components/artifact/artifact-context'
+
+import { CollapsibleMessage } from './collapsible-message'
+import { SearchSkeleton } from './default-skeleton'
+import { SearchResults } from './search-results'
+import { SearchResultsImageSection } from './search-results-image'
+import { Section, ToolArgsSection } from './section'
+
+interface SearchSectionProps {
+  tool: ToolInvocation
+  isOpen: boolean
+  onOpenChange: (open: boolean) => void
+  chatId: string
 }
 
-export function SearchSection({ result }: SearchSectionProps) {
-  const [data, error, pending] = useStreamableValue(result)
-  const searchResults: TypeSearchResults = data ? JSON.parse(data) : undefined
+export function SearchSection({
+  tool,
+  isOpen,
+  onOpenChange,
+  chatId
+}: SearchSectionProps) {
+  const { status } = useChat({
+    id: chatId
+  })
+  const isLoading = status === 'submitted' || status === 'streaming'
+
+  const isToolLoading = tool.state === 'call'
+  const searchResults: TypeSearchResults =
+    tool.state === 'result' ? tool.result : undefined
+  const query = tool.args?.query as string | undefined
+  const includeDomains = tool.args?.includeDomains as string[] | undefined
+  const includeDomainsString = includeDomains
+    ? ` [${includeDomains.join(', ')}]`
+    : ''
+
+  const { open } = useArtifact()
+  const header = (
+    <button
+      type="button"
+      onClick={() => open({ type: 'tool-invocation', toolInvocation: tool })}
+      className="flex items-center justify-between w-full text-left rounded-md p-1 -ml-1"
+      title="Open details"
+    >
+      <ToolArgsSection
+        tool="search"
+        number={searchResults?.results?.length}
+      >{`${query}${includeDomainsString}`}</ToolArgsSection>
+    </button>
+  )
+
   return (
-    <div>
-      {!pending && data ? (
-        <>
-          <Section size="sm" className="pt-2 pb-0">
-            <ToolBadge tool="search">{`${searchResults.query}`}</ToolBadge>
+    <CollapsibleMessage
+      role="assistant"
+      isCollapsible={true}
+      header={header}
+      isOpen={isOpen}
+      onOpenChange={onOpenChange}
+      showIcon={false}
+    >
+      {searchResults &&
+        searchResults.images &&
+        searchResults.images.length > 0 && (
+          <Section>
+            <SearchResultsImageSection
+              images={searchResults.images}
+              query={query}
+            />
           </Section>
-          {searchResults.images && searchResults.images.length > 0 && (
-            <Section title="Images">
-              <SearchResultsImageSection
-                images={searchResults.images}
-                query={searchResults.query}
-              />
-            </Section>
-          )}
-          <Section title="Sources">
-            <SearchResults results={searchResults.results} />
-          </Section>
-        </>
-      ) : (
-        <Section className="pt-2 pb-0">
-          <SearchSkeleton />
+        )}
+      {isLoading && isToolLoading ? (
+        <SearchSkeleton />
+      ) : searchResults?.results ? (
+        <Section title="Sources">
+          <SearchResults results={searchResults.results} />
         </Section>
-      )}
-    </div>
+      ) : null}
+    </CollapsibleMessage>
   )
 }

@@ -1,35 +1,70 @@
 'use client'
 
-import { SearchSkeleton } from './search-skeleton'
-import { Section } from './section'
-import type { SerperSearchResults } from '@/lib/types'
-import { StreamableValue, useStreamableValue } from 'ai/rsc'
-import { VideoSearchResults } from './video-search-results'
-import { ToolBadge } from './tool-badge'
+import { useChat } from '@ai-sdk/react'
+import { ToolInvocation } from 'ai'
 
-export type VideoSearchSectionProps = {
-  result?: StreamableValue<string>
+import type { SerperSearchResults } from '@/lib/types'
+
+import { useArtifact } from '@/components/artifact/artifact-context'
+
+import { CollapsibleMessage } from './collapsible-message'
+import { DefaultSkeleton } from './default-skeleton'
+import { Section, ToolArgsSection } from './section'
+import { VideoSearchResults } from './video-search-results'
+
+interface VideoSearchSectionProps {
+  tool: ToolInvocation
+  isOpen: boolean
+  onOpenChange: (open: boolean) => void
+  chatId: string
 }
 
-export function VideoSearchSection({ result }: VideoSearchSectionProps) {
-  const [data, error, pending] = useStreamableValue(result)
-  const searchResults: SerperSearchResults = data ? JSON.parse(data) : undefined
+export function VideoSearchSection({
+  tool,
+  isOpen,
+  onOpenChange,
+  chatId
+}: VideoSearchSectionProps) {
+  const { status } = useChat({
+    id: chatId
+  })
+  const isLoading = status === 'submitted' || status === 'streaming'
+
+  const isToolLoading = tool.state === 'call'
+  const videoResults: SerperSearchResults =
+    tool.state === 'result' ? tool.result : undefined
+  const query = tool.args?.query as string | undefined
+
+  const { open } = useArtifact()
+  const header = (
+    <button
+      type="button"
+      onClick={() => open({ type: 'tool-invocation', toolInvocation: tool })}
+      className="flex items-center justify-between w-full text-left rounded-md p-1 -ml-1"
+      title="Open details"
+    >
+      <ToolArgsSection tool="videoSearch" number={videoResults?.videos?.length}>
+        {query}
+      </ToolArgsSection>
+    </button>
+  )
+
   return (
-    <div>
-      {!pending && data ? (
-        <>
-          <Section size="sm" className="pt-2 pb-0">
-            <ToolBadge tool="search">{`${searchResults.searchParameters.q}`}</ToolBadge>
-          </Section>
-          <Section title="Videos">
-            <VideoSearchResults results={searchResults} />
-          </Section>
-        </>
-      ) : (
-        <Section className="pt-2 pb-0">
-          <SearchSkeleton />
+    <CollapsibleMessage
+      role="assistant"
+      isCollapsible={true}
+      header={header}
+      isOpen={isOpen}
+      onOpenChange={onOpenChange}
+      showIcon={false}
+    >
+      {!isLoading && videoResults ? (
+        <Section title="Videos">
+          <VideoSearchResults results={videoResults} />
         </Section>
+      ) : (
+        <DefaultSkeleton />
       )}
-    </div>
+    </CollapsibleMessage>
   )
 }

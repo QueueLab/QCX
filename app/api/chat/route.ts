@@ -1,68 +1,85 @@
-import { NextResponse, NextRequest } from 'next/server';
-import { saveChat, createMessage, NewChat, NewMessage } from '@/lib/actions/chat-db';
-import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user';
-// import { generateUUID } from '@/lib/utils'; // Assuming generateUUID is in lib/utils as per PR context - not needed for PKs
+import { cookies } from 'next/headers'
 
-// This is a simplified POST handler. PR #533's version might be more complex,
-// potentially handling streaming AI responses and then saving.
-// For now, this focuses on the database interaction part.
-export async function POST(request: NextRequest) {
+import { getCurrentUserId } from '@/lib/auth/get-current-user'
+import { createManualToolStreamResponse } from '@/lib/streaming/create-manual-tool-stream'
+import { createToolCallingStreamResponse } from '@/lib/streaming/create-tool-calling-stream'
+import { Model } from '@/lib/types/models'
+import { isProviderEnabled } from '@/lib/utils/registry'
+
+export const maxDuration = 30
+
+const DEFAULT_MODEL: Model = {
+  id: 'gpt-4o-mini',
+  name: 'GPT-4o mini',
+  provider: 'OpenAI',
+  providerId: 'openai',
+  enabled: true,
+  toolCallType: 'native'
+}
+
+export async function POST(req: Request) {
   try {
-    const userId = await getCurrentUserIdOnServer();
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const { messages, id: chatId } = await req.json()
+    const referer = req.headers.get('referer')
+    const isSharePage = referer?.includes('/share/')
+    const userId = await getCurrentUserId()
+
+    if (isSharePage) {
+      return new Response('Chat API is not available on share pages', {
+        status: 403,
+        statusText: 'Forbidden'
+      })
     }
 
-    const body = await request.json();
+    const cookieStore = await cookies()
+    const modelJson = cookieStore.get('selectedModel')?.value
+    const searchMode = cookieStore.get('search-mode')?.value === 'true'
 
-    // Example: Distinguish between creating a new chat vs. adding a message to existing chat
-    // The actual structure of `body` would depend on client-side implementation.
-    // Let's assume a simple case: creating a new chat with an initial message.
-    const { title, initialMessageContent, role = 'user' } = body;
+    let selectedModel = DEFAULT_MODEL
 
-    if (!initialMessageContent) {
-        return NextResponse.json({ error: 'Initial message content is required' }, { status: 400 });
+    if (modelJson) {
+      try {
+        selectedModel = JSON.parse(modelJson) as Model
+      } catch (e) {
+        console.error('Failed to parse selected model:', e)
+      }
     }
 
-    const newChatData: NewChat = {
-      // id: generateUUID(), // Drizzle schema now has defaultRandom for UUIDs
-      userId: userId,
-      title: title || 'New Chat', // Default title if not provided
-      // createdAt: new Date(), // Handled by defaultNow() in schema
-      visibility: 'private', // Default visibility
-    };
-
-    // Use a transaction if creating chat and first message together
-    // For simplicity here, let's assume saveChat handles chat creation and returns ID, then we create a message.
-    // A more robust `saveChat` might create the chat and first message in one go.
-    // The `saveChat` in chat-db.ts is designed to handle this.
-
-    const firstMessage: Omit<NewMessage, 'chatId'> = {
-        // id: generateUUID(), // Drizzle schema now has defaultRandom for UUIDs
-        // chatId is omitted as it will be set by saveChat
-        userId: userId,
-        role: role as NewMessage['role'], // Ensure role type matches schema expectation
-        content: initialMessageContent,
-        // createdAt: new Date(), // Handled by defaultNow() in schema, not strictly needed here
-    };
-
-    // The saveChat in chat-db.ts is designed to take initial messages.
-    const savedChatId = await saveChat(newChatData, [firstMessage]);
-
-    if (!savedChatId) {
-         return NextResponse.json({ error: 'Failed to save chat' }, { status: 500 });
+    if (
+      !isProviderEnabled(selectedModel.providerId) ||
+      selectedModel.enabled === false
+    ) {
+      return new Response(
+        `Selected provider is not enabled ${selectedModel.providerId}`,
+        {
+          status: 404,
+          statusText: 'Not Found'
+        }
+      )
     }
 
-    // Fetch the newly created chat and message to return (optional, but good for client)
-    // For now, just return success and the new chat ID.
-    return NextResponse.json({ message: 'Chat created successfully', chatId: savedChatId }, { status: 201 });
+    const supportsToolCalling = selectedModel.toolCallType === 'native'
 
+    return supportsToolCalling
+      ? createToolCallingStreamResponse({
+          messages,
+          model: selectedModel,
+          chatId,
+          searchMode,
+          userId
+        })
+      : createManualToolStreamResponse({
+          messages,
+          model: selectedModel,
+          chatId,
+          searchMode,
+          userId
+        })
   } catch (error) {
-    console.error('Error in POST /api/chat:', error);
-    let errorMessage = 'Internal Server Error';
-    if (error instanceof Error) {
-        errorMessage = error.message;
-    }
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
+    console.error('API route error:', error)
+    return new Response('Error processing your request', {
+      status: 500,
+      statusText: 'Internal Server Error'
+    })
   }
 }

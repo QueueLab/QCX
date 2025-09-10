@@ -1,76 +1,79 @@
-import { notFound, redirect } from 'next/navigation';
-import { Chat } from '@/components/chat';
-import { getChat, getChatMessages } from '@/lib/actions/chat'; // Added getChatMessages
-import { AI } from '@/app/actions';
-import { MapDataProvider } from '@/components/map/map-data-context';
-import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'; // For server-side auth
-import type { AIMessage } from '@/lib/types'; // For AIMessage type
-import type { Message as DrizzleMessage } from '@/lib/actions/chat-db'; // For DrizzleMessage type
+import { notFound, redirect } from 'next/navigation'
 
-export const maxDuration = 60;
+import { getChat } from '@/lib/actions/chat'
+import { getCurrentUserId } from '@/lib/auth/get-current-user'
+import { getModels } from '@/lib/config/models'
+import { ExtendedCoreMessage, SearchResults } from '@/lib/types' // Added SearchResults
+import { convertToUIMessages } from '@/lib/utils'
 
-export interface SearchPageProps {
-  params: Promise<{ id: string }>; // Keep as is for now
-}
+import { Chat } from '@/components/chat'
 
-export async function generateMetadata({ params }: SearchPageProps) {
-  const { id } = await params; // Keep as is for now
-  // TODO: Metadata generation might need authenticated user if chats are private
-  // For now, assuming getChat can be called or it handles anon access for metadata appropriately
-  const userId = await getCurrentUserIdOnServer(); // Attempt to get user for metadata
-  const chat = await getChat(id, userId || 'anonymous'); // Pass userId or 'anonymous' if none
-  return {
-    title: chat?.title?.toString().slice(0, 50) || 'Search',
-  };
-}
+export const maxDuration = 60
 
-export default async function SearchPage({ params }: SearchPageProps) {
-  const { id } = await params; // Keep as is for now
-  const userId = await getCurrentUserIdOnServer();
+export async function generateMetadata(props: {
+  params: Promise<{ id: string }>
+}) {
+  const { id } = await props.params
+  const userId = await getCurrentUserId()
+  const chat = await getChat(id, userId || 'anonymous') // Ensure fallback for userId
 
-  if (!userId) {
-    // If no user, redirect to login or show appropriate page
-    // For now, redirecting to home, but a login page would be better.
-    redirect('/');
+  let metadata: {
+    title: string
+    openGraph?: { images?: { url: string; width?: number; height?: number }[] }
+  } = {
+    title: chat?.title?.toString().slice(0, 50) || 'Search'
   }
 
-  const chat = await getChat(id, userId);
+  if (chat && chat.messages) {
+    const dataMessage = chat.messages.find(
+      (msg: ExtendedCoreMessage) => msg.role === 'data'
+    )
+
+    if (dataMessage && dataMessage.content) {
+      // Assuming dataMessage.content is of type SearchResults or a compatible structure
+      const searchData = dataMessage.content as SearchResults
+      if (searchData.images && searchData.images.length > 0) {
+        const firstImage = searchData.images[0]
+        let imageUrl: string | undefined = undefined
+
+        if (typeof firstImage === 'string') {
+          imageUrl = firstImage
+        } else if (typeof firstImage === 'object' && firstImage.url) {
+          imageUrl = firstImage.url
+        }
+
+        if (imageUrl) {
+          metadata.openGraph = {
+            images: [{ url: imageUrl, width: 1200, height: 630 }] // Standard OG image dimensions
+          }
+        }
+      }
+    }
+  }
+  // If no image is found, metadata.openGraph.images will remain undefined,
+  // allowing fallback to parent or global OG image settings.
+  return metadata
+}
+
+// ... rest of the file (default export SearchPage) remains the same
+export default async function SearchPage(props: {
+  params: Promise<{ id: string }>
+}) {
+  const userId = await getCurrentUserId()
+  const { id } = await props.params
+
+  const chat = await getChat(id, userId)
+  // convertToUIMessages for useChat hook
+  const messages = convertToUIMessages(chat?.messages || [])
 
   if (!chat) {
-    // If chat doesn't exist or user doesn't have access (handled by getChat)
-    notFound();
+    redirect('/')
   }
 
-  // Fetch messages for the chat
-  const dbMessages: DrizzleMessage[] = await getChatMessages(chat.id);
+  if (chat?.userId !== userId && chat?.userId !== 'anonymous') {
+    notFound()
+  }
 
-  // Transform DrizzleMessages to AIMessages
-  const initialMessages: AIMessage[] = dbMessages.map((dbMsg): AIMessage => {
-    return {
-      id: dbMsg.id,
-      role: dbMsg.role as AIMessage['role'], // Cast role, ensure AIMessage['role'] includes all dbMsg.role possibilities
-      content: dbMsg.content,
-      createdAt: dbMsg.createdAt ? new Date(dbMsg.createdAt) : undefined,
-      // 'type' and 'name' are not in the basic Drizzle 'messages' schema.
-      // These would be undefined unless specific logic is added to derive them.
-      // For instance, if a message with role 'tool' should have a 'name',
-      // or if some messages have a specific 'type' based on content or other flags.
-      // This mapping assumes standard user/assistant messages primarily.
-    };
-  });
-
-  return (
-    <AI
-      initialAIState={{
-        chatId: chat.id,
-        messages: initialMessages, // Use the transformed messages from the database
-        // isSharePage: true, // This was in PR#533, but share functionality is removed.
-                             // If needed for styling or other logic, it can be set.
-      }}
-    >
-      <MapDataProvider>
-        <Chat id={id} />
-      </MapDataProvider>
-    </AI>
-  );
+  const models = await getModels()
+  return <Chat key={id} id={id} savedMessages={messages} models={models} />
 }

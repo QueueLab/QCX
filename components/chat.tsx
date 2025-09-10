@@ -1,123 +1,248 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
-import { ChatPanel } from './chat-panel'
-import { ChatMessages } from './chat-messages'
-import { EmptyScreen } from './empty-screen'
-import { Mapbox } from './map/mapbox-map'
-import { useUIState, useAIState } from 'ai/rsc'
-import MobileIconsBar from './mobile-icons-bar'
-import { useProfileToggle, ProfileToggleEnum } from "@/components/profile-toggle-context";
-import SettingsView from "@/components/settings/settings-view";
-import { MapDataProvider, useMapData } from './map/map-data-context'; // Add this and useMapData
-import { updateDrawingContext } from '@/lib/actions/chat'; // Import the server action
+import { useEffect, useMemo, useRef, useState } from 'react'
 
-type ChatProps = {
-  id?: string // This is the chatId
+import { useChat } from '@ai-sdk/react'
+import { ChatRequestOptions } from 'ai'
+import { Message } from 'ai/react'
+import { toast } from 'sonner'
+
+import { Model } from '@/lib/types/models'
+import { cn } from '@/lib/utils'
+
+import { ChatMessages } from './chat-messages'
+import { ChatPanel } from './chat-panel'
+
+// Define section structure
+interface ChatSection {
+  id: string // User message ID
+  userMessage: Message
+  assistantMessages: Message[]
 }
 
-export function Chat({ id }: ChatProps) {
-  const router = useRouter()
-  const path = usePathname()
-  const [messages] = useUIState()
-  const [aiState] = useAIState()
-  const [isMobile, setIsMobile] = useState(false)
-  const { activeView } = useProfileToggle();
-  const [input, setInput] = useState('')
-  const [showEmptyScreen, setShowEmptyScreen] = useState(false)
-  
-  useEffect(() => {
-    setShowEmptyScreen(messages.length === 0)
+export function Chat({
+  id,
+  savedMessages = [],
+  query,
+  models
+}: {
+  id: string
+  savedMessages?: Message[]
+  query?: string
+  models?: Model[]
+}) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const [isAtBottom, setIsAtBottom] = useState(true)
+
+  const {
+    messages,
+    input,
+    handleInputChange,
+    handleSubmit,
+    status,
+    setMessages,
+    stop,
+    append,
+    data,
+    setData,
+    addToolResult,
+    reload
+  } = useChat({
+    initialMessages: savedMessages,
+    id: id, // Use unique chat ID for isolated streaming
+    body: {
+      id
+    },
+    onFinish: () => {
+      // Only update URL if we're on the home page (new chat)
+      // Don't update if we're already on a search page to avoid hijacking navigation
+      if (window.location.pathname === '/') {
+        window.history.replaceState({}, '', `/search/${id}`)
+      }
+      window.dispatchEvent(new CustomEvent('chat-history-updated'))
+    },
+    onError: error => {
+      toast.error(`Error in chat: ${error.message}`)
+    },
+    sendExtraMessageFields: false, // Disable extra message fields,
+    experimental_throttle: 100
+  })
+
+  const isLoading = status === 'submitted' || status === 'streaming'
+
+  // Convert messages array to sections array
+  const sections = useMemo<ChatSection[]>(() => {
+    const result: ChatSection[] = []
+    let currentSection: ChatSection | null = null
+
+    for (const message of messages) {
+      if (message.role === 'user') {
+        // Start a new section when a user message is found
+        if (currentSection) {
+          result.push(currentSection)
+        }
+        currentSection = {
+          id: message.id,
+          userMessage: message,
+          assistantMessages: []
+        }
+      } else if (currentSection && message.role === 'assistant') {
+        // Add assistant message to the current section
+        currentSection.assistantMessages.push(message)
+      }
+      // Ignore other role types like 'system' for now
+    }
+
+    // Add the last section if exists
+    if (currentSection) {
+      result.push(currentSection)
+    }
+
+    return result
   }, [messages])
 
+  // Detect if scroll container is at the bottom
   useEffect(() => {
-    // Check if device is mobile
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 1024)
+    const container = scrollContainerRef.current
+    if (!container) return
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container
+      const threshold = 50 // threshold in pixels
+      if (scrollHeight - scrollTop - clientHeight < threshold) {
+        setIsAtBottom(true)
+      } else {
+        setIsAtBottom(false)
+      }
     }
-    
-    // Initial check
-    checkMobile()
-    
-    // Add event listener for window resize
-    window.addEventListener('resize', checkMobile)
-    
-    // Cleanup
-    return () => window.removeEventListener('resize', checkMobile)
+
+    container.addEventListener('scroll', handleScroll, { passive: true })
+    handleScroll() // Set initial state
+
+    return () => container.removeEventListener('scroll', handleScroll)
   }, [])
 
+  // Scroll to the section when a new user message is sent
   useEffect(() => {
-    if (!path.includes('search') && messages.length === 1) {
-      window.history.replaceState({}, '', `/search/${id}`)
+    // Only scroll if this chat is currently visible in the URL
+    const isCurrentChat =
+      window.location.pathname === `/search/${id}` ||
+      (window.location.pathname === '/' && sections.length > 0)
+
+    if (isCurrentChat && sections.length > 0) {
+      const lastMessage = messages[messages.length - 1]
+      if (lastMessage && lastMessage.role === 'user') {
+        // If the last message is from user, find the corresponding section
+        const sectionId = lastMessage.id
+        requestAnimationFrame(() => {
+          const sectionElement = document.getElementById(`section-${sectionId}`)
+          sectionElement?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        })
+      }
     }
-  }, [id, path, messages])
+  }, [sections, messages, id])
 
   useEffect(() => {
-    if (aiState.messages[aiState.messages.length - 1]?.type === 'response') {
-      // Refresh the page to chat history updates
-      router.refresh()
-    }
-  }, [aiState, router])
+    setMessages(savedMessages)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id])
 
-  // Get mapData to access drawnFeatures
-  const { mapData } = useMapData();
-
-  // useEffect to call the server action when drawnFeatures changes
-  useEffect(() => {
-    if (id && mapData.drawnFeatures && mapData.drawnFeatures.length > 0) {
-      console.log('Chat.tsx: drawnFeatures changed, calling updateDrawingContext', mapData.drawnFeatures);
-      updateDrawingContext(id, mapData.drawnFeatures);
-    }
-  }, [id, mapData.drawnFeatures]);
-
-  // Mobile layout
-  if (isMobile) {
-    return (
-      <MapDataProvider> {/* Add Provider */}
-        <div className="mobile-layout-container">
-          <div className="mobile-map-section">
-            {activeView ? <SettingsView /> : <Mapbox />}
-          </div>
-          <div className="mobile-icons-bar">
-            <MobileIconsBar />
-          </div>
-          <div className="mobile-chat-input-area">
-            <ChatPanel messages={messages} input={input} setInput={setInput} />
-          </div>
-          <div className="mobile-chat-messages-area">
-            {showEmptyScreen ? (
-              <EmptyScreen
-                submitMessage={message => {
-                  setInput(message)
-                }}
-              />
-            ) : (
-              <ChatMessages messages={messages} />
-            )}
-          </div>
-        </div>
-      </MapDataProvider>
-    );
+  const onQuerySelect = (query: string) => {
+    append({
+      role: 'user',
+      content: query
+    })
   }
-  
-  // Desktop layout
+
+  const handleUpdateAndReloadMessage = async (
+    messageId: string,
+    newContent: string
+  ) => {
+    setMessages(currentMessages =>
+      currentMessages.map(msg =>
+        msg.id === messageId ? { ...msg, content: newContent } : msg
+      )
+    )
+
+    try {
+      const messageIndex = messages.findIndex(msg => msg.id === messageId)
+      if (messageIndex === -1) return
+
+      const messagesUpToEdited = messages.slice(0, messageIndex + 1)
+
+      setMessages(messagesUpToEdited)
+
+      setData(undefined)
+
+      await reload({
+        body: {
+          chatId: id,
+          regenerate: true
+        }
+      })
+    } catch (error) {
+      console.error('Failed to reload after message update:', error)
+      toast.error(`Failed to reload conversation: ${(error as Error).message}`)
+    }
+  }
+
+  const handleReloadFrom = async (
+    messageId: string,
+    options?: ChatRequestOptions
+  ) => {
+    const messageIndex = messages.findIndex(m => m.id === messageId)
+    if (messageIndex !== -1) {
+      const userMessageIndex = messages
+        .slice(0, messageIndex)
+        .findLastIndex(m => m.role === 'user')
+      if (userMessageIndex !== -1) {
+        const trimmedMessages = messages.slice(0, userMessageIndex + 1)
+        setMessages(trimmedMessages)
+        return await reload(options)
+      }
+    }
+    return await reload(options)
+  }
+
+  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setData(undefined)
+    handleSubmit(e)
+  }
+
   return (
-    <MapDataProvider> {/* Add Provider */}
-      <div className="flex justify-start items-start">
-        {/* This is the new div for scrolling */}
-        <div className="w-1/2 flex flex-col space-y-3 md:space-y-4 px-8 sm:px-12 pt-12 md:pt-14 pb-4 h-[calc(100vh-0.5in)] overflow-y-auto">
-          {/* TODO: Add EmptyScreen for desktop if needed */}
-          <ChatMessages messages={messages} />
-          <ChatPanel messages={messages} input={input} setInput={setInput} />
-        </div>
-        <div
-          className="w-1/2 p-4 fixed h-[calc(100vh-0.5in)] top-0 right-0 mt-[0.5in]"
-          style={{ zIndex: 10 }} // Added z-index
-        >
-          {activeView ? <SettingsView /> : <Mapbox />}
-        </div>
-      </div>
-    </MapDataProvider>
-  );
+    <div
+      className={cn(
+        'relative flex h-full min-w-0 flex-1 flex-col',
+        messages.length === 0 ? 'items-center justify-center' : ''
+      )}
+      data-testid="full-chat"
+    >
+      <ChatMessages
+        sections={sections}
+        data={data}
+        onQuerySelect={onQuerySelect}
+        isLoading={isLoading}
+        chatId={id}
+        addToolResult={addToolResult}
+        scrollContainerRef={scrollContainerRef}
+        onUpdateMessage={handleUpdateAndReloadMessage}
+        reload={handleReloadFrom}
+      />
+      <ChatPanel
+        input={input}
+        handleInputChange={handleInputChange}
+        handleSubmit={onSubmit}
+        isLoading={isLoading}
+        messages={messages}
+        setMessages={setMessages}
+        stop={stop}
+        query={query}
+        append={append}
+        models={models}
+        showScrollToBottomButton={!isAtBottom}
+        scrollContainerRef={scrollContainerRef}
+      />
+    </div>
+  )
 }

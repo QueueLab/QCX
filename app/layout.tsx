@@ -1,30 +1,32 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter as FontSans } from 'next/font/google'
-import './globals.css'
+
+import { Analytics } from '@vercel/analytics/next'
+
+import { createClient } from '@/lib/supabase/server'
 import { cn } from '@/lib/utils'
-import { ThemeProvider } from '@/components/theme-provider'
-import Header from '@/components/header'
-import Footer from '@/components/footer'
-import { Sidebar } from '@/components/sidebar'
-import { Analytics } from "@vercel/analytics/next"
-import { SpeedInsights } from "@vercel/speed-insights/next"
+
+import { SidebarProvider } from '@/components/ui/sidebar'
 import { Toaster } from '@/components/ui/sonner'
-import { MapToggleProvider } from '@/components/map-toggle-context'
-import { ProfileToggleProvider } from '@/components/profile-toggle-context'
-import { MapLoadingProvider } from '@/components/map-loading-context';
-import ConditionalLottie from '@/components/conditional-lottie';
+
+import AppSidebar from '@/components/app-sidebar'
+import ArtifactRoot from '@/components/artifact/artifact-root'
+import Header from '@/components/header'
+import { ThemeProvider } from '@/components/theme-provider'
+
+import './globals.css'
 
 const fontSans = FontSans({
   subsets: ['latin'],
   variable: '--font-sans'
 })
 
-const title = 'Beta'
+const title = 'Morphic'
 const description =
-  'language to Maps'
+  'A fully open-source AI-powered answer engine with a generative UI.'
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://labs.queue.cx'),
+  metadataBase: new URL('https://morphic.sh'),
   title,
   description,
   openGraph: {
@@ -35,7 +37,7 @@ export const metadata: Metadata = {
     title,
     description,
     card: 'summary_large_image',
-    creator: '@queuelabs'
+    creator: '@miiura'
   }
 }
 
@@ -46,36 +48,49 @@ export const viewport: Viewport = {
   maximumScale: 1
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  let user = null
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (supabaseUrl && supabaseAnonKey) {
+    const supabase = await createClient()
+    const {
+      data: { user: supabaseUser }
+    } = await supabase.auth.getUser()
+    user = supabaseUser
+  }
+
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={cn('font-sans antialiased', fontSans.variable)}>
-        <MapToggleProvider>
-          <ProfileToggleProvider>
-            <ThemeProvider
-              attribute="class"
-              defaultTheme="earth"
-              enableSystem
-              disableTransitionOnChange
-              themes={['light', 'dark', 'earth']}
-            >
-              <MapLoadingProvider>
-                <Header />
-                <ConditionalLottie />
-                {children}
-                <Sidebar />
-                <Footer />
-                <Toaster />
-              </MapLoadingProvider>
-            </ThemeProvider>
-          </ProfileToggleProvider>
-        </MapToggleProvider>
-        <Analytics />
-        <SpeedInsights />
+      <body
+        className={cn(
+          'min-h-screen flex flex-col font-sans antialiased',
+          fontSans.variable
+        )}
+      >
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <SidebarProvider defaultOpen>
+            <AppSidebar />
+            <div className="flex flex-col flex-1">
+              <Header user={user} />
+              <main className="flex flex-1 min-h-0">
+                <ArtifactRoot>{children}</ArtifactRoot>
+              </main>
+            </div>
+          </SidebarProvider>
+          <Toaster />
+          <Analytics />
+        </ThemeProvider>
       </body>
     </html>
   )

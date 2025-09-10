@@ -1,75 +1,93 @@
-'use client'
+import { ChevronDown } from 'lucide-react'
 
-import React, { useEffect, useState } from 'react'
+import { cn } from '@/lib/utils'
+
 import {
   Collapsible,
-  CollapsibleTrigger,
-  CollapsibleContent
-} from '@radix-ui/react-collapsible'
-import { Button } from './ui/button'
-import { ChevronDown } from 'lucide-react'
-import { StreamableValue, useStreamableValue } from 'ai/rsc'
-import { cn } from '@/lib/utils'
+  CollapsibleContent,
+  CollapsibleTrigger
+} from './ui/collapsible'
+import { IconLogo } from './ui/icons'
 import { Separator } from './ui/separator'
+import { CurrentUserAvatar } from './current-user-avatar'
 
 interface CollapsibleMessageProps {
-  message: {
-    id: string
-    isCollapsed?: StreamableValue<boolean>
-    component: React.ReactNode
-  }
-  isLastMessage?: boolean
+  children: React.ReactNode
+  role: 'user' | 'assistant'
+  isCollapsible?: boolean
+  isOpen?: boolean
+  header?: React.ReactNode
+  onOpenChange?: (open: boolean) => void
+  showBorder?: boolean
+  showIcon?: boolean
 }
 
-export const CollapsibleMessage: React.FC<CollapsibleMessageProps> = ({
-  message,
-  isLastMessage = false
-}) => {
-  const [data] = useStreamableValue(message.isCollapsed)
-  const isCollapsed = data ?? false
-  const [open, setOpen] = useState(isLastMessage)
-
-  useEffect(() => {
-    setOpen(isLastMessage)
-  }, [isCollapsed, isLastMessage])
-
-  // if not collapsed, return the component
-  if (!isCollapsed) {
-    return message.component
-  }
+export function CollapsibleMessage({
+  children,
+  role,
+  isCollapsible = false,
+  isOpen = true,
+  header,
+  onOpenChange,
+  showBorder = true,
+  showIcon = true
+}: CollapsibleMessageProps) {
+  const content = <div className="flex-1">{children}</div>
 
   return (
-    <Collapsible
-      open={open}
-      onOpenChange={value => {
-        setOpen(value)
-      }}
-    >
-      <CollapsibleTrigger asChild>
+    <div className="flex">
+      {showIcon && (
+        <div className="relative flex flex-col items-center">
+          <div className="w-5">
+            {role === 'assistant' ? (
+              <IconLogo className="size-5" />
+            ) : (
+              <CurrentUserAvatar />
+            )}
+          </div>
+        </div>
+      )}
+
+      {isCollapsible ? (
         <div
           className={cn(
-            'w-full flex justify-end',
-            !isCollapsed ? 'hidden' : ''
+            'flex-1 rounded-2xl p-4',
+            showBorder && 'border border-border/50'
           )}
         >
-          <Button
-            variant="ghost"
-            size={'icon'}
-            className={cn('-mt-3 rounded-full')}
+          <Collapsible
+            open={isOpen}
+            onOpenChange={onOpenChange}
+            className="w-full"
           >
-            <ChevronDown
-              size={14}
-              className={cn(
-                open ? 'rotate-180' : 'rotate-0',
-                'h-4 w-4 transition-all'
-              )}
-            />
-            <span className="sr-only">collapse</span>
-          </Button>
+            <div className="flex items-center justify-between w-full gap-2">
+              {header && <div className="text-sm w-full">{header}</div>}
+              <CollapsibleTrigger asChild>
+                <button
+                  type="button"
+                  className="rounded-md p-1 hover:bg-accent group"
+                  aria-label={isOpen ? 'Collapse' : 'Expand'}
+                >
+                  <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                </button>
+              </CollapsibleTrigger>
+            </div>
+            <CollapsibleContent className="data-[state=closed]:animate-collapse-up data-[state=open]:animate-collapse-down">
+              <Separator className="my-4 border-border/50" />
+              {content}
+            </CollapsibleContent>
+          </Collapsible>
         </div>
-      </CollapsibleTrigger>
-      <CollapsibleContent>{message.component}</CollapsibleContent>
-      {!open && <Separator className="my-2 bg-muted" />}
-    </Collapsible>
+      ) : (
+        <div
+          className={cn(
+            'flex-1 rounded-2xl',
+            role === 'assistant' ? 'px-0' : 'px-3'
+          )}
+        >
+          {content}
+        </div>
+      )}
+    </div>
   )
 }
