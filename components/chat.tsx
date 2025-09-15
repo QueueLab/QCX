@@ -11,6 +11,7 @@ import MobileIconsBar from './mobile-icons-bar'
 import { useProfileToggle, ProfileToggleEnum } from "@/components/profile-toggle-context";
 import SettingsView from "@/components/settings/settings-view";
 import { MapDataProvider, useMapData } from './map/map-data-context'; // Add this and useMapData
+import { useMapToggle, MapToggleEnum } from './map-toggle-context';
 import { updateDrawingContext } from '@/lib/actions/chat'; // Import the server action
 
 type ChatProps = {

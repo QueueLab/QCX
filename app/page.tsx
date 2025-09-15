@@ -7,10 +7,10 @@ export const maxDuration = 60
 
 import { MapDataProvider } from '@/components/map/map-data-context'
 
-export default function Page() {
+export default async function Page() {
   const id = nanoid()
   const cookieStore = cookies()
-  const userCookie = cookieStore.get('copilotkit_user_details')
+  const userCookie = (await cookieStore).get('copilotkit_user_details')
   const user = userCookie ? JSON.parse(userCookie.value) : {}
   return (
     <AI initialAIState={{ chatId: id, messages: [] }}>

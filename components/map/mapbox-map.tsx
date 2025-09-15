@@ -206,6 +206,10 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
       try {
         // Update our current map center ref
         currentMapCenterRef.current.center = [longitude, latitude]
+
+        if (userMarkerRef.current) {
+          userMarkerRef.current.setLngLat([longitude, latitude]);
+        }
         
         await new Promise<void>((resolve) => {
           map.current?.flyTo({
@@ -535,10 +539,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     const position = map.current.getCenter();
 
     if (isLive && profilePictureUrl) {
-      if (userMarkerRef.current) {
-        // Update position of existing marker
-        userMarkerRef.current.setLngLat(position);
-      } else {
+      if (!userMarkerRef.current) {
         // Create a new marker
         const el = document.createElement('div');
         el.className = 'user-marker';
@@ -563,7 +564,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         userMarkerRef.current = null;
       }
     }
-  }, [mapData.user, map.current, updateMapPosition]);
+  }, [mapData]);
 
   // Long-press handlers
   const handleMouseDown = useCallback(() => {
