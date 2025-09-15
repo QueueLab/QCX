@@ -13,6 +13,9 @@ export interface Webcam {
       preview: string;
     }
   };
+  urls: {
+    webcam: string;
+  };
 }
 
 export interface WindyResponse {

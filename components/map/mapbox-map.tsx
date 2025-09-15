@@ -548,7 +548,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         const marker = new mapboxgl.Marker(el)
           .setLngLat([webcam.location.longitude, webcam.location.latitude])
           .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(
-            `<h3>${webcam.title}</h3><img src="${webcam.images.current.preview}" alt="${webcam.title}" style="width:100%;" />`
+            `<a href="${webcam.urls.webcam}" target="_blank" rel="noopener noreferrer"><h3>${webcam.title}</h3><img src="${webcam.images.current.preview}" alt="${webcam.title}" style="width:100%;" /></a>`
           ))
           .addTo(map.current!);
 
