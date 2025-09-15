@@ -15,9 +15,12 @@ import { updateDrawingContext } from '@/lib/actions/chat'; // Import the server 
 
 type ChatProps = {
   id?: string // This is the chatId
+  user?: {
+    profilePictureUrl?: string;
+  }
 }
 
-export function Chat({ id }: ChatProps) {
+export function Chat({ id, user }: ChatProps) {
   const router = useRouter()
   const path = usePathname()
   const [messages] = useUIState()
@@ -61,7 +64,18 @@ export function Chat({ id }: ChatProps) {
   }, [aiState, router])
 
   // Get mapData to access drawnFeatures
-  const { mapData } = useMapData();
+  const { mapData, setMapData } = useMapData();
+  const { mapType } = useMapToggle();
+
+  useEffect(() => {
+    setMapData(prevMapData => ({
+      ...prevMapData,
+      user: {
+        profilePictureUrl: user?.profilePictureUrl,
+        isLive: mapType === MapToggleEnum.RealTimeMode,
+      },
+    }));
+  }, [user, mapType, setMapData]);
 
   // useEffect to call the server action when drawnFeatures changes
   useEffect(() => {
