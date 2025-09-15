@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useCallback } from 'react' // Removed useState
+import { useEffect, useRef, useCallback, useState } from 'react'
 import mapboxgl from 'mapbox-gl'
 import MapboxDraw from '@mapbox/mapbox-gl-draw'
 import * as turf from '@turf/turf'
@@ -11,6 +11,7 @@ import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css'
 import { useMapToggle, MapToggleEnum } from '../map-toggle-context'
 import { useMapData } from './map-data-context'; // Add this import
 import { useMapLoading } from '../map-loading-context'; // Import useMapLoading
+import { getWebcams, Webcam } from '@/lib/windy';
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN as string;
 
@@ -32,6 +33,9 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   const { mapData, setMapData } = useMapData(); // Consume the new context, get setMapData
   const { setIsMapLoaded } = useMapLoading(); // Get setIsMapLoaded from context
   const previousMapTypeRef = useRef<MapToggleEnum | null>(null)
+  const [webcams, setWebcams] = useState<Webcam[]>([]);
+  const webcamMarkersRef = useRef<{ [id: string]: mapboxgl.Marker }>({});
+
 
   // Refs for long-press functionality
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -504,6 +508,54 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
       updateMapPosition(position.latitude, position.longitude)
     }
   }, [position, updateMapPosition, mapType])
+
+  useEffect(() => {
+    if (mapType === MapToggleEnum.WebcamMode) {
+      const fetchWebcams = async () => {
+        try {
+          const windyResponse = await getWebcams();
+          setWebcams(windyResponse.webcams);
+        } catch (error) {
+          console.error('Error fetching webcams:', error);
+          toast.error('Failed to fetch webcams.');
+        }
+      };
+      fetchWebcams();
+    } else {
+      // Clear webcams and markers when not in WebcamMode
+      setWebcams([]);
+      Object.values(webcamMarkersRef.current).forEach(marker => marker.remove());
+      webcamMarkersRef.current = {};
+    }
+  }, [mapType]);
+
+  useEffect(() => {
+    if (map.current && mapType === MapToggleEnum.WebcamMode) {
+      // Clear existing markers
+      Object.values(webcamMarkersRef.current).forEach(marker => marker.remove());
+      webcamMarkersRef.current = {};
+
+      webcams.forEach(webcam => {
+        const el = document.createElement('div');
+        el.className = 'webcam-marker';
+        el.style.backgroundImage = 'url("https://img.icons8.com/ios-filled/50/000000/web-camera.png")';
+        el.style.width = '25px';
+        el.style.height = '25px';
+        el.style.backgroundSize = 'cover';
+        el.style.borderRadius = '50%';
+        el.style.cursor = 'pointer';
+
+        const marker = new mapboxgl.Marker(el)
+          .setLngLat([webcam.location.longitude, webcam.location.latitude])
+          .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(
+            `<h3>${webcam.title}</h3><img src="${webcam.images.current.preview}" alt="${webcam.title}" style="width:100%;" />`
+          ))
+          .addTo(map.current!);
+
+        webcamMarkersRef.current[webcam.id] = marker;
+      });
+    }
+  }, [webcams, mapType]);
 
   // Effect to handle map updates from MapDataContext
   useEffect(() => {
