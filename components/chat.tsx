@@ -69,10 +69,11 @@ export function Chat({ id, user }: ChatProps) {
   const { mapType } = useMapToggle();
 
   useEffect(() => {
+    const profilePictureUrl = user?.profilePictureUrl || 'https://placehold.co/50x50';
     setMapData(prevMapData => ({
       ...prevMapData,
       user: {
-        profilePictureUrl: user?.profilePictureUrl,
+        profilePictureUrl: profilePictureUrl,
         isLive: mapType === MapToggleEnum.RealTimeMode,
       },
     }));
