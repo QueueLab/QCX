@@ -11,7 +11,7 @@ import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css'
 import { useMapToggle, MapToggleEnum } from '../map-toggle-context'
 import { useMapData } from './map-data-context'; // Add this import
 import { useMapLoading } from '../map-loading-context'; // Import useMapLoading
-import { getWebcams, Webcam } from '@/lib/windy';
+import { getSensors, Sensor } from '@/lib/sensors';
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN as string;
 
@@ -33,8 +33,8 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   const { mapData, setMapData } = useMapData(); // Consume the new context, get setMapData
   const { setIsMapLoaded } = useMapLoading(); // Get setIsMapLoaded from context
   const previousMapTypeRef = useRef<MapToggleEnum | null>(null)
-  const [webcams, setWebcams] = useState<Webcam[]>([]);
-  const webcamMarkersRef = useRef<{ [id: string]: mapboxgl.Marker }>({});
+  const [sensors, setSensors] = useState<Sensor[]>([]);
+  const sensorMarkersRef = useRef<{ [id: string]: mapboxgl.Marker }>({});
 
 
   // Refs for long-press functionality
@@ -510,35 +510,35 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   }, [position, updateMapPosition, mapType])
 
   useEffect(() => {
-    if (mapType === MapToggleEnum.WebcamMode) {
-      const fetchWebcams = async () => {
+    if (mapType === MapToggleEnum.SensorMode) {
+      const fetchSensors = async () => {
         try {
-          const windyResponse = await getWebcams();
-          setWebcams(windyResponse.webcams);
+          const windyResponse = await getSensors();
+          setSensors(windyResponse.webcams);
         } catch (error) {
-          console.error('Error fetching webcams:', error);
-          toast.error('Failed to fetch webcams.');
+          console.error('Error fetching sensors:', error);
+          toast.error('Failed to fetch sensors.');
         }
       };
-      fetchWebcams();
+      fetchSensors();
     } else {
-      // Clear webcams and markers when not in WebcamMode
-      setWebcams([]);
-      Object.values(webcamMarkersRef.current).forEach(marker => marker.remove());
-      webcamMarkersRef.current = {};
+      // Clear sensors and markers when not in SensorMode
+      setSensors([]);
+      Object.values(sensorMarkersRef.current).forEach(marker => marker.remove());
+      sensorMarkersRef.current = {};
     }
   }, [mapType]);
 
   useEffect(() => {
-    if (map.current && mapType === MapToggleEnum.WebcamMode) {
+    if (map.current && mapType === MapToggleEnum.SensorMode) {
       // Clear existing markers
-      Object.values(webcamMarkersRef.current).forEach(marker => marker.remove());
-      webcamMarkersRef.current = {};
+      Object.values(sensorMarkersRef.current).forEach(marker => marker.remove());
+      sensorMarkersRef.current = {};
 
-      webcams.forEach(webcam => {
+      sensors.forEach(sensor => {
         const el = document.createElement('div');
-        el.className = 'webcam-marker';
-        el.style.backgroundImage = 'url("https://img.icons8.com/ios-filled/50/000000/web-camera.png")';
+        el.className = 'sensor-marker';
+        el.style.backgroundImage = 'url("https://img.icons8.com/ios-filled/50/000000/radio-tower.png")';
         el.style.width = '25px';
         el.style.height = '25px';
         el.style.backgroundSize = 'cover';
@@ -546,16 +546,16 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         el.style.cursor = 'pointer';
 
         const marker = new mapboxgl.Marker(el)
-          .setLngLat([webcam.location.longitude, webcam.location.latitude])
+          .setLngLat([sensor.location.longitude, sensor.location.latitude])
           .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(
-            `<a href="${webcam.urls.webcam}" target="_blank" rel="noopener noreferrer"><h3>${webcam.title}</h3><img src="${webcam.images.current.preview}" alt="${webcam.title}" style="width:100%;" /></a>`
+            `<a href="${sensor.urls.webcam}" target="_blank" rel="noopener noreferrer"><h3>${sensor.title}</h3><img src="${sensor.images.current.preview}" alt="${sensor.title}" style="width:100%;" /></a>`
           ))
           .addTo(map.current!);
 
-        webcamMarkersRef.current[webcam.id] = marker;
+        sensorMarkersRef.current[sensor.id] = marker;
       });
     }
-  }, [webcams, mapType]);
+  }, [sensors, mapType]);
 
   // Effect to handle map updates from MapDataContext
   useEffect(() => {

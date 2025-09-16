@@ -8,7 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
-import { Map, Pencil, Tent } from 'lucide-react'
+import { Map, Pencil, RadioTower } from 'lucide-react'
 import { useMapToggle, MapToggleEnum } from './map-toggle-context'
 
 export function MapToggle() {
@@ -29,13 +29,13 @@ export function MapToggle() {
         <DropdownMenuItem onClick={() => {setMapType(MapToggleEnum.FreeMode)}}>
           My Maps
         </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => {setMapType(MapToggleEnum.SensorMode)}}>
+          <RadioTower className="h-[1rem] w-[1rem] mr-2" />
+          Sensors
+        </DropdownMenuItem>
         <DropdownMenuItem onClick={() => {setMapType(MapToggleEnum.DrawingMode)}}>
           <Pencil className="h-[1rem] w-[1rem] mr-2" />
           Draw & Measure
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => {setMapType(MapToggleEnum.WebcamMode)}}>
-          <Tent className="h-[1rem] w-[1rem] mr-2" />
-          Webcams
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

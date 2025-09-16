@@ -6,7 +6,7 @@ export enum MapToggleEnum {
   FreeMode,
   RealTimeMode,
   DrawingMode, // Added new mode for drawing and measurement
-  WebcamMode,
+  SensorMode,
 }
 
 interface MapToggleContextType {
