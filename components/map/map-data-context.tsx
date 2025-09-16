@@ -14,6 +14,10 @@ export interface MapData {
     measurement: string;
     geometry: any;
   }>;
+  user?: {
+    profilePictureUrl?: string;
+    isLive?: boolean;
+  };
 }
 
 interface MapDataContextType {

@@ -32,6 +32,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   const { mapData, setMapData } = useMapData(); // Consume the new context, get setMapData
   const { setIsMapLoaded } = useMapLoading(); // Get setIsMapLoaded from context
   const previousMapTypeRef = useRef<MapToggleEnum | null>(null)
+  const userMarkerRef = useRef<mapboxgl.Marker | null>(null);
 
   // Refs for long-press functionality
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -205,6 +206,10 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
       try {
         // Update our current map center ref
         currentMapCenterRef.current.center = [longitude, latitude]
+
+        if (userMarkerRef.current) {
+          userMarkerRef.current.setLngLat([longitude, latitude]);
+        }
         
         await new Promise<void>((resolve) => {
           map.current?.flyTo({
@@ -524,6 +529,42 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     //   drawRoute(mapData.mapFeature.route_geometry); // Implement drawRoute function if needed
     // }
   }, [mapData.targetPosition, mapData.mapFeature, updateMapPosition]);
+
+  useEffect(() => {
+    if (!map.current) return;
+
+    const { user } = mapData;
+    const isLive = user?.isLive;
+    const profilePictureUrl = user?.profilePictureUrl;
+    const position = map.current.getCenter();
+
+    if (isLive && profilePictureUrl) {
+      if (!userMarkerRef.current) {
+        // Create a new marker
+        const el = document.createElement('div');
+        el.className = 'user-marker';
+        el.style.backgroundImage = `url(${profilePictureUrl})`;
+        el.style.width = '50px';
+        el.style.height = '50px';
+        el.style.backgroundSize = 'cover';
+        el.style.borderRadius = '50%';
+        el.style.cursor = 'pointer';
+        el.style.boxShadow = '0 0 10px rgba(0, 0, 0, 0.5)';
+
+        const marker = new mapboxgl.Marker(el)
+          .setLngLat(position)
+          .addTo(map.current);
+
+        userMarkerRef.current = marker;
+      }
+    } else {
+      // Remove marker if it exists and user is not live
+      if (userMarkerRef.current) {
+        userMarkerRef.current.remove();
+        userMarkerRef.current = null;
+      }
+    }
+  }, [mapData]);
 
   // Long-press handlers
   const handleMouseDown = useCallback(() => {

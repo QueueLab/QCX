@@ -11,13 +11,17 @@ import MobileIconsBar from './mobile-icons-bar'
 import { useProfileToggle, ProfileToggleEnum } from "@/components/profile-toggle-context";
 import SettingsView from "@/components/settings/settings-view";
 import { MapDataProvider, useMapData } from './map/map-data-context'; // Add this and useMapData
+import { useMapToggle, MapToggleEnum } from './map-toggle-context';
 import { updateDrawingContext } from '@/lib/actions/chat'; // Import the server action
 
 type ChatProps = {
   id?: string // This is the chatId
+  user?: {
+    profilePictureUrl?: string;
+  }
 }
 
-export function Chat({ id }: ChatProps) {
+export function Chat({ id, user }: ChatProps) {
   const router = useRouter()
   const path = usePathname()
   const [messages] = useUIState()
@@ -61,7 +65,19 @@ export function Chat({ id }: ChatProps) {
   }, [aiState, router])
 
   // Get mapData to access drawnFeatures
-  const { mapData } = useMapData();
+  const { mapData, setMapData } = useMapData();
+  const { mapType } = useMapToggle();
+
+  useEffect(() => {
+    const profilePictureUrl = user?.profilePictureUrl || 'https://placehold.co/50x50';
+    setMapData(prevMapData => ({
+      ...prevMapData,
+      user: {
+        profilePictureUrl: profilePictureUrl,
+        isLive: mapType === MapToggleEnum.RealTimeMode,
+      },
+    }));
+  }, [user, mapType, setMapData]);
 
   // useEffect to call the server action when drawnFeatures changes
   useEffect(() => {
