@@ -18,7 +18,9 @@ import { History } from '@/components/history'
 import { MapToggle } from './map-toggle'
 import { ModeToggle } from './mode-toggle'
 
-export const MobileIconsBar: React.FC = () => {
+export const MobileIconsBar: React.FC<{ children?: React.ReactNode }> = ({
+  children
+}) => {
   const [, setMessages] = useUIState<typeof AI>()
   const { clearChat } = useActions()
 
@@ -53,6 +55,7 @@ export const MobileIconsBar: React.FC = () => {
       </Button>
       <History location="header" />
       <ModeToggle />
+      {children}
     </div>
   )
 }

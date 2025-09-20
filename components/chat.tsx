@@ -80,10 +80,9 @@ export function Chat({ id }: ChatProps) {
             {activeView ? <SettingsView /> : <Mapbox />}
           </div>
           <div className="mobile-icons-bar">
-            <MobileIconsBar />
-          </div>
-          <div className="mobile-chat-input-area">
-            <ChatPanel messages={messages} input={input} setInput={setInput} />
+            <MobileIconsBar>
+              <ChatPanel messages={messages} input={input} setInput={setInput} />
+            </MobileIconsBar>
           </div>
           <div className="mobile-chat-messages-area">
             {showEmptyScreen ? (
