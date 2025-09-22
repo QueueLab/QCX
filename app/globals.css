@@ -161,13 +161,10 @@
   }
 
   .mobile-chat-input-area {
-    height: 70px;
     padding: 10px;
     background-color: hsl(var(--background));
-    /* border-top: 1px solid hsl(var(--border)); */ /* Removed for cleaner separation */
-    border-bottom: 1px solid hsl(var(--border)); /* Added for separation from messages area below */
+    border-top: 1px solid hsl(var(--border));
     box-sizing: border-box;
-    /* z-index: 30; */ /* No longer needed as it's in flow */
     display: flex;
     align-items: center;
   }
