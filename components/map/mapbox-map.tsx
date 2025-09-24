@@ -268,6 +268,15 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     
     // Add control to map
     map.current.addControl(drawRef.current, 'top-right')
+
+    // Restore the map's view state
+    const { center, zoom, pitch } = currentMapCenterRef.current
+    map.current.flyTo({
+      center,
+      zoom,
+      pitch,
+      duration: 0 // Fly instantly
+    })
     
     // Set up event listeners for measurements
     map.current.on('draw.create', updateMeasurementLabels)
