@@ -8,29 +8,23 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
-import { Map, Pencil } from 'lucide-react'
+import { TentTree, RadioTower } from 'lucide-react'
 import { useMapToggle, MapToggleEnum } from './map-toggle-context'
 
-export function MapToggle() {
+export function SensorToggle() {
   const { setMapType } = useMapToggle();
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon">
-          <Map className="h-[1.2rem] w-[1.2rem]" />
+          <TentTree className="h-[1.2rem] w-[1.2rem]" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => {setMapType(MapToggleEnum.RealTimeMode)}}>
-          Live
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => {setMapType(MapToggleEnum.FreeMode)}}>
-          My Maps
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => {setMapType(MapToggleEnum.DrawingMode)}}>
-          <Pencil className="h-[1rem] w-[1.2rem] mr-2" />
-          Draw & Measure
+        <DropdownMenuItem onClick={() => {setMapType(MapToggleEnum.SensorMode)}}>
+          <RadioTower className="h-[1rem] w-[1.2rem] mr-2" />
+          Sensors
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
