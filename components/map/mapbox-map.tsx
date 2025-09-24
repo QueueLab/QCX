@@ -538,12 +538,16 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
       sensors.forEach(sensor => {
         const el = document.createElement('div');
         el.className = 'sensor-marker';
-        el.style.backgroundImage = 'url("https://img.icons8.com/ios-filled/50/000000/radio-tower.png")';
-        el.style.width = '25px';
-        el.style.height = '25px';
-        el.style.backgroundSize = 'cover';
+        el.style.width = '30px';
+        el.style.height = '30px';
         el.style.borderRadius = '50%';
+        el.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+        el.style.color = 'white';
+        el.style.display = 'flex';
+        el.style.justifyContent = 'center';
+        el.style.alignItems = 'center';
         el.style.cursor = 'pointer';
+        el.innerHTML = '&#8599;';
 
         const marker = new mapboxgl.Marker(el)
           .setLngLat([sensor.location.longitude, sensor.location.latitude])

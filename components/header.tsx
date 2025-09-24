@@ -7,12 +7,12 @@ import { Button } from '@/components/ui/button'
 import {
   Search,
   CircleUserRound,
-  Map,
   CalendarDays,
-  TentTree
+  TentTree,
 } from 'lucide-react'
 import { MapToggle } from './map-toggle'
 import { ProfileToggle } from './profile-toggle'
+import { SensorToggle } from './sensor-toggle'
 
 export const Header = () => {
   return (
@@ -43,9 +43,7 @@ export const Header = () => {
           <Search className="h-[1.2rem] w-[1.2rem]" />
         </Button>
         
-        <Button variant="ghost" size="icon">
-          <TentTree className="h-[1.2rem] w-[1.2rem]" />
-        </Button>
+        <SensorToggle />
         
         <ModeToggle />
         
