@@ -273,12 +273,9 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     setTimeout(() => {
       if (map.current) {
         const { center, zoom, pitch } = currentMapCenterRef.current
-        map.current.flyTo({
-          center,
-          zoom,
-          pitch,
-          duration: 0 // Fly instantly
-        })
+        map.current.setZoom(zoom)
+        map.current.setPitch(pitch)
+        map.current.setCenter(center)
       }
     }, 0)
     
