@@ -234,10 +234,14 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   // Set up drawing tools
   const setupDrawingTools = useCallback(() => {
     if (!map.current || !drawRef.current) return;
-    
-    // Add the existing control to the map.
+
     map.current.addControl(drawRef.current, 'top-right');
-    
+
+    // Set up event listeners for measurements
+    map.current.on('draw.create', updateMeasurementLabels);
+    map.current.on('draw.delete', updateMeasurementLabels);
+    map.current.on('draw.update', updateMeasurementLabels);
+
     // Restore the map's view state after a brief delay.
     setTimeout(() => {
       if (map.current) {
@@ -246,8 +250,8 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         map.current.setPitch(pitch);
         map.current.setCenter(center);
       }
-    }, 0);
-    
+    }, 150);
+
     // Restore previous drawings if they exist.
     if (drawingFeatures.current) {
       drawRef.current.set(drawingFeatures.current);
@@ -330,6 +334,11 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
           try {
             // Save current drawings before removing control
             drawingFeatures.current = drawRef.current.getAll();
+
+            // Detach event listeners
+            map.current.off('draw.create', updateMeasurementLabels);
+            map.current.off('draw.delete', updateMeasurementLabels);
+            map.current.off('draw.update', updateMeasurementLabels);
 
             map.current.removeControl(drawRef.current);
             
@@ -417,11 +426,6 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
           },
           defaultMode: 'draw_polygon'
         });
-
-        // Set up event listeners for measurements once
-        map.current.on('draw.create', updateMeasurementLabels);
-        map.current.on('draw.delete', updateMeasurementLabels);
-        map.current.on('draw.update', updateMeasurementLabels);
 
         // Initialize drawing tools based on initial mode
         if (mapType === MapToggleEnum.DrawingMode) {
