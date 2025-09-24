@@ -101,11 +101,6 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         el.textContent = formattedArea
         
         // Add marker for the label
-
-
-
-
-
         if (map.current) {
           const marker = new mapboxgl.Marker({ element: el })
             .setLngLat(coordinates as [number, number])
@@ -235,6 +230,19 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   const setupDrawingTools = useCallback(() => {
     if (!map.current) return
     
+    // Capture current map state BEFORE making any changes
+    const currentCenter = map.current.getCenter()
+    const currentZoom = map.current.getZoom()
+    const currentPitch = map.current.getPitch()
+    const currentBearing = map.current.getBearing()
+    
+    // Update our reference with the actual current state
+    currentMapCenterRef.current = { 
+      center: [currentCenter.lng, currentCenter.lat], 
+      zoom: currentZoom, 
+      pitch: currentPitch 
+    }
+    
     // Remove existing draw control if present
     if (drawRef.current) {
       try {
@@ -269,15 +277,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     // Add control to map
     map.current.addControl(drawRef.current, 'top-right')
 
-    // Restore the map's view state after a brief delay to ensure it's not overridden
-    setTimeout(() => {
-      if (map.current) {
-        const { center, zoom, pitch } = currentMapCenterRef.current
-        map.current.setZoom(zoom)
-        map.current.setPitch(pitch)
-        map.current.setCenter(center)
-      }
-    }, 0)
+    // No need to restore map state since we want to keep the current view
     
     // Set up event listeners for measurements
     map.current.on('draw.create', updateMeasurementLabels)
@@ -467,9 +467,13 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     }
 
     return () => {
+      if (longPressTimerRef.current) { // Cleanup timer on component unmount
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
       if (map.current) {
         map.current.off('moveend', captureMapCenter)
-        
+
         if (drawRef.current) {
           try {
             map.current.off('draw.create', updateMeasurementLabels)
@@ -480,32 +484,31 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
             console.log('Draw control already removed')
           }
         }
-        
-        // Clean up any existing labels
+
         Object.values(polygonLabelsRef.current).forEach(marker => marker.remove())
         Object.values(lineLabelsRef.current).forEach(marker => marker.remove())
-        
+
         stopRotation()
-        setIsMapLoaded(false) // Reset map loaded state on cleanup
+        setIsMapLoaded(false)
         map.current.remove()
         map.current = null
       }
-      
+
       if (geolocationWatchIdRef.current !== null) {
         navigator.geolocation.clearWatch(geolocationWatchIdRef.current)
         geolocationWatchIdRef.current = null
       }
-    }
+    };
   }, [
-    handleUserInteraction, 
-    startRotation, 
-    stopRotation, 
-    mapType, 
-    updateMeasurementLabels, 
-    setupGeolocationWatcher, 
-    captureMapCenter, 
+    handleUserInteraction,
+    startRotation,
+    stopRotation,
+    mapType,
+    updateMeasurementLabels,
+    setupGeolocationWatcher,
+    captureMapCenter,
     setupDrawingTools,
-    setIsMapLoaded // Added missing dependency
+    setIsMapLoaded
   ])
 
   // Handle position updates from props
@@ -559,57 +562,6 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
       longPressTimerRef.current = null;
     }
   }, []);
-
-  // Cleanup for the main useEffect
-  useEffect(() => {
-    // ... existing useEffect logic ...
-    return () => {
-      // ... existing cleanup logic ...
-      if (longPressTimerRef.current) { // Cleanup timer on component unmount
-        clearTimeout(longPressTimerRef.current);
-        longPressTimerRef.current = null;
-      }
-      // ... existing cleanup logic for map and geolocation ...
-      if (map.current) {
-        map.current.off('moveend', captureMapCenter)
-
-        if (drawRef.current) {
-          try {
-            map.current.off('draw.create', updateMeasurementLabels)
-            map.current.off('draw.delete', updateMeasurementLabels)
-            map.current.off('draw.update', updateMeasurementLabels)
-            map.current.removeControl(drawRef.current)
-          } catch (e) {
-            console.log('Draw control already removed')
-          }
-        }
-
-        Object.values(polygonLabelsRef.current).forEach(marker => marker.remove())
-        Object.values(lineLabelsRef.current).forEach(marker => marker.remove())
-
-        stopRotation()
-        setIsMapLoaded(false)
-        map.current.remove()
-        map.current = null
-      }
-
-      if (geolocationWatchIdRef.current !== null) {
-        navigator.geolocation.clearWatch(geolocationWatchIdRef.current)
-        geolocationWatchIdRef.current = null
-      }
-    };
-  }, [
-    handleUserInteraction,
-    startRotation,
-    stopRotation,
-    mapType, // mapType is already here, good.
-    updateMeasurementLabels,
-    setupGeolocationWatcher,
-    captureMapCenter,
-    setupDrawingTools,
-    setIsMapLoaded
-  ]);
-
 
   return (
     <div className="relative h-full w-full">
