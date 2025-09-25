@@ -395,12 +395,11 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         initialZoom = 1.3;
       }
 
-      currentMapCenterRef.current.zoom = initialZoom;
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/satellite-streets-v12',
         center: currentMapCenterRef.current.center,
-        zoom: initialZoom,
+        zoom: currentMapCenterRef.current.zoom,
         pitch: currentMapCenterRef.current.pitch,
         bearing: 0,
         maxZoom: 22,
