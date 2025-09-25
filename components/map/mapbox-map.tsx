@@ -233,32 +233,58 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
 
   // Set up drawing tools
   const setupDrawingTools = useCallback(() => {
-    if (!map.current || !drawRef.current) return;
-
-    map.current.addControl(drawRef.current, 'top-right');
-
-    // Set up event listeners for measurements
-    map.current.on('draw.create', updateMeasurementLabels);
-    map.current.on('draw.delete', updateMeasurementLabels);
-    map.current.on('draw.update', updateMeasurementLabels);
-
-    // Restore the map's view state after a brief delay.
-    setTimeout(() => {
-      if (map.current) {
-        const { center, zoom, pitch } = currentMapCenterRef.current;
-        map.current.setZoom(zoom);
-        map.current.setPitch(pitch);
-        map.current.setCenter(center);
+    if (!map.current) return
+    
+    // Remove existing draw control if present
+    if (drawRef.current) {
+      try {
+        map.current.off('draw.create', updateMeasurementLabels)
+        map.current.off('draw.delete', updateMeasurementLabels)
+        map.current.off('draw.update', updateMeasurementLabels)
+        map.current.removeControl(drawRef.current)
+        drawRef.current = null
+        
+        // Clean up any existing labels
+        Object.values(polygonLabelsRef.current).forEach(marker => marker.remove())
+        Object.values(lineLabelsRef.current).forEach(marker => marker.remove())
+        polygonLabelsRef.current = {}
+        lineLabelsRef.current = {}
+      } catch (e) {
+        console.log('Error removing draw control:', e)
       }
-    }, 150);
-
-    // Restore previous drawings if they exist.
-    if (drawingFeatures.current) {
-      drawRef.current.set(drawingFeatures.current);
-      // Update labels after restoring features.
-      setTimeout(updateMeasurementLabels, 100);
     }
-  }, [updateMeasurementLabels]);
+    
+    // Create new draw control with both polygon and line tools
+    drawRef.current = new MapboxDraw({
+      displayControlsDefault: false,
+      controls: {
+        polygon: true,
+        trash: true,
+        line_string: true
+      },
+      // Start in polygon mode by default
+      defaultMode: 'draw_polygon'
+    })
+    
+    // Add control to map
+    map.current.addControl(drawRef.current, 'top-right')
+    
+    // Set up event listeners for measurements
+    map.current.on('draw.create', updateMeasurementLabels)
+    map.current.on('draw.delete', updateMeasurementLabels)
+    map.current.on('draw.update', updateMeasurementLabels)
+    
+    // Restore previous drawings if they exist
+    if (drawingFeatures.current && drawingFeatures.current.features.length > 0) {
+      // Add each feature back to the draw tool
+      drawingFeatures.current.features.forEach((feature: any) => {
+        drawRef.current?.add(feature)
+      })
+      
+      // Update labels after restoring features
+      setTimeout(updateMeasurementLabels, 100)
+    }
+  }, [updateMeasurementLabels])
 
   // Set up geolocation watcher
   const setupGeolocationWatcher = useCallback(() => {
@@ -329,27 +355,25 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         // If switching to drawing mode, setup drawing tools
         setupDrawingTools()
       } else {
-        // If switching from drawing mode, remove the control but keep the instance.
+        // If switching from drawing mode, remove drawing tools but save features
         if (drawRef.current) {
+          // Save current drawings before removing control
+          drawingFeatures.current = drawRef.current.getAll()
+          
           try {
-            // Save current drawings before removing control
-            drawingFeatures.current = drawRef.current.getAll();
-
-            // Detach event listeners
-            map.current.off('draw.create', updateMeasurementLabels);
-            map.current.off('draw.delete', updateMeasurementLabels);
-            map.current.off('draw.update', updateMeasurementLabels);
-
-            map.current.removeControl(drawRef.current);
+            map.current.off('draw.create', updateMeasurementLabels)
+            map.current.off('draw.delete', updateMeasurementLabels)
+            map.current.off('draw.update', updateMeasurementLabels)
+            map.current.removeControl(drawRef.current)
+            drawRef.current = null
             
             // Clean up any existing labels
-            Object.values(polygonLabelsRef.current).forEach(marker => marker.remove());
-            Object.values(lineLabelsRef.current).forEach(marker => marker.remove());
-            polygonLabelsRef.current = {};
-            lineLabelsRef.current = {};
+            Object.values(polygonLabelsRef.current).forEach(marker => marker.remove())
+            Object.values(lineLabelsRef.current).forEach(marker => marker.remove())
+            polygonLabelsRef.current = {}
+            lineLabelsRef.current = {}
           } catch (e) {
-            // This can happen if the control is already removed, which is fine.
-            console.log('Could not remove draw control:', e);
+            console.log('Error removing draw control:', e)
           }
         }
       }
@@ -371,12 +395,11 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         initialZoom = 1.3;
       }
 
-      currentMapCenterRef.current.zoom = initialZoom;
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/satellite-streets-v12',
         center: currentMapCenterRef.current.center,
-        zoom: initialZoom,
+        zoom: currentMapCenterRef.current.zoom,
         pitch: currentMapCenterRef.current.pitch,
         bearing: 0,
         maxZoom: 22,
@@ -416,17 +439,6 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
           },
         })
 
-        // Create the drawing tool instance once and store it in a ref.
-        drawRef.current = new MapboxDraw({
-          displayControlsDefault: false,
-          controls: {
-            polygon: true,
-            trash: true,
-            line_string: true
-          },
-          defaultMode: 'draw_polygon'
-        });
-
         // Initialize drawing tools based on initial mode
         if (mapType === MapToggleEnum.DrawingMode) {
           setupDrawingTools()
@@ -446,7 +458,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     return () => {
       if (map.current) {
         map.current.off('moveend', captureMapCenter)
-
+        
         if (drawRef.current) {
           try {
             map.current.off('draw.create', updateMeasurementLabels)
@@ -457,30 +469,30 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
             console.log('Draw control already removed')
           }
         }
-
+        
         // Clean up any existing labels
         Object.values(polygonLabelsRef.current).forEach(marker => marker.remove())
         Object.values(lineLabelsRef.current).forEach(marker => marker.remove())
-
+        
         stopRotation()
         setIsMapLoaded(false) // Reset map loaded state on cleanup
         map.current.remove()
         map.current = null
       }
-
+      
       if (geolocationWatchIdRef.current !== null) {
         navigator.geolocation.clearWatch(geolocationWatchIdRef.current)
         geolocationWatchIdRef.current = null
       }
     }
   }, [
-    handleUserInteraction,
-    startRotation,
-    stopRotation,
-    mapType,
-    updateMeasurementLabels,
-    setupGeolocationWatcher,
-    captureMapCenter,
+    handleUserInteraction, 
+    startRotation, 
+    stopRotation, 
+    mapType, 
+    updateMeasurementLabels, 
+    setupGeolocationWatcher, 
+    captureMapCenter, 
     setupDrawingTools,
     setIsMapLoaded // Added missing dependency
   ])
