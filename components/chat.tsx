@@ -75,16 +75,12 @@ export function Chat({ id }: ChatProps) {
   if (isMobile) {
     return (
       <MapDataProvider> {/* Add Provider */}
+        {/* The order of components here is critical for mobile layout.
+            Using a flex column, the .mobile-chat-messages-area is set to flex: 1
+            which allows it to take up the remaining space. The other components
+            have fixed heights, so for the chat area to scroll properly, it must
+            be rendered before the fixed-height elements. */}
         <div className="mobile-layout-container">
-          <div className="mobile-map-section">
-            {activeView ? <SettingsView /> : <Mapbox />}
-          </div>
-          <div className="mobile-icons-bar">
-            <MobileIconsBar />
-          </div>
-          <div className="mobile-chat-input-area">
-            <ChatPanel messages={messages} input={input} setInput={setInput} />
-          </div>
           <div className="mobile-chat-messages-area">
             {showEmptyScreen ? (
               <EmptyScreen
@@ -95,6 +91,15 @@ export function Chat({ id }: ChatProps) {
             ) : (
               <ChatMessages messages={messages} />
             )}
+          </div>
+          <div className="mobile-chat-input-area">
+            <ChatPanel messages={messages} input={input} setInput={setInput} />
+          </div>
+          <div className="mobile-icons-bar">
+            <MobileIconsBar />
+          </div>
+          <div className="mobile-map-section">
+            {activeView ? <SettingsView /> : <Mapbox />}
           </div>
         </div>
       </MapDataProvider>
