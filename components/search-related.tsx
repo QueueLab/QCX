@@ -43,7 +43,7 @@ export const SearchRelated: React.FC<SearchRelatedProps> = ({
 
     const userMessage = {
       id: Date.now(),
-      component: <UserMessage message={query} />
+      component: <UserMessage content={query} />
     }
 
     // Removed mcp argument from submit call

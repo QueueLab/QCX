@@ -494,7 +494,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     setupGeolocationWatcher, 
     captureMapCenter, 
     setupDrawingTools,
-    setIsMapLoaded // Added missing dependency
+    setIsMapLoaded
   ])
 
   // Handle position updates from props
