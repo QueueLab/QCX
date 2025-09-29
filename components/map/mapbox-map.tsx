@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useCallback } from 'react' // Removed useState
+import { useEffect, useRef, useCallback, useState } from 'react'
 import mapboxgl from 'mapbox-gl'
 import MapboxDraw from '@mapbox/mapbox-gl-draw'
 import * as turf from '@turf/turf'
@@ -11,6 +11,7 @@ import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css'
 import { useMapToggle, MapToggleEnum } from '../map-toggle-context'
 import { useMapData } from './map-data-context'; // Add this import
 import { useMapLoading } from '../map-loading-context'; // Import useMapLoading
+import { getSensors, Sensor } from '@/lib/sensors';
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN as string;
 
@@ -32,6 +33,9 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   const { mapData, setMapData } = useMapData(); // Consume the new context, get setMapData
   const { setIsMapLoaded } = useMapLoading(); // Get setIsMapLoaded from context
   const previousMapTypeRef = useRef<MapToggleEnum | null>(null)
+  const [sensors, setSensors] = useState<Sensor[]>([]);
+  const sensorMarkersRef = useRef<{ [id: string]: mapboxgl.Marker }>({});
+
 
   // Refs for long-press functionality
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -503,6 +507,58 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
       updateMapPosition(position.latitude, position.longitude)
     }
   }, [position, updateMapPosition, mapType])
+
+  useEffect(() => {
+    if (mapType === MapToggleEnum.SensorMode) {
+      const fetchSensors = async () => {
+        try {
+          const windyResponse = await getSensors();
+          setSensors(windyResponse.webcams);
+        } catch (error) {
+          console.error('Error fetching sensors:', error);
+          toast.error('Failed to fetch sensors.');
+        }
+      };
+      fetchSensors();
+    } else {
+      // Clear sensors and markers when not in SensorMode
+      setSensors([]);
+      Object.values(sensorMarkersRef.current).forEach(marker => marker.remove());
+      sensorMarkersRef.current = {};
+    }
+  }, [mapType]);
+
+  useEffect(() => {
+    if (map.current && mapType === MapToggleEnum.SensorMode) {
+      // Clear existing markers
+      Object.values(sensorMarkersRef.current).forEach(marker => marker.remove());
+      sensorMarkersRef.current = {};
+
+      sensors.forEach(sensor => {
+        const el = document.createElement('div');
+        el.className = 'sensor-marker';
+        el.style.width = '30px';
+        el.style.height = '30px';
+        el.style.borderRadius = '50%';
+        el.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+        el.style.color = 'white';
+        el.style.display = 'flex';
+        el.style.justifyContent = 'center';
+        el.style.alignItems = 'center';
+        el.style.cursor = 'pointer';
+        el.innerHTML = '&#8599;';
+
+        const marker = new mapboxgl.Marker(el)
+          .setLngLat([sensor.location.longitude, sensor.location.latitude])
+          .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(
+            `<a href="${sensor.urls.webcam}" target="_blank" rel="noopener noreferrer"><h3>${sensor.title}</h3><img src="${sensor.images.current.preview}" alt="${sensor.title}" style="width:100%;" /></a>`
+          ))
+          .addTo(map.current!);
+
+        sensorMarkersRef.current[sensor.id] = marker;
+      });
+    }
+  }, [sensors, mapType]);
 
   // Effect to handle map updates from MapDataContext
   useEffect(() => {
