@@ -6,9 +6,11 @@ import { ChatPanel } from './chat-panel'
 import { ChatMessages } from './chat-messages'
 import { EmptyScreen } from './empty-screen'
 import { Mapbox } from './map/mapbox-map'
-import { useUIState, useAIState } from 'ai/rsc'
+import { useUIState, useAIState, useActions } from 'ai/rsc'
+import { nanoid } from 'nanoid'
+import { UserMessage } from './user-message'
 import MobileIconsBar from './mobile-icons-bar'
-import { useProfileToggle, ProfileToggleEnum } from "@/components/profile-toggle-context";
+import { useProfileToggle, ProfileToggleEnum } from '@/components/profile-toggle-context'
 import SettingsView from "@/components/settings/settings-view";
 import { MapDataProvider, useMapData } from './map/map-data-context'; // Add this and useMapData
 import { updateDrawingContext } from '@/lib/actions/chat'; // Import the server action
@@ -20,12 +22,14 @@ type ChatProps = {
 export function Chat({ id }: ChatProps) {
   const router = useRouter()
   const path = usePathname()
-  const [messages] = useUIState()
+  const [messages, setMessages] = useUIState()
   const [aiState] = useAIState()
+  const { submit } = useActions()
   const [isMobile, setIsMobile] = useState(false)
-  const { activeView } = useProfileToggle();
+  const { activeView } = useProfileToggle()
   const [input, setInput] = useState('')
   const [showEmptyScreen, setShowEmptyScreen] = useState(false)
+  const [isInputFocused, setIsInputFocused] = useState(false)
   
   useEffect(() => {
     setShowEmptyScreen(messages.length === 0)
@@ -83,13 +87,30 @@ export function Chat({ id }: ChatProps) {
             <MobileIconsBar />
           </div>
           <div className="mobile-chat-input-area">
-            <ChatPanel messages={messages} input={input} setInput={setInput} />
+            <ChatPanel
+              messages={messages}
+              input={input}
+              setInput={setInput}
+              onFocus={() => setIsInputFocused(true)}
+            />
           </div>
           <div className="mobile-chat-messages-area">
             {showEmptyScreen ? (
               <EmptyScreen
-                submitMessage={message => {
-                  setInput(message)
+                isInputFocused={isInputFocused}
+                submitMessage={async (message: string) => {
+                  setMessages(currentMessages => [
+                    ...currentMessages,
+                    {
+                      id: nanoid(),
+                      component: <UserMessage message={message} />
+                    }
+                  ])
+                  const responseMessage = await submit(message)
+                  setMessages(currentMessages => [
+                    ...currentMessages,
+                    responseMessage as any
+                  ])
                 }}
               />
             ) : (
@@ -98,20 +119,40 @@ export function Chat({ id }: ChatProps) {
           </div>
         </div>
       </MapDataProvider>
-    );
+    )
   }
-  
+
   // Desktop layout
   return (
-    <MapDataProvider> {/* Add Provider */}
+    <MapDataProvider>
+      {' '}
+      {/* Add Provider */}
       <div className="flex justify-start items-start">
         {/* This is the new div for scrolling */}
         <div className="w-1/2 flex flex-col space-y-3 md:space-y-4 px-8 sm:px-12 pt-12 md:pt-14 pb-4 h-[calc(100vh-0.5in)] overflow-y-auto">
-          <ChatPanel messages={messages} input={input} setInput={setInput} />
+          <ChatPanel
+            messages={messages}
+            input={input}
+            setInput={setInput}
+            onFocus={() => setIsInputFocused(true)}
+          />
           {showEmptyScreen ? (
             <EmptyScreen
-              submitMessage={message => {
-                setInput(message)
+              isInputFocused={isInputFocused}
+              submitMessage={async (message: string) => {
+                setMessages(currentMessages => [
+                  ...currentMessages,
+                  {
+                    id: nanoid(),
+                    component: <UserMessage message={message} />
+                  }
+                ])
+
+                const responseMessage = await submit(message)
+                setMessages(currentMessages => [
+                  ...currentMessages,
+                  responseMessage as any
+                ])
               }}
             />
           ) : (
@@ -126,5 +167,5 @@ export function Chat({ id }: ChatProps) {
         </div>
       </div>
     </MapDataProvider>
-  );
+  )
 }

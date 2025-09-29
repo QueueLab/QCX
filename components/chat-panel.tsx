@@ -15,9 +15,15 @@ interface ChatPanelProps {
   messages: UIState
   input: string
   setInput: (value: string) => void
+  onFocus: () => void
 }
 
-export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
+export function ChatPanel({
+  messages,
+  input,
+  setInput,
+  onFocus
+}: ChatPanelProps) {
   const [, setMessages] = useUIState<typeof AI>()
   const { submit, clearChat } = useActions()
   // Removed mcp instance as it's no longer passed to submit
@@ -121,6 +127,7 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
             onChange={e => {
               setInput(e.target.value)
             }}
+            onFocus={onFocus}
             onKeyDown={e => {
               if (
                 e.key === 'Enter' &&
