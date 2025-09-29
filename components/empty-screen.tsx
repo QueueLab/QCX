@@ -8,8 +8,8 @@ const exampleMessages = [
     icon: Globe
   },
   {
-    heading: 'Does the climate affect our experience?',
-    message: 'Does the climate affect our experience?',
+    heading: 'How does the climate affect our experience?',
+    message: 'How does the climate affect our experience?',
     icon: Thermometer
   },
   {
