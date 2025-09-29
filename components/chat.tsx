@@ -107,9 +107,16 @@ export function Chat({ id }: ChatProps) {
       <div className="flex justify-start items-start">
         {/* This is the new div for scrolling */}
         <div className="w-1/2 flex flex-col space-y-3 md:space-y-4 px-8 sm:px-12 pt-12 md:pt-14 pb-4 h-[calc(100vh-0.5in)] overflow-y-auto">
-          {/* TODO: Add EmptyScreen for desktop if needed */}
-          <ChatMessages messages={messages} />
           <ChatPanel messages={messages} input={input} setInput={setInput} />
+          {showEmptyScreen ? (
+            <EmptyScreen
+              submitMessage={message => {
+                setInput(message)
+              }}
+            />
+          ) : (
+            <ChatMessages messages={messages} />
+          )}
         </div>
         <div
           className="w-1/2 p-4 fixed h-[calc(100vh-0.5in)] top-0 right-0 mt-[0.5in]"
