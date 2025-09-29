@@ -33,15 +33,71 @@ type RelatedQueries = {
 
 // Removed mcp parameter from submit, as geospatialTool now handles its client.
 async function submit(formData?: FormData, skip?: boolean) {
-'use server';
-
-  // TODO: Update agent function signatures in lib/agents/researcher.tsx and lib/agents/writer.tsx
-  // to accept currentSystemPrompt as the first argument.
+  'use server';
 
   const aiState = getMutableAIState<typeof AI>();
   const uiStream = createStreamableUI();
   const isGenerating = createStreamableValue(true);
   const isCollapsed = createStreamableValue(false);
+
+  const userInput = skip
+    ? `{"action": "skip"}`
+    : (formData?.get('input') as string);
+
+  if (userInput.toLowerCase().trim() === 'what is a planet computer?') {
+    const definition = "A planet computer is a proprietary environment aware system that interoperates Climate forecasting, mapping and scheduling using cutting edge multi-agents to streamline automation and exploration on a planet";
+
+    const content = JSON.stringify(Object.fromEntries(formData!));
+    const type = 'input';
+
+    aiState.update({
+      ...aiState.get(),
+      messages: [
+        ...aiState.get().messages,
+        {
+          id: nanoid(),
+          role: 'user',
+          content,
+          type,
+        },
+      ],
+    });
+
+    const answerSection = (
+      <Section title="response">
+        <BotMessage content={definition} />
+      </Section>
+    );
+
+    uiStream.append(answerSection);
+
+    aiState.done({
+      ...aiState.get(),
+      messages: [
+        ...aiState.get().messages,
+        {
+          id: nanoid(),
+          role: 'assistant',
+          content: definition,
+          type: 'response',
+        },
+      ],
+    });
+
+    isGenerating.done(false);
+    uiStream.done();
+
+    return {
+      id: nanoid(),
+      isGenerating: isGenerating.value,
+      component: uiStream.value,
+      isCollapsed: isCollapsed.value,
+    };
+  }
+
+  // TODO: Update agent function signatures in lib/agents/researcher.tsx and lib/agents/writer.tsx
+  // to accept currentSystemPrompt as the first argument.
+
   // Get the messages from the state, filter out the tool messages
   const messages: CoreMessage[] = [...(aiState.get().messages as any[])].filter(
     (message) =>
@@ -59,9 +115,6 @@ async function submit(formData?: FormData, skip?: boolean) {
   // Limit the number of messages to the maximum
   messages.splice(0, Math.max(messages.length - maxMessages, 0));
   // Get the user input from the form data
-  const userInput = skip
-    ? `{"action": "skip"}`
-    : (formData?.get('input') as string);
 
   const content = skip
     ? userInput
