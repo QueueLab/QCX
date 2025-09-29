@@ -1,26 +1,26 @@
 import { Button } from '@/components/ui/button';
-import { TreePine, Sun ,Rocket, Moon} from 'lucide-react';
+import { Globe, Thermometer, Laptop, HelpCircle } from 'lucide-react';
 
 const exampleMessages = [
   {
-    heading: 'What are the best nature parks here?',
-    message: 'What are the best nature parks here?',
-    icon: TreePine
+    heading: 'What is a planet computer?',
+    message: 'What is a planet computer?',
+    icon: Globe
   },
   {
-    heading: 'Plan me a trip in the tropics',
-    message: 'Plan me a trip in the tropics',
-    icon: Sun
+    heading: 'How does climate change affect our experience?',
+    message: 'How does climate change affect our experience?',
+    icon: Thermometer
   },
   {
-    heading: 'When is the next lunar eclipse?',
-    message: 'When is the next lunar eclipse?',
-    icon: Moon,
+    heading: 'What is QCX-Terra?',
+    message: 'What is QCX-Terra?',
+    icon: Laptop,
   },
   {
-    heading: 'How far is Mars?',
-    message: 'How far is Mars?',
-    icon: Rocket,
+    heading: 'How do I use the computer?',
+    message: 'How do I use the computer?',
+    icon: HelpCircle,
   },
 ];
 
