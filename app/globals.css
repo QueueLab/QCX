@@ -76,7 +76,6 @@
     margin: 0;
     padding: 0;
     height: 100vh;
-    overflow: hidden;
   }
 }
 
@@ -158,6 +157,7 @@
     background-color: hsl(var(--card));
     color: hsl(var(--card-foreground));
     box-sizing: border-box;
+    min-height: 0;
   }
 
   .mobile-chat-input-area {
