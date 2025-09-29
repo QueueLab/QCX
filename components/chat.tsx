@@ -3,9 +3,8 @@
 import { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { ChatPanel } from './chat-panel'
-import { ChatMessages } from './chat-messages'
-import { EmptyScreen } from './empty-screen'
 import { Mapbox } from './map/mapbox-map'
+import { ConditionalChatMessages } from './conditional-chat-messages'
 import { useUIState, useAIState } from 'ai/rsc'
 import MobileIconsBar from './mobile-icons-bar'
 import { useProfileToggle, ProfileToggleEnum } from "@/components/profile-toggle-context";
@@ -86,15 +85,11 @@ export function Chat({ id }: ChatProps) {
             <ChatPanel messages={messages} input={input} setInput={setInput} />
           </div>
           <div className="mobile-chat-messages-area">
-            {showEmptyScreen ? (
-              <EmptyScreen
-                submitMessage={message => {
-                  setInput(message)
-                }}
-              />
-            ) : (
-              <ChatMessages messages={messages} />
-            )}
+            <ConditionalChatMessages
+              messages={messages}
+              showEmptyScreen={showEmptyScreen}
+              setInput={setInput}
+            />
           </div>
         </div>
       </MapDataProvider>
@@ -107,8 +102,11 @@ export function Chat({ id }: ChatProps) {
       <div className="flex justify-start items-start">
         {/* This is the new div for scrolling */}
         <div className="w-1/2 flex flex-col space-y-3 md:space-y-4 px-8 sm:px-12 pt-12 md:pt-14 pb-4 h-[calc(100vh-0.5in)] overflow-y-auto">
-          {/* TODO: Add EmptyScreen for desktop if needed */}
-          <ChatMessages messages={messages} />
+          <ConditionalChatMessages
+            messages={messages}
+            showEmptyScreen={showEmptyScreen}
+            setInput={setInput}
+          />
           <ChatPanel messages={messages} input={input} setInput={setInput} />
         </div>
         <div
