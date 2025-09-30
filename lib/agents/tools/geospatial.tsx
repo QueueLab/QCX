@@ -280,7 +280,7 @@ Uses the Mapbox Search Box Text Search API endpoint to power searching for and g
       while (retryCount < MAX_RETRIES) {
         try {
           toolCallResult = await Promise.race([
-            mcpClient.callTool({ name: toolName, arguments: toolArgs }),
+            mcpClient.callTool({ name: toolName ?? 'unknown_tool', arguments: toolArgs }),
             new Promise((_, reject) => setTimeout(() => reject(new Error('Tool call timeout')), 30000)),
           ]);
           break;
