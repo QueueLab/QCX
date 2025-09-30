@@ -9,6 +9,7 @@ import { Mapbox } from './map/mapbox-map'
 import { useUIState, useAIState, useActions } from 'ai/rsc'
 import { UserMessage } from './user-message'
 import { nanoid } from 'nanoid'
+import { UIState } from '@/app/actions'
 import MobileIconsBar from './mobile-icons-bar'
 import { useProfileToggle, ProfileToggleEnum } from "@/components/profile-toggle-context";
 import SettingsView from "@/components/settings/settings-view";
@@ -31,7 +32,7 @@ export function Chat({ id }: ChatProps) {
   const [isInputFocused, setIsInputFocused] = useState(false)
 
   const submitExampleMessage = async (message: string) => {
-    setMessages(currentMessages => [
+    setMessages((currentMessages: UIState) => [
       ...currentMessages,
       {
         id: nanoid(),
@@ -41,7 +42,7 @@ export function Chat({ id }: ChatProps) {
 
     const responseMessage = await submit(message)
 
-    setMessages(currentMessages => [...currentMessages, responseMessage as any])
+    setMessages((currentMessages: UIState) => [...currentMessages, responseMessage as any])
   }
 
   useEffect(() => {
