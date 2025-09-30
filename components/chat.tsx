@@ -6,7 +6,9 @@ import { ChatPanel } from './chat-panel'
 import { ChatMessages } from './chat-messages'
 import { EmptyScreen } from './empty-screen'
 import { Mapbox } from './map/mapbox-map'
-import { useUIState, useAIState } from 'ai/rsc'
+import { useUIState, useAIState, useStreamableValue, type StreamableValue } from 'ai/rsc'
+import { useIsLoading } from '@/components/is-loading-provider'
+import type { UIState } from '@/app/actions'
 import MobileIconsBar from './mobile-icons-bar'
 import { useProfileToggle, ProfileToggleEnum } from "@/components/profile-toggle-context";
 import SettingsView from "@/components/settings/settings-view";
@@ -15,6 +17,19 @@ import { updateDrawingContext } from '@/lib/actions/chat'; // Import the server 
 
 type ChatProps = {
   id?: string // This is the chatId
+}
+
+function LoadingStateUpdater({ messages }: { messages: UIState }) {
+  const { setIsLoading } = useIsLoading();
+  const lastMessage = messages[messages.length - 1];
+  const isGenerating = lastMessage?.isGenerating;
+  const [loading] = useStreamableValue(isGenerating);
+
+  useEffect(() => {
+    setIsLoading(loading || false);
+  }, [loading, setIsLoading]);
+
+  return null;
 }
 
 export function Chat({ id }: ChatProps) {
@@ -75,6 +90,7 @@ export function Chat({ id }: ChatProps) {
   if (isMobile) {
     return (
       <MapDataProvider> {/* Add Provider */}
+        <LoadingStateUpdater messages={messages} />
         <div className="mobile-layout-container">
           <div className="mobile-map-section">
             {activeView ? <SettingsView /> : <Mapbox />}
@@ -104,6 +120,7 @@ export function Chat({ id }: ChatProps) {
   // Desktop layout
   return (
     <MapDataProvider> {/* Add Provider */}
+      <LoadingStateUpdater messages={messages} />
       <div className="flex justify-start items-start">
         {/* This is the new div for scrolling */}
         <div className="w-1/2 flex flex-col space-y-3 md:space-y-4 px-8 sm:px-12 pt-12 md:pt-14 pb-4 h-[calc(100vh-0.5in)] overflow-y-auto">

@@ -12,6 +12,7 @@ import { Toaster } from '@/components/ui/sonner'
 import { MapToggleProvider } from '@/components/map-toggle-context'
 import { ProfileToggleProvider } from '@/components/profile-toggle-context'
 import { MapLoadingProvider } from '@/components/map-loading-context';
+import { IsLoadingProvider } from '@/components/is-loading-provider';
 import ConditionalLottie from '@/components/conditional-lottie';
 
 const fontSans = FontSans({
@@ -54,26 +55,28 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={cn('font-sans antialiased', fontSans.variable)}>
-        <MapToggleProvider>
-          <ProfileToggleProvider>
-            <ThemeProvider
-              attribute="class"
-              defaultTheme="earth"
-              enableSystem
-              disableTransitionOnChange
-              themes={['light', 'dark', 'earth']}
-            >
-              <MapLoadingProvider>
-                <Header />
-                <ConditionalLottie />
-                {children}
-                <Sidebar />
-                <Footer />
-                <Toaster />
-              </MapLoadingProvider>
-            </ThemeProvider>
-          </ProfileToggleProvider>
-        </MapToggleProvider>
+        <IsLoadingProvider>
+          <MapToggleProvider>
+            <ProfileToggleProvider>
+              <ThemeProvider
+                attribute="class"
+                defaultTheme="earth"
+                enableSystem
+                disableTransitionOnChange
+                themes={['light', 'dark', 'earth']}
+              >
+                <MapLoadingProvider>
+                  <Header />
+                  <ConditionalLottie />
+                  {children}
+                  <Sidebar />
+                  <Footer />
+                  <Toaster />
+                </MapLoadingProvider>
+              </ThemeProvider>
+            </ProfileToggleProvider>
+          </MapToggleProvider>
+        </IsLoadingProvider>
         <Analytics />
         <SpeedInsights />
       </body>

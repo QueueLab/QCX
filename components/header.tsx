@@ -1,5 +1,6 @@
 import React from 'react'
 import Image from 'next/image'
+import { useIsLoading } from './is-loading-provider'
 import { ModeToggle } from './mode-toggle'
 import { cn } from '@/lib/utils'
 import HistoryContainer from './history-container'
@@ -15,6 +16,8 @@ import { MapToggle } from './map-toggle'
 import { ProfileToggle } from './profile-toggle'
 
 export const Header = () => {
+  const { isLoading } = useIsLoading()
+
   return (
     <header className="fixed w-full p-1 md:p-2 flex justify-between items-center z-10 backdrop-blur md:backdrop-blur-none bg-background/80 md:bg-transparent">
       <div>
@@ -25,7 +28,15 @@ export const Header = () => {
       
       <div className="absolute left-1">
         <Button variant="ghost" size="icon">
-          <Image src="/images/logo.svg" alt="Logo" width={24} height={24} className="h-6 w-auto" />
+          <Image
+            src="/images/logo.svg"
+            alt="Logo"
+            width={24}
+            height={24}
+            className={cn('h-6 w-auto', {
+              'animate-spin-counter-clockwise': isLoading
+            })}
+          />
         </Button>
       </div>
       
