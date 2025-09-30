@@ -74,15 +74,30 @@ async function submit(formData?: FormData, skip?: boolean) {
 
     uiStream.append(answerSection);
 
+    const groupeId = nanoid();
+    const relatedQueries = { items: [] };
+
     aiState.done({
       ...aiState.get(),
       messages: [
         ...aiState.get().messages,
         {
-          id: nanoid(),
+          id: groupeId,
           role: 'assistant',
           content: definition,
           type: 'response',
+        },
+        {
+          id: groupeId,
+          role: 'assistant',
+          content: JSON.stringify(relatedQueries),
+          type: 'related',
+        },
+        {
+          id: groupeId,
+          role: 'assistant',
+          content: 'followup',
+          type: 'followup',
         },
       ],
     });
