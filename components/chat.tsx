@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { ChatPanel } from './chat-panel'
+import { ChatPanel, ChatPanelRef } from './chat-panel'
 import { ChatMessages } from './chat-messages'
 import { EmptyScreen } from './empty-screen'
 import { Mapbox } from './map/mapbox-map'
@@ -26,6 +26,11 @@ export function Chat({ id }: ChatProps) {
   const { activeView } = useProfileToggle();
   const [input, setInput] = useState('')
   const [showEmptyScreen, setShowEmptyScreen] = useState(false)
+  const chatPanelRef = useRef<ChatPanelRef>(null);
+
+  const handleAttachment = () => {
+    chatPanelRef.current?.handleAttachmentClick();
+  };
   
   useEffect(() => {
     setShowEmptyScreen(messages.length === 0)
@@ -80,10 +85,10 @@ export function Chat({ id }: ChatProps) {
             {activeView ? <SettingsView /> : <Mapbox />}
           </div>
           <div className="mobile-icons-bar">
-            <MobileIconsBar />
+            <MobileIconsBar onAttachmentClick={handleAttachment} />
           </div>
           <div className="mobile-chat-input-area">
-            <ChatPanel messages={messages} input={input} setInput={setInput} />
+            <ChatPanel ref={chatPanelRef} messages={messages} input={input} setInput={setInput} />
           </div>
           <div className="mobile-chat-messages-area">
             {showEmptyScreen ? (

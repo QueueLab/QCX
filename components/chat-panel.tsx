@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef, ChangeEvent } from 'react'
+import { useEffect, useState, useRef, ChangeEvent, forwardRef, useImperativeHandle } from 'react'
 import type { AI, UIState } from '@/app/actions'
 import { useUIState, useActions } from 'ai/rsc'
 // Removed import of useGeospatialToolMcp as it's no longer used/available
@@ -17,7 +17,11 @@ interface ChatPanelProps {
   setInput: (value: string) => void
 }
 
-export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
+export interface ChatPanelRef {
+  handleAttachmentClick: () => void;
+}
+
+export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, input, setInput }, ref) => {
   const [, setMessages] = useUIState<typeof AI>()
   const { submit, clearChat } = useActions()
   // Removed mcp instance as it's no longer passed to submit
@@ -26,6 +30,12 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useImperativeHandle(ref, () => ({
+    handleAttachmentClick() {
+      fileInputRef.current?.click()
+    }
+  }));
 
   // Detect mobile layout
   useEffect(() => {
@@ -243,4 +253,5 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
       </form>
     </div>
   )
-}
+})
+ChatPanel.displayName = 'ChatPanel'
