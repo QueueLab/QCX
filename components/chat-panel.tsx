@@ -172,6 +172,19 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
             className="hidden"
             accept="text/plain,image/png,image/jpeg,image/webp"
           />
+          {!isMobile && (
+            <Button
+              type="button"
+              variant={'ghost'}
+              size={'icon'}
+              className={cn(
+                'absolute top-1/2 transform -translate-y-1/2 left-3'
+              )}
+              onClick={handleAttachmentClick}
+            >
+              <Paperclip size={isMobile ? 18 : 20} />
+            </Button>
+          )}
           <Textarea
             ref={inputRef}
             name="input"
@@ -182,10 +195,10 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
             spellCheck={false}
             value={input}
             className={cn(
-              'resize-none w-full min-h-12 rounded-fill border border-input pl-4 pr-20 pt-3 pb-1 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+              'resize-none w-full min-h-12 rounded-fill border border-input pl-14 pr-12 pt-3 pb-1 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
               isMobile
-                ? 'mobile-chat-input input bg-background' // Use mobile input styles
-                : 'bg-muted pr-20'
+                ? 'mobile-chat-input input bg-background'
+                : 'bg-muted'
             )}
             onChange={e => {
               setInput(e.target.value)
@@ -214,20 +227,6 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
                 Math.max(8, newBorder) + 'px'
             }}
           />
-          {!isMobile && (
-            <Button
-              type="button"
-              variant={'ghost'}
-              size={'icon'}
-              className={cn(
-                'absolute top-1/2 transform -translate-y-1/2',
-                isMobile ? 'right-8' : 'right-10'
-              )}
-              onClick={handleAttachmentClick}
-            >
-              <Paperclip size={isMobile ? 18 : 20} />
-            </Button>
-          )}
           <Button
             type="submit"
             size={'icon'}
