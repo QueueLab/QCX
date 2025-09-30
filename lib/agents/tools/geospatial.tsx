@@ -52,9 +52,15 @@ async function getConnectedMcpClient(): Promise<McpClient | null> {
   // Load config from file or fallback
   let config;
   try {
-    const mapboxMcpConfig = await import('QCX/mapbox_mcp_config.json');
-    config = { ...mapboxMcpConfig.default || mapboxMcpConfig, mapboxAccessToken };
-    console.log('[GeospatialTool] Config loaded successfully');
+    // Use static import for config
+    let mapboxMcpConfig;
+    try {
+      mapboxMcpConfig = require('../../../mapbox_mcp_config.json');
+      config = { ...mapboxMcpConfig, mapboxAccessToken };
+      console.log('[GeospatialTool] Config loaded successfully');
+    } catch (configError: any) {
+      throw configError;
+    }
   } catch (configError: any) {
     console.error('[GeospatialTool] Failed to load mapbox config:', configError.message);
     config = { mapboxAccessToken, version: '1.0.0', name: 'mapbox-mcp-server' };
@@ -63,7 +69,7 @@ async function getConnectedMcpClient(): Promise<McpClient | null> {
 
   // Build Smithery URL
   const smitheryUrlOptions = { config, apiKey, profileId };
-  const mcpServerBaseUrl = `https://server.smithery.ai/@ngoiyaeric/mapbox-mcp-server/mcp?api_key=${smitheryUrlOptions.apiKey}&profile=${smitheryUrlOptions.profileId}`;
+  const mcpServerBaseUrl = `https://server.smithery.ai/@Waldzell-Agentics/mcp-server/mcp?api_key=${smitheryUrlOptions.apiKey}&profile=${smitheryUrlOptions.profileId}`;
   let serverUrlToUse;
   try {
     serverUrlToUse = createSmitheryUrl(mcpServerBaseUrl, smitheryUrlOptions);
@@ -142,13 +148,74 @@ async function closeClient(client: McpClient | null) {
  * Main geospatial tool executor.
  */
 export const geospatialTool = ({ uiStream }: { uiStream: ReturnType<typeof createStreamableUI> }) => ({
-  description: `Use this tool for location-based queries including:
-- Finding specific places, addresses, or landmarks
-- Getting coordinates for locations
-- Distance calculations between places
-- Direction queries
-- Map-related requests
-- Geographic information lookup`,
+  description: `Use this tool for location-based queries including: 
+  There a plethora of tools inside this tool accessible on the mapbox mcp server where switch case into the tool of choice for that use case
+  If the Query is supposed to use multiple tools in a sequence you must access all the tools in the sequence and then provide a final answer based on the results of all the tools used. 
+
+Static image tool:
+
+Generates static map images using the Mapbox static image API. Features include:
+
+Custom map styles (streets, outdoors, satellite, etc.)
+Adjustable image dimensions and zoom levels
+Support for multiple markers with custom colors and labels
+Overlay options including polylines and polygons
+Auto-fitting to specified coordinates
+
+Category search tool:
+
+Performs a category search using the Mapbox Search Box category search API. Features include:
+Search for points of interest by category (restaurants, hotels, gas stations, etc.)
+Filtering by geographic proximity
+Customizable result limits
+Rich metadata for each result
+Support for multiple languages
+
+Reverse geocoding tool: 
+
+Performs reverse geocoding using the Mapbox geocoding V6 API. Features include:
+Convert geographic coordinates to human-readable addresses
+Customizable levels of detail (street, neighborhood, city, etc.)
+Results filtering by type (address, poi, neighborhood, etc.)
+Support for multiple languages
+Rich location context information
+
+Directions tool:
+
+Fetches routing directions using the Mapbox Directions API. Features include:
+
+Support for different routing profiles: driving (with live traffic or typical), walking, and cycling
+Route from multiple waypoints (2-25 coordinate pairs)
+Alternative routes option
+Route annotations (distance, duration, speed, congestion)
+
+Scheduling options:
+
+Future departure time (depart_at) for driving and driving-traffic profiles
+Desired arrival time (arrive_by) for driving profile only
+Profile-specific optimizations:
+Driving: vehicle dimension constraints (height, width, weight)
+Exclusion options for routing:
+Common exclusions: ferry routes, cash-only tolls
+Driving-specific exclusions: tolls, motorways, unpaved roads, tunnels, country borders, state borders
+Custom point exclusions (up to 50 geographic points to avoid)
+GeoJSON geometry output format
+
+Isochrone tool:
+
+Computes areas that are reachable within a specified amount of times from a location using Mapbox Isochrone API. Features include:
+
+Support for different travel profiles (driving, walking, cycling)
+Customizable travel times or distances
+Multiple contour generation (e.g., 15, 30, 45 minute ranges)
+Optional departure or arrival time specification
+Color customization for visualization
+
+Search and geocode tool:
+Uses the Mapbox Search Box Text Search API endpoint to power searching for and geocoding POIs, addresses, places, and any other types supported by that API. This tool consolidates the functionality that was previously provided by the ForwardGeocodeTool and PoiSearchTool (from earlier versions of this MCP server) into a single tool.`
+
+
+,
   parameters: geospatialQuerySchema,
   execute: async (params: z.infer<typeof geospatialQuerySchema>) => {
     const { queryType, includeMap = true } = params;
@@ -181,24 +248,25 @@ export const geospatialTool = ({ uiStream }: { uiStream: ReturnType<typeof creat
         const { tools } = await mcpClient.listTools().catch(() => ({ tools: [] }));
         const names = new Set(tools?.map((t: any) => t.name) || []);
         const prefer = (...cands: string[]) => cands.find(n => names.has(n));
+
         switch (queryType) {
-          case 'directions':
-          case 'distance': return prefer('calculate_distance', 'mapbox_matrix', 'mapbox_directions') || 'mapbox_matrix';
-          case 'search': return prefer('search_nearby_places', 'mapbox_geocoding') || 'mapbox_geocoding';
-          case 'map': return prefer('generate_map_link', 'mapbox_geocoding') || 'mapbox_geocoding';
-          case 'reverse':
-          case 'geocode': return prefer('geocode_location', 'mapbox_geocoding') || 'mapbox_geocoding';
+          case 'directions': return prefer('directions_tool') 
+          case 'distance': return prefer('matrix_tool');
+          case 'search': return prefer( 'isochrone_tool','category_search_tool') || 'poi_search_tool';
+          case 'map': return prefer('static_map_image_tool') 
+          case 'reverse': return prefer('reverse_geocode_tool');
+          case 'geocode': return prefer('forward_geocode_tool');
         }
       })();
 
       // Build arguments
       const toolArgs = (() => {
         switch (queryType) {
-          case 'directions':
+          case 'directions': return { waypoints: [params.origin, params.destination], includeMapPreview: includeMap, profile: params.mode };
           case 'distance': return { places: [params.origin, params.destination], includeMapPreview: includeMap, mode: params.mode || 'driving' };
           case 'reverse': return { searchText: `${params.coordinates.latitude},${params.coordinates.longitude}`, includeMapPreview: includeMap, maxResults: params.maxResults || 5 };
           case 'search': return { searchText: params.query, includeMapPreview: includeMap, maxResults: params.maxResults || 5, ...(params.coordinates && { proximity: `${params.coordinates.latitude},${params.coordinates.longitude}` }), ...(params.radius && { radius: params.radius }) };
-          case 'geocode':
+          case 'geocode': 
           case 'map': return { searchText: params.location, includeMapPreview: includeMap, maxResults: queryType === 'geocode' ? params.maxResults || 5 : undefined };
         }
       })();
@@ -212,7 +280,7 @@ export const geospatialTool = ({ uiStream }: { uiStream: ReturnType<typeof creat
       while (retryCount < MAX_RETRIES) {
         try {
           toolCallResult = await Promise.race([
-            mcpClient.callTool({ name: toolName, arguments: toolArgs }),
+            mcpClient.callTool({ name: toolName ?? 'unknown_tool', arguments: toolArgs }),
             new Promise((_, reject) => setTimeout(() => reject(new Error('Tool call timeout')), 30000)),
           ]);
           break;
