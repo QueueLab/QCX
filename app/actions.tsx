@@ -44,8 +44,10 @@ async function submit(formData?: FormData, skip?: boolean) {
     ? `{"action": "skip"}`
     : (formData?.get('input') as string);
 
-  if (userInput.toLowerCase().trim() === 'what is a planet computer?') {
-    const definition = "A planet computer is a proprietary environment aware system that interoperates Climate forecasting, mapping and scheduling using cutting edge multi-agents to streamline automation and exploration on a planet";
+  if (userInput.toLowerCase().trim() === 'what is a planet computer?' || userInput.toLowerCase().trim() === 'what is qcx-terra?') {
+    const definition = userInput.toLowerCase().trim() === 'what is a planet computer?'
+      ? "A planet computer is a proprietary environment aware system that interoperates Climate forecasting, mapping and scheduling using cutting edge multi-agents to streamline automation and exploration on a planet"
+      : "QCX-Terra is a model garden of pixel level precision geospatial foundational models for efficient land feature predictions from satellite imagery";
 
     const content = JSON.stringify(Object.fromEntries(formData!));
     const type = 'input';
