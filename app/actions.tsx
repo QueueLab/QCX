@@ -52,7 +52,80 @@ async function submit(formData?: FormData, skip?: boolean) {
   const maxMessages = useSpecificAPI ? 5 : 10
   messages.splice(0, Math.max(messages.length - maxMessages, 0))
 
-  const userInput = skip ? `{"action": "skip"}` : formData?.get('input') as string
+  const userInput = skip
+    ? `{"action": "skip"}`
+    : (formData?.get('input') as string);
+
+  if (userInput.toLowerCase().trim() === 'what is a planet computer?' || userInput.toLowerCase().trim() === 'what is qcx-terra?') {
+    const definition = userInput.toLowerCase().trim() === 'what is a planet computer?'
+      ? "A planet computer is a proprietary environment aware system that interoperates Climate forecasting, mapping and scheduling using cutting edge multi-agents to streamline automation and exploration on a planet"
+      : "QCX-Terra is a model garden of pixel level precision geospatial foundational models for efficient land feature predictions from satellite imagery";
+
+    const content = JSON.stringify(Object.fromEntries(formData!));
+    const type = 'input';
+
+    aiState.update({
+      ...aiState.get(),
+      messages: [
+        ...aiState.get().messages,
+        {
+          id: nanoid(),
+          role: 'user',
+          content,
+          type,
+        },
+      ],
+    });
+
+    const definitionStream = createStreamableValue();
+    definitionStream.done(definition);
+
+    const answerSection = (
+      <Section title="response">
+        <BotMessage content={definitionStream.value} />
+      </Section>
+    );
+
+    uiStream.append(answerSection);
+
+    const groupeId = nanoid();
+    const relatedQueries = { items: [] };
+
+    aiState.done({
+      ...aiState.get(),
+      messages: [
+        ...aiState.get().messages,
+        {
+          id: groupeId,
+          role: 'assistant',
+          content: definition,
+          type: 'response',
+        },
+        {
+          id: groupeId,
+          role: 'assistant',
+          content: JSON.stringify(relatedQueries),
+          type: 'related',
+        },
+        {
+          id: groupeId,
+          role: 'assistant',
+          content: 'followup',
+          type: 'followup',
+        },
+      ],
+    });
+
+    isGenerating.done(false);
+    uiStream.done();
+
+    return {
+      id: nanoid(),
+      isGenerating: isGenerating.value,
+      component: uiStream.value,
+      isCollapsed: isCollapsed.value,
+    };
+  }
   const file = !skip ? (formData?.get('file') as File) : undefined
 
   if (!userInput && !file) {
