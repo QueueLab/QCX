@@ -1,13 +1,13 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, ChangeEvent } from 'react'
 import type { AI, UIState } from '@/app/actions'
 import { useUIState, useActions } from 'ai/rsc'
 // Removed import of useGeospatialToolMcp as it's no longer used/available
 import { cn } from '@/lib/utils'
 import { UserMessage } from './user-message'
 import { Button } from './ui/button'
-import { ArrowRight, Plus, Paperclip } from 'lucide-react'
+import { ArrowRight, Plus, Paperclip, X } from 'lucide-react'
 import Textarea from 'react-textarea-autosize'
 import { nanoid } from 'nanoid'
 
@@ -22,8 +22,10 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
   const { submit, clearChat } = useActions()
   // Removed mcp instance as it's no longer passed to submit
   const [isMobile, setIsMobile] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Detect mobile layout
   useEffect(() => {
@@ -35,28 +37,73 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        alert('File size must be less than 10MB')
+        return
+      }
+      setSelectedFile(file)
+    }
+  }
+
+  const handleAttachmentClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  const clearAttachment = () => {
+    setSelectedFile(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    if (!input && !selectedFile) {
+      return
+    }
+
+    const content: ({ type: 'text'; text: string } | { type: 'image'; image: string })[] = []
+    if (input) {
+      content.push({ type: 'text', text: input })
+    }
+    if (selectedFile && selectedFile.type.startsWith('image/')) {
+      content.push({
+        type: 'image',
+        image: URL.createObjectURL(selectedFile)
+      })
+    }
+
     setMessages(currentMessages => [
       ...currentMessages,
       {
         id: nanoid(),
-        component: <UserMessage message={input} />
+        component: <UserMessage content={content} />
       }
     ])
+
     const formData = new FormData(e.currentTarget)
-    // Removed mcp argument from submit call
+    if (selectedFile) {
+      formData.append('file', selectedFile)
+    }
+
+    setInput('')
+    clearAttachment()
+
     const responseMessage = await submit(formData)
     setMessages(currentMessages => [...currentMessages, responseMessage as any])
   }
 
   const handleClear = async () => {
     setMessages([])
+    clearAttachment()
     await clearChat()
   }
 
   useEffect(() => {
-    inputRef.current?.focus(); 
+    inputRef.current?.focus()
   }, [])
 
   // New chat button (appears when there are messages)
@@ -92,10 +139,25 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
           : 'sticky bottom-0 bg-background z-10 w-full border-t border-border px-2 py-3 md:px-4'
       )}
     >
+      {selectedFile && (
+        <div className="w-full px-4 pb-2">
+          <div className="flex items-center justify-between p-2 bg-muted rounded-lg">
+            <span className="text-sm text-muted-foreground truncate max-w-xs">
+              {selectedFile.name}
+            </span>
+            <Button variant="ghost" size="icon" onClick={clearAttachment}>
+              <X size={16} />
+            </Button>
+          </div>
+        </div>
+      )}
       <form
         ref={formRef}
         onSubmit={handleSubmit}
-        className={cn('max-w-full w-full', isMobile ? 'px-2 pb-2 pt-1 h-full flex flex-col justify-center' : '')}
+        className={cn(
+          'max-w-full w-full',
+          isMobile ? 'px-2 pb-2 pt-1 h-full flex flex-col justify-center' : ''
+        )}
       >
         <div
           className={cn(
@@ -103,6 +165,26 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
             isMobile && 'mobile-chat-input' // Apply mobile chat input styling
           )}
         >
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            className="hidden"
+            accept="text/plain,image/png,image/jpeg,image/webp"
+          />
+          {!isMobile && (
+            <Button
+              type="button"
+              variant={'ghost'}
+              size={'icon'}
+              className={cn(
+                'absolute top-1/2 transform -translate-y-1/2 left-3'
+              )}
+              onClick={handleAttachmentClick}
+            >
+              <Paperclip size={isMobile ? 18 : 20} />
+            </Button>
+          )}
           <Textarea
             ref={inputRef}
             name="input"
@@ -113,10 +195,10 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
             spellCheck={false}
             value={input}
             className={cn(
-              'resize-none w-full min-h-12 rounded-fill border border-input pl-4 pr-20 pt-3 pb-1 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+              'resize-none w-full min-h-12 rounded-fill border border-input pl-14 pr-12 pt-3 pb-1 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
               isMobile
-                ? 'mobile-chat-input input bg-background' // Use mobile input styles
-                : 'bg-muted pr-20'
+                ? 'mobile-chat-input input bg-background'
+                : 'bg-muted'
             )}
             onChange={e => {
               setInput(e.target.value)
@@ -127,7 +209,7 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
                 !e.shiftKey &&
                 !e.nativeEvent.isComposing
               ) {
-                if (input.trim().length === 0) {
+                if (input.trim().length === 0 && !selectedFile) {
                   e.preventDefault()
                   return
                 }
@@ -145,19 +227,6 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
                 Math.max(8, newBorder) + 'px'
             }}
           />
-          {!isMobile && (
-            <Button
-              type="button"
-              variant={'ghost'}
-              size={'icon'}
-              className={cn(
-                'absolute top-1/2 transform -translate-y-1/2',
-                isMobile ? 'right-8' : 'right-10'
-              )}
-            >
-              <Paperclip size={isMobile ? 18 : 20} />
-            </Button>
-          )}
           <Button
             type="submit"
             size={'icon'}
@@ -166,7 +235,7 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
               'absolute top-1/2 transform -translate-y-1/2',
               isMobile ? 'right-1' : 'right-2'
             )}
-            disabled={input.length === 0}
+            disabled={input.length === 0 && !selectedFile}
           >
             <ArrowRight size={isMobile ? 18 : 20} />
           </Button>

@@ -22,7 +22,7 @@ export function FollowupPanel() {
     const userMessage = {
       id: Date.now(),
       isGenerating: false,
-      component: <UserMessage message={input} />
+      component: <UserMessage content={input} />
     }
 
     // Removed mcp argument from submit call
