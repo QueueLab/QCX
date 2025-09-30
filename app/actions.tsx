@@ -63,9 +63,12 @@ async function submit(formData?: FormData, skip?: boolean) {
       ],
     });
 
+    const definitionStream = createStreamableValue();
+    definitionStream.done(definition);
+
     const answerSection = (
       <Section title="response">
-        <BotMessage content={definition} />
+        <BotMessage content={definitionStream.value} />
       </Section>
     );
 
