@@ -18,7 +18,11 @@ import { History } from '@/components/history'
 import { MapToggle } from './map-toggle'
 import { ModeToggle } from './mode-toggle'
 
-export const MobileIconsBar: React.FC = () => {
+interface MobileIconsBarProps {
+  onAttachmentClick: () => void;
+}
+
+export const MobileIconsBar: React.FC<MobileIconsBarProps> = ({ onAttachmentClick }) => {
   const [, setMessages] = useUIState<typeof AI>()
   const { clearChat } = useActions()
 
@@ -45,7 +49,7 @@ export const MobileIconsBar: React.FC = () => {
       <Button variant="ghost" size="icon">
         <TentTree className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>
-      <Button variant="ghost" size="icon">
+      <Button variant="ghost" size="icon" onClick={onAttachmentClick}>
         <Paperclip className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>
       <Button variant="ghost" size="icon">
