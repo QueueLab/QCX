@@ -33,18 +33,101 @@ type RelatedQueries = {
 
 // Removed mcp parameter from submit, as geospatialTool now handles its client.
 async function submit(formData?: FormData, skip?: boolean) {
-  'use server'
 
-  const aiState = getMutableAIState<typeof AI>()
-  const uiStream = createStreamableUI()
-  const isGenerating = createStreamableValue(true)
-  const isCollapsed = createStreamableValue(false)
+  'use server';
+
+  const aiState = getMutableAIState<typeof AI>();
+  const uiStream = createStreamableUI();
+  const isGenerating = createStreamableValue(true);
+  const isCollapsed = createStreamableValue(false);
+
+  const userInput = skip
+    ? `{"action": "skip"}`
+    : (formData?.get('input') as string);
+
+  if (userInput.toLowerCase().trim() === 'what is a planet computer?' || userInput.toLowerCase().trim() === 'what is qcx-terra?') {
+    const definition = userInput.toLowerCase().trim() === 'what is a planet computer?'
+      ? "A planet computer is a proprietary environment aware system that interoperates Climate forecasting, mapping and scheduling using cutting edge multi-agents to streamline automation and exploration on a planet"
+      : "QCX-Terra is a model garden of pixel level precision geospatial foundational models for efficient land feature predictions from satellite imagery";
+
+    const content = JSON.stringify(Object.fromEntries(formData!));
+    const type = 'input';
+
+    aiState.update({
+      ...aiState.get(),
+      messages: [
+        ...aiState.get().messages,
+        {
+          id: nanoid(),
+          role: 'user',
+          content,
+          type,
+        },
+      ],
+    });
+
+    const definitionStream = createStreamableValue();
+    definitionStream.done(definition);
+
+    const answerSection = (
+      <Section title="response">
+        <BotMessage content={definitionStream.value} />
+      </Section>
+    );
+
+    uiStream.append(answerSection);
+
+    const groupeId = nanoid();
+    const relatedQueries = { items: [] };
+
+    aiState.done({
+      ...aiState.get(),
+      messages: [
+        ...aiState.get().messages,
+        {
+          id: groupeId,
+          role: 'assistant',
+          content: definition,
+          type: 'response',
+        },
+        {
+          id: groupeId,
+          role: 'assistant',
+          content: JSON.stringify(relatedQueries),
+          type: 'related',
+        },
+        {
+          id: groupeId,
+          role: 'assistant',
+          content: 'followup',
+          type: 'followup',
+        },
+      ],
+    });
+
+    isGenerating.done(false);
+    uiStream.done();
+
+    return {
+      id: nanoid(),
+      isGenerating: isGenerating.value,
+      component: uiStream.value,
+      isCollapsed: isCollapsed.value,
+    };
+  }
+
+  // TODO: Update agent function signatures in lib/agents/researcher.tsx and lib/agents/writer.tsx
+  // to accept currentSystemPrompt as the first argument.
+
+  // Get the messages from the state, filter out the tool messages
+
   const messages: CoreMessage[] = [...(aiState.get().messages as any[])].filter(
     message =>
       message.role !== 'tool' &&
       message.type !== 'followup' &&
       message.type !== 'related' &&
       message.type !== 'end'
+
   )
 
   const groupeId = nanoid()
@@ -102,6 +185,24 @@ async function submit(formData?: FormData, skip?: boolean) {
   const content = hasImage
     ? (messageParts as any)
     : messageParts.map(part => part.text).join('\n')
+
+
+  );
+
+  // groupeId is used to group the messages for collapse
+  const groupeId = nanoid();
+
+  const useSpecificAPI = process.env.USE_SPECIFIC_API_FOR_WRITER === 'true';
+  const maxMessages = useSpecificAPI ? 5 : 10;
+  // Limit the number of messages to the maximum
+  messages.splice(0, Math.max(messages.length - maxMessages, 0));
+  // Get the user input from the form data
+
+  const content = skip
+    ? userInput
+    : formData
+    ? JSON.stringify(Object.fromEntries(formData))
+    : null;
 
   const type = skip
     ? undefined
