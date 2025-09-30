@@ -6,7 +6,9 @@ import { ChatPanel } from './chat-panel'
 import { ChatMessages } from './chat-messages'
 import { EmptyScreen } from './empty-screen'
 import { Mapbox } from './map/mapbox-map'
-import { useUIState, useAIState } from 'ai/rsc'
+import { useUIState, useAIState, useActions } from 'ai/rsc'
+import { UserMessage } from './user-message'
+import { nanoid } from 'nanoid'
 import MobileIconsBar from './mobile-icons-bar'
 import { useProfileToggle, ProfileToggleEnum } from "@/components/profile-toggle-context";
 import SettingsView from "@/components/settings/settings-view";
@@ -20,16 +22,27 @@ type ChatProps = {
 export function Chat({ id }: ChatProps) {
   const router = useRouter()
   const path = usePathname()
-  const [messages] = useUIState()
+  const [messages, setMessages] = useUIState()
   const [aiState] = useAIState()
+  const { submit } = useActions()
   const [isMobile, setIsMobile] = useState(false)
   const { activeView } = useProfileToggle();
   const [input, setInput] = useState('')
-  const [showEmptyScreen, setShowEmptyScreen] = useState(false)
-  
-  useEffect(() => {
-    setShowEmptyScreen(messages.length === 0)
-  }, [messages])
+  const [isInputFocused, setIsInputFocused] = useState(false)
+
+  const submitExampleMessage = async (message: string) => {
+    setMessages(currentMessages => [
+      ...currentMessages,
+      {
+        id: nanoid(),
+        component: <UserMessage message={message} />
+      }
+    ])
+
+    const responseMessage = await submit(message)
+
+    setMessages(currentMessages => [...currentMessages, responseMessage as any])
+  }
 
   useEffect(() => {
     // Check if device is mobile
@@ -83,18 +96,20 @@ export function Chat({ id }: ChatProps) {
             <MobileIconsBar />
           </div>
           <div className="mobile-chat-input-area">
-            <ChatPanel messages={messages} input={input} setInput={setInput} />
+            <ChatPanel
+              messages={messages}
+              input={input}
+              setInput={setInput}
+              onFocus={() => setIsInputFocused(true)}
+              onBlur={() => setIsInputFocused(false)}
+            />
           </div>
           <div className="mobile-chat-messages-area">
-            {showEmptyScreen ? (
-              <EmptyScreen
-                submitMessage={message => {
-                  setInput(message)
-                }}
-              />
-            ) : (
+            {messages.length > 0 ? (
               <ChatMessages messages={messages} />
-            )}
+            ) : isInputFocused ? (
+              <EmptyScreen submitMessage={submitExampleMessage} />
+            ) : null}
           </div>
         </div>
       </MapDataProvider>
@@ -107,16 +122,18 @@ export function Chat({ id }: ChatProps) {
       <div className="flex justify-start items-start">
         {/* This is the new div for scrolling */}
         <div className="w-1/2 flex flex-col space-y-3 md:space-y-4 px-8 sm:px-12 pt-12 md:pt-14 pb-4 h-[calc(100vh-0.5in)] overflow-y-auto">
-          <ChatPanel messages={messages} input={input} setInput={setInput} />
-          {showEmptyScreen ? (
-            <EmptyScreen
-              submitMessage={message => {
-                setInput(message)
-              }}
-            />
-          ) : (
+          <ChatPanel
+            messages={messages}
+            input={input}
+            setInput={setInput}
+            onFocus={() => setIsInputFocused(true)}
+            onBlur={() => setIsInputFocused(false)}
+          />
+          {messages.length > 0 ? (
             <ChatMessages messages={messages} />
-          )}
+          ) : isInputFocused ? (
+            <EmptyScreen submitMessage={submitExampleMessage} />
+          ) : null}
         </div>
         <div
           className="w-1/2 p-4 fixed h-[calc(100vh-0.5in)] top-0 right-0 mt-[0.5in]"

@@ -15,9 +15,17 @@ interface ChatPanelProps {
   messages: UIState
   input: string
   setInput: (value: string) => void
+  onFocus?: () => void
+  onBlur?: () => void
 }
 
-export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
+export function ChatPanel({
+  messages,
+  input,
+  setInput,
+  onFocus,
+  onBlur
+}: ChatPanelProps) {
   const [, setMessages] = useUIState<typeof AI>()
   const { submit, clearChat } = useActions()
   // Removed mcp instance as it's no longer passed to submit
@@ -118,6 +126,8 @@ export function ChatPanel({ messages, input, setInput }: ChatPanelProps) {
                 ? 'mobile-chat-input input bg-background' // Use mobile input styles
                 : 'bg-muted pr-20'
             )}
+            onFocus={onFocus}
+            onBlur={onBlur}
             onChange={e => {
               setInput(e.target.value)
             }}
