@@ -246,6 +246,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
               isMobile ? 'right-1' : 'right-2'
             )}
             disabled={input.length === 0 && !selectedFile}
+            aria-label="Send message"
           >
             <ArrowRight size={isMobile ? 18 : 20} />
           </Button>
