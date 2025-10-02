@@ -12,6 +12,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { Section } from '@/components/section'
 import { FollowupPanel } from '@/components/followup-panel'
 import { inquire, researcher, taskManager, querySuggestor } from '@/lib/agents'
+import { geojsonEnricher } from '@/lib/agents/geojson-enricher'
 // Removed import of useGeospatialToolMcp as it no longer exists and was incorrectly used here.
 // The geospatialTool (if used by agents like researcher) now manages its own MCP client.
 import { writer } from '@/lib/agents/writer'
@@ -25,6 +26,7 @@ import { CopilotDisplay } from '@/components/copilot-display'
 import RetrieveSection from '@/components/retrieve-section'
 import { VideoSearchSection } from '@/components/video-search-section'
 import { MapQueryHandler } from '@/components/map/map-query-handler' // Add this import
+import { LocationResponseHandler } from '@/components/map/location-response-handler'
 
 // Define the type for related queries
 type RelatedQueries = {
@@ -296,6 +298,8 @@ async function submit(formData?: FormData, skip?: boolean) {
     }
 
     if (!errorOccurred) {
+      const locationResponse = await geojsonEnricher(answer)
+
       const relatedQueries = await querySuggestor(uiStream, messages)
       uiStream.append(
         <Section title="Follow-up">
@@ -312,8 +316,14 @@ async function submit(formData?: FormData, skip?: boolean) {
           {
             id: groupeId,
             role: 'assistant',
-            content: answer,
+            content: locationResponse.text,
             type: 'response'
+          },
+          {
+            id: nanoid(),
+            role: 'tool',
+            name: 'geojsonEnrichment',
+            content: JSON.stringify(locationResponse),
           },
           {
             id: groupeId,
@@ -537,6 +547,24 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                   </Section>
                 )
               }
+            case 'location_response':
+              try {
+                const locationResponse = JSON.parse(content as string)
+                return {
+                  id,
+                  component: (
+                    <LocationResponseHandler
+                      locationResponse={locationResponse}
+                    />
+                  )
+                }
+              } catch (error) {
+                console.error(
+                  'Error parsing location_response content:',
+                  error
+                )
+                return { id, component: null }
+              }
           }
           break
         case 'tool':
@@ -552,6 +580,16 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
               return {
                 id,
                 component: <MapQueryHandler toolOutput={toolOutput} />,
+                isCollapsed: false
+              }
+            }
+
+            if (name === 'geojsonEnrichment') {
+              return {
+                id,
+                component: (
+                  <LocationResponseHandler locationResponse={toolOutput} />
+                ),
                 isCollapsed: false
               }
             }
