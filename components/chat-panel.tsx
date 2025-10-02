@@ -7,7 +7,7 @@ import { useUIState, useActions } from 'ai/rsc'
 import { cn } from '@/lib/utils'
 import { UserMessage } from './user-message'
 import { Button } from './ui/button'
-import { ArrowRight, Plus, Paperclip, X } from 'lucide-react'
+import { ArrowRight, Plus, Paperclip, X, BrainCircuit } from 'lucide-react'
 import Textarea from 'react-textarea-autosize'
 import { nanoid } from 'nanoid'
 
@@ -68,6 +68,66 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
       fileInputRef.current.value = ''
     }
   }
+
+  const handleOnnxClick = async () => {
+    if (!input) {
+      return;
+    }
+
+    const currentInput = input;
+
+    setMessages(currentMessages => [
+      ...currentMessages,
+      {
+        id: nanoid(),
+        component: <UserMessage content={[{ type: 'text', text: `[ONNX Request]: ${currentInput}` }]} />
+      }
+    ]);
+
+    setInput('');
+
+    try {
+      const response = await fetch('/api/onnx', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query: currentInput }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get response from ONNX API');
+      }
+
+      const data = await response.json();
+
+      setMessages(currentMessages => [
+        ...currentMessages,
+        {
+          id: nanoid(),
+          component: (
+            <div className="p-4 my-2 border rounded-lg bg-muted">
+              <p><strong>ONNX Model Response:</strong></p>
+              <pre className="whitespace-pre-wrap">{JSON.stringify(data, null, 2)}</pre>
+            </div>
+          )
+        }
+      ]);
+    } catch (error) {
+      console.error('ONNX API call failed:', error);
+      setMessages(currentMessages => [
+        ...currentMessages,
+        {
+          id: nanoid(),
+          component: (
+            <div className="p-4 my-2 border rounded-lg bg-destructive/20 text-destructive">
+              <p><strong>Error:</strong> Failed to get ONNX model response.</p>
+            </div>
+          )
+        }
+      ]);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -183,17 +243,31 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
             accept="text/plain,image/png,image/jpeg,image/webp"
           />
           {!isMobile && (
-            <Button
-              type="button"
-              variant={'ghost'}
-              size={'icon'}
-              className={cn(
-                'absolute top-1/2 transform -translate-y-1/2 left-3'
-              )}
-              onClick={handleAttachmentClick}
-            >
-              <Paperclip size={isMobile ? 18 : 20} />
-            </Button>
+            <>
+              <Button
+                type="button"
+                variant={'ghost'}
+                size={'icon'}
+                className={cn(
+                  'absolute top-1/2 transform -translate-y-1/2 left-3'
+                )}
+                onClick={handleAttachmentClick}
+              >
+                <Paperclip size={isMobile ? 18 : 20} />
+              </Button>
+              <Button
+                type="button"
+                variant={'ghost'}
+                size={'icon'}
+                className={cn(
+                  'absolute top-1/2 transform -translate-y-1/2 left-14'
+                )}
+                onClick={handleOnnxClick}
+                title="Send to ONNX Model"
+              >
+                <BrainCircuit size={isMobile ? 18 : 20} />
+              </Button>
+            </>
           )}
           <Textarea
             ref={inputRef}
@@ -205,7 +279,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
             spellCheck={false}
             value={input}
             className={cn(
-              'resize-none w-full min-h-12 rounded-fill border border-input pl-14 pr-12 pt-3 pb-1 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+              'resize-none w-full min-h-12 rounded-fill border border-input pl-28 pr-12 pt-3 pb-1 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
               isMobile
                 ? 'mobile-chat-input input bg-background'
                 : 'bg-muted'

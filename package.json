@@ -63,6 +63,7 @@
     "mapbox-gl": "^3.11.0",
     "next": "^15.3.3",
     "next-themes": "^0.3.0",
+    "onnxruntime-node": "^1.23.0",
     "open-codex": "^0.1.30",
     "pg": "^8.16.2",
     "QCX": ".",
