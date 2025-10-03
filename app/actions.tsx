@@ -54,7 +54,8 @@ async function submit(formData?: FormData, skip?: boolean) {
 
   const userInput = skip
     ? `{"action": "skip"}`
-    : (formData?.get('input') as string);
+    : ((formData?.get('related_query') as string) ||
+      (formData?.get('input') as string))
 
   if (userInput.toLowerCase().trim() === 'what is a planet computer?' || userInput.toLowerCase().trim() === 'what is qcx-terra?') {
     const definition = userInput.toLowerCase().trim() === 'what is a planet computer?'
