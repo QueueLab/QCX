@@ -90,27 +90,24 @@ export function ModelSelectionForm({ form }: ModelSelectionFormProps) {
                             <Icon className="h-5 w-5" />
                           </div>
                           <div className="flex-1 space-y-1">
-                            <div className="flex items-center gap-2">
-                              <h4 className="font-medium">{model.name}</h4>
-                              <Badge variant={model.badgeVariant}>
-                                {model.badge}
-                              </Badge>
-                            </div>
-                            <p className="text-sm text-muted-foreground">
-                              {model.description}
-                            </p>
-                            {model.id === "QCX-Terra" && (
-                              <div className="flex items-center space-x-2 pt-2">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-medium">{model.name}</h4>
+                                <Badge variant={model.badgeVariant}>
+                                  {model.badge}
+                                </Badge>
+                              </div>
+                              {model.id === "QCX-Terra" && (
                                 <Switch
                                   id="geospatial-model-toggle"
                                   checked={isGeospatialModelEnabled}
                                   onCheckedChange={toggleGeospatialModel}
                                 />
-                                <Label htmlFor="geospatial-model-toggle" className="text-sm">
-                                  geospatial foundational model garden (-&gt;on)
-                                </Label>
-                              </div>
-                            )}
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              {model.description}
+                            </p>
                           </div>
                         </CardContent>
                       </Card>
