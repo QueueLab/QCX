@@ -107,7 +107,7 @@ export function ModelSelectionForm({ form }: ModelSelectionFormProps) {
                                   onCheckedChange={toggleGeospatialModel}
                                 />
                                 <Label htmlFor="geospatial-model-toggle" className="text-sm">
-                                  geospatial foundational model garden (->on)
+                                  geospatial foundational model garden (-&gt;on)
                                 </Label>
                               </div>
                             )}
