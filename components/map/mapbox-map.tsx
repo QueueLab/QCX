@@ -524,6 +524,84 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     // }
   }, [mapData.targetPosition, mapData.mapFeature, updateMapPosition]);
 
+  // Effect to handle GeoJSON data updates
+  useEffect(() => {
+    if (!map.current) return;
+
+    const mapInstance = map.current;
+    const source = mapInstance.getSource('geojson-data');
+
+    // If GeoJSON data is present, add or update the source and layers
+    if (mapData.geojson) {
+      if (source) {
+        (source as mapboxgl.GeoJSONSource).setData(mapData.geojson);
+      } else {
+        mapInstance.addSource('geojson-data', {
+          type: 'geojson',
+          data: mapData.geojson,
+        });
+
+        // Add layer for points
+        mapInstance.addLayer({
+          id: 'geojson-points',
+          type: 'circle',
+          source: 'geojson-data',
+          paint: {
+            'circle-radius': 8,
+            'circle-color': '#007cbf',
+            'circle-stroke-width': 2,
+            'circle-stroke-color': '#ffffff',
+          },
+          filter: ['==', '$type', 'Point'],
+        });
+
+        // Add layer for lines
+        mapInstance.addLayer({
+          id: 'geojson-lines',
+          type: 'line',
+          source: 'geojson-data',
+          paint: {
+            'line-color': '#ff4500',
+            'line-width': 3,
+          },
+          filter: ['==', '$type', 'LineString'],
+        });
+      }
+    } else {
+      // If no GeoJSON data, remove layers and source if they exist
+      if (mapInstance.getLayer('geojson-points')) mapInstance.removeLayer('geojson-points');
+      if (mapInstance.getLayer('geojson-lines')) mapInstance.removeLayer('geojson-lines');
+      if (source) mapInstance.removeSource('geojson-data');
+    }
+  }, [mapData.geojson]);
+
+  // Effect to execute map commands
+  useEffect(() => {
+    if (!map.current || !mapData.mapCommands || mapData.mapCommands.length === 0) return;
+
+    const mapInstance = map.current;
+
+    mapData.mapCommands.forEach(command => {
+      switch (command.command) {
+        case 'flyTo':
+          mapInstance.flyTo(command.params);
+          break;
+        case 'easeTo':
+          mapInstance.easeTo(command.params);
+          break;
+        case 'fitBounds':
+          mapInstance.fitBounds(command.params, command.params.options || {});
+          break;
+        default:
+          console.warn(`Unknown map command: ${command.command}`);
+      }
+    });
+
+    // Clear commands after execution to prevent re-triggering
+    setMapData(prev => ({ ...prev, mapCommands: null }));
+
+  }, [mapData.mapCommands, setMapData]);
+
   // Long-press handlers
   const handleMouseDown = useCallback(() => {
     // Only activate long press if not in real-time mode (as that mode has its own interactions)
