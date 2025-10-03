@@ -4,7 +4,6 @@ import { useEffect, useState, useRef, ChangeEvent, forwardRef, useImperativeHand
 import type { AI, UIState } from '@/app/actions'
 import { useUIState, useActions } from 'ai/rsc'
 import { useGeospatialModel } from '@/lib/geospatial-model-context'
-// Removed import of useGeospatialToolMcp as it's no longer used/available
 import { cn } from '@/lib/utils'
 import { UserMessage } from './user-message'
 import { Button } from './ui/button'
@@ -26,7 +25,6 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
   const [, setMessages] = useUIState<typeof AI>()
   const { submit, clearChat } = useActions()
   const { isGeospatialModelEnabled } = useGeospatialModel();
-  // Removed mcp instance as it's no longer passed to submit
   const [isMobile, setIsMobile] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -39,7 +37,6 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     }
   }));
 
-  // Detect mobile layout
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth <= 1024)
@@ -73,36 +70,57 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (!input && !selectedFile) {
-      return
+
+    const trimmedInput = input.trim();
+    if (!trimmedInput && !selectedFile) {
+      return; // Prevent submission if both text and file are empty
     }
 
     if (isGeospatialModelEnabled) {
-      const currentInput = input;
+      // Logic for Geospatial Model (ONNX)
+      const userMessageContent: ({ type: 'text'; text: string } | { type: 'image'; image: string })[] = [];
+      if (trimmedInput) {
+        userMessageContent.push({ type: 'text', text: `[ONNX Request]: ${trimmedInput}` });
+      }
+      if (selectedFile) {
+        userMessageContent.push({ type: 'image', image: URL.createObjectURL(selectedFile) });
+      }
+
       setMessages(currentMessages => [
         ...currentMessages,
-        {
-          id: nanoid(),
-          component: <UserMessage content={[{ type: 'text', text: `[ONNX Request]: ${currentInput}` }]} />
-        }
+        { id: nanoid(), component: <UserMessage content={userMessageContent} /> }
       ]);
 
+      const onnxFormData = new FormData();
+      if (trimmedInput) {
+        onnxFormData.append('query', trimmedInput);
+      }
+      if (selectedFile) {
+        onnxFormData.append('file', selectedFile);
+      }
+
       setInput('');
+      clearAttachment();
 
       try {
         const response = await fetch('/api/onnx', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ query: currentInput }),
+          body: onnxFormData,
         });
 
         if (!response.ok) {
-          throw new Error('Failed to get response from ONNX API');
+          throw new Error(`ONNX API request failed with status ${response.status}`);
         }
 
         const data = await response.json();
+
+        // Validate the response shape
+        if (typeof data !== 'object' || data === null || !data.prediction) {
+          console.error("Unexpected response format from ONNX API:", data);
+          throw new Error('Unexpected response format from the ONNX model.');
+        }
+
+        const predictionText = typeof data.prediction === 'string' ? data.prediction : JSON.stringify(data.prediction, null, 2);
 
         setMessages(currentMessages => [
           ...currentMessages,
@@ -111,11 +129,12 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
             component: (
               <div className="p-4 my-2 border rounded-lg bg-muted">
                 <p><strong>ONNX Model Response:</strong></p>
-                <pre className="whitespace-pre-wrap">{JSON.stringify(data, null, 2)}</pre>
+                <pre className="whitespace-pre-wrap">{predictionText}</pre>
               </div>
             )
           }
         ]);
+
       } catch (error) {
         console.error('ONNX API call failed:', error);
         setMessages(currentMessages => [
@@ -124,42 +143,37 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
             id: nanoid(),
             component: (
               <div className="p-4 my-2 border rounded-lg bg-destructive/20 text-destructive">
-                <p><strong>Error:</strong> Failed to get ONNX model response.</p>
+                <p><strong>Error:</strong> {error instanceof Error ? error.message : 'Failed to get ONNX model response.'}</p>
               </div>
             )
           }
         ]);
       }
     } else {
-      const content: ({ type: 'text'; text: string } | { type: 'image'; image: string })[] = []
-      if (input) {
-        content.push({ type: 'text', text: input })
+      // Default chat submission logic
+      const defaultContent: ({ type: 'text'; text: string } | { type: 'image'; image: string })[] = [];
+      if (trimmedInput) {
+        defaultContent.push({ type: 'text', text: trimmedInput });
       }
-      if (selectedFile && selectedFile.type.startsWith('image/')) {
-        content.push({
-          type: 'image',
-          image: URL.createObjectURL(selectedFile)
-        })
+      if (selectedFile) {
+        defaultContent.push({ type: 'image', image: URL.createObjectURL(selectedFile) });
       }
 
       setMessages(currentMessages => [
         ...currentMessages,
-        {
-          id: nanoid(),
-          component: <UserMessage content={content} />
-        }
-      ])
+        { id: nanoid(), component: <UserMessage content={defaultContent} /> }
+      ]);
 
-      const formData = new FormData(e.currentTarget)
+      const defaultFormData = new FormData(e.currentTarget);
       if (selectedFile) {
-        formData.append('file', selectedFile)
+        defaultFormData.append('file', selectedFile);
       }
 
-      setInput('')
-      clearAttachment()
+      setInput('');
+      clearAttachment();
 
-      const responseMessage = await submit(formData)
-      setMessages(currentMessages => [...currentMessages, responseMessage as any])
+      const responseMessage = await submit(defaultFormData);
+      setMessages(currentMessages => [...currentMessages, responseMessage as any]);
     }
   }
 
@@ -173,7 +187,6 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     inputRef.current?.focus()
   }, [])
 
-  // New chat button (appears when there are messages)
   if (messages.length > 0 && !isMobile) {
     return (
       <div

@@ -98,11 +98,16 @@ export function ModelSelectionForm({ form }: ModelSelectionFormProps) {
                                 </Badge>
                               </div>
                               {model.id === "QCX-Terra" && (
-                                <Switch
-                                  id="geospatial-model-toggle"
-                                  checked={isGeospatialModelEnabled}
-                                  onCheckedChange={toggleGeospatialModel}
-                                />
+                                <div className="flex items-center space-x-2">
+                                  <Label htmlFor="geospatial-model-toggle" className="sr-only">
+                                    Enable Geospatial Foundational Model
+                                  </Label>
+                                  <Switch
+                                    id="geospatial-model-toggle"
+                                    checked={isGeospatialModelEnabled}
+                                    onCheckedChange={toggleGeospatialModel}
+                                  />
+                                </div>
                               )}
                             </div>
                             <p className="text-sm text-muted-foreground">
