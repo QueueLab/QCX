@@ -3,13 +3,14 @@
 import { useEffect, useState, useRef, ChangeEvent, forwardRef, useImperativeHandle } from 'react'
 import type { AI, UIState } from '@/app/actions'
 import { useUIState, useActions } from 'ai/rsc'
-// Removed import of useGeospatialToolMcp as it's no longer used/available
 import { cn } from '@/lib/utils'
 import { UserMessage } from './user-message'
 import { Button } from './ui/button'
-import { ArrowRight, Plus, Paperclip, X, BrainCircuit } from 'lucide-react'
+import { ArrowRight, Plus, Paperclip, X } from 'lucide-react'
 import Textarea from 'react-textarea-autosize'
 import { nanoid } from 'nanoid'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 
 interface ChatPanelProps {
   messages: UIState
@@ -24,8 +25,8 @@ export interface ChatPanelRef {
 export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, input, setInput }, ref) => {
   const [, setMessages] = useUIState<typeof AI>()
   const { submit, clearChat } = useActions()
-  // Removed mcp instance as it's no longer passed to submit
   const [isMobile, setIsMobile] = useState(false)
+  const [useOnnxModel, setUseOnnxModel] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
@@ -37,7 +38,6 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     }
   }));
 
-  // Detect mobile layout
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth <= 1024)
@@ -69,101 +69,96 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     }
   }
 
-  const handleOnnxClick = async () => {
-    if (!input) {
-      return;
-    }
-
-    const currentInput = input;
-
-    setMessages(currentMessages => [
-      ...currentMessages,
-      {
-        id: nanoid(),
-        component: <UserMessage content={[{ type: 'text', text: `[ONNX Request]: ${currentInput}` }]} />
-      }
-    ]);
-
-    setInput('');
-
-    try {
-      const response = await fetch('/api/onnx', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ query: currentInput }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to get response from ONNX API');
-      }
-
-      const data = await response.json();
-
-      setMessages(currentMessages => [
-        ...currentMessages,
-        {
-          id: nanoid(),
-          component: (
-            <div className="p-4 my-2 border rounded-lg bg-muted">
-              <p><strong>ONNX Model Response:</strong></p>
-              <pre className="whitespace-pre-wrap">{JSON.stringify(data, null, 2)}</pre>
-            </div>
-          )
-        }
-      ]);
-    } catch (error) {
-      console.error('ONNX API call failed:', error);
-      setMessages(currentMessages => [
-        ...currentMessages,
-        {
-          id: nanoid(),
-          component: (
-            <div className="p-4 my-2 border rounded-lg bg-destructive/20 text-destructive">
-              <p><strong>Error:</strong> Failed to get ONNX model response.</p>
-            </div>
-          )
-        }
-      ]);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!input && !selectedFile) {
       return
     }
 
-    const content: ({ type: 'text'; text: string } | { type: 'image'; image: string })[] = []
-    if (input) {
-      content.push({ type: 'text', text: input })
-    }
-    if (selectedFile && selectedFile.type.startsWith('image/')) {
-      content.push({
-        type: 'image',
-        image: URL.createObjectURL(selectedFile)
-      })
-    }
+    if (useOnnxModel) {
+      const currentInput = input;
+      setMessages(currentMessages => [
+        ...currentMessages,
+        {
+          id: nanoid(),
+          component: <UserMessage content={[{ type: 'text', text: `[ONNX Request]: ${currentInput}` }]} />
+        }
+      ]);
 
-    setMessages(currentMessages => [
-      ...currentMessages,
-      {
-        id: nanoid(),
-        component: <UserMessage content={content} />
+      setInput('');
+
+      try {
+        const response = await fetch('/api/onnx', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ query: currentInput }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to get response from ONNX API');
+        }
+
+        const data = await response.json();
+
+        setMessages(currentMessages => [
+          ...currentMessages,
+          {
+            id: nanoid(),
+            component: (
+              <div className="p-4 my-2 border rounded-lg bg-muted">
+                <p><strong>ONNX Model Response:</strong></p>
+                <pre className="whitespace-pre-wrap">{JSON.stringify(data, null, 2)}</pre>
+              </div>
+            )
+          }
+        ]);
+      } catch (error) {
+        console.error('ONNX API call failed:', error);
+        setMessages(currentMessages => [
+          ...currentMessages,
+          {
+            id: nanoid(),
+            component: (
+              <div className="p-4 my-2 border rounded-lg bg-destructive/20 text-destructive">
+                <p><strong>Error:</strong> Failed to get ONNX model response.</p>
+              </div>
+            )
+          }
+        ]);
       }
-    ])
+    } else {
+      const content: ({ type: 'text'; text: string } | { type: 'image'; image: string })[] = []
+      if (input) {
+        content.push({ type: 'text', text: input })
+      }
+      if (selectedFile && selectedFile.type.startsWith('image/')) {
+        content.push({
+          type: 'image',
+          image: URL.createObjectURL(selectedFile)
+        })
+      }
 
-    const formData = new FormData(e.currentTarget)
-    if (selectedFile) {
-      formData.append('file', selectedFile)
+      setMessages(currentMessages => [
+        ...currentMessages,
+        {
+          id: nanoid(),
+          component: <UserMessage content={content} />
+        }
+      ])
+
+      const formData = new FormData(e.currentTarget)
+      if (selectedFile) {
+        formData.append('file', selectedFile)
+      }
+
+      setInput('')
+      clearAttachment()
+
+      const responseMessage = await submit(formData)
+      setMessages(currentMessages => [...currentMessages, responseMessage as any])
     }
-
-    setInput('')
-    clearAttachment()
-
-    const responseMessage = await submit(formData)
-    setMessages(currentMessages => [...currentMessages, responseMessage as any])
   }
 
   const handleClear = async () => {
@@ -176,7 +171,6 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     inputRef.current?.focus()
   }, [])
 
-  // New chat button (appears when there are messages)
   if (messages.length > 0 && !isMobile) {
     return (
       <div
@@ -221,6 +215,14 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
           </div>
         </div>
       )}
+      <div className="flex items-center space-x-2 px-4 pb-2">
+        <Switch
+          id="onnx-model-toggle"
+          checked={useOnnxModel}
+          onCheckedChange={setUseOnnxModel}
+        />
+        <Label htmlFor="onnx-model-toggle">Use ONNX Model</Label>
+      </div>
       <form
         ref={formRef}
         onSubmit={handleSubmit}
@@ -243,31 +245,17 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
             accept="text/plain,image/png,image/jpeg,image/webp"
           />
           {!isMobile && (
-            <>
-              <Button
-                type="button"
-                variant={'ghost'}
-                size={'icon'}
-                className={cn(
-                  'absolute top-1/2 transform -translate-y-1/2 left-3'
-                )}
-                onClick={handleAttachmentClick}
-              >
-                <Paperclip size={isMobile ? 18 : 20} />
-              </Button>
-              <Button
-                type="button"
-                variant={'ghost'}
-                size={'icon'}
-                className={cn(
-                  'absolute top-1/2 transform -translate-y-1/2 left-14'
-                )}
-                onClick={handleOnnxClick}
-                title="Send to ONNX Model"
-              >
-                <BrainCircuit size={isMobile ? 18 : 20} />
-              </Button>
-            </>
+            <Button
+              type="button"
+              variant={'ghost'}
+              size={'icon'}
+              className={cn(
+                'absolute top-1/2 transform -translate-y-1/2 left-3'
+              )}
+              onClick={handleAttachmentClick}
+            >
+              <Paperclip size={isMobile ? 18 : 20} />
+            </Button>
           )}
           <Textarea
             ref={inputRef}
@@ -279,7 +267,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
             spellCheck={false}
             value={input}
             className={cn(
-              'resize-none w-full min-h-12 rounded-fill border border-input pl-28 pr-12 pt-3 pb-1 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+              'resize-none w-full min-h-12 rounded-fill border border-input pl-14 pr-12 pt-3 pb-1 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
               isMobile
                 ? 'mobile-chat-input input bg-background'
                 : 'bg-muted'
