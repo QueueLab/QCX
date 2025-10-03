@@ -25,16 +25,13 @@ export function Chat({ id }: ChatProps) {
   const [isMobile, setIsMobile] = useState(false)
   const { activeView } = useProfileToggle();
   const [input, setInput] = useState('')
-  const [showEmptyScreen, setShowEmptyScreen] = useState(false)
   const chatPanelRef = useRef<ChatPanelRef>(null);
 
   const handleAttachment = () => {
     chatPanelRef.current?.handleAttachmentClick();
   };
   
-  useEffect(() => {
-    setShowEmptyScreen(messages.length === 0)
-  }, [messages])
+  const showEmptyScreen = messages.length === 0
 
   useEffect(() => {
     // Check if device is mobile
@@ -79,40 +76,17 @@ export function Chat({ id }: ChatProps) {
   // Mobile layout
   if (isMobile) {
     return (
-      <MapDataProvider> {/* Add Provider */}
-        <div className="mobile-layout-container">
-          <div className="mobile-map-section">
-            {activeView ? <SettingsView /> : <Mapbox />}
-          </div>
-          <div className="mobile-icons-bar">
-            <MobileIconsBar onAttachmentClick={handleAttachment} />
-          </div>
-          <div className="mobile-chat-input-area">
-            <ChatPanel ref={chatPanelRef} messages={messages} input={input} setInput={setInput} />
-          </div>
-          <div className="mobile-chat-messages-area">
-            {showEmptyScreen ? (
-              <EmptyScreen
-                submitMessage={message => {
-                  setInput(message)
-                }}
-              />
-            ) : (
-              <ChatMessages messages={messages} />
-            )}
-          </div>
+      <div className="mobile-layout-container">
+        <div className="mobile-map-section">
+          {activeView ? <SettingsView /> : <Mapbox />}
         </div>
-      </MapDataProvider>
-    );
-  }
-  
-  // Desktop layout
-  return (
-    <MapDataProvider> {/* Add Provider */}
-      <div className="flex justify-start items-start">
-        {/* This is the new div for scrolling */}
-        <div className="w-1/2 flex flex-col space-y-3 md:space-y-4 px-8 sm:px-12 pt-12 md:pt-14 pb-4 h-[calc(100vh-0.5in)] overflow-y-auto">
-          <ChatPanel messages={messages} input={input} setInput={setInput} />
+        <div className="mobile-icons-bar">
+          <MobileIconsBar onAttachmentClick={handleAttachment} />
+        </div>
+        <div className="mobile-chat-input-area">
+          <ChatPanel ref={chatPanelRef} messages={messages} input={input} setInput={setInput} />
+        </div>
+        <div className="mobile-chat-messages-area">
           {showEmptyScreen ? (
             <EmptyScreen
               submitMessage={message => {
@@ -123,13 +97,32 @@ export function Chat({ id }: ChatProps) {
             <ChatMessages messages={messages} />
           )}
         </div>
-        <div
-          className="w-1/2 p-4 fixed h-[calc(100vh-0.5in)] top-0 right-0 mt-[0.5in]"
-          style={{ zIndex: 10 }} // Added z-index
-        >
-          {activeView ? <SettingsView /> : <Mapbox />}
-        </div>
       </div>
-    </MapDataProvider>
+    );
+  }
+
+  // Desktop layout
+  return (
+    <div className="flex justify-start items-start">
+      {/* This is the new div for scrolling */}
+      <div className="w-1/2 flex flex-col space-y-3 md:space-y-4 px-8 sm:px-12 pt-12 md:pt-14 pb-4 h-[calc(100vh-0.5in)] overflow-y-auto">
+        <ChatPanel messages={messages} input={input} setInput={setInput} />
+        {showEmptyScreen ? (
+          <EmptyScreen
+            submitMessage={message => {
+              setInput(message)
+            }}
+          />
+        ) : (
+          <ChatMessages messages={messages} />
+        )}
+      </div>
+      <div
+        className="w-1/2 p-4 fixed h-[calc(100vh-0.5in)] top-0 right-0 mt-[0.5in]"
+        style={{ zIndex: 10 }} // Added z-index
+      >
+        {activeView ? <SettingsView /> : <Mapbox />}
+      </div>
+    </div>
   );
 }

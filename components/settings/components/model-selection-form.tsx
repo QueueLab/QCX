@@ -12,6 +12,8 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Sparkles, Zap, Rocket, Cpu, Earth } from "lucide-react";
 
 interface ModelSelectionFormProps {
@@ -94,6 +96,14 @@ export function ModelSelectionForm({ form }: ModelSelectionFormProps) {
                             <p className="text-sm text-muted-foreground">
                               {model.description}
                             </p>
+                            {model.id === 'QCX-Terra' && (
+                              <div className="flex items-center space-x-2 pt-2">
+                                <Switch id="geospatial-model-garden" defaultChecked />
+                                <Label htmlFor="geospatial-model-garden" className="text-sm font-normal">
+                                  geospatial foundational model garden (->on)
+                                </Label>
+                              </div>
+                            )}
                           </div>
                         </CardContent>
                       </Card>

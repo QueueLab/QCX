@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "vitest",
     "db:migrate": "cross-env EXECUTE_MIGRATIONS=true bun lib/db/migrate.ts"
   },
   "dependencies": {
@@ -86,17 +87,23 @@
     "uuid": "^9.0.0"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
     "@types/cookie": "^0.6.0",
     "@types/mapbox-gl": "^3.4.1",
     "@types/node": "^20.17.30",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@types/uuid": "^9.0.0",
+    "@vitejs/plugin-react": "^5.0.4",
+    "@vitest/coverage-v8": "^3.2.4",
     "cross-env": "^7.0.3",
     "eslint": "^8.57.1",
     "eslint-config-next": "^14.2.28",
+    "jsdom": "^27.0.0",
     "postcss": "^8.5.3",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
   }
 }
