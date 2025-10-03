@@ -11,6 +11,8 @@ import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Toaster } from '@/components/ui/sonner'
 import { MapToggleProvider } from '@/components/map-toggle-context'
 import { ProfileToggleProvider } from '@/components/profile-toggle-context'
+import { GeospatialModelProvider } from '@/lib/geospatial-model-context'
+import ErrorBoundary from '@/components/error-boundary'
 import { MapLoadingProvider } from '@/components/map-loading-context';
 import ConditionalLottie from '@/components/conditional-lottie';
 
@@ -54,26 +56,30 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={cn('font-sans antialiased', fontSans.variable)}>
-        <MapToggleProvider>
-          <ProfileToggleProvider>
-            <ThemeProvider
-              attribute="class"
-              defaultTheme="earth"
-              enableSystem
-              disableTransitionOnChange
-              themes={['light', 'dark', 'earth']}
-            >
-              <MapLoadingProvider>
-                <Header />
-                <ConditionalLottie />
-                {children}
-                <Sidebar />
-                <Footer />
-                <Toaster />
-              </MapLoadingProvider>
-            </ThemeProvider>
-          </ProfileToggleProvider>
-        </MapToggleProvider>
+        <ErrorBoundary>
+          <MapToggleProvider>
+            <ProfileToggleProvider>
+              <GeospatialModelProvider>
+                <ThemeProvider
+                  attribute="class"
+                  defaultTheme="earth"
+                  enableSystem
+                  disableTransitionOnChange
+                  themes={['light', 'dark', 'earth']}
+                >
+                  <MapLoadingProvider>
+                    <Header />
+                    <ConditionalLottie />
+                    {children}
+                    <Sidebar />
+                    <Footer />
+                    <Toaster />
+                  </MapLoadingProvider>
+                </ThemeProvider>
+              </GeospatialModelProvider>
+            </ProfileToggleProvider>
+          </MapToggleProvider>
+        </ErrorBoundary>
         <Analytics />
         <SpeedInsights />
       </body>
