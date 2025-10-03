@@ -8,27 +8,27 @@ export async function POST(request: Request) {
     // For now, we will use a placeholder.
     const azureVmEndpoint = 'https://your-azure-vm-api-endpoint.com/terramind.onnx';
 
-    // In a real implementation, you would forward the request to the Azure VM.
-    // For now, we will just simulate a response.
-    // const response = await fetch(azureVmEndpoint, {
-    //   method: 'POST',
-    //   headers: {
-    //     'Content-Type': 'application/json',
-    //   },
-    //   body: JSON.stringify(body),
-    // });
-    // const data = await response.json();
+    // Forward the request to the Azure VM.
+    const response = await fetch(azureVmEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
 
-    // Simulated response for now
-    const simulatedData = {
-      prediction: "This is a simulated response from the ONNX model.",
-      confidence: 0.95,
-      input: body,
-    };
+    // Check if the request was successful
+    if (!response.ok) {
+      throw new Error(`Failed to get response from Azure VM: ${response.statusText}`);
+    }
 
-    return NextResponse.json(simulatedData);
+    const data = await response.json();
+
+    return NextResponse.json(data);
   } catch (error) {
     console.error('Error in ONNX proxy API:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    // It's better to check if error is an instance of Error
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    return NextResponse.json({ error: 'Internal Server Error', details: errorMessage }, { status: 500 });
   }
 }

@@ -11,6 +11,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Toaster } from '@/components/ui/sonner'
 import { MapToggleProvider } from '@/components/map-toggle-context'
 import { ProfileToggleProvider } from '@/components/profile-toggle-context'
+import { GeospatialModelProvider } from '@/lib/geospatial-model-context'
 import { MapLoadingProvider } from '@/components/map-loading-context';
 import ConditionalLottie from '@/components/conditional-lottie';
 
@@ -56,22 +57,24 @@ export default function RootLayout({
       <body className={cn('font-sans antialiased', fontSans.variable)}>
         <MapToggleProvider>
           <ProfileToggleProvider>
-            <ThemeProvider
-              attribute="class"
-              defaultTheme="earth"
-              enableSystem
-              disableTransitionOnChange
-              themes={['light', 'dark', 'earth']}
-            >
-              <MapLoadingProvider>
-                <Header />
-                <ConditionalLottie />
-                {children}
-                <Sidebar />
-                <Footer />
-                <Toaster />
-              </MapLoadingProvider>
-            </ThemeProvider>
+            <GeospatialModelProvider>
+              <ThemeProvider
+                attribute="class"
+                defaultTheme="earth"
+                enableSystem
+                disableTransitionOnChange
+                themes={['light', 'dark', 'earth']}
+              >
+                <MapLoadingProvider>
+                  <Header />
+                  <ConditionalLottie />
+                  {children}
+                  <Sidebar />
+                  <Footer />
+                  <Toaster />
+                </MapLoadingProvider>
+              </ThemeProvider>
+            </GeospatialModelProvider>
           </ProfileToggleProvider>
         </MapToggleProvider>
         <Analytics />

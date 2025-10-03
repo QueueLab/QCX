@@ -3,14 +3,14 @@
 import { useEffect, useState, useRef, ChangeEvent, forwardRef, useImperativeHandle } from 'react'
 import type { AI, UIState } from '@/app/actions'
 import { useUIState, useActions } from 'ai/rsc'
+import { useGeospatialModel } from '@/lib/geospatial-model-context'
+// Removed import of useGeospatialToolMcp as it's no longer used/available
 import { cn } from '@/lib/utils'
 import { UserMessage } from './user-message'
 import { Button } from './ui/button'
 import { ArrowRight, Plus, Paperclip, X } from 'lucide-react'
 import Textarea from 'react-textarea-autosize'
 import { nanoid } from 'nanoid'
-import { Switch } from '@/components/ui/switch'
-import { Label } from '@/components/ui/label'
 
 interface ChatPanelProps {
   messages: UIState
@@ -25,8 +25,9 @@ export interface ChatPanelRef {
 export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, input, setInput }, ref) => {
   const [, setMessages] = useUIState<typeof AI>()
   const { submit, clearChat } = useActions()
+  const { isGeospatialModelEnabled } = useGeospatialModel();
+  // Removed mcp instance as it's no longer passed to submit
   const [isMobile, setIsMobile] = useState(false)
-  const [useOnnxModel, setUseOnnxModel] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
@@ -38,6 +39,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     }
   }));
 
+  // Detect mobile layout
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth <= 1024)
@@ -75,7 +77,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
       return
     }
 
-    if (useOnnxModel) {
+    if (isGeospatialModelEnabled) {
       const currentInput = input;
       setMessages(currentMessages => [
         ...currentMessages,
@@ -171,6 +173,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     inputRef.current?.focus()
   }, [])
 
+  // New chat button (appears when there are messages)
   if (messages.length > 0 && !isMobile) {
     return (
       <div
@@ -215,14 +218,6 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
           </div>
         </div>
       )}
-      <div className="flex items-center space-x-2 px-4 pb-2">
-        <Switch
-          id="onnx-model-toggle"
-          checked={useOnnxModel}
-          onCheckedChange={setUseOnnxModel}
-        />
-        <Label htmlFor="onnx-model-toggle">Use ONNX Model</Label>
-      </div>
       <form
         ref={formRef}
         onSubmit={handleSubmit}

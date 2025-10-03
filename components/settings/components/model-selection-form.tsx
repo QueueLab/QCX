@@ -13,6 +13,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, Zap, Rocket, Cpu, Earth } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { useGeospatialModel } from "@/lib/geospatial-model-context";
 
 interface ModelSelectionFormProps {
   form: UseFormReturn<any>;
@@ -54,6 +57,8 @@ const models = [
 ];
 
 export function ModelSelectionForm({ form }: ModelSelectionFormProps) {
+  const { isGeospatialModelEnabled, toggleGeospatialModel } = useGeospatialModel();
+
   return (
     <FormField
       control={form.control}
@@ -94,6 +99,18 @@ export function ModelSelectionForm({ form }: ModelSelectionFormProps) {
                             <p className="text-sm text-muted-foreground">
                               {model.description}
                             </p>
+                            {model.id === "QCX-Terra" && (
+                              <div className="flex items-center space-x-2 pt-2">
+                                <Switch
+                                  id="geospatial-model-toggle"
+                                  checked={isGeospatialModelEnabled}
+                                  onCheckedChange={toggleGeospatialModel}
+                                />
+                                <Label htmlFor="geospatial-model-toggle" className="text-sm">
+                                  geospatial foundational model garden (->on)
+                                </Label>
+                              </div>
+                            )}
                           </div>
                         </CardContent>
                       </Card>
