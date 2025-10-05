@@ -8,10 +8,11 @@ import {
 } from 'ai/rsc'
 import { CoreMessage, ToolResultPart } from 'ai'
 import { nanoid } from 'nanoid'
+import type { FeatureCollection } from 'geojson'
 import { Spinner } from '@/components/ui/spinner'
 import { Section } from '@/components/section'
 import { FollowupPanel } from '@/components/followup-panel'
-import { inquire, researcher, taskManager, querySuggestor } from '@/lib/agents'
+import { inquire, researcher, taskManager, querySuggestor, resolutionSearch } from '@/lib/agents'
 // Removed import of useGeospatialToolMcp as it no longer exists and was incorrectly used here.
 // The geospatialTool (if used by agents like researcher) now manages its own MCP client.
 import { writer } from '@/lib/agents/writer'
@@ -21,6 +22,7 @@ import { UserMessage } from '@/components/user-message'
 import { BotMessage } from '@/components/message'
 import { SearchSection } from '@/components/search-section'
 import SearchRelated from '@/components/search-related'
+import { GeoJsonLayer } from '@/components/map/geojson-layer'
 import { CopilotDisplay } from '@/components/copilot-display'
 import RetrieveSection from '@/components/retrieve-section'
 import { VideoSearchSection } from '@/components/video-search-section'
@@ -39,6 +41,71 @@ async function submit(formData?: FormData, skip?: boolean) {
   const uiStream = createStreamableUI()
   const isGenerating = createStreamableValue(true)
   const isCollapsed = createStreamableValue(false)
+
+  const action = formData?.get('action') as string;
+  if (action === 'resolution_search') {
+    const file = formData?.get('file') as File;
+    if (!file) {
+      throw new Error('No file provided for resolution search.');
+    }
+
+    const buffer = await file.arrayBuffer();
+    const dataUrl = `data:${file.type};base64,${Buffer.from(buffer).toString('base64')}`;
+
+    // Get the current messages, excluding tool-related ones.
+    const messages: CoreMessage[] = [...(aiState.get().messages as any[])].filter(
+      message =>
+        message.role !== 'tool' &&
+        message.type !== 'followup' &&
+        message.type !== 'related' &&
+        message.type !== 'end'
+    );
+
+    // The user's prompt for this action is static.
+    const userInput = 'Analyze this map view.';
+
+    // Construct the multimodal content for the user message.
+    const content: CoreMessage['content'] = [
+      { type: 'text', text: userInput },
+      { type: 'image', image: dataUrl, mimeType: file.type }
+    ];
+
+    // Add the new user message to the AI state.
+    aiState.update({
+      ...aiState.get(),
+      messages: [
+        ...aiState.get().messages,
+        { id: nanoid(), role: 'user', content }
+      ]
+    });
+    messages.push({ role: 'user', content });
+
+    // Call the simplified agent.
+    const analysisResult = await resolutionSearch(uiStream, messages);
+
+    aiState.done({
+      ...aiState.get(),
+      messages: [
+        ...aiState.get().messages,
+        {
+          id: nanoid(),
+          role: 'assistant',
+          content: JSON.stringify(analysisResult),
+          type: 'resolution_search_result'
+        }
+      ]
+    });
+
+    isGenerating.done(false);
+    uiStream.done();
+    return {
+      id: nanoid(),
+      isGenerating: isGenerating.value,
+      component: uiStream.value,
+      isCollapsed: isCollapsed.value
+    };
+  }
+
   const messages: CoreMessage[] = [...(aiState.get().messages as any[])].filter(
     message =>
       message.role !== 'tool' &&
@@ -537,6 +604,25 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                   <Section title="Follow-up" className="pb-8">
                     <FollowupPanel />
                   </Section>
+                )
+              }
+            case 'resolution_search_result':
+              const analysisResult = JSON.parse(content as string);
+              const summaryValue = createStreamableValue();
+              summaryValue.done(analysisResult.summary);
+              const geoJson = analysisResult.geoJson as FeatureCollection;
+
+              return {
+                id,
+                component: (
+                  <>
+                    <Section title="Map Analysis">
+                      <BotMessage content={summaryValue.value} />
+                    </Section>
+                    {geoJson && (
+                      <GeoJsonLayer id={id} data={geoJson} />
+                    )}
+                  </>
                 )
               }
           }

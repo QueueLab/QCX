@@ -11,12 +11,14 @@ import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css'
 import { useMapToggle, MapToggleEnum } from '../map-toggle-context'
 import { useMapData } from './map-data-context'; // Add this import
 import { useMapLoading } from '../map-loading-context'; // Import useMapLoading
+import { useMap } from './map-context'
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN as string;
 
 export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number; } }> = ({ position }) => {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
+  const { setMap } = useMap()
   const drawRef = useRef<MapboxDraw | null>(null)
   const rotationFrameRef = useRef<number | null>(null)
   const polygonLabelsRef = useRef<{ [id: string]: mapboxgl.Marker }>({})
@@ -418,6 +420,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
 
       map.current.on('load', () => {
         if (!map.current) return
+        setMap(map.current) // Set map instance in context
 
         // Add terrain and sky
         map.current.addSource('mapbox-dem', {
@@ -476,6 +479,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         
         stopRotation()
         setIsMapLoaded(false) // Reset map loaded state on cleanup
+        setMap(null) // Clear map instance from context
         map.current.remove()
         map.current = null
       }
@@ -494,7 +498,8 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     setupGeolocationWatcher, 
     captureMapCenter, 
     setupDrawingTools,
-    setIsMapLoaded
+    setIsMapLoaded,
+    setMap
   ])
 
   // Handle position updates from props
@@ -578,6 +583,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
 
         stopRotation()
         setIsMapLoaded(false)
+        setMap(null)
         map.current.remove()
         map.current = null
       }
@@ -596,7 +602,8 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     setupGeolocationWatcher,
     captureMapCenter,
     setupDrawingTools,
-    setIsMapLoaded
+    setIsMapLoaded,
+    setMap
   ]);
 
 
