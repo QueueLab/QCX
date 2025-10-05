@@ -12,7 +12,7 @@ import { useProfileToggle, ProfileToggleEnum } from "@/components/profile-toggle
 import SettingsView from "@/components/settings/settings-view";
 import { MapDataProvider, useMapData } from './map/map-data-context'; // Add this and useMapData
 import { MapProvider } from './map/map-context'
-import { DesktopIconsBar } from './desktop-icons-bar'
+import { AnalysisTool } from './analysis-tool'
 import { updateDrawingContext } from '@/lib/actions/chat'; // Import the server action
 
 type ChatProps = {
@@ -133,7 +133,7 @@ export function Chat({ id }: ChatProps) {
             style={{ zIndex: 10 }} // Added z-index
           >
             {activeView ? <SettingsView /> : <Mapbox />}
-            <DesktopIconsBar />
+            <AnalysisTool />
           </div>
         </div>
       </MapProvider>

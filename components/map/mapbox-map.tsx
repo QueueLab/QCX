@@ -405,7 +405,8 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         pitch: currentMapCenterRef.current.pitch,
         bearing: 0,
         maxZoom: 22,
-        attributionControl: true
+        attributionControl: true,
+        preserveDrawingBuffer: true
       })
 
       map.current.addControl(new mapboxgl.NavigationControl(), 'top-left')

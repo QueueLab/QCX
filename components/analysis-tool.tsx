@@ -9,7 +9,7 @@ import { useMap } from './map/map-context'
 import { nanoid } from 'nanoid'
 import { UserMessage } from './user-message'
 
-export function DesktopIconsBar() {
+export function AnalysisTool() {
   const { map } = useMap()
   const { submit } = useActions()
   const [, setMessages] = useUIState<typeof AI>()
@@ -56,8 +56,8 @@ export function DesktopIconsBar() {
   }
 
   return (
-    <div className="absolute top-4 right-4 z-20 flex flex-col space-y-2">
-       <Button
+    <div className="absolute top-4 right-4 z-20">
+      <Button
         variant="outline"
         size="icon"
         onClick={handleResolutionSearch}
@@ -71,7 +71,6 @@ export function DesktopIconsBar() {
           <Search className="h-5 w-5" />
         )}
       </Button>
-      {/* Other desktop icons like MapToggle can be added here if needed */}
     </div>
   )
 }
