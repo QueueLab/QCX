@@ -12,8 +12,12 @@ import { useProfileToggle, ProfileToggleEnum } from "@/components/profile-toggle
 import SettingsView from "@/components/settings/settings-view";
 import { MapDataProvider, useMapData } from './map/map-data-context'; // Add this and useMapData
 import { MapProvider } from './map/map-context'
-import { AnalysisTool } from './analysis-tool'
 import { updateDrawingContext } from '@/lib/actions/chat'; // Import the server action
+import dynamic from 'next/dynamic'
+
+const AnalysisTool = dynamic(() => import('./analysis-tool').then(mod => mod.AnalysisTool), {
+  ssr: false,
+})
 
 type ChatProps = {
   id?: string // This is the chatId

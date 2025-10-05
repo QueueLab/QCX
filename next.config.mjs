@@ -3,7 +3,7 @@ const nextConfig = {
   experimental: {
     serverActions: {
       allowedOrigins: ["localhost:3000", "https://planet.queue.cx/"],
-      bodySizeLimit: '5mb',
+      bodySizeLimit: '200mb',
     },
   },
   transpilePackages: ['QCX', 'mapbox_mcp'], // Added to transpile local packages
