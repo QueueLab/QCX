@@ -3,13 +3,13 @@
 import { useEffect, useState, useRef, ChangeEvent, forwardRef, useImperativeHandle } from 'react'
 import type { AI, UIState } from '@/app/actions'
 import { useUIState, useActions } from 'ai/rsc'
-// Removed import of useGeospatialToolMcp as it's no longer used/available
 import { cn } from '@/lib/utils'
 import { UserMessage } from './user-message'
 import { Button } from './ui/button'
 import { ArrowRight, Plus, Paperclip, X } from 'lucide-react'
 import Textarea from 'react-textarea-autosize'
 import { nanoid } from 'nanoid'
+import Image from 'next/image'
 
 interface ChatPanelProps {
   messages: UIState
@@ -24,9 +24,8 @@ export interface ChatPanelRef {
 export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, input, setInput }, ref) => {
   const [, setMessages] = useUIState<typeof AI>()
   const { submit, clearChat } = useActions()
-  // Removed mcp instance as it's no longer passed to submit
   const [isMobile, setIsMobile] = useState(false)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -48,22 +47,43 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
   }, [])
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      if (file.size > 10 * 1024 * 1024) {
-        alert('File size must be less than 10MB')
-        return
-      }
-      setSelectedFile(file)
+    const files = e.target.files
+    if (files) {
+      const newFiles = Array.from(files).filter(file => {
+        if (file.size > 10 * 1024 * 1024) {
+          alert(`File ${file.name} is too large (max 10MB)`)
+          return false
+        }
+        return true
+      })
+      setSelectedFiles(prevFiles => [...prevFiles, ...newFiles])
     }
   }
+
+  // Automatically submit the form when a file is selected on mobile
+  useEffect(() => {
+    if (selectedFiles.length > 0 && isMobile) {
+      // Only auto-submit if there wasn't text before, to avoid interrupting typing
+      if (input.trim() === '') {
+        formRef.current?.requestSubmit()
+      }
+    }
+  }, [selectedFiles, isMobile, input])
 
   const handleAttachmentClick = () => {
     fileInputRef.current?.click()
   }
 
-  const clearAttachment = () => {
-    setSelectedFile(null)
+  const removeAttachment = (index: number) => {
+    setSelectedFiles(prevFiles => prevFiles.filter((_, i) => i !== index));
+    // Reset file input value to allow re-selecting the same file
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const clearAllAttachments = () => {
+    setSelectedFiles([])
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
@@ -71,7 +91,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (!input && !selectedFile) {
+    if (!input && selectedFiles.length === 0) {
       return
     }
 
@@ -79,12 +99,15 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     if (input) {
       content.push({ type: 'text', text: input })
     }
-    if (selectedFile && selectedFile.type.startsWith('image/')) {
-      content.push({
-        type: 'image',
-        image: URL.createObjectURL(selectedFile)
-      })
-    }
+    selectedFiles.forEach(file => {
+        if (file.type.startsWith('image/')) {
+            content.push({
+                type: 'image',
+                image: URL.createObjectURL(file)
+            })
+        }
+    })
+
 
     setMessages(currentMessages => [
       ...currentMessages,
@@ -95,12 +118,14 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     ])
 
     const formData = new FormData(e.currentTarget)
-    if (selectedFile) {
-      formData.append('file', selectedFile)
+    if (selectedFiles.length > 0) {
+      selectedFiles.forEach(file => {
+        formData.append('files', file)
+      })
     }
 
     setInput('')
-    clearAttachment()
+    clearAllAttachments()
 
     const responseMessage = await submit(formData)
     setMessages(currentMessages => [...currentMessages, responseMessage as any])
@@ -108,7 +133,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
 
   const handleClear = async () => {
     setMessages([])
-    clearAttachment()
+    clearAllAttachments()
     await clearChat()
   }
 
@@ -149,16 +174,32 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
           : 'sticky bottom-0 bg-background z-10 w-full border-t border-border px-2 py-3 md:px-4'
       )}
     >
-      {selectedFile && (
+      {selectedFiles.length > 0 && (
         <div className="w-full px-4 pb-2">
-          <div className="flex items-center justify-between p-2 bg-muted rounded-lg">
-            <span className="text-sm text-muted-foreground truncate max-w-xs">
-              {selectedFile.name}
-            </span>
-            <Button variant="ghost" size="icon" onClick={clearAttachment}>
-              <X size={16} />
-            </Button>
-          </div>
+            <div className="flex items-center space-x-2 overflow-x-auto">
+                {selectedFiles.map((file, index) => (
+                    <div
+                        key={index}
+                        className="flex-shrink-0 relative w-20 h-20 bg-muted rounded-lg p-1"
+                    >
+                        <Image
+                            src={URL.createObjectURL(file)}
+                            alt={file.name}
+                            width={80}
+                            height={80}
+                            className="w-full h-full object-cover rounded-md"
+                        />
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute top-0 right-0 h-6 w-6 bg-background/50 hover:bg-background/75"
+                            onClick={() => removeAttachment(index)}
+                        >
+                            <X size={12} />
+                        </Button>
+                    </div>
+                ))}
+            </div>
         </div>
       )}
       <form
@@ -180,7 +221,8 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
             ref={fileInputRef}
             onChange={handleFileChange}
             className="hidden"
-            accept="text/plain,image/png,image/jpeg,image/webp"
+            accept="image/png,image/jpeg,image/webp"
+            multiple
           />
           {!isMobile && (
             <Button
@@ -219,7 +261,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
                 !e.shiftKey &&
                 !e.nativeEvent.isComposing
               ) {
-                if (input.trim().length === 0 && !selectedFile) {
+                if (input.trim().length === 0 && selectedFiles.length === 0) {
                   e.preventDefault()
                   return
                 }
@@ -245,7 +287,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
               'absolute top-1/2 transform -translate-y-1/2',
               isMobile ? 'right-1' : 'right-2'
             )}
-            disabled={input.length === 0 && !selectedFile}
+            disabled={input.length === 0 && selectedFiles.length === 0}
             aria-label="Send message"
           >
             <ArrowRight size={isMobile ? 18 : 20} />
