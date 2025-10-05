@@ -56,8 +56,9 @@ Analyze the user's prompt and the image to provide a holistic understanding of t
   const summaryStream = createStreamableValue<string>()
   summaryStream.done(object.summary || 'Analysis complete.')
 
-  // Update the UI with the final summary.
-  uiStream.done(
+  // Update the UI with the final summary. The stream is NOT closed here;
+  // the main action handler in `app/actions.tsx` is responsible for closing it.
+  uiStream.update(
     <BotMessage content={summaryStream.value} />
   );
 
