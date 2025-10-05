@@ -119,8 +119,8 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
 
     const formData = new FormData(e.currentTarget)
     if (selectedFiles.length > 0) {
-      selectedFiles.forEach(file => {
-        formData.append('files', file)
+      selectedFiles.forEach((file, index) => {
+        formData.append(`files[${index}]`, file)
       })
     }
 

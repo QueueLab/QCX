@@ -128,9 +128,16 @@ async function submit(formData?: FormData, skip?: boolean) {
       isCollapsed: isCollapsed.value,
     };
   }
-  const file = !skip ? (formData?.get('file') as File) : undefined
+  const files: File[] = []
+  if (formData && !skip) {
+    for (const [key, value] of formData.entries()) {
+      if (key.startsWith('files[')) {
+        files.push(value as File)
+      }
+    }
+  }
 
-  if (!userInput && !file) {
+  if (!userInput && files.length === 0) {
     isGenerating.done(false)
     return {
       id: nanoid(),
@@ -144,31 +151,31 @@ async function submit(formData?: FormData, skip?: boolean) {
     type: 'text' | 'image'
     text?: string
     image?: string
-    mimeType?: string
   }[] = []
 
   if (userInput) {
     messageParts.push({ type: 'text', text: userInput })
   }
 
-  if (file) {
-    const buffer = await file.arrayBuffer()
-    if (file.type.startsWith('image/')) {
-      const dataUrl = `data:${file.type};base64,${Buffer.from(
-        buffer
-      ).toString('base64')}`
-      messageParts.push({
-        type: 'image',
-        image: dataUrl,
-        mimeType: file.type
-      })
-    } else if (file.type === 'text/plain') {
-      const textContent = Buffer.from(buffer).toString('utf-8')
-      const existingTextPart = messageParts.find(p => p.type === 'text')
-      if (existingTextPart) {
-        existingTextPart.text = `${textContent}\n\n${existingTextPart.text}`
-      } else {
-        messageParts.push({ type: 'text', text: textContent })
+  if (files.length > 0) {
+    for (const file of files) {
+      const buffer = await file.arrayBuffer()
+      if (file.type.startsWith('image/')) {
+        const dataUrl = `data:${file.type};base64,${Buffer.from(
+          buffer
+        ).toString('base64')}`
+        messageParts.push({
+          type: 'image',
+          image: dataUrl
+        })
+      } else if (file.type === 'text/plain') {
+        const textContent = Buffer.from(buffer).toString('utf-8')
+        const existingTextPart = messageParts.find(p => p.type === 'text')
+        if (existingTextPart) {
+          existingTextPart.text = `${textContent}\n\n${existingTextPart.text}`
+        } else {
+          messageParts.push({ type: 'text', text: textContent })
+        }
       }
     }
   }
@@ -180,7 +187,7 @@ async function submit(formData?: FormData, skip?: boolean) {
 
   const type = skip
     ? undefined
-    : formData?.has('input') || formData?.has('file')
+    : formData?.has('input') || files.length > 0
     ? 'input'
     : formData?.has('related_query')
     ? 'input_related'
