@@ -1,16 +1,25 @@
 'use client'
 
-import React, { useState } from 'react'
+'use client'
+
+import React, { createContext, useContext, useState, ReactNode } from 'react'
 import { useActions, useUIState } from 'ai/rsc'
 import { AI } from '@/app/actions'
-import { Button } from '@/components/ui/button'
-import { Search } from 'lucide-react'
 import { useMap } from './map/map-context'
 import { nanoid } from 'nanoid'
 import { UserMessage } from './user-message'
 import { toast } from 'react-toastify'
 
-export function AnalysisTool() {
+type AnalysisToolContextType = {
+  isAnalyzing: boolean
+  handleResolutionSearch: () => void
+}
+
+const AnalysisToolContext = createContext<AnalysisToolContextType | undefined>(
+  undefined
+)
+
+export const AnalysisToolProvider = ({ children }: { children: ReactNode }) => {
   const { map } = useMap()
   const { submit } = useActions()
   const [, setMessages] = useUIState<typeof AI>()
@@ -57,21 +66,18 @@ export function AnalysisTool() {
   }
 
   return (
-    <div className="absolute top-4 right-4 z-20">
-      <Button
-        variant="outline"
-        size="icon"
-        onClick={handleResolutionSearch}
-        disabled={isAnalyzing || !map}
-        title="Analyze current map view"
-        className="bg-background/80 backdrop-blur-sm hover:bg-background"
-      >
-        {isAnalyzing ? (
-          <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-current"></div>
-        ) : (
-          <Search className="h-5 w-5" />
-        )}
-      </Button>
-    </div>
+    <AnalysisToolContext.Provider
+      value={{ isAnalyzing, handleResolutionSearch }}
+    >
+      {children}
+    </AnalysisToolContext.Provider>
   )
+}
+
+export const useAnalysisTool = (): AnalysisToolContextType => {
+  const context = useContext(AnalysisToolContext)
+  if (!context) {
+    throw new Error('useAnalysisTool must be used within an AnalysisToolProvider')
+  }
+  return context
 }

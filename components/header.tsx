@@ -1,3 +1,5 @@
+'use client'
+
 import React from 'react'
 import Image from 'next/image'
 import { ModeToggle } from './mode-toggle'
@@ -13,8 +15,13 @@ import {
 } from 'lucide-react'
 import { MapToggle } from './map-toggle'
 import { ProfileToggle } from './profile-toggle'
+import { useAnalysisTool } from './analysis-tool-context'
+import { useMap } from './map/map-context'
 
 export const Header = () => {
+  const { isAnalyzing, handleResolutionSearch } = useAnalysisTool()
+  const { map } = useMap()
+
   return (
     <header className="fixed w-full p-1 md:p-2 flex justify-between items-center z-10 backdrop-blur md:backdrop-blur-none bg-background/80 md:bg-transparent">
       <div>
@@ -39,8 +46,18 @@ export const Header = () => {
           <CalendarDays className="h-[1.2rem] w-[1.2rem]" />
         </Button>
         
-        <Button variant="ghost" size="icon">
-          <Search className="h-[1.2rem] w-[1.2rem]" />
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleResolutionSearch}
+          disabled={isAnalyzing || !map}
+          title="Analyze current map view"
+        >
+          {isAnalyzing ? (
+            <div className="h-[1.2rem] w-[1.2rem] animate-spin rounded-full border-b-2 border-current"></div>
+          ) : (
+            <Search className="h-[1.2rem] w-[1.2rem]" />
+          )}
         </Button>
         
         <Button variant="ghost" size="icon">
