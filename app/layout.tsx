@@ -12,6 +12,8 @@ import { Toaster } from '@/components/ui/sonner'
 import { MapToggleProvider } from '@/components/map-toggle-context'
 import { ProfileToggleProvider } from '@/components/profile-toggle-context'
 import { MapLoadingProvider } from '@/components/map-loading-context';
+import { MapProvider } from '@/components/map/map-context';
+import { AnalysisToolProvider } from '@/components/analysis-tool-context';
 import ConditionalLottie from '@/components/conditional-lottie';
 
 const fontSans = FontSans({
@@ -64,12 +66,16 @@ export default function RootLayout({
               themes={['light', 'dark', 'earth']}
             >
               <MapLoadingProvider>
-                <Header />
-                <ConditionalLottie />
-                {children}
-                <Sidebar />
-                <Footer />
-                <Toaster />
+                <MapProvider>
+                  <AnalysisToolProvider>
+                    <Header />
+                    <ConditionalLottie />
+                    {children}
+                    <Sidebar />
+                    <Footer />
+                    <Toaster />
+                  </AnalysisToolProvider>
+                </MapProvider>
               </MapLoadingProvider>
             </ThemeProvider>
           </ProfileToggleProvider>
