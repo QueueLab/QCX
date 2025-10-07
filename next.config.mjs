@@ -2,7 +2,7 @@
 const nextConfig = {  
   experimental: {
     serverActions: {
-      allowedOrigins: ["localhost:3000", "https://planet.queue.cx/"],
+      allowedOrigins: ["http://localhost:3000", "https://planet.queue.cx"],
       bodySizeLimit: '200mb',
     },
   },

@@ -1,9 +1,8 @@
-import { createStreamableUI, createStreamableValue, StreamableValue } from 'ai/rsc'
 import { CoreMessage, generateObject } from 'ai'
 import { getModel } from '@/lib/utils'
 import { z } from 'zod'
-import { BotMessage } from '@/components/message'
-import { Card } from '@/components/ui/card'
+
+// This agent is now a pure data-processing module, with no UI dependencies.
 
 // Define the schema for the structured response from the AI.
 const resolutionSearchSchema = z.object({
@@ -24,20 +23,16 @@ const resolutionSearchSchema = z.object({
   }).describe('A GeoJSON object containing points of interest and classified land features to be overlaid on the map.'),
 })
 
-export async function resolutionSearch(
-  uiStream: ReturnType<typeof createStreamableUI>,
-  messages: CoreMessage[]
-) {
-  uiStream.update(<Card>Analyzing map view...</Card>)
-
+export async function resolutionSearch(messages: CoreMessage[]) {
   const systemPrompt = `
 As a geospatial analyst, your task is to analyze the provided satellite image of a geographic location.
 Your analysis should be comprehensive and include the following components:
 
 1.  **Land Feature Classification:** Identify and describe the different types of land cover visible in the image (e.g., urban areas, forests, water bodies, agricultural fields).
 2.  **Points of Interest (POI):** Detect and name any significant landmarks, infrastructure (e.g., bridges, major roads), or notable buildings.
-3.  **Contextual News & Events:** Based on the identified location, perform a web search to find any relevant and current news or events. For example, if you identify Central Park, search for "current events Central Park NYC".
-4.  **Structured Output:** Return your findings in a structured JSON format. The output must include a 'summary' (a detailed text description of your analysis) and a 'geoJson' object. The GeoJSON should contain features (Points or Polygons) for the identified POIs and land classifications, with appropriate properties.
+3.  **Structured Output:** Return your findings in a structured JSON format. The output must include a 'summary' (a detailed text description of your analysis) and a 'geoJson' object. The GeoJSON should contain features (Points or Polygons) for the identified POIs and land classifications, with appropriate properties.
+
+Your analysis should be based solely on the visual information in the image and your general knowledge. Do not attempt to access external websites or perform web searches.
 
 Analyze the user's prompt and the image to provide a holistic understanding of the location.
 `;
@@ -51,16 +46,6 @@ Analyze the user's prompt and the image to provide a holistic understanding of t
     messages: filteredMessages,
     schema: resolutionSearchSchema,
   })
-
-  // Create a streamable value for the summary and immediately mark it as done.
-  const summaryStream = createStreamableValue<string>()
-  summaryStream.done(object.summary || 'Analysis complete.')
-
-  // Update the UI with the final summary. The stream is NOT closed here;
-  // the main action handler in `app/actions.tsx` is responsible for closing it.
-  uiStream.update(
-    <BotMessage content={summaryStream.value} />
-  );
 
   // Return the complete, validated object.
   return object

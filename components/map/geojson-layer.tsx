@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import type mapboxgl from 'mapbox-gl'
 import { useMap } from './map-context'
 import type { FeatureCollection } from 'geojson'
 

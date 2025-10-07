@@ -8,6 +8,7 @@ import { Search } from 'lucide-react'
 import { useMap } from './map/map-context'
 import { nanoid } from 'nanoid'
 import { UserMessage } from './user-message'
+import { toast } from 'react-toastify'
 
 export function AnalysisTool() {
   const { map } = useMap()
@@ -17,7 +18,7 @@ export function AnalysisTool() {
 
   const handleResolutionSearch = async () => {
     if (!map) {
-      alert('Map is not available yet. Please wait for it to load.')
+      toast.error('Map is not available yet. Please wait for it to load.')
       return
     }
 
@@ -49,7 +50,7 @@ export function AnalysisTool() {
       setMessages(currentMessages => [...currentMessages, responseMessage as any])
     } catch (error) {
       console.error('Failed to perform resolution search:', error)
-      alert('An error occurred while analyzing the map.')
+      toast.error('An error occurred while analyzing the map.')
     } finally {
       setIsAnalyzing(false)
     }
