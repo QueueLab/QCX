@@ -80,8 +80,17 @@ async function submit(formData?: FormData, skip?: boolean) {
     });
     messages.push({ role: 'user', content });
 
-    // Call the simplified agent.
-    const analysisResult = await resolutionSearch(uiStream, messages);
+    // Call the simplified agent, which now returns data directly.
+    const analysisResult = await resolutionSearch(messages);
+
+    // Create a streamable value for the summary and mark it as done.
+    const summaryStream = createStreamableValue<string>();
+    summaryStream.done(analysisResult.summary || 'Analysis complete.');
+
+    // Update the UI stream with the BotMessage component.
+    uiStream.update(
+      <BotMessage content={summaryStream.value} />
+    );
 
     aiState.done({
       ...aiState.get(),
@@ -606,7 +615,7 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                   </Section>
                 )
               }
-            case 'resolution_search_result':
+            case 'resolution_search_result': {
               const analysisResult = JSON.parse(content as string);
               const summaryValue = createStreamableValue();
               summaryValue.done(analysisResult.summary);
@@ -625,6 +634,7 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                   </>
                 )
               }
+            }
           }
           break
         case 'tool':

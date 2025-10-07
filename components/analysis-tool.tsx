@@ -8,8 +8,9 @@ import { Search } from 'lucide-react'
 import { useMap } from './map/map-context'
 import { nanoid } from 'nanoid'
 import { UserMessage } from './user-message'
+import { toast } from 'react-toastify'
 
-export function DesktopIconsBar() {
+export function AnalysisTool() {
   const { map } = useMap()
   const { submit } = useActions()
   const [, setMessages] = useUIState<typeof AI>()
@@ -17,7 +18,7 @@ export function DesktopIconsBar() {
 
   const handleResolutionSearch = async () => {
     if (!map) {
-      alert('Map is not available yet. Please wait for it to load.')
+      toast.error('Map is not available yet. Please wait for it to load.')
       return
     }
 
@@ -49,15 +50,15 @@ export function DesktopIconsBar() {
       setMessages(currentMessages => [...currentMessages, responseMessage as any])
     } catch (error) {
       console.error('Failed to perform resolution search:', error)
-      alert('An error occurred while analyzing the map.')
+      toast.error('An error occurred while analyzing the map.')
     } finally {
       setIsAnalyzing(false)
     }
   }
 
   return (
-    <div className="absolute top-4 right-4 z-20 flex flex-col space-y-2">
-       <Button
+    <div className="absolute top-4 right-4 z-20">
+      <Button
         variant="outline"
         size="icon"
         onClick={handleResolutionSearch}
@@ -71,7 +72,6 @@ export function DesktopIconsBar() {
           <Search className="h-5 w-5" />
         )}
       </Button>
-      {/* Other desktop icons like MapToggle can be added here if needed */}
     </div>
   )
 }

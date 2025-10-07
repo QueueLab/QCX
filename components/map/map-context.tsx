@@ -1,18 +1,18 @@
 'use client'
 
 import { createContext, useContext, useState, ReactNode } from 'react'
-import type { Map } from 'mapbox-gl'
+import type { Map as MapboxMap } from 'mapbox-gl'
 
 // A more direct context to hold the map instance itself.
 type MapContextType = {
-  map: Map | null;
-  setMap: (map: Map | null) => void;
+  map: MapboxMap | null;
+  setMap: (map: MapboxMap | null) => void;
 };
 
 const MapContext = createContext<MapContextType | undefined>(undefined);
 
 export const MapProvider = ({ children }: { children: ReactNode }) => {
-  const [map, setMap] = useState<Map | null>(null);
+  const [map, setMap] = useState<MapboxMap | null>(null);
 
   return (
     <MapContext.Provider value={{ map, setMap }}>

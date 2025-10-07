@@ -1,0 +1,7 @@
+$ next dev --turbo
+   ▲ Next.js 15.3.3 (Turbopack)
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.0.2:3000
+   - Environments: .env.local, .env
+
+ ✓ Starting...
