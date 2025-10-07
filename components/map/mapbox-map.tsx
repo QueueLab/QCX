@@ -534,11 +534,11 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     // If GeoJSON data is present, add or update the source and layers
     if (mapData.geojson) {
       if (source) {
-        (source as mapboxgl.GeoJSONSource).setData(mapData.geojson);
+        (source as mapboxgl.GeoJSONSource).setData(mapData.geojson as any);
       } else {
         mapInstance.addSource('geojson-data', {
           type: 'geojson',
-          data: mapData.geojson,
+          data: mapData.geojson as any,
         });
 
         // Add layer for points
@@ -590,7 +590,8 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
           mapInstance.easeTo(command.params);
           break;
         case 'fitBounds':
-          mapInstance.fitBounds(command.params, command.params.options || {});
+          const { bounds, options } = command.params;
+          mapInstance.fitBounds(bounds, options || {});
           break;
         default:
           console.warn(`Unknown map command: ${command.command}`);

@@ -19,11 +19,12 @@ Rules for GeoJSON:
 - If no geographic data can be extracted, set "geojson" to null.
 
 Rules for Map Commands:
-- Identify actions in the text that imply map movements (e.g., "fly to," "center on," "zoom to").
+- Identify actions in thetext that imply map movements (e.g., "fly to," "center on," "zoom to").
 - Create a list of command objects, for example: { "command": "flyTo", "params": { "center": [-71.05633, 42.356823], "zoom": 15 } }.
 - If no map commands can be inferred, set "map_commands" to null.
 
 The final output MUST be a single JSON object that strictly follows the LocationResponse interface.
+Return ONLY the raw JSON object with no surrounding markdown, code fences, or any additional text or explanation.
 
 Here is the text to process:
 `;
@@ -52,7 +53,15 @@ export async function geojsonEnricher(
     });
 
     // Assuming the LLM returns a valid JSON string, parse it.
-    const enrichedData = JSON.parse(text) as LocationResponse;
+    let responseText = await text;
+
+    // Strip markdown code fences if present
+    const jsonMatch = responseText.match(/```(json)?\n([\s\S]*?)\n```/);
+    if (jsonMatch && jsonMatch[2]) {
+      responseText = jsonMatch[2].trim();
+    }
+
+    const enrichedData = JSON.parse(responseText) as LocationResponse;
     return enrichedData;
   } catch (error) {
     console.error('Error enriching response with GeoJSON:', error);
