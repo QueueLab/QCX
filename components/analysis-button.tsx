@@ -8,7 +8,7 @@ import { Search } from 'lucide-react'
 import { useMap } from './map/map-context'
 import { nanoid } from 'nanoid'
 import { UserMessage } from './user-message'
-import { toast } from 'react-toastify'
+import { toast } from 'sonner'
 
 export function AnalysisButton() {
   const { map } = useMap()
@@ -65,9 +65,9 @@ export function AnalysisButton() {
       title="Analyze current map view"
     >
       {isAnalyzing ? (
-        <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-current"></div>
+        <div className="h-[1.2rem] w-[1.2rem] animate-spin rounded-full border-b-2 border-current"></div>
       ) : (
-        <Search className="h-5 w-5" />
+        <Search className="h-[1.2rem] w-[1.2rem]" />
       )}
     </Button>
   )

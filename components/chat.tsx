@@ -11,7 +11,6 @@ import MobileIconsBar from './mobile-icons-bar'
 import { useProfileToggle, ProfileToggleEnum } from "@/components/profile-toggle-context";
 import SettingsView from "@/components/settings/settings-view";
 import { MapDataProvider, useMapData } from './map/map-data-context'; // Add this and useMapData
-import { MapProvider } from './map/map-context'
 import { updateDrawingContext } from '@/lib/actions/chat'; // Import the server action
 import dynamic from 'next/dynamic'
 
@@ -82,8 +81,7 @@ export function Chat({ id }: ChatProps) {
   if (isMobile) {
     return (
       <MapDataProvider> {/* Add Provider */}
-        <MapProvider>
-          <div className="mobile-layout-container">
+        <div className="mobile-layout-container">
             <div className="mobile-map-section">
             {activeView ? <SettingsView /> : <Mapbox />}
           </div>
@@ -105,7 +103,6 @@ export function Chat({ id }: ChatProps) {
             )}
             </div>
           </div>
-        </MapProvider>
       </MapDataProvider>
     );
   }
@@ -113,8 +110,7 @@ export function Chat({ id }: ChatProps) {
   // Desktop layout
   return (
     <MapDataProvider> {/* Add Provider */}
-      <MapProvider>
-        <div className="flex justify-start items-start">
+      <div className="flex justify-start items-start">
           {/* This is the new div for scrolling */}
         <div className="w-1/2 flex flex-col space-y-3 md:space-y-4 px-8 sm:px-12 pt-12 md:pt-14 pb-4 h-[calc(100vh-0.5in)] overflow-y-auto">
           <ChatPanel messages={messages} input={input} setInput={setInput} />
@@ -135,7 +131,6 @@ export function Chat({ id }: ChatProps) {
             {activeView ? <SettingsView /> : <Mapbox />}
           </div>
         </div>
-      </MapProvider>
     </MapDataProvider>
   );
 }
