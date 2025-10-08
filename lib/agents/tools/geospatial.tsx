@@ -21,6 +21,7 @@ interface Location {
 
 interface McpResponse {
   location: Location;
+  results?: any[];
   mapUrl?: string;
 }
 

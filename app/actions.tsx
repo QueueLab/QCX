@@ -12,7 +12,14 @@ import type { FeatureCollection } from 'geojson'
 import { Spinner } from '@/components/ui/spinner'
 import { Section } from '@/components/section'
 import { FollowupPanel } from '@/components/followup-panel'
-import { inquire, researcher, taskManager, querySuggestor, resolutionSearch } from '@/lib/agents'
+import {
+  inquire,
+  researcher,
+  taskManager,
+  querySuggestor,
+  resolutionSearch,
+  viewportAnalyzer
+} from '@/lib/agents'
 // Removed import of useGeospatialToolMcp as it no longer exists and was incorrectly used here.
 // The geospatialTool (if used by agents like researcher) now manages its own MCP client.
 import { writer } from '@/lib/agents/writer'
@@ -43,6 +50,74 @@ async function submit(formData?: FormData, skip?: boolean) {
   const isCollapsed = createStreamableValue(false)
 
   const action = formData?.get('action') as string;
+
+  if (action === 'viewport_analysis') {
+    const viewportData = formData?.get('viewport') as string;
+    if (!viewportData) {
+      throw new Error('No viewport data provided for analysis.');
+    }
+    const viewport = JSON.parse(viewportData);
+
+    // The user's prompt for this action is static.
+    const userInput = 'Analyze this map view.';
+
+    // Add the new user message to the AI state.
+    aiState.update({
+      ...aiState.get(),
+      messages: [
+        ...aiState.get().messages,
+        { id: nanoid(), role: 'user', content: userInput }
+      ]
+    });
+
+    // Call the viewport analyzer agent
+    const analysisResult = await viewportAnalyzer(viewport);
+
+    // Generate related queries
+    const messages: CoreMessage[] = [{ role: 'user', content: userInput }];
+    const relatedQueries = await querySuggestor(uiStream, messages);
+    uiStream.append(
+      <Section title="Follow-up">
+        <FollowupPanel />
+      </Section>
+    );
+
+    // Update AI state with assistant's response and related queries
+    aiState.done({
+      ...aiState.get(),
+      messages: [
+        ...aiState.get().messages,
+        {
+          id: nanoid(),
+          role: 'assistant',
+          content: JSON.stringify(analysisResult), // Storing the result for history
+          type: 'viewport_analysis_result'
+        },
+        {
+          id: nanoid(),
+          role: 'assistant',
+          content: JSON.stringify(relatedQueries),
+          type: 'related'
+        },
+        {
+          id: nanoid(),
+          role: 'assistant',
+          content: 'followup',
+          type: 'followup'
+        }
+      ]
+    });
+
+    isGenerating.done(false);
+    uiStream.done();
+    return {
+      id: nanoid(),
+      isGenerating: isGenerating.value,
+      component: uiStream.value,
+      isCollapsed: isCollapsed.value
+    };
+  }
+
   if (action === 'resolution_search') {
     const file = formData?.get('file') as File;
     if (!file) {
@@ -634,6 +709,23 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                   </>
                 )
               }
+            }
+            case 'viewport_analysis_result': {
+              // This is a placeholder, as the actual rendering is handled
+              // by the streamable UI update in the action.
+              // When re-rendering from history, we can display the summary.
+              const analysisResult = JSON.parse(content as string);
+              const summaryValue = createStreamableValue();
+              summaryValue.done(analysisResult.summary || 'Viewport analysis result');
+
+              return {
+                id,
+                component: (
+                  <Section title="Viewport Analysis">
+                    <BotMessage content={summaryValue.value} />
+                  </Section>
+                )
+              };
             }
           }
           break

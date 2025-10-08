@@ -16,7 +16,7 @@ export function AnalysisButton() {
   const [, setMessages] = useUIState<typeof AI>()
   const [isAnalyzing, setIsAnalyzing] = useState(false)
 
-  const handleResolutionSearch = async () => {
+  const handleAnalyzeViewport = async () => {
     if (!map) {
       toast.error('Map is not available yet. Please wait for it to load.')
       return
@@ -29,27 +29,38 @@ export function AnalysisButton() {
         ...currentMessages,
         {
           id: nanoid(),
-          component: <UserMessage content={[{ type: 'text', text: 'Analyze this map view.' }]} />
+          component: <UserMessage content={[{ type: 'text', text: 'Analyze current map view' }]} />
         }
       ])
 
-      const canvas = map.getCanvas()
-      const blob = await new Promise<Blob | null>(resolve => {
-        canvas.toBlob(resolve, 'image/png')
-      })
+      const center = map.getCenter()
+      const zoom = map.getZoom()
+      const bounds = map.getBounds()
 
-      if (!blob) {
-        throw new Error('Failed to capture map image.')
+      if (!bounds) {
+        toast.error('Could not determine map boundaries. Please try again.')
+        setIsAnalyzing(false)
+        return
       }
 
       const formData = new FormData()
-      formData.append('file', blob, 'map_capture.png')
-      formData.append('action', 'resolution_search')
+      formData.append('action', 'viewport_analysis')
+      formData.append(
+        'viewport',
+        JSON.stringify({
+          center: { lng: center.lng, lat: center.lat },
+          zoom,
+          bounds: {
+            sw: { lng: bounds.getWest(), lat: bounds.getSouth() },
+            ne: { lng: bounds.getEast(), lat: bounds.getNorth() }
+          }
+        })
+      )
 
       const responseMessage = await submit(formData)
       setMessages(currentMessages => [...currentMessages, responseMessage as any])
     } catch (error) {
-      console.error('Failed to perform resolution search:', error)
+      console.error('Failed to perform viewport analysis:', error)
       toast.error('An error occurred while analyzing the map.')
     } finally {
       setIsAnalyzing(false)
@@ -60,7 +71,7 @@ export function AnalysisButton() {
     <Button
       variant="ghost"
       size="icon"
-      onClick={handleResolutionSearch}
+      onClick={handleAnalyzeViewport}
       disabled={isAnalyzing || !map}
       title="Analyze current map view"
     >
