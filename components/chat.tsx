@@ -15,10 +15,6 @@ import { MapProvider } from './map/map-context'
 import { updateDrawingContext } from '@/lib/actions/chat'; // Import the server action
 import dynamic from 'next/dynamic'
 
-const AnalysisTool = dynamic(() => import('./analysis-tool').then(mod => mod.AnalysisTool), {
-  ssr: false,
-})
-
 type ChatProps = {
   id?: string // This is the chatId
 }
@@ -137,7 +133,6 @@ export function Chat({ id }: ChatProps) {
             style={{ zIndex: 10 }} // Added z-index
           >
             {activeView ? <SettingsView /> : <Mapbox />}
-            <AnalysisTool />
           </div>
         </div>
       </MapProvider>

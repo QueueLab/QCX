@@ -10,7 +10,7 @@ import { nanoid } from 'nanoid'
 import { UserMessage } from './user-message'
 import { toast } from 'react-toastify'
 
-export function AnalysisTool() {
+export function AnalysisButton() {
   const { map } = useMap()
   const { submit } = useActions()
   const [, setMessages] = useUIState<typeof AI>()
@@ -57,21 +57,18 @@ export function AnalysisTool() {
   }
 
   return (
-    <div className="absolute top-4 right-4 z-20">
-      <Button
-        variant="outline"
-        size="icon"
-        onClick={handleResolutionSearch}
-        disabled={isAnalyzing || !map}
-        title="Analyze current map view"
-        className="bg-background/80 backdrop-blur-sm hover:bg-background"
-      >
-        {isAnalyzing ? (
-          <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-current"></div>
-        ) : (
-          <Search className="h-5 w-5" />
-        )}
-      </Button>
-    </div>
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={handleResolutionSearch}
+      disabled={isAnalyzing || !map}
+      title="Analyze current map view"
+    >
+      {isAnalyzing ? (
+        <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-current"></div>
+      ) : (
+        <Search className="h-5 w-5" />
+      )}
+    </Button>
   )
 }

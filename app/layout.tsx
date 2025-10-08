@@ -11,8 +11,10 @@ import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Toaster } from '@/components/ui/sonner'
 import { MapToggleProvider } from '@/components/map-toggle-context'
 import { ProfileToggleProvider } from '@/components/profile-toggle-context'
+import { MapProvider } from '@/components/map/map-context'
 import { MapLoadingProvider } from '@/components/map-loading-context';
 import ConditionalLottie from '@/components/conditional-lottie';
+import { AI } from './actions';
 
 const fontSans = FontSans({
   subsets: ['latin'],
@@ -63,14 +65,18 @@ export default function RootLayout({
               disableTransitionOnChange
               themes={['light', 'dark', 'earth']}
             >
-              <MapLoadingProvider>
-                <Header />
-                <ConditionalLottie />
-                {children}
-                <Sidebar />
-                <Footer />
-                <Toaster />
-              </MapLoadingProvider>
+              <AI>
+                <MapProvider>
+                  <MapLoadingProvider>
+                    <Header />
+                    <ConditionalLottie />
+                    {children}
+                    <Sidebar />
+                    <Footer />
+                    <Toaster />
+                  </MapLoadingProvider>
+                </MapProvider>
+              </AI>
             </ThemeProvider>
           </ProfileToggleProvider>
         </MapToggleProvider>

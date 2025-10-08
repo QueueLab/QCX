@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { MapToggle } from './map-toggle'
 import { ProfileToggle } from './profile-toggle'
+import { AnalysisButton } from './analysis-button'
 
 export const Header = () => {
   return (
@@ -39,9 +40,7 @@ export const Header = () => {
           <CalendarDays className="h-[1.2rem] w-[1.2rem]" />
         </Button>
         
-        <Button variant="ghost" size="icon">
-          <Search className="h-[1.2rem] w-[1.2rem]" />
-        </Button>
+        <AnalysisButton />
         
         <Button variant="ghost" size="icon">
           <TentTree className="h-[1.2rem] w-[1.2rem]" />
