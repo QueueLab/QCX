@@ -2,10 +2,10 @@
 
 #  Quality  Computer  Experiences
 
-<img src="https://github.com/user-attachments/assets/bf0d94e1-438d-4cc8-b809-fd467b142aba" alt="logo" width="200" />
+<iframe title="vimeo-player" src="https://player.vimeo.com/video/1014706363?h=bb6f76a5ba" width="640" height="360" frameborder="0" referrerpolicy="strict-origin-when-cross-origin" allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"   allowfullscreen></iframe>
 
 
-[**Sign Up**](https://tally.so/r/wkWqkd) &nbsp;|&nbsp; [**Community**](https://discord.com/invite/NqGY9EWjWj) &nbsp;|&nbsp; [**X**](https://x.com/tryqcx)
+[**Sign Up**](https://www.qcx.world) &nbsp;|&nbsp; [**Community**](https://discord.com/invite/NqGY9EWjWj) &nbsp;|&nbsp; [**X**](https://x.com/tryqcx)
 
 </div>
 Planet Computer
