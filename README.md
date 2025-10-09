@@ -2,7 +2,6 @@
 
 #  Quality  Computer  Experiences
 
-https://player.vimeo.com/video/1014706363?h=bb6f76a5ba
 
 
 [**Sign Up**](https://www.qcx.world) &nbsp;|&nbsp; [**Community**](https://discord.com/invite/NqGY9EWjWj) &nbsp;|&nbsp; [**X**](https://x.com/tryqcx)
