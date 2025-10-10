@@ -41,7 +41,7 @@ export function Chat({ id }: ChatProps) {
   useEffect(() => {
     // Check if device is mobile
     const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 1024)
+      setIsMobile(window.innerWidth < 768)
     }
     
     // Initial check
