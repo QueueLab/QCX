@@ -29,6 +29,7 @@ import { MapQueryHandler } from '@/components/map/map-query-handler' // Add this
 import { LocationResponseHandler } from '@/components/map/location-response-handler'
 import { isLocationResponse } from '@/lib/utils/type-guards'
 import { PartialRelated } from '@/lib/schema/related'
+import { LocationResponse } from '@/lib/types/custom'
 
 // Removed mcp parameter from submit, as geospatialTool now handles its client.
 async function submit(formData?: FormData, skip?: boolean) {
@@ -295,9 +296,18 @@ async function submit(formData?: FormData, skip?: boolean) {
     }
 
     if (!errorOccurred) {
-      let locationResponse;
+      let locationResponse: LocationResponse;
       try {
-        locationResponse = await geojsonEnricher(answer);
+        // Create a timeout promise that rejects after 30 seconds.
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('GeoJSON enrichment timed out after 30 seconds')), 30000)
+        );
+
+        // Race the agent call against the timeout.
+        locationResponse = (await Promise.race([
+          geojsonEnricher(answer),
+          timeoutPromise
+        ])) as LocationResponse;
       } catch (e) {
         console.error("Error during geojson enrichment:", e);
         // Fallback to a response without location data, ensuring consistent structure.
