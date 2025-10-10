@@ -1,20 +1,27 @@
-# Use the official Bun image as a base
-FROM oven/bun:1.1.3-alpine
+# Base image
+FROM oven/bun:1.2.12 AS builder
 
-# Set the working directory in the container
 WORKDIR /app
 
-# Copy package.json and bun.lockb to leverage Docker cache
-COPY package.json bun.lockb* ./
+# Install dependencies (separated for better cache utilization)
+COPY package.json bun.lock ./
+RUN bun install
 
-# Install dependencies
-RUN bun install --frozen-lockfile
-
-# Copy the rest of the application source code
+# Copy source code and build
 COPY . .
+RUN bun next telemetry disable
+RUN bun run build
 
-# Expose the port the app runs on
-EXPOSE 3000
+# Runtime stage
+FROM oven/bun:1.2.12 AS runner
+WORKDIR /app
 
-# Define the command to run the app
-CMD ["bun", "run", "dev", "--", "-H", "0.0.0.0"]
+# Copy only necessary files from builder
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/bun.lock ./bun.lock
+COPY --from=builder /app/node_modules ./node_modules
+
+# Start production server
+CMD ["bun", "start", "-H", "0.0.0.0"]
