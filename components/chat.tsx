@@ -82,6 +82,7 @@ export function Chat({ id }: ChatProps) {
   if (isMobile) {
     return (
       <MapDataProvider> {/* Add Provider */}
+        <HeaderSearchButton />
         <div className="mobile-layout-container">
           <div className="mobile-map-section">
           {activeView ? <SettingsView /> : <Mapbox />}
