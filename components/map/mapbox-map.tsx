@@ -590,6 +590,8 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
           mapInstance.easeTo(command.params);
           break;
         case 'fitBounds':
+          // Destructure params to pass 'bounds' and 'options' separately,
+          // ensuring the function is called with the correct signature.
           const { bounds, options } = command.params;
           mapInstance.fitBounds(bounds, options || {});
           break;

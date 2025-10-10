@@ -27,6 +27,7 @@ export interface GeoJSONFeatureCollection {
 
 // Defines the structured response that includes textual data, GeoJSON, and map commands.
 export interface LocationResponse {
+  type: 'tool';
   text: string;
   geojson: GeoJSONFeatureCollection | null;
   map_commands?: MapCommand[] | null;

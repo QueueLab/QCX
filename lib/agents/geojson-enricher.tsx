@@ -1,16 +1,21 @@
 import { CoreMessage, LanguageModel, streamText } from 'ai';
-import { getModel }from '../utils';
+import { getModel } from '../utils';
 import { LocationResponse } from '../types/custom';
+import { isLocationResponse } from '../utils/type-guards';
 
 // A specialized prompt instructing the LLM to parse a textual response
 // and extract structured GeoJSON data and map commands.
 const GEOJSON_ENRICHMENT_PROMPT = `
 You are an AI assistant specializing in geospatial data extraction.
+The final output MUST be a single JSON object that strictly follows the LocationResponse interface.
+Return ONLY the raw JSON object with no surrounding markdown, code fences, or any additional text or explanation.
+
 Your task is to process a given text and extract the following information:
 
-1.  "text": The original textual response that should be displayed to the user.
-2.  "geojson": A valid GeoJSON FeatureCollection representing any locations, addresses, coordinates, or routes mentioned in the text.
-3.  "map_commands": A list of map camera commands to control the map view, such as flying to a location.
+1.  "type": This field must always be the string 'tool'.
+2.  "text": The original textual response that should be displayed to the user.
+3.  "geojson": A valid GeoJSON FeatureCollection representing any locations, addresses, coordinates, or routes mentioned in the text.
+4.  "map_commands": A list of map camera commands to control the map view, such as flying to a location.
 
 Rules for GeoJSON:
 - Convert all found locations into appropriate GeoJSON features (Point, LineString).
@@ -22,9 +27,6 @@ Rules for Map Commands:
 - Identify actions in thetext that imply map movements (e.g., "fly to," "center on," "zoom to").
 - Create a list of command objects, for example: { "command": "flyTo", "params": { "center": [-71.05633, 42.356823], "zoom": 15 } }.
 - If no map commands can be inferred, set "map_commands" to null.
-
-The final output MUST be a single JSON object that strictly follows the LocationResponse interface.
-Return ONLY the raw JSON object with no surrounding markdown, code fences, or any additional text or explanation.
 
 Here is the text to process:
 `;
@@ -46,27 +48,42 @@ export async function geojsonEnricher(
   ];
 
   try {
+    // Await the streaming text promise to get the full response.
     const { text } = await streamText({
       model,
       messages,
-      maxTokens: 2048,
+      maxTokens: 4096, // Increased maxTokens for potentially larger GeoJSON payloads.
     });
-
-    // Assuming the LLM returns a valid JSON string, parse it.
     let responseText = await text;
 
-    // Strip markdown code fences if present
+    // Strip any surrounding markdown code fences.
     const jsonMatch = responseText.match(/```(json)?\n([\s\S]*?)\n```/);
     if (jsonMatch && jsonMatch[2]) {
       responseText = jsonMatch[2].trim();
     }
 
-    const enrichedData = JSON.parse(responseText) as LocationResponse;
-    return enrichedData;
+    // Parse the cleaned text into a JSON object.
+    const parsedJson = JSON.parse(responseText);
+
+    // Validate the parsed object against the LocationResponse interface.
+    if (isLocationResponse(parsedJson)) {
+      return parsedJson;
+    } else {
+      // If validation fails, log the error and the invalid object.
+      console.error('Validation failed: The parsed object does not match the LocationResponse interface.', parsedJson);
+      // Return a default response to avoid crashing the application.
+      return {
+        type: 'tool',
+        text: researcherResponse,
+        geojson: null,
+        map_commands: null,
+      };
+    }
   } catch (error) {
     console.error('Error enriching response with GeoJSON:', error);
-    // If parsing fails, return a default response that includes the original text.
+    // If parsing or any other part of the process fails, return a default response.
     return {
+      type: 'tool',
       text: researcherResponse,
       geojson: null,
       map_commands: null,

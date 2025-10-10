@@ -27,6 +27,7 @@ import RetrieveSection from '@/components/retrieve-section'
 import { VideoSearchSection } from '@/components/video-search-section'
 import { MapQueryHandler } from '@/components/map/map-query-handler' // Add this import
 import { LocationResponseHandler } from '@/components/map/location-response-handler'
+import { isLocationResponse } from '@/lib/utils/type-guards'
 import { PartialRelated } from '@/lib/schema/related'
 
 // Removed mcp parameter from submit, as geospatialTool now handles its client.
@@ -299,8 +300,9 @@ async function submit(formData?: FormData, skip?: boolean) {
         locationResponse = await geojsonEnricher(answer);
       } catch (e) {
         console.error("Error during geojson enrichment:", e);
-        // Fallback to a response without location data
+        // Fallback to a response without location data, ensuring consistent structure.
         locationResponse = {
+          type: 'tool',
           text: answer,
           geojson: null,
           map_commands: null,
@@ -575,14 +577,8 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
             }
 
             if (name === 'geojsonEnrichment') {
-              // Runtime validation for the toolOutput
-              if (
-                toolOutput &&
-                typeof toolOutput.text === 'string' &&
-                (toolOutput.geojson === null ||
-                  (typeof toolOutput.geojson === 'object' &&
-                    toolOutput.geojson.type === 'FeatureCollection'))
-              ) {
+              // Use the type guard for robust runtime validation.
+              if (isLocationResponse(toolOutput)) {
                 return {
                   id,
                   component: (
@@ -591,7 +587,10 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                   isCollapsed: false,
                 };
               } else {
-                console.warn('Invalid toolOutput for geojsonEnrichment:', toolOutput);
+                // The type guard already logs the specific validation error.
+                console.warn(
+                  'Skipping render for geojsonEnrichment due to invalid data structure.'
+                );
                 return { id, component: null };
               }
             }
