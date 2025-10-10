@@ -39,9 +39,7 @@ export const Header = () => {
           <CalendarDays className="h-[1.2rem] w-[1.2rem]" />
         </Button>
         
-        <Button variant="ghost" size="icon">
-          <Search className="h-[1.2rem] w-[1.2rem]" />
-        </Button>
+        <div id="header-search-portal" />
         
         <Button variant="ghost" size="icon">
           <TentTree className="h-[1.2rem] w-[1.2rem]" />
@@ -54,10 +52,7 @@ export const Header = () => {
 
       {/* Mobile menu buttons */}
       <div className="flex md:hidden gap-2">
-        <Button variant="ghost" size="sm">
-          <Search className="h-4 w-4 mr-2" />
-          Search
-        </Button>
+        <div id="mobile-header-search-portal" />
         
         <ProfileToggle/>
       </div>
