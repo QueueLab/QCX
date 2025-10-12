@@ -16,8 +16,11 @@ import { getSupabaseServerClient } from '../supabase/client'
 
 export async function getChats(userId?: string | null): Promise<Chat[]> {
   if (!userId) {
-    console.warn('getChats called without userId, returning empty array.')
-    return []
+    const userId = await getCurrentUserIdOnServer();
+    if (!userId) {
+      console.warn('getChats called without userId, returning empty array.')
+      return []
+    }
   }
 
   const supabase = getSupabaseServerClient()
@@ -33,11 +36,13 @@ export async function getChats(userId?: string | null): Promise<Chat[]> {
   return (data as Chat[]) || []
 }
 
-export async function getChat(id: string, userId: string): Promise<Chat | null> {
+export async function getChat(id: string): Promise<Chat | null> {
+  const userId = await getCurrentUserIdOnServer();
   if (!userId) {
-    console.warn('getChat called without userId.')
+    console.warn('getChat called without authenticated user.')
     return null
   }
+
   const supabase = getSupabaseServerClient()
   const { data, error } = await supabase
     .from('chats')
@@ -50,7 +55,12 @@ export async function getChat(id: string, userId: string): Promise<Chat | null> 
     return null
   }
 
-  return data as Chat
+  // Final check to ensure the user is a participant
+  if (data && data.chat_participants.some((p: { user_id: string }) => p.user_id === userId)) {
+    return data as Chat;
+  }
+
+  return null;
 }
 
 export async function getChatMessages(chatId: string): Promise<any[]> {

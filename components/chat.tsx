@@ -44,7 +44,7 @@ export function Chat({ id }: ChatProps) {
   useEffect(() => {
     async function fetchChatData() {
         if (id) {
-            const chat = await getChat(id, '');
+            const chat = await getChat(id);
             setChatData(chat);
         }
     }
