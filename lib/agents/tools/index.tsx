@@ -3,6 +3,7 @@ import { retrieveTool } from './retrieve'
 import { searchTool } from './search'
 import { videoSearchTool } from './video-search'
 import { geospatialTool } from './geospatial' // Removed useGeospatialToolMcp import
+import { elevationTool } from './elevation'
 
 export interface ToolProps {
   uiStream: ReturnType<typeof createStreamableUI>
@@ -25,6 +26,9 @@ export const getTools = ({ uiStream, fullResponse }: ToolProps) => {
     geospatialQueryTool: geospatialTool({
       uiStream
       // mcp: mcp || null // Removed mcp argument
+    }),
+    elevationQueryTool: elevationTool({
+      uiStream
     })
   }
 

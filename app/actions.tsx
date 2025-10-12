@@ -27,6 +27,7 @@ import { CopilotDisplay } from '@/components/copilot-display'
 import RetrieveSection from '@/components/retrieve-section'
 import { VideoSearchSection } from '@/components/video-search-section'
 import { MapQueryHandler } from '@/components/map/map-query-handler' // Add this import
+import { MapboxElevationDisplay } from '@/components/mapbox-elevation-display'
 
 // Define the type for related queries
 type RelatedQueries = {
@@ -652,6 +653,16 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                 component: <MapQueryHandler toolOutput={toolOutput} />,
                 isCollapsed: false
               }
+            }
+            if (
+              toolOutput.type === 'ELEVATION_QUERY_RESULT' &&
+              name === 'elevationQueryTool'
+            ) {
+              return {
+                id,
+                component: <MapboxElevationDisplay toolOutput={toolOutput} />,
+                isCollapsed: false
+              };
             }
 
             const searchResults = createStreamableValue()
