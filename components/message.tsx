@@ -6,7 +6,6 @@ import rehypeExternalLinks from 'rehype-external-links'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
-import 'katex/dist/katex.min.css'
 
 export function BotMessage({ content }: { content: StreamableValue<string> }) {
   const [data, error, pending] = useStreamableValue(content)
@@ -21,7 +20,7 @@ export function BotMessage({ content }: { content: StreamableValue<string> }) {
     <MemoizedReactMarkdown
       rehypePlugins={[[rehypeExternalLinks, { target: '_blank' }], rehypeKatex]}
       remarkPlugins={[remarkGfm, remarkMath]}
-      className="prose-sm prose-neutral prose-a:text-accent-foreground/50 break-words [overflow-wrap:anywhere]"
+      className="prose-sm prose-neutral prose-a:text-accent-foreground/50 break-words"
     >
       {processedData}
     </MemoizedReactMarkdown>
