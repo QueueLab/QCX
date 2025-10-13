@@ -80,8 +80,10 @@ Analysis & Planning
     })
   })
 
-  // Remove the spinner
-  uiStream.update(null)
+  // removal 1: // Remove the spinner
+  // removal 1: // uiStream.update(null)
+  // Append the answer section immediately to avoid gating on first token
+  uiStream.append(answerSection)
 
   // Process the response
   const toolCalls: ToolCallPart[] = []
@@ -90,12 +92,13 @@ Analysis & Planning
     switch (delta.type) {
       case 'text-delta':
         if (delta.textDelta) {
+          /* removal 1:
           // If the first text delta is available, add a UI section
           if (fullResponse.length === 0 && delta.textDelta.length > 0) {
             // Update the UI
             uiStream.update(answerSection)
           }
-
+          */
           fullResponse += delta.textDelta
           streamText.update(fullResponse)
         }
@@ -104,10 +107,13 @@ Analysis & Planning
         toolCalls.push(delta)
         break
       case 'tool-result':
+        /* removal 1:
         // Append the answer section if the specific model is not used
         if (!useSpecificModel && toolResponses.length === 0 && delta.result) {
           uiStream.append(answerSection)
         }
+          */
+        // Keep answer section already appended; just collect tool outputs
         if (!delta.result) {
           hasError = true
         }
@@ -129,5 +135,7 @@ Analysis & Planning
     messages.push({ role: 'tool', content: toolResponses })
   }
 
+  // Mark the answer stream as done
+  streamText.done()
   return { result, fullResponse, hasError, toolResponses }
 }
