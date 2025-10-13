@@ -3,13 +3,13 @@
 import { useEffect, useState, useRef, ChangeEvent, forwardRef, useImperativeHandle } from 'react'
 import type { AI, UIState } from '@/app/actions'
 import { useUIState, useActions } from 'ai/rsc'
-// Removed import of useGeospatialToolMcp as it's no longer used/available
 import { cn } from '@/lib/utils'
 import { UserMessage } from './user-message'
 import { Button } from './ui/button'
-import { ArrowRight, Plus, Paperclip, X } from 'lucide-react'
+import { ArrowRight, Plus, Paperclip, X, Search, MapPin, Globe } from 'lucide-react'
 import Textarea from 'react-textarea-autosize'
 import { nanoid } from 'nanoid'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 
 interface ChatPanelProps {
   messages: UIState
@@ -27,6 +27,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
   // Removed mcp instance as it's no longer passed to submit
   const [isMobile, setIsMobile] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [searchMode, setSearchMode] = useState('Standard')
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -169,15 +170,53 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
           isMobile ? 'px-2 pb-2 pt-1 h-full flex flex-col justify-center' : ''
         )}
       >
+        <div className="flex justify-center mb-2">
+          <RadioGroup
+            defaultValue="Standard"
+            className="flex bg-muted rounded-full p-1"
+            onValueChange={setSearchMode}
+          >
+            <RadioGroupItem value="Standard" id="Standard" className="sr-only" />
+            <label
+              htmlFor="Standard"
+              className={`cursor-pointer rounded-full px-3 py-1 text-sm ${
+                searchMode === 'Standard' ? 'bg-background text-foreground' : 'text-muted-foreground'
+              }`}
+            >
+              <Search className="h-4 w-4" />
+            </label>
+            <RadioGroupItem value="Geospatial" id="Geospatial" className="sr-only" />
+            <label
+              htmlFor="Geospatial"
+              className={`cursor-pointer rounded-full px-3 py-1 text-sm ${
+                searchMode === 'Geospatial' ? 'bg-background text-foreground' : 'text-muted-foreground'
+              }`}
+            >
+              <MapPin className="h-4 w-4" />
+            </label>
+            <RadioGroupItem value="Web Search" id="Web Search" className="sr-only" />
+            <label
+              htmlFor="Web Search"
+              className={`cursor-pointer rounded-full px-3 py-1 text-sm ${
+                searchMode === 'Web Search' ? 'bg-background text-foreground' : 'text-muted-foreground'
+              }`}
+            >
+              <Globe className="h-4 w-4" />
+            </label>
+          </RadioGroup>
+        </div>
         <div
           className={cn(
             'relative flex items-start w-full',
             isMobile && 'mobile-chat-input' // Apply mobile chat input styling
           )}
         >
+          <input type="hidden" name="searchMode" value={searchMode} />
           <input
             type="file"
-            ref={fileInputRef}
+            ref={fileInputNode => {
+              fileInputRef.current = fileInputNode
+            }}
             onChange={handleFileChange}
             className="hidden"
             accept="text/plain,image/png,image/jpeg,image/webp"

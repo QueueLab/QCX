@@ -133,6 +133,8 @@ async function submit(formData?: FormData, skip?: boolean) {
     : ((formData?.get('related_query') as string) ||
       (formData?.get('input') as string))
 
+  const searchMode = formData?.get('searchMode') as string || 'Standard'
+
   if (userInput.toLowerCase().trim() === 'what is a planet computer?' || userInput.toLowerCase().trim() === 'what is qcx-terra?') {
     const definition = userInput.toLowerCase().trim() === 'what is a planet computer?'
       ? `A planet computer is a proprietary environment aware system that interoperates weather forecasting, mapping and scheduling using cutting edge multi-agents to streamline automation and exploration on a planet. Available for our Pro and Enterprise customers. [QCX Pricing](https://www.queue.cx/#pricing)`
@@ -324,7 +326,8 @@ async function submit(formData?: FormData, skip?: boolean) {
         uiStream,
         streamText,
         messages,
-        useSpecificAPI
+        useSpecificAPI,
+        searchMode
       )
       answer = fullResponse
       toolOutputs = toolResponses
