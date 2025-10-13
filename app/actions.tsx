@@ -286,7 +286,12 @@ async function submit(formData?: FormData, skip?: boolean) {
 
   async function processEvents() {
     let action: any = { object: { next: 'proceed' } }
-    if (!skip) action = (await taskManager(messages)) ?? action
+    if (!skip) {
+      const taskManagerResult = await taskManager(messages)
+      if (taskManagerResult) {
+        action.object = taskManagerResult.object
+      }
+    }
 
     if (action.object.next === 'inquire') {
       const inquiry = await inquire(uiStream, messages)

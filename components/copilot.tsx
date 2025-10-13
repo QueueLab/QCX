@@ -79,6 +79,11 @@ export const Copilot: React.FC<CopilotProps> = ({ inquiry }: CopilotProps) => {
       ? undefined
       : new FormData(e.target as HTMLFormElement)
 
+    if (formData) {
+      formData.set('input', updatedQuery())
+      formData.delete('additional_query')
+    }
+
     // Removed mcp argument from submit call
     const response = await submit(formData, skip)
     setMessages(currentMessages => [...currentMessages, response])
