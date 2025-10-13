@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter as FontSans } from 'next/font/google'
 import './globals.css'
+import 'katex/dist/katex.min.css';
 import { cn } from '@/lib/utils'
 import { ThemeProvider } from '@/components/theme-provider'
 import Header from '@/components/header'
