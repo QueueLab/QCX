@@ -18,13 +18,15 @@ export function BotMessage({ content }: { content: StreamableValue<string> }) {
   const processedData = preprocessLaTeX(data || '')
 
   return (
-    <MemoizedReactMarkdown
-      rehypePlugins={[[rehypeExternalLinks, { target: '_blank' }], rehypeKatex]}
-      remarkPlugins={[remarkGfm, remarkMath]}
-      className="prose-sm prose-neutral prose-a:text-accent-foreground/50 break-words [overflow-wrap:anywhere]"
-    >
-      {processedData}
-    </MemoizedReactMarkdown>
+    <div className="overflow-x-auto">
+      <MemoizedReactMarkdown
+        rehypePlugins={[[rehypeExternalLinks, { target: '_blank' }], rehypeKatex]}
+        remarkPlugins={[remarkGfm, remarkMath]}
+        className="prose-sm prose-neutral prose-a:text-accent-foreground/50"
+      >
+        {processedData}
+      </MemoizedReactMarkdown>
+    </div>
   )
 }
 
