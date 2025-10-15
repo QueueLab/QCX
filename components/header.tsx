@@ -1,5 +1,7 @@
+"use client"
 import React from 'react'
 import Image from 'next/image'
+import { useCalendarToggle } from './calendar-toggle-context'
 import { ModeToggle } from './mode-toggle'
 import { cn } from '@/lib/utils'
 import HistoryContainer from './history-container'
@@ -15,6 +17,7 @@ import { MapToggle } from './map-toggle'
 import { ProfileToggle } from './profile-toggle'
 
 export const Header = () => {
+  const { toggleCalendar } = useCalendarToggle()
   return (
     <header className="fixed w-full p-1 md:p-2 flex justify-between items-center z-10 backdrop-blur md:backdrop-blur-none bg-background/80 md:bg-transparent">
       <div>
@@ -35,7 +38,7 @@ export const Header = () => {
         
         <MapToggle />
         
-        <Button variant="ghost" size="icon">
+        <Button variant="ghost" size="icon" onClick={toggleCalendar} title="Open Calendar">
           <CalendarDays className="h-[1.2rem] w-[1.2rem]" />
         </Button>
         
