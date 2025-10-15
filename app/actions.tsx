@@ -17,6 +17,7 @@ import { inquire, researcher, taskManager, querySuggestor, resolutionSearch } fr
 // The geospatialTool (if used by agents like researcher) now manages its own MCP client.
 import { writer } from '@/lib/agents/writer'
 import { saveChat, getSystemPrompt } from '@/lib/actions/chat' // Added getSystemPrompt
+import { retrieveContext } from '@/lib/actions/rag'
 import { Chat, AIMessage } from '@/lib/types'
 import { UserMessage } from '@/components/user-message'
 import { BotMessage } from '@/components/message'
@@ -284,6 +285,11 @@ async function submit(formData?: FormData, skip?: boolean) {
   const userId = 'anonymous'
   const currentSystemPrompt = (await getSystemPrompt(userId)) || ''
 
+  const retrievedContext = await retrieveContext(userInput, aiState.get().chatId)
+  const augmentedSystemPrompt = retrievedContext.length > 0
+    ? `Context: ${retrievedContext.join('\n')}\n${currentSystemPrompt}`
+    : currentSystemPrompt
+
   async function processEvents() {
     let action: any = { object: { next: 'proceed' } }
     if (!skip) {
@@ -325,7 +331,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         : answer.length === 0 && !errorOccurred
     ) {
       const { fullResponse, hasError, toolResponses } = await researcher(
-        currentSystemPrompt,
+        augmentedSystemPrompt,
         uiStream,
         streamText,
         messages,
@@ -570,14 +576,23 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                 // New messages will store the content array or string directly
                 messageContent = content
               }
+              const location = (message as any).locations
               return {
                 id,
                 component: (
-                  <UserMessage
-                    content={messageContent}
-                    chatId={chatId}
-                    showShare={index === 0 && !isSharePage}
-                  />
+                  <>
+                    <UserMessage
+                      content={messageContent}
+                      chatId={chatId}
+                      showShare={index === 0 && !isSharePage}
+                    />
+                    {location && (
+                      <GeoJsonLayer
+                        id={`${id}-geojson`}
+                        data={location.geojson}
+                      />
+                    )}
+                  </>
                 )
               }
             case 'inquiry':
