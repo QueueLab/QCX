@@ -27,6 +27,7 @@ import { CopilotDisplay } from '@/components/copilot-display'
 import RetrieveSection from '@/components/retrieve-section'
 import { VideoSearchSection } from '@/components/video-search-section'
 import { MapQueryHandler } from '@/components/map/map-query-handler'
+import { MapImageOverlay } from '@/components/map/map-image-overlay'
 
 // Define the type for related queries
 type RelatedQueries = {
@@ -237,6 +238,23 @@ async function submit(formData?: FormData, skip?: boolean) {
         type: 'image',
         image: dataUrl,
         mimeType: file.type
+      })
+
+      const mapCenter = formData?.get('map_center') as string | undefined
+      const center = mapCenter ? JSON.parse(mapCenter) : [0, 0]
+
+      // Add a new message to the AI state to trigger the image overlay
+      aiState.update({
+        ...aiState.get(),
+        messages: [
+          ...aiState.get().messages,
+          {
+            id: nanoid(),
+            role: 'assistant',
+            content: JSON.stringify({ imageUrl: dataUrl, center }),
+            type: 'image_overlay'
+          }
+        ]
       })
     } else if (file.type === 'text/plain') {
       const textContent = Buffer.from(buffer).toString('utf-8')
@@ -591,6 +609,34 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
           const answer = createStreamableValue()
           answer.done(content)
           switch (type) {
+            case 'image_overlay': {
+              const { imageUrl, center } = JSON.parse(content as string)
+              const [lng, lat] = center
+
+              const halfSize = 0.5 // Size of the overlay in degrees
+              const coordinates: [
+                [number, number],
+                [number, number],
+                [number, number],
+                [number, number]
+              ] = [
+                [lng - halfSize, lat + halfSize], // top-left
+                [lng + halfSize, lat + halfSize], // top-right
+                [lng + halfSize, lat - halfSize], // bottom-right
+                [lng - halfSize, lat - halfSize] // bottom-left
+              ]
+
+              return {
+                id,
+                component: (
+                  <MapImageOverlay
+                    id={id}
+                    imageUrl={imageUrl}
+                    coordinates={coordinates}
+                  />
+                )
+              }
+            }
             case 'response':
               return {
                 id,
