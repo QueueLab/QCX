@@ -63,24 +63,26 @@ export default function RootLayout({
             <ProfileToggleProvider>
               <ThemeProvider
                 attribute="class"
-              defaultTheme="earth"
-              enableSystem
-              disableTransitionOnChange
-              themes={['light', 'dark', 'earth']}
-            >
-              <MapProvider>
-                <MapLoadingProvider>
-                  <Header />
-                  <ConditionalLottie />
-                  {children}
-                  <Sidebar />
-                  <Footer />
-                  <Toaster />
-                </MapLoadingProvider>
-              </MapProvider>
-            </ThemeProvider>
-          </ProfileToggleProvider>
-        </MapToggleProvider>
+                defaultTheme="earth"
+                enableSystem
+                disableTransitionOnChange
+                themes={['light', 'dark', 'earth']}
+              >
+                <MapProvider>
+                  <MapDataProvider>
+                    <MapLoadingProvider>
+                      <Header />
+                      <ConditionalLottie />
+                      {children}
+                      <Sidebar />
+                      <Footer />
+                      <Toaster />
+                    </MapLoadingProvider>
+                  </MapDataProvider>
+                </MapProvider>
+              </ThemeProvider>
+            </ProfileToggleProvider>
+          </MapToggleProvider>
         </CalendarToggleProvider>
         <Analytics />
         <SpeedInsights />
