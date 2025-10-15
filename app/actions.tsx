@@ -46,7 +46,7 @@ async function extractCoordinatesFromMapImage(imageDataUrl: string) {
         content: [
           {
             type: 'text',
-            text: 'Extract the geographic coordinates from this map image. Look for latitude/longitude labels, coordinate grid lines, or scale information. Return the corner coordinates.'
+            text: 'Understand the image uploaded by the user, if its a map proceed to extract all the information that you can from the image. We have to place it in the system. Extract the geographic coordinates from this map image. Look for latitude/longitude labels, coordinate grid lines, or scale information. Return the corner coordinates.'
           },
           { type: 'image', image: imageDataUrl }
         ]
