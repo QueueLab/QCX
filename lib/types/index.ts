@@ -72,6 +72,7 @@ export type AIMessage = {
     | 'tool'
     | 'followup'
     | 'end'
-    | 'drawing_context' // Added custom type for drawing context messages
+    | 'drawing_context'
     | 'resolution_search_result'
+    | 'image_overlay'
 }

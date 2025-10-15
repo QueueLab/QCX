@@ -2,12 +2,17 @@
 
 import { useMap } from '@/components/map/map-context'
 import { useEffect } from 'react'
-import { LngLatBounds, LngLatLike } from 'mapbox-gl'
+import { LngLatBounds } from 'mapbox-gl'
 
 interface MapImageOverlayProps {
   id: string
   imageUrl: string
-  coordinates: [LngLatLike, LngLatLike, LngLatLike, LngLatLike]
+  coordinates: [
+    [number, number],
+    [number, number],
+    [number, number],
+    [number, number]
+  ]
   beforeId?: string
   opacity?: number
 }
