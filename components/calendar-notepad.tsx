@@ -1,6 +1,5 @@
 "use client"
 
-
 import type React from "react"
 import { useState, useEffect } from "react"
 import { ChevronLeft, ChevronRight, MapPin } from "lucide-react"
@@ -11,29 +10,24 @@ import type { CalendarNote, NewCalendarNote } from "@/lib/types"
 
 interface CalendarNotepadProps {
   chatId?: string;
-  initialNotes: CalendarNote[];
 }
 
-export function CalendarNotepad({ chatId, initialNotes }: CalendarNotepadProps) {
+export function CalendarNotepad({ chatId }: CalendarNotepadProps) {
   const { mapData, setMapData } = useMapData()
   const [selectedDate, setSelectedDate] = useState(new Date())
-  const [notes, setNotes] = useState<CalendarNote[]>(initialNotes)
+  const [notes, setNotes] = useState<CalendarNote[]>([])
   const [noteContent, setNoteContent] = useState("")
   const [dateOffset, setDateOffset] = useState(0)
   const [taggedLocation, setTaggedLocation] = useState<any | null>(null)
 
+  // Fetch notes when selectedDate or chatId changes
   useEffect(() => {
-    // Avoid fetching on initial render if we have initialNotes
-    if (initialNotes && isSameDay(selectedDate, new Date())) {
-      return;
-    }
-
     const fetchNotes = async () => {
       const fetchedNotes = await getNotes(selectedDate, chatId ?? null)
       setNotes(fetchedNotes)
     }
     fetchNotes()
-  }, [selectedDate, chatId, initialNotes])
+  }, [selectedDate, chatId])
 
   const generateDateRange = (offset: number) => {
     const dates = []
