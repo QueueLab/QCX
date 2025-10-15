@@ -6,13 +6,15 @@ import {
   getAIState,
   getMutableAIState
 } from 'ai/rsc'
-import { CoreMessage, ToolResultPart } from 'ai'
+import { CoreMessage, ToolResultPart, generateObject } from 'ai'
 import { nanoid } from 'nanoid'
+import { z } from 'zod'
 import type { FeatureCollection } from 'geojson'
 import { Spinner } from '@/components/ui/spinner'
 import { Section } from '@/components/section'
 import { FollowupPanel } from '@/components/followup-panel'
 import { inquire, researcher, taskManager, querySuggestor, resolutionSearch } from '@/lib/agents'
+import { getModel } from '@/lib/utils'
 // Removed import of useGeospatialToolMcp as it no longer exists and was incorrectly used here.
 // The geospatialTool (if used by agents like researcher) now manages its own MCP client.
 import { writer } from '@/lib/agents/writer'
@@ -26,11 +28,40 @@ import { GeoJsonLayer } from '@/components/map/geojson-layer'
 import { CopilotDisplay } from '@/components/copilot-display'
 import RetrieveSection from '@/components/retrieve-section'
 import { VideoSearchSection } from '@/components/video-search-section'
-import { MapQueryHandler } from '@/components/map/map-query-handler' // Add this import
+import { MapQueryHandler } from '@/components/map/map-query-handler'
+import { MapImageOverlay } from '@/components/map/map-image-overlay'
 
 // Define the type for related queries
 type RelatedQueries = {
   items: { query: string }[]
+}
+
+async function extractCoordinatesFromMapImage(imageDataUrl: string) {
+  'use server'
+  const result = await generateObject({
+    model: getModel(),
+    messages: [
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: 'Extract the geographic coordinates from this map image. Look for latitude/longitude labels, coordinate grid lines, or scale information. Return the corner coordinates.'
+          },
+          { type: 'image', image: imageDataUrl }
+        ]
+      }
+    ],
+    schema: z.object({
+      topLeft: z.object({ lat: z.number(), lng: z.number() }),
+      topRight: z.object({ lat: z.number(), lng: z.number() }),
+      bottomRight: z.object({ lat: z.number(), lng: z.number() }),
+      bottomLeft: z.object({ lat: z.number(), lng: z.number() }),
+      confidence: z.number().describe('0-1 confidence score')
+    })
+  })
+
+  return result.object
 }
 
 // Removed mcp parameter from submit, as geospatialTool now handles its client.
@@ -238,6 +269,54 @@ async function submit(formData?: FormData, skip?: boolean) {
         image: dataUrl,
         mimeType: file.type
       })
+
+      try {
+        const coords = await extractCoordinatesFromMapImage(dataUrl)
+        if (coords.confidence > 0.7) {
+          const coordinates: [
+            [number, number],
+            [number, number],
+            [number, number],
+            [number, number]
+          ] = [
+            [coords.topLeft.lng, coords.topLeft.lat],
+            [coords.topRight.lng, coords.topRight.lat],
+            [coords.bottomRight.lng, coords.bottomRight.lat],
+            [coords.bottomLeft.lng, coords.bottomLeft.lat]
+          ]
+          aiState.update({
+            ...aiState.get(),
+            messages: [
+              ...aiState.get().messages,
+              {
+                id: nanoid(),
+                role: 'assistant',
+                content: JSON.stringify({ imageUrl: dataUrl, coordinates }),
+                type: 'image_overlay'
+              }
+            ]
+          })
+        } else {
+          console.warn('Low confidence in coordinate extraction')
+          throw new Error('Low confidence')
+        }
+      } catch (error) {
+        console.error('Failed to extract coordinates:', error)
+        const mapCenter = formData?.get('map_center') as string | undefined
+        const center = mapCenter ? JSON.parse(mapCenter) : [0, 0]
+        aiState.update({
+          ...aiState.get(),
+          messages: [
+            ...aiState.get().messages,
+            {
+              id: nanoid(),
+              role: 'assistant',
+              content: JSON.stringify({ imageUrl: dataUrl, center }),
+              type: 'image_overlay'
+            }
+          ]
+        })
+      }
     } else if (file.type === 'text/plain') {
       const textContent = Buffer.from(buffer).toString('utf-8')
       const existingTextPart = messageParts.find(p => p.type === 'text')
@@ -591,6 +670,41 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
           const answer = createStreamableValue()
           answer.done(content)
           switch (type) {
+            case 'image_overlay': {
+              const data = JSON.parse(content as string)
+              let coordinates: [
+                [number, number],
+                [number, number],
+                [number, number],
+                [number, number]
+              ]
+
+              if (data.coordinates) {
+                // New format: direct coordinates
+                coordinates = data.coordinates
+              } else {
+                // Old format: fallback to center-based
+                const [lng, lat] = data.center
+                const halfSize = 0.5
+                coordinates = [
+                  [lng - halfSize, lat + halfSize],
+                  [lng + halfSize, lat + halfSize],
+                  [lng + halfSize, lat - halfSize],
+                  [lng - halfSize, lat - halfSize]
+                ]
+              }
+
+              return {
+                id,
+                component: (
+                  <MapImageOverlay
+                    id={id}
+                    imageUrl={data.imageUrl}
+                    coordinates={coordinates}
+                  />
+                )
+              }
+            }
             case 'response':
               return {
                 id,
