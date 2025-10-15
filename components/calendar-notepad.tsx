@@ -9,11 +9,12 @@ import { cn } from "@/lib/utils"
 import { getNotes, saveNote } from "@/lib/actions/calendar"
 import { useMapData } from "./map/map-data-context"
 import type { CalendarNote, NewCalendarNote } from "@/lib/types"
-import { useChat } from 'ai/react'
 
+interface CalendarNotepadProps {
+  chatId?: string;
+}
 
-export function CalendarNotepad() {
-  const { chatId } = useChat()
+export function CalendarNotepad({ chatId }: CalendarNotepadProps) {
   const { mapData, setMapData } = useMapData()
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [notes, setNotes] = useState<CalendarNote[]>([])
@@ -90,7 +91,7 @@ export function CalendarNotepad() {
   };
 
   return (
-    <div className="bg-card text-card-foreground shadow-lg rounded-lg p-4 max-w-2xl mx-auto my-4 border">
+    <div data-testid="calendar-notepad" className="bg-card text-card-foreground shadow-lg rounded-lg p-4 max-w-2xl mx-auto my-4 border">
       <div className="flex items-center justify-between mb-4">
         <button
           onClick={() => setDateOffset(dateOffset - 7)}

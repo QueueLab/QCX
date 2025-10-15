@@ -1,12 +1,11 @@
 'use server'
 
-import { and, desc, eq } from 'drizzle-orm'
+import { and, desc, eq, isNull } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { calendarNotes } from '@/lib/db/schema'
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
 import type { CalendarNote, NewCalendarNote } from '@/lib/types'
-import { createMessage } from './chat-db'
-import type { NewMessage } from '@/lib/db/types'
+import { createMessage, NewMessage } from './chat-db'
 
 /**
  * Retrieves notes for a specific date and chat session.
@@ -28,18 +27,17 @@ export async function getNotes(date: Date, chatId: string | null): Promise<Calen
   endDate.setHours(23, 59, 59, 999)
 
   try {
+    const whereConditions = [eq(calendarNotes.userId, userId)];
+    if (chatId) {
+      whereConditions.push(eq(calendarNotes.chatId, chatId));
+    } else {
+      whereConditions.push(isNull(calendarNotes.chatId));
+    }
+
     const notes = await db
       .select()
       .from(calendarNotes)
-      .where(
-        and(
-          eq(calendarNotes.userId, userId),
-          eq(calendarNotes.chatId, chatId),
-          // Add date range condition here if Drizzle supports it directly,
-          // otherwise filter after fetching or use raw SQL.
-          // For now, this example assumes a full-day match logic needs to be handled.
-        )
-      )
+      .where(and(...whereConditions))
       .orderBy(desc(calendarNotes.createdAt))
       .execute()
 

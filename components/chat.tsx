@@ -98,7 +98,7 @@ export function Chat({ id }: ChatProps) {
         </div>
         <div className="mobile-chat-messages-area">
           {isCalendarOpen ? (
-            <CalendarNotepad />
+            <CalendarNotepad chatId={id} />
           ) : showEmptyScreen ? (
             <EmptyScreen
               submitMessage={message => {
@@ -122,7 +122,7 @@ export function Chat({ id }: ChatProps) {
         {/* This is the new div for scrolling */}
       <div className="w-1/2 flex flex-col space-y-3 md:space-y-4 px-8 sm:px-12 pt-12 md:pt-14 pb-4 h-[calc(100vh-0.5in)] overflow-y-auto">
         {isCalendarOpen ? (
-          <CalendarNotepad />
+          <CalendarNotepad chatId={id} />
         ) : (
           <>
             <ChatPanel messages={messages} input={input} setInput={setInput} />

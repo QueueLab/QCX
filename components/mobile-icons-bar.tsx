@@ -42,7 +42,7 @@ export const MobileIconsBar: React.FC<MobileIconsBarProps> = ({ onAttachmentClic
         <CircleUserRound className="h-[1.2rem] w-[1.2rem]" />
       </Button>
       <MapToggle />
-      <Button variant="ghost" size="icon" onClick={toggleCalendar}>
+      <Button variant="ghost" size="icon" onClick={toggleCalendar} title="Open Calendar">
         <CalendarDays className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>
       <Button variant="ghost" size="icon">
