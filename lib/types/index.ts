@@ -75,3 +75,18 @@ export type AIMessage = {
     | 'drawing_context' // Added custom type for drawing context messages
     | 'resolution_search_result'
 }
+
+export type CalendarNote = {
+  id: string;
+  userId: string;
+  chatId: string | null;
+  date: Date;
+  content: string;
+  locationTags: any | null;
+  userTags: string[] | null;
+  mapFeatureId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type NewCalendarNote = Omit<CalendarNote, 'id' | 'createdAt' | 'updatedAt'>;

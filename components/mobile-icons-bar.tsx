@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React from 'react'
 import { useUIState, useActions } from 'ai/rsc'
 import { AI } from '@/app/actions'
 import { Button } from '@/components/ui/button'
@@ -17,15 +17,7 @@ import {
 import { History } from '@/components/history'
 import { MapToggle } from './map-toggle'
 import { ModeToggle } from './mode-toggle'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { CalendarNotepad } from "./calendar-notepad"
-
+import { useCalendarToggle } from './calendar-toggle-context'
 
 interface MobileIconsBarProps {
   onAttachmentClick: () => void;
@@ -34,8 +26,7 @@ interface MobileIconsBarProps {
 export const MobileIconsBar: React.FC<MobileIconsBarProps> = ({ onAttachmentClick }) => {
   const [, setMessages] = useUIState<typeof AI>()
   const { clearChat } = useActions()
-  const [isCalendarOpen, setCalendarOpen] = useState(false)
-
+  const { toggleCalendar } = useCalendarToggle()
 
   const handleNewChat = async () => {
     setMessages([])
@@ -51,19 +42,9 @@ export const MobileIconsBar: React.FC<MobileIconsBarProps> = ({ onAttachmentClic
         <CircleUserRound className="h-[1.2rem] w-[1.2rem]" />
       </Button>
       <MapToggle />
-      <Dialog open={isCalendarOpen} onOpenChange={setCalendarOpen}>
-        <DialogTrigger asChild>
-          <Button variant="ghost" size="icon">
-            <CalendarDays className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Calendar Notepad</DialogTitle>
-          </DialogHeader>
-          <CalendarNotepad />
-        </DialogContent>
-      </Dialog>
+      <Button variant="ghost" size="icon" onClick={toggleCalendar}>
+        <CalendarDays className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
+      </Button>
       <Button variant="ghost" size="icon">
         <Search className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>

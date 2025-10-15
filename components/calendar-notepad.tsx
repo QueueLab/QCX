@@ -1,163 +1,174 @@
 "use client"
 
+"use client"
+
 import type React from "react"
-import { useActions } from 'ai/rsc'
-import { AI } from '@/app/actions'
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ChevronLeft, ChevronRight, MapPin } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { addDays, format, isSameDay, startOfDay } from "date-fns"
+import { getNotes, saveNote } from "@/lib/actions/calendar"
 import { useMapData } from "./map/map-data-context"
-import { Button } from "./ui/button"
+import type { CalendarNote, NewCalendarNote } from "@/lib/types"
+import { useChat } from 'ai/react'
 
-interface Note {
-  id: string
-  date: Date
-  content: string
-  timestamp: Date
-  locationTags?: any[]
-  userTags?: string[]
-}
 
 export function CalendarNotepad() {
-  const { mapData, setMapДata } = useMapData()
-  const { saveCalendarNote, getChatId, saveNoteAsMessage } = useActions<typeof AI>()
-  const [selectedDate, setSelectedDate] = useState(startOfDay(new Date()))
-  const [notes, setNotes] = useState<Note[]>([])
+  const { chatId } = useChat()
+  const { mapData, setMapData } = useMapData()
+  const [selectedDate, setSelectedDate] = useState(new Date())
+  const [notes, setNotes] = useState<CalendarNote[]>([])
   const [noteContent, setNoteContent] = useState("")
   const [dateOffset, setDateOffset] = useState(0)
   const [taggedLocation, setTaggedLocation] = useState<any | null>(null)
 
+  useEffect(() => {
+    const fetchNotes = async () => {
+      const fetchedNotes = await getNotes(selectedDate, chatId ?? null)
+      setNotes(fetchedNotes)
+    }
+    fetchNotes()
+  }, [selectedDate, chatId])
+
   const generateDateRange = (offset: number) => {
-    const today = startOfDay(new Date())
-    const startDate = addDays(today, offset)
-    return Array.from({ length: 7 }, (_, i) => addDays(startDate, i))
+    const dates = []
+    const today = new Date()
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(today)
+      date.setDate(today.getDate() + offset + i)
+      dates.push(date)
+    }
+    return dates
   }
 
   const dateRange = generateDateRange(dateOffset)
 
-  const filteredNotes = notes.filter((note) => isSameDay(note.date, selectedDate))
-
-  const handleTagLocation = () => {
-    const location = mapData.drawnFeatures && mapData.drawnFeatures.length > 0
-      ? mapData.drawnFeatures
-      : mapData.targetPosition;
-    setTaggedLocation(location);
-  };
+  const isSameDay = (date1: Date, date2: Date) => {
+    return (
+      date1.getDate() === date2.getDate() &&
+      date1.getMonth() === date2.getMonth() &&
+      date1.getFullYear() === date2.getFullYear()
+    )
+  }
 
   const handleAddNote = async (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-      if (!noteContent.trim()) return
+        if (!noteContent.trim()) return
 
-      const userTags = noteContent.match(/@\w+/g)?.map(tag => tag.substring(1)) || [];
+        const newNote: NewCalendarNote = {
+            date: selectedDate,
+            content: noteContent,
+            chatId: chatId ?? null,
+            userId: '', // This will be set on the server
+            locationTags: taggedLocation,
+            userTags: null,
+            mapFeatureId: null,
+        }
 
-      const newNote: Note = {
-        id: Date.now().toString(),
-        date: selectedDate,
-        content: noteContent,
-        timestamp: new Date(),
-        locationTags: taggedLocation ? [taggedLocation] : [],
-        userTags: userTags,
-      }
-
-      const result = await saveCalendarNote({
-          date: newNote.date,
-          content: newNote.content,
-          locationTags: newNote.locationTags,
-          userTags: newNote.userTags,
-      });
-
-      if ('error' in result) {
-        console.error("Failed to save note:", result.error);
-        return;
-      }
-
-      const chatId = await getChatId();
-      if (chatId) {
-        await saveNoteAsMessage(result, chatId);
-      }
-
-      setNotes([newNote, ...notes])
-      setNoteContent("")
-      setTaggedLocation(null);
+        const savedNote = await saveNote(newNote)
+        if (savedNote) {
+            setNotes([savedNote, ...notes])
+            setNoteContent("")
+            setTaggedLocation(null)
+        }
     }
   }
 
-  return (
-    <div className="flex h-full flex-col">
-      <div className="flex items-center gap-2 border-b border-border/50 px-4 py-3">
-        <button onClick={() => setDateOffset(dateOffset - 7)} className="text-muted-foreground hover:text-foreground">
-          <ChevronLeft className="h-4 w-4" />
-        </button>
+  const handleTagLocation = () => {
+    if (mapData.targetPosition) {
+      setTaggedLocation({
+        type: 'Point',
+        coordinates: mapData.targetPosition
+      });
+      setNoteContent(prev => `${prev} #location`);
+    }
+  };
 
-        <div className="flex flex-1 gap-1">
-          {dateRange.map((date, index) => (
+  const handleFlyTo = (location: any) => {
+    if (location && location.coordinates) {
+      setMapData(prev => ({ ...prev, targetPosition: location.coordinates }));
+    }
+  };
+
+  return (
+    <div className="bg-card text-card-foreground shadow-lg rounded-lg p-4 max-w-2xl mx-auto my-4 border">
+      <div className="flex items-center justify-between mb-4">
+        <button
+          onClick={() => setDateOffset(dateOffset - 7)}
+          className="p-2 text-muted-foreground hover:text-foreground"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+        <div className="flex space-x-2 overflow-x-auto">
+          {dateRange.map((date) => (
             <button
-              key={index}
+              key={date.toISOString()}
               onClick={() => setSelectedDate(date)}
               className={cn(
-                "flex flex-1 flex-col items-center gap-0.5 rounded px-2 py-1.5 text-xs transition-colors",
+                "flex flex-col items-center p-2 rounded-md transition-colors",
                 isSameDay(date, selectedDate)
-                  ? "bg-foreground/10 text-foreground"
-                  : "text-muted-foreground hover:text-foreground",
+                  ? "bg-primary text-primary-foreground"
+                  : "hover:bg-accent"
               )}
             >
-              <span className="font-medium">{format(date, "d")}</span>
-              <span className="text-[10px] opacity-60">{format(date, "MMM")}</span>
+              <span className="text-sm font-medium">
+                {date.toLocaleDateString(undefined, { day: "numeric" })}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {date.toLocaleDateString(undefined, { month: "short" })}
+              </span>
             </button>
           ))}
         </div>
-
-        <button onClick={() => setDateOffset(dateOffset + 7)} className="text-muted-foreground hover:text-foreground">
-          <ChevronRight className="h-4 w-4" />
+        <button
+          onClick={() => setDateOffset(dateOffset + 7)}
+          className="p-2 text-muted-foreground hover:text-foreground"
+        >
+          <ChevronRight className="h-5 w-5" />
         </button>
       </div>
 
-      <div className="border-b border-border/50 p-4">
-        <textarea
-          value={noteContent}
-          onChange={(e) => setNoteContent(e.target.value)}
-          onKeyDown={handleAddNote}
-          placeholder="Add note... (⌘+Enter to save, @mention, #location)"
-          className="w-full resize-none border-0 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
-          rows={2}
-        />
-        <div className="flex justify-end">
-            <Button variant="ghost" size="icon" onClick={handleTagLocation}>
-                <MapPin className={cn("h-4 w-4", taggedLocation ? "text-primary" : "text-muted-foreground")} />
-            </Button>
+      <div className="mb-4">
+        <div className="relative">
+          <textarea
+            value={noteContent}
+            onChange={(e) => setNoteContent(e.target.value)}
+            onKeyDown={handleAddNote}
+            placeholder="Add note... (⌘+Enter to save, @mention, #location)"
+            className="w-full p-2 bg-input rounded-md border focus:ring-ring focus:ring-2 focus:outline-none pr-10"
+            rows={3}
+          />
+          <button
+            onClick={handleTagLocation}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            <MapPin className="h-5 w-5" />
+          </button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-4">
-        {filteredNotes.length === 0 ? (
-          <p className="text-center text-sm text-muted-foreground/50">No notes</p>
-        ) : (
-          <div className="space-y-3">
-            {filteredNotes.map((note) => (
-              <div key={note.id} className="group">
-                <div className="mb-1 flex items-center gap-2 text-[10px] text-muted-foreground/50">
-                  <span>
-                    {format(note.timestamp, "p")}
-                  </span>
-                  {note.locationTags && note.locationTags.length > 0 && (
-                    <button onClick={() => {
-                        const location = note.locationTags![0];
-                        if (Array.isArray(location) && typeof location[0] === 'object') {
-                            setMapData(prev => ({ ...prev, drawnFeatures: location as any, targetPosition: null }));
-                        } else if (Array.isArray(location) && typeof location[0] === 'number') {
-                            setMapData(prev => ({ ...prev, targetPosition: location as any, drawnFeatures: [] }));
-                        }
-                    }} className="flex items-center gap-1 text-muted-foreground hover:text-foreground">
-                        <MapPin className="h-3 w-3" />
-                        <span>Location</span>
-                    </button>
-                  )}
+      <div className="space-y-4">
+        {notes.length > 0 ? (
+          notes.map((note) => (
+            <div key={note.id} className="p-3 bg-muted rounded-md">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">
+                    {new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                  <p className="text-sm whitespace-pre-wrap break-words">{note.content}</p>
                 </div>
-                <p className="text-sm leading-relaxed text-foreground/90">{note.content}</p>
+                {note.locationTags && (
+                  <button onClick={() => handleFlyTo(note.locationTags)} className="text-muted-foreground hover:text-foreground ml-2">
+                    <MapPin className="h-5 w-5" />
+                  </button>
+                )}
               </div>
-            ))}
-          </div>
+            </div>
+          ))
+        ) : (
+          <p className="text-center text-muted-foreground text-sm py-4">
+            No notes for this day.
+          </p>
         )}
       </div>
     </div>

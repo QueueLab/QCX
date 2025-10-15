@@ -1,28 +1,23 @@
-'use client'
-
-import React, { useState } from 'react'
+"use client"
+import React from 'react'
 import Image from 'next/image'
+import { useCalendarToggle } from './calendar-toggle-context'
 import { ModeToggle } from './mode-toggle'
+import { cn } from '@/lib/utils'
 import HistoryContainer from './history-container'
 import { Button } from '@/components/ui/button'
 import {
+  Search,
+  CircleUserRound,
+  Map,
   CalendarDays,
   TentTree
 } from 'lucide-react'
 import { MapToggle } from './map-toggle'
 import { ProfileToggle } from './profile-toggle'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import { CalendarNotepad } from "./calendar-notepad"
-
 
 export const Header = () => {
-  const [isCalendarOpen, setCalendarOpen] = useState(false)
+  const { toggleCalendar } = useCalendarToggle()
   return (
     <header className="fixed w-full p-1 md:p-2 flex justify-between items-center z-10 backdrop-blur md:backdrop-blur-none bg-background/80 md:bg-transparent">
       <div>
@@ -43,19 +38,9 @@ export const Header = () => {
         
         <MapToggle />
         
-        <Dialog open={isCalendarOpen} onOpenChange={setCalendarOpen}>
-          <DialogTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <CalendarDays className="h-[1.2rem] w-[1.2rem]" />
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Calendar Notepad</DialogTitle>
-            </DialogHeader>
-            <CalendarNotepad />
-          </DialogContent>
-        </Dialog>
+        <Button variant="ghost" size="icon" onClick={toggleCalendar}>
+          <CalendarDays className="h-[1.2rem] w-[1.2rem]" />
+        </Button>
         
         <div id="header-search-portal" />
         

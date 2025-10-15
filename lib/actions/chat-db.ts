@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import { chats, messages, users, calendarNotes } from '@/lib/db/schema';
+import { chats, messages, users } from '@/lib/db/schema';
 import { eq, desc, and, sql, asc } from 'drizzle-orm'; // Added asc
 import { alias } from 'drizzle-orm/pg-core';
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'; // We'll use this to ensure user-specific actions
@@ -11,8 +11,6 @@ export type Message = typeof messages.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type NewChat = typeof chats.$inferInsert;
 export type NewMessage = typeof messages.$inferInsert;
-export type CalendarNote = typeof calendarNotes.$inferSelect;
-export type NewCalendarNote = typeof calendarNotes.$inferInsert;
 
 /**
  * Retrieves a specific chat by its ID, ensuring it belongs to the current user
@@ -221,19 +219,5 @@ export async function getMessagesByChatId(chatId: string): Promise<Message[]> {
 // - deleteTrailingMessages(chatId: string, lastKeptMessageId: string): Promise<void>
 // These are placeholders for now and can be implemented if subsequent steps show they are directly part of PR #533's changes.
 // The PR mentions "feat: Add message update and trailing deletion logic" and "refactor(chat): Adjust message edit logic".
-
-export async function saveCalendarNote(noteData: NewCalendarNote): Promise<CalendarNote | null> {
-  if (!noteData.userId || !noteData.content || !noteData.date) {
-    console.error('Missing required fields for creating a calendar note.');
-    return null;
-  }
-  try {
-    const result = await db.insert(calendarNotes).values(noteData).returning();
-    return result[0] || null;
-  } catch (error) {
-    console.error('Error creating calendar note:', error);
-    return null;
-  }
-}
 
 console.log('Chat DB actions loaded. Ensure getCurrentUserId() is correctly implemented for server-side usage if applicable.');

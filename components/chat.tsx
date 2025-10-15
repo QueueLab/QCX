@@ -5,6 +5,8 @@ import { usePathname, useRouter } from 'next/navigation'
 import { ChatPanel, ChatPanelRef } from './chat-panel'
 import { ChatMessages } from './chat-messages'
 import { EmptyScreen } from './empty-screen'
+import { useCalendarToggle } from './calendar-toggle-context'
+import { CalendarNotepad } from './calendar-notepad'
 import { Mapbox } from './map/mapbox-map'
 import { useUIState, useAIState } from 'ai/rsc'
 import MobileIconsBar from './mobile-icons-bar'
@@ -26,6 +28,7 @@ export function Chat({ id }: ChatProps) {
   const [aiState] = useAIState()
   const [isMobile, setIsMobile] = useState(false)
   const { activeView } = useProfileToggle();
+  const { isCalendarOpen } = useCalendarToggle()
   const [input, setInput] = useState('')
   const [showEmptyScreen, setShowEmptyScreen] = useState(false)
   const chatPanelRef = useRef<ChatPanelRef>(null);
@@ -94,7 +97,9 @@ export function Chat({ id }: ChatProps) {
           <ChatPanel ref={chatPanelRef} messages={messages} input={input} setInput={setInput} />
         </div>
         <div className="mobile-chat-messages-area">
-          {showEmptyScreen ? (
+          {isCalendarOpen ? (
+            <CalendarNotepad />
+          ) : showEmptyScreen ? (
             <EmptyScreen
               submitMessage={message => {
                 setInput(message)
@@ -103,7 +108,7 @@ export function Chat({ id }: ChatProps) {
           ) : (
             <ChatMessages messages={messages} />
           )}
-          </div>
+        </div>
         </div>
       </MapDataProvider>
     );
@@ -116,15 +121,21 @@ export function Chat({ id }: ChatProps) {
       <div className="flex justify-start items-start">
         {/* This is the new div for scrolling */}
       <div className="w-1/2 flex flex-col space-y-3 md:space-y-4 px-8 sm:px-12 pt-12 md:pt-14 pb-4 h-[calc(100vh-0.5in)] overflow-y-auto">
-        <ChatPanel messages={messages} input={input} setInput={setInput} />
-        {showEmptyScreen ? (
-          <EmptyScreen
-            submitMessage={message => {
-              setInput(message)
-            }}
-          />
+        {isCalendarOpen ? (
+          <CalendarNotepad />
         ) : (
-          <ChatMessages messages={messages} />
+          <>
+            <ChatPanel messages={messages} input={input} setInput={setInput} />
+            {showEmptyScreen ? (
+              <EmptyScreen
+                submitMessage={message => {
+                  setInput(message)
+                }}
+              />
+            ) : (
+              <ChatMessages messages={messages} />
+            )}
+          </>
         )}
       </div>
         <div

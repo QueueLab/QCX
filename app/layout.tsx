@@ -12,6 +12,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Toaster } from '@/components/ui/sonner'
 import { MapToggleProvider } from '@/components/map-toggle-context'
 import { ProfileToggleProvider } from '@/components/profile-toggle-context'
+import { CalendarToggleProvider } from '@/components/calendar-toggle-context'
 import { MapLoadingProvider } from '@/components/map-loading-context';
 import ConditionalLottie from '@/components/conditional-lottie';
 import { MapProvider } from '@/components/map/map-context'
@@ -56,10 +57,11 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={cn('font-sans antialiased', fontSans.variable)}>
-        <MapToggleProvider>
-          <ProfileToggleProvider>
-            <ThemeProvider
-              attribute="class"
+        <CalendarToggleProvider>
+          <MapToggleProvider>
+            <ProfileToggleProvider>
+              <ThemeProvider
+                attribute="class"
               defaultTheme="earth"
               enableSystem
               disableTransitionOnChange
@@ -78,6 +80,7 @@ export default function RootLayout({
             </ThemeProvider>
           </ProfileToggleProvider>
         </MapToggleProvider>
+        </CalendarToggleProvider>
         <Analytics />
         <SpeedInsights />
       </body>
