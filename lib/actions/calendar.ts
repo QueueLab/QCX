@@ -1,6 +1,6 @@
 'use server'
 
-import { and, desc, eq, isNull } from 'drizzle-orm'
+import { and, desc, eq, isNull, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { calendarNotes } from '@/lib/db/schema'
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
@@ -27,7 +27,14 @@ export async function getNotes(date: Date, chatId: string | null): Promise<Calen
   endDate.setHours(23, 59, 59, 999)
 
   try {
-    const whereConditions = [eq(calendarNotes.userId, userId)];
+    const whereConditions = [
+      eq(calendarNotes.userId, userId),
+      and(
+        sql`${calendarNotes.date} >= ${startDate}`,
+        sql`${calendarNotes.date} <= ${endDate}`
+      )
+    ];
+
     if (chatId) {
       whereConditions.push(eq(calendarNotes.chatId, chatId));
     } else {
@@ -41,11 +48,7 @@ export async function getNotes(date: Date, chatId: string | null): Promise<Calen
       .orderBy(desc(calendarNotes.createdAt))
       .execute()
 
-    // Filter by date in application logic
-    return notes.filter(note => {
-        const noteDate = new Date(note.date);
-        return noteDate >= startDate && noteDate <= endDate;
-    });
+    return notes;
 
   } catch (error) {
     console.error('Error fetching notes:', error)

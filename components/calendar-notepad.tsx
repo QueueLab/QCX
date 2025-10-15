@@ -12,23 +12,29 @@ import type { CalendarNote, NewCalendarNote } from "@/lib/types"
 
 interface CalendarNotepadProps {
   chatId?: string;
+  initialNotes: CalendarNote[];
 }
 
-export function CalendarNotepad({ chatId }: CalendarNotepadProps) {
+export function CalendarNotepad({ chatId, initialNotes }: CalendarNotepadProps) {
   const { mapData, setMapData } = useMapData()
   const [selectedDate, setSelectedDate] = useState(new Date())
-  const [notes, setNotes] = useState<CalendarNote[]>([])
+  const [notes, setNotes] = useState<CalendarNote[]>(initialNotes)
   const [noteContent, setNoteContent] = useState("")
   const [dateOffset, setDateOffset] = useState(0)
   const [taggedLocation, setTaggedLocation] = useState<any | null>(null)
 
   useEffect(() => {
+    // Avoid fetching on initial render if we have initialNotes
+    if (initialNotes && isSameDay(selectedDate, new Date())) {
+      return;
+    }
+
     const fetchNotes = async () => {
       const fetchedNotes = await getNotes(selectedDate, chatId ?? null)
       setNotes(fetchedNotes)
     }
     fetchNotes()
-  }, [selectedDate, chatId])
+  }, [selectedDate, chatId, initialNotes])
 
   const generateDateRange = (offset: number) => {
     const dates = []
