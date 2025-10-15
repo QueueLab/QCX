@@ -86,7 +86,7 @@ async function submit(formData?: FormData, skip?: boolean) {
       summaryStream.done(analysisResult.summary || 'Analysis complete.');
 
       uiStream.update(
-        <BotMessage content={summaryStream} />
+        <BotMessage content={summaryStream.value} />
       );
 
       aiState.done({
@@ -107,7 +107,7 @@ async function submit(formData?: FormData, skip?: boolean) {
       const errorMessage = 'Sorry, I encountered an error while analyzing the image. The AI model might be unavailable or the request timed out. Please try again later.';
       errorStream.done(errorMessage);
       uiStream.update(
-        <BotMessage content={errorStream} />
+        <BotMessage content={errorStream.value} />
       );
       aiState.done({
         ...aiState.get(),
