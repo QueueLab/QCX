@@ -40,6 +40,7 @@ export const messages = pgTable('messages', {
 export const usersRelations = relations(users, ({ many }) => ({
   chats: many(chats),
   messages: many(messages),
+  calendarNotes: many(calendarNotes),
 }));
 
 export const chatsRelations = relations(chats, ({ one, many }) => ({
@@ -48,6 +49,7 @@ export const chatsRelations = relations(chats, ({ one, many }) => ({
     references: [users.id],
   }),
   messages: many(messages),
+  calendarNotes: many(calendarNotes),
 }));
 
 export const messagesRelations = relations(messages, ({ one }) => ({
@@ -58,5 +60,29 @@ export const messagesRelations = relations(messages, ({ one }) => ({
   user: one(users, {
     fields: [messages.userId],
     references: [users.id],
+  }),
+}));
+
+export const calendarNotes = pgTable('calendar_notes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  chatId: uuid('chat_id').references(() => chats.id, { onDelete: 'cascade' }),
+  date: timestamp('date', { withTimezone: true }).notNull(),
+  content: text('content').notNull(),
+  locationTags: jsonb('location_tags'),
+  userTags: text('user_tags').array(),
+  mapFeatureId: text('map_feature_id'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const calendarNotesRelations = relations(calendarNotes, ({ one }) => ({
+  user: one(users, {
+    fields: [calendarNotes.userId],
+    references: [users.id],
+  }),
+  chat: one(chats, {
+    fields: [calendarNotes.chatId],
+    references: [chats.id],
   }),
 }));

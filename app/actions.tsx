@@ -16,7 +16,7 @@ import { inquire, researcher, taskManager, querySuggestor, resolutionSearch } fr
 // Removed import of useGeospatialToolMcp as it no longer exists and was incorrectly used here.
 // The geospatialTool (if used by agents like researcher) now manages its own MCP client.
 import { writer } from '@/lib/agents/writer'
-import { saveChat, getSystemPrompt } from '@/lib/actions/chat' // Added getSystemPrompt
+import { saveChat, getSystemPrompt, saveCalendarNote } from '@/lib/actions/chat' // Added getSystemPrompt
 import { Chat, AIMessage } from '@/lib/types'
 import { UserMessage } from '@/components/user-message'
 import { BotMessage } from '@/components/message'
@@ -439,6 +439,43 @@ async function clearChat() {
   })
 }
 
+async function getChatId() {
+  'use server'
+  const aiState = getAIState() as AIState
+  return aiState?.chatId
+}
+
+import { createMessage } from '@/lib/actions/chat-db'
+
+async function saveNoteAsMessage(note: any, chatId: string) {
+  'use server'
+  const aiState = getMutableAIState<typeof AI>()
+  const userId = aiState.get().messages[0]?.userId
+
+  if (!userId) {
+    return { error: "User not found" }
+  }
+
+  const message = await createMessage({
+    chatId: chatId,
+    userId: userId,
+    role: 'data',
+    content: JSON.stringify({ type: 'calendar_note', ...note }),
+  })
+
+  aiState.update({
+    ...aiState.get(),
+    messages: [
+      ...aiState.get().messages,
+      {
+        id: message!.id,
+        role: 'data',
+        content: JSON.stringify({ type: 'calendar_note', ...note }),
+      },
+    ],
+  });
+}
+
 export type AIState = {
   messages: AIMessage[]
   chatId: string
@@ -462,7 +499,10 @@ const initialUIState: UIState = []
 export const AI = createAI<AIState, UIState>({
   actions: {
     submit,
-    clearChat
+    clearChat,
+    saveCalendarNote,
+    getChatId,
+    saveNoteAsMessage,
   },
   initialUIState,
   initialAIState,

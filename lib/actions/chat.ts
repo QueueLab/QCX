@@ -10,12 +10,39 @@ import {
   saveChat as dbSaveChat,
   createMessage as dbCreateMessage,
   getMessagesByChatId as dbGetMessagesByChatId, // Added
+  saveCalendarNote as dbSaveCalendarNote,
   type Chat as DrizzleChat,
   type Message as DrizzleMessage, // Added
   type NewChat as DbNewChat,
-  type NewMessage as DbNewMessage
+  type NewMessage as DbNewMessage,
+  type NewCalendarNote,
+  type CalendarNote,
 } from '@/lib/actions/chat-db'
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user' // For operations needing current user
+
+export async function saveCalendarNote(noteData: Omit<NewCalendarNote, 'userId'>): Promise<CalendarNote | { error: string }> {
+  'use server'
+  const userId = await getCurrentUserIdOnServer()
+  if (!userId) {
+    return { error: 'User not authenticated' }
+  }
+
+  const completeNoteData: NewCalendarNote = {
+    ...noteData,
+    userId,
+  }
+
+  try {
+    const savedNote = await dbSaveCalendarNote(completeNoteData);
+    if (!savedNote) {
+      throw new Error('Failed to save calendar note.');
+    }
+    return savedNote;
+  } catch (error) {
+    console.error('saveCalendarNote: Error saving calendar note:', error);
+    return { error: 'Failed to save calendar note' };
+  }
+}
 
 // TODO: Migrate Redis-based functions below (saveSystemPrompt, getSystemPrompt) if needed.
 // const redis = new Redis({
