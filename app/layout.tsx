@@ -16,6 +16,7 @@ import { CalendarToggleProvider } from '@/components/calendar-toggle-context'
 import { MapLoadingProvider } from '@/components/map-loading-context';
 import ConditionalLottie from '@/components/conditional-lottie';
 import { MapProvider } from '@/components/map/map-context'
+import { MapDataProvider } from '@/components/map/map-data-context'
 
 const fontSans = FontSans({
   subsets: ['latin'],
