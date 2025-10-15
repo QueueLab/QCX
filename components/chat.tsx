@@ -12,7 +12,7 @@ import { useUIState, useAIState } from 'ai/rsc'
 import MobileIconsBar from './mobile-icons-bar'
 import { useProfileToggle, ProfileToggleEnum } from "@/components/profile-toggle-context";
 import SettingsView from "@/components/settings/settings-view";
-import { useMapData } from './map/map-data-context'; // Remove MapDataProvider from import
+import { MapDataProvider, useMapData } from './map/map-data-context'; // Add this and useMapData
 import { updateDrawingContext } from '@/lib/actions/chat'; // Import the server action
 import dynamic from 'next/dynamic'
 import { HeaderSearchButton } from './header-search-button'
@@ -84,22 +84,49 @@ export function Chat({ id }: ChatProps) {
   // Mobile layout
   if (isMobile) {
     return (
-      <>
+      <MapDataProvider> {/* Add Provider */}
         <HeaderSearchButton />
         <div className="mobile-layout-container">
           <div className="mobile-map-section">
-            {activeView ? <SettingsView /> : <Mapbox />}
-          </div>
-          <div className="mobile-icons-bar">
-            <MobileIconsBar onAttachmentClick={handleAttachment} />
-          </div>
-          <div className="mobile-chat-input-area">
-            <ChatPanel ref={chatPanelRef} messages={messages} input={input} setInput={setInput} />
-          </div>
-          <div className="mobile-chat-messages-area">
-            {isCalendarOpen ? (
-              <CalendarNotepad chatId={id} />
-            ) : showEmptyScreen ? (
+          {activeView ? <SettingsView /> : <Mapbox />}
+        </div>
+        <div className="mobile-icons-bar">
+          <MobileIconsBar onAttachmentClick={handleAttachment} />
+        </div>
+        <div className="mobile-chat-input-area">
+          <ChatPanel ref={chatPanelRef} messages={messages} input={input} setInput={setInput} />
+        </div>
+        <div className="mobile-chat-messages-area">
+          {isCalendarOpen ? (
+            <CalendarNotepad chatId={id} />
+          ) : showEmptyScreen ? (
+            <EmptyScreen
+              submitMessage={message => {
+                setInput(message)
+              }}
+            />
+          ) : (
+            <ChatMessages messages={messages} />
+          )}
+        </div>
+        </div>
+      </MapDataProvider>
+    );
+  }
+
+  // Desktop layout
+  return (
+    <MapDataProvider> {/* Add Provider */}
+      <HeaderSearchButton />
+      <div className="flex justify-start items-start">
+        {/* This is the new div for scrolling */}
+      <div className="w-1/2 flex flex-col space-y-3 md:space-y-4 px-8 sm:px-12 pt-12 md:pt-14 pb-4 h-[calc(100vh-0.5in)] overflow-y-auto">
+        {isCalendarOpen ? (
+          <CalendarNotepad chatId={id} />
+        ) : (
+          <>
+            <ChatPanel messages={messages} input={input} setInput={setInput} />
+            {showEmptyScreen ? (
               <EmptyScreen
                 submitMessage={message => {
                   setInput(message)
@@ -108,36 +135,9 @@ export function Chat({ id }: ChatProps) {
             ) : (
               <ChatMessages messages={messages} />
             )}
-          </div>
-        </div>
-      </>
-    );
-  }
-
-  // Desktop layout
-  return (
-    <>
-      <HeaderSearchButton />
-      <div className="flex justify-start items-start">
-        {/* This is the new div for scrolling */}
-        <div className="w-1/2 flex flex-col space-y-3 md:space-y-4 px-8 sm:px-12 pt-12 md:pt-14 pb-4 h-[calc(100vh-0.5in)] overflow-y-auto">
-          {isCalendarOpen ? (
-            <CalendarNotepad chatId={id} />
-          ) : (
-            <>
-              <ChatPanel messages={messages} input={input} setInput={setInput} />
-              {showEmptyScreen ? (
-                <EmptyScreen
-                  submitMessage={message => {
-                    setInput(message)
-                  }}
-                />
-              ) : (
-                <ChatMessages messages={messages} />
-              )}
-            </>
-          )}
-        </div>
+          </>
+        )}
+      </div>
         <div
           className="w-1/2 p-4 fixed h-[calc(100vh-0.5in)] top-0 right-0 mt-[0.5in]"
           style={{ zIndex: 10 }} // Added z-index
@@ -145,6 +145,6 @@ export function Chat({ id }: ChatProps) {
           {activeView ? <SettingsView /> : <Mapbox />}
         </div>
       </div>
-    </>
+    </MapDataProvider>
   );
 }

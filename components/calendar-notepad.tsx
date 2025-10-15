@@ -1,5 +1,7 @@
 "use client"
 
+"use client"
+
 import type React from "react"
 import { useState, useEffect } from "react"
 import { ChevronLeft, ChevronRight, MapPin } from "lucide-react"
@@ -20,7 +22,6 @@ export function CalendarNotepad({ chatId }: CalendarNotepadProps) {
   const [dateOffset, setDateOffset] = useState(0)
   const [taggedLocation, setTaggedLocation] = useState<any | null>(null)
 
-  // Fetch notes when selectedDate or chatId changes
   useEffect(() => {
     const fetchNotes = async () => {
       const fetchedNotes = await getNotes(selectedDate, chatId ?? null)

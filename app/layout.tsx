@@ -16,7 +16,6 @@ import { CalendarToggleProvider } from '@/components/calendar-toggle-context'
 import { MapLoadingProvider } from '@/components/map-loading-context';
 import ConditionalLottie from '@/components/conditional-lottie';
 import { MapProvider } from '@/components/map/map-context'
-import { MapDataProvider } from '@/components/map/map-data-context'
 
 const fontSans = FontSans({
   subsets: ['latin'],
@@ -63,26 +62,24 @@ export default function RootLayout({
             <ProfileToggleProvider>
               <ThemeProvider
                 attribute="class"
-                defaultTheme="earth"
-                enableSystem
-                disableTransitionOnChange
-                themes={['light', 'dark', 'earth']}
-              >
-                <MapProvider>
-                  <MapDataProvider>
-                    <MapLoadingProvider>
-                      <Header />
-                      <ConditionalLottie />
-                      {children}
-                      <Sidebar />
-                      <Footer />
-                      <Toaster />
-                    </MapLoadingProvider>
-                  </MapDataProvider>
-                </MapProvider>
-              </ThemeProvider>
-            </ProfileToggleProvider>
-          </MapToggleProvider>
+              defaultTheme="earth"
+              enableSystem
+              disableTransitionOnChange
+              themes={['light', 'dark', 'earth']}
+            >
+              <MapProvider>
+                <MapLoadingProvider>
+                  <Header />
+                  <ConditionalLottie />
+                  {children}
+                  <Sidebar />
+                  <Footer />
+                  <Toaster />
+                </MapLoadingProvider>
+              </MapProvider>
+            </ThemeProvider>
+          </ProfileToggleProvider>
+        </MapToggleProvider>
         </CalendarToggleProvider>
         <Analytics />
         <SpeedInsights />

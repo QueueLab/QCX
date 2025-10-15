@@ -1,5 +1,3 @@
-'use client'
-
 import { Button } from '@/components/ui/button';
 import { Globe, Thermometer, Laptop, HelpCircle } from 'lucide-react';
 

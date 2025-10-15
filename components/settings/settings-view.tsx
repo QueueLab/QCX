@@ -1,5 +1,3 @@
-'use client'
-
 import { Suspense } from "react"
 import { Settings } from "@/components/settings/components/settings"
 import { SettingsSkeleton } from "@/components/settings/components/settings-skeleton"
