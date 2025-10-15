@@ -2,6 +2,39 @@
 @tailwind components;
 @tailwind utilities;
 
+/* KaTeX Math Rendering Styles */
+.katex {
+  font-size: 1.1em !important;
+  line-height: 1.5 !important;
+}
+
+/* Ensure proper spacing for inline math */
+.katex-inline {
+  margin: 0 0.2em;
+  vertical-align: -0.4em;
+}
+
+/* Ensure proper spacing for display math */
+.katex-display {
+  margin: 1em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-top: 0.5em;
+  padding-bottom: 0.5em;
+}
+
+/* Fix for math expressions in dark mode */
+.dark .katex {
+  color: var(--foreground);
+}
+
+/* Ensure math expressions don't break layout on mobile */
+@media (max-width: 640px) {
+  .katex-display {
+    font-size: 0.9em !important;
+  }
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
