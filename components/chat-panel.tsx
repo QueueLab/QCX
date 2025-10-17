@@ -69,42 +69,48 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    if (!input && !selectedFile) {
-      return
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!input.trim() && !selectedFile) {
+      return;
     }
 
-    const content: ({ type: 'text'; text: string } | { type: 'image'; image: string })[] = []
+    // Create the user message content first, while we still have the input and file
+    const content: ({ type: 'text'; text: string } | { type: 'image'; image: string })[] = [];
     if (input) {
-      content.push({ type: 'text', text: input })
+      content.push({ type: 'text', text: input });
     }
     if (selectedFile && selectedFile.type.startsWith('image/')) {
       content.push({
         type: 'image',
         image: URL.createObjectURL(selectedFile)
-      })
+      });
     }
 
+    // Prepare the form data for the server action
+    const formData = new FormData(e.currentTarget);
+    if (selectedFile) {
+      formData.append('file', selectedFile);
+    }
+
+    // Clear the input fields for the user
+    setInput('');
+    clearAttachment();
+
+    // Call the server action. It will immediately return a streamable UI component.
+    const responseMessage = submit(formData);
+
+    // Update the UI state with both the user's message and the initial assistant response
+    // in a single operation. This ensures the component tree structure is consistent.
     setMessages(currentMessages => [
       ...currentMessages,
       {
         id: nanoid(),
-        component: <UserMessage content={content} />
-      }
-    ])
-
-    const formData = new FormData(e.currentTarget)
-    if (selectedFile) {
-      formData.append('file', selectedFile)
-    }
-
-    setInput('')
-    clearAttachment()
-
-    const responseMessage = await submit(formData)
-    setMessages(currentMessages => [...currentMessages, responseMessage as any])
-  }
+        component: <UserMessage content={content} />,
+      },
+      responseMessage as any,
+    ]);
+  };
 
   const handleClear = async () => {
     setMessages([])
