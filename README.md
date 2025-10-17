@@ -1,6 +1,6 @@
 <div align="center">
 
-#  Quality  Computers  Experience
+#  Quality  Computer  Experience
 
 
 
