@@ -38,7 +38,7 @@ export const Header = () => {
         
         <MapToggle />
         
-        <Button variant="ghost" size="icon" onClick={toggleCalendar} title="Open Calendar">
+        <Button variant="ghost" size="icon" onClick={toggleCalendar} title="Open Calendar" data-testid="calendar-toggle-button">
           <CalendarDays className="h-[1.2rem] w-[1.2rem]" />
         </Button>
         

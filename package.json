@@ -53,7 +53,7 @@
     "cookie": "^0.6.0",
     "dotenv": "^16.5.0",
     "drizzle-kit": "^0.31.1",
-    "drizzle-orm": "^0.29.0",
+    "drizzle-orm": "^0.44.6",
     "embla-carousel-react": "^8.6.0",
     "exa-js": "^1.6.13",
     "framer-motion": "^12.15.0",

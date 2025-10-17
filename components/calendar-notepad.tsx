@@ -6,15 +6,17 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { ChevronLeft, ChevronRight, MapPin } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { getNotes, saveNote } from "@/lib/actions/calendar"
+import { getNotes, saveNote, addCalendarContextToAI } from "@/lib/actions/calendar"
 import { useMapData } from "./map/map-data-context"
 import type { CalendarNote, NewCalendarNote } from "@/lib/types"
+import { useActions } from 'ai/rsc'
 
 interface CalendarNotepadProps {
   chatId?: string;
 }
 
 export function CalendarNotepad({ chatId }: CalendarNotepadProps) {
+  const { setAIState } = useActions();
   const { mapData, setMapData } = useMapData()
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [notes, setNotes] = useState<CalendarNote[]>([])
@@ -23,11 +25,20 @@ export function CalendarNotepad({ chatId }: CalendarNotepadProps) {
   const [taggedLocation, setTaggedLocation] = useState<any | null>(null)
 
   useEffect(() => {
-    const fetchNotes = async () => {
-      const fetchedNotes = await getNotes(selectedDate, chatId ?? null)
-      setNotes(fetchedNotes)
-    }
-    fetchNotes()
+    const fetchNotesAndSetContext = async () => {
+      if (!chatId) return; // Do not fetch or set context if there is no chat
+      const fetchedNotes = await getNotes(selectedDate, chatId);
+      setNotes(fetchedNotes);
+
+      if (fetchedNotes.length > 0) {
+        // Asynchronously add notes to AI context without blocking UI
+        addCalendarContextToAI(fetchedNotes, chatId).then(() => {
+          // Optional: Force a re-render of AI state if needed, though often not necessary
+          // For example, by refetching chat messages if they are displayed elsewhere
+        });
+      }
+    };
+    fetchNotesAndSetContext()
   }, [selectedDate, chatId])
 
   const generateDateRange = (offset: number) => {
@@ -52,27 +63,42 @@ export function CalendarNotepad({ chatId }: CalendarNotepadProps) {
   }
 
   const handleAddNote = async (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-        if (!noteContent.trim()) return
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault(); // Prevent new line on enter
+      if (!noteContent.trim()) return;
 
-        const newNote: NewCalendarNote = {
-            date: selectedDate,
-            content: noteContent,
-            chatId: chatId ?? null,
-            userId: '', // This will be set on the server
-            locationTags: taggedLocation,
-            userTags: null,
-            mapFeatureId: null,
-        }
+      const userTags = noteContent.match(/@(\w+)/g)?.map(tag => tag.substring(1)) || null;
+      const locationNameTags = noteContent.match(/#(\w+)/g)?.map(tag => tag.substring(1)) || [];
 
-        const savedNote = await saveNote(newNote)
-        if (savedNote) {
-            setNotes([savedNote, ...notes])
-            setNoteContent("")
-            setTaggedLocation(null)
-        }
+      let locationTagsData = taggedLocation;
+      if (locationNameTags.length > 0) {
+        locationTagsData = {
+          ...(locationTagsData || {}),
+          name: locationNameTags[0] // Storing the first #tag as the location name for now
+        };
+      }
+
+      const newNote: NewCalendarNote = {
+        date: selectedDate,
+        content: noteContent,
+        chatId: chatId ?? null,
+        userId: '', // This will be set on the server
+        locationTags: locationTagsData,
+        userTags: userTags,
+        mapFeatureId: null, // Will be implemented in a future step
+      };
+
+      const savedNote = await saveNote(newNote);
+      if (savedNote) {
+        setNotes([savedNote, ...notes]);
+        setNoteContent("");
+        setTaggedLocation(null);
+      } else {
+        // TODO: Add user-facing error notification
+        console.error("Failed to save the note.");
+      }
     }
-  }
+  };
 
   const handleTagLocation = () => {
     if (mapData.targetPosition) {
@@ -134,7 +160,7 @@ export function CalendarNotepad({ chatId }: CalendarNotepadProps) {
             value={noteContent}
             onChange={(e) => setNoteContent(e.target.value)}
             onKeyDown={handleAddNote}
-            placeholder="Add note... (⌘+Enter to save, @mention, #location)"
+            placeholder="Add note... (Enter to save, Shift+Enter for new line)"
             className="w-full p-2 bg-input rounded-md border focus:ring-ring focus:ring-2 focus:outline-none pr-10"
             rows={3}
           />
@@ -157,11 +183,23 @@ export function CalendarNotepad({ chatId }: CalendarNotepadProps) {
                     {new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </p>
                   <p className="text-sm whitespace-pre-wrap break-words">{note.content}</p>
+                  <div className="flex items-center gap-2 mt-2">
+                    {note.userTags && note.userTags.map(tag => (
+                      <span key={tag} className="text-xs bg-secondary text-secondary-foreground px-2 py-1 rounded-full">
+                        @{tag}
+                      </span>
+                    ))}
+                  </div>
                 </div>
                 {note.locationTags && (
-                  <button onClick={() => handleFlyTo(note.locationTags)} className="text-muted-foreground hover:text-foreground ml-2">
-                    <MapPin className="h-5 w-5" />
-                  </button>
+                  <div className="flex flex-col items-end">
+                    <button onClick={() => handleFlyTo(note.locationTags)} className="text-muted-foreground hover:text-foreground ml-2">
+                      <MapPin className="h-5 w-5" />
+                    </button>
+                    {note.locationTags.name && (
+                      <span className="text-xs text-muted-foreground mt-1">#{note.locationTags.name}</span>
+                    )}
+                  </div>
                 )}
               </div>
             </div>

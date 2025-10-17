@@ -61,6 +61,29 @@ export async function getNotes(date: Date, chatId: string | null): Promise<Calen
  * @param noteData - The note data to save.
  * @returns A promise that resolves to the saved note or null if an error occurs.
  */
+export async function addCalendarContextToAI(notes: CalendarNote[], chatId: string) {
+  const userId = await getCurrentUserIdOnServer();
+  if (!userId || notes.length === 0) {
+    return;
+  }
+
+  try {
+    const contextMessage: NewMessage = {
+      chatId: chatId,
+      userId: userId,
+      role: 'data',
+      content: JSON.stringify({
+        type: 'calendar_context',
+        notes: notes,
+        message: `User is viewing notes for ${new Date(notes[0].date).toDateString()}.`,
+      }),
+    };
+    await createMessage(contextMessage);
+  } catch (error) {
+    console.error('Error adding calendar context to AI:', error);
+  }
+}
+
 export async function saveNote(noteData: NewCalendarNote | CalendarNote): Promise<CalendarNote | null> {
     const userId = await getCurrentUserIdOnServer();
     if (!userId) {
