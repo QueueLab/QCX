@@ -76,15 +76,12 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     }
 
     // Create the user message content first, while we still have the input and file
-    const content: ({ type: 'text'; text: string } | { type: 'image'; image: string })[] = [];
+    const content: ({ type: 'text'; text: string } | { type: 'image'; image: File })[] = [];
     if (input) {
       content.push({ type: 'text', text: input });
     }
     if (selectedFile && selectedFile.type.startsWith('image/')) {
-      content.push({
-        type: 'image',
-        image: URL.createObjectURL(selectedFile)
-      });
+      content.push({ type: 'image', image: selectedFile });
     }
 
     // Prepare the form data for the server action
