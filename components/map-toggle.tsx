@@ -29,7 +29,7 @@ export function MapToggle() {
         <DropdownMenuItem onClick={() => {setMapType(MapToggleEnum.FreeMode)}}>
           My Maps
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => {setMapType(MapToggleEnum.DrawingMode)}}>
+        <DropdownMenuItem data-testid="drawing-mode-button" onClick={() => {setMapType(MapToggleEnum.DrawingMode)}}>
           <Pencil className="h-[1rem] w-[1rem] mr-2" />
           Draw & Measure
         </DropdownMenuItem>
