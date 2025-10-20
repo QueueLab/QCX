@@ -8,8 +8,17 @@ import { MapDataProvider } from '@/components/map/map-data-context'
 
 export default function Page() {
   const id = nanoid()
+  const initialAIState = {
+    conversations: [
+      {
+        id: nanoid(),
+        chatId: id,
+        messages: []
+      }
+    ]
+  }
   return (
-    <AI initialAIState={{ chatId: id, messages: [] }}>
+    <AI initialAIState={initialAIState}>
       <MapDataProvider>
         <Chat id={id} />
       </MapDataProvider>

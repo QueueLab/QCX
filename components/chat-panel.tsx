@@ -23,7 +23,7 @@ export interface ChatPanelRef {
 
 export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, input, setInput }, ref) => {
   const [, setMessages] = useUIState<typeof AI>()
-  const { submit, clearChat } = useActions()
+  const { submit } = useActions()
   // Removed mcp instance as it's no longer passed to submit
   const [isMobile, setIsMobile] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -69,7 +69,10 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (
+    e: React.FormEvent<HTMLFormElement>,
+    newChat?: boolean
+  ) => {
     e.preventDefault()
     if (!input && !selectedFile) {
       return
@@ -86,17 +89,22 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
       })
     }
 
-    setMessages(currentMessages => [
-      ...currentMessages,
-      {
-        id: nanoid(),
-        component: <UserMessage content={content} />
-      }
-    ])
+    if (!newChat) {
+      setMessages(currentMessages => [
+        ...currentMessages,
+        {
+          id: nanoid(),
+          component: <UserMessage content={content} />
+        }
+      ])
+    }
 
     const formData = new FormData(e.currentTarget)
     if (selectedFile) {
       formData.append('file', selectedFile)
+    }
+    if (newChat) {
+      formData.append('newChat', 'true')
     }
 
     setInput('')
@@ -106,10 +114,13 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     setMessages(currentMessages => [...currentMessages, responseMessage as any])
   }
 
-  const handleClear = async () => {
+  const handleNewConversation = async () => {
     setMessages([])
     clearAttachment()
-    await clearChat()
+    const formData = new FormData()
+    formData.append('newChat', 'true')
+    const responseMessage = await submit(formData)
+    setMessages(currentMessages => [...currentMessages, responseMessage as any])
   }
 
   useEffect(() => {
@@ -129,10 +140,10 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
           type="button"
           variant={'secondary'}
           className="rounded-full bg-secondary/80 group transition-all hover:scale-105 pointer-events-auto"
-          onClick={() => handleClear()}
+          onClick={handleNewConversation}
         >
           <span className="text-sm mr-2 group-hover:block hidden animate-in fade-in duration-300">
-            New
+            New Conversation
           </span>
           <Plus size={18} className="group-hover:rotate-90 transition-all" />
         </Button>

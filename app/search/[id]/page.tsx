@@ -1,3 +1,4 @@
+import { nanoid } from 'nanoid';
 import { notFound, redirect } from 'next/navigation';
 import { Chat } from '@/components/chat';
 import { getChat, getChatMessages } from '@/lib/actions/chat'; // Added getChatMessages
@@ -59,15 +60,18 @@ export default async function SearchPage({ params }: SearchPageProps) {
     };
   });
 
-  return (
-    <AI
-      initialAIState={{
+  const initialAIState = {
+    conversations: [
+      {
+        id: nanoid(),
         chatId: chat.id,
-        messages: initialMessages, // Use the transformed messages from the database
-        // isSharePage: true, // This was in PR#533, but share functionality is removed.
-                             // If needed for styling or other logic, it can be set.
-      }}
-    >
+        messages: initialMessages,
+      }
+    ]
+  };
+
+  return (
+    <AI initialAIState={initialAIState}>
       <MapDataProvider>
         <Chat id={id} />
       </MapDataProvider>

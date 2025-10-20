@@ -84,44 +84,26 @@ Analysis & Planning
   uiStream.update(null)
 
   // Process the response
-  const toolCalls: ToolCallPart[] = []
-  const toolResponses: ToolResultPart[] = []
-  for await (const delta of result.fullStream) {
-    switch (delta.type) {
-      case 'text-delta':
-        if (delta.textDelta) {
-          // If the first text delta is available, add a UI section
-          if (fullResponse.length === 0 && delta.textDelta.length > 0) {
-            // Update the UI
-            uiStream.update(answerSection)
-          }
+  uiStream.update(answerSection);
 
-          fullResponse += delta.textDelta
-          streamText.update(fullResponse)
-        }
-        break
-      case 'tool-call':
-        toolCalls.push(delta)
-        break
-      case 'tool-result':
-        // Append the answer section if the specific model is not used
-        if (!useSpecificModel && toolResponses.length === 0 && delta.result) {
-          uiStream.append(answerSection)
-        }
-        if (!delta.result) {
-          hasError = true
-        }
-        toolResponses.push(delta)
-        break
-      case 'error':
-        hasError = true
-        fullResponse += `\nError occurred while executing the tool`
-        break
-    }
+  const { text, toolCalls, toolResults } = await result;
+
+  fullResponse = await text;
+  streamText.done(fullResponse);
+
+  const finalToolResults = await toolResults;
+  const toolResponses: ToolResultPart[] = (finalToolResults || []).map(toolResult => ({
+    ...toolResult
+  }));
+
+  if (toolResponses.some(tr => !tr.result)) {
+    hasError = true;
   }
+
+  const finalToolCalls = await toolCalls;
   messages.push({
     role: 'assistant',
-    content: [{ type: 'text', text: fullResponse }, ...toolCalls]
+    content: [{ type: 'text', text: fullResponse }, ...(finalToolCalls || [])]
   })
 
   if (toolResponses.length > 0) {

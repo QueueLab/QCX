@@ -42,7 +42,21 @@ async function submit(formData?: FormData, skip?: boolean) {
   const isGenerating = createStreamableValue(true)
   const isCollapsed = createStreamableValue(false)
 
-  const action = formData?.get('action') as string;
+  const action = formData?.get('action') as string
+  const newChat = formData?.get('newChat') === 'true'
+
+  if (newChat) {
+    const newConversation = {
+      id: nanoid(),
+      chatId: nanoid(),
+      messages: []
+    }
+    const currentAIState = aiState.get()
+    aiState.update({
+      ...currentAIState,
+      conversations: [...currentAIState.conversations, newConversation]
+    })
+  }
   if (action === 'resolution_search') {
     const file = formData?.get('file') as File;
     if (!file) {
@@ -52,8 +66,11 @@ async function submit(formData?: FormData, skip?: boolean) {
     const buffer = await file.arrayBuffer();
     const dataUrl = `data:${file.type};base64,${Buffer.from(buffer).toString('base64')}`;
 
-    // Get the current messages, excluding tool-related ones.
-    const messages: CoreMessage[] = [...(aiState.get().messages as any[])].filter(
+    // Get the current messages from the last conversation, excluding tool-related ones.
+    const currentAIState = aiState.get()
+    const lastConversation =
+      currentAIState.conversations[currentAIState.conversations.length - 1]
+    const messages: CoreMessage[] = [...(lastConversation.messages as any[])].filter(
       message =>
         message.role !== 'tool' &&
         message.type !== 'followup' &&
@@ -71,13 +88,13 @@ async function submit(formData?: FormData, skip?: boolean) {
     ];
 
     // Add the new user message to the AI state.
+    const newUserMessage: AIMessage = { id: nanoid(), role: 'user', content };
+    lastConversation.messages.push(newUserMessage);
     aiState.update({
-      ...aiState.get(),
-      messages: [
-        ...aiState.get().messages,
-        { id: nanoid(), role: 'user', content }
-      ]
+      ...currentAIState,
+      conversations: [...currentAIState.conversations]
     });
+
     messages.push({ role: 'user', content });
 
     // Call the simplified agent, which now returns data directly.
@@ -92,17 +109,16 @@ async function submit(formData?: FormData, skip?: boolean) {
       <BotMessage content={summaryStream.value} />
     );
 
+    const assistantMessage: AIMessage = {
+      id: nanoid(),
+      role: 'assistant',
+      content: JSON.stringify(analysisResult),
+      type: 'resolution_search_result'
+    };
+    lastConversation.messages.push(assistantMessage);
     aiState.done({
-      ...aiState.get(),
-      messages: [
-        ...aiState.get().messages,
-        {
-          id: nanoid(),
-          role: 'assistant',
-          content: JSON.stringify(analysisResult),
-          type: 'resolution_search_result'
-        }
-      ]
+      ...currentAIState,
+      conversations: [...currentAIState.conversations]
     });
 
     isGenerating.done(false);
@@ -115,7 +131,10 @@ async function submit(formData?: FormData, skip?: boolean) {
     };
   }
 
-  const messages: CoreMessage[] = [...(aiState.get().messages as any[])].filter(
+  const currentAIState = aiState.get()
+  const lastConversation =
+    currentAIState.conversations[currentAIState.conversations.length - 1]
+  const messages: CoreMessage[] = [...(lastConversation.messages as any[])].filter(
     message =>
       message.role !== 'tool' &&
       message.type !== 'followup' &&
@@ -139,24 +158,18 @@ async function submit(formData?: FormData, skip?: boolean) {
 
       : `QCX-Terra is a model garden of pixel level precision geospatial foundational models for efficient land feature predictions from satellite imagery. Available for our Pro and Enterprise customers. [QCX Pricing] (https://www.queue.cx/#pricing)`;
 
-    const content = JSON.stringify(Object.fromEntries(formData!));
-    const type = 'input';
+    const content = JSON.stringify(Object.fromEntries(formData!))
+    const type = 'input' as const
 
+    const userMessage: AIMessage = { id: nanoid(), role: 'user', content, type }
+    lastConversation.messages.push(userMessage)
     aiState.update({
-      ...aiState.get(),
-      messages: [
-        ...aiState.get().messages,
-        {
-          id: nanoid(),
-          role: 'user',
-          content,
-          type,
-        },
-      ],
-    });
+      ...currentAIState,
+      conversations: [...currentAIState.conversations]
+    })
 
-    const definitionStream = createStreamableValue();
-    definitionStream.done(definition);
+    const definitionStream = createStreamableValue()
+    definitionStream.done(definition)
 
     const answerSection = (
       <Section title="response">
@@ -166,33 +179,31 @@ async function submit(formData?: FormData, skip?: boolean) {
 
     uiStream.append(answerSection);
 
-    const groupeId = nanoid();
-    const relatedQueries = { items: [] };
+    const groupeId = nanoid()
+    const relatedQueries = { items: [] }
 
+    lastConversation.messages.push({
+      id: groupeId,
+      role: 'assistant',
+      content: definition,
+      type: 'response'
+    } as AIMessage)
+    lastConversation.messages.push({
+      id: groupeId,
+      role: 'assistant',
+      content: JSON.stringify(relatedQueries),
+      type: 'related'
+    } as AIMessage)
+    lastConversation.messages.push({
+      id: groupeId,
+      role: 'assistant',
+      content: 'followup',
+      type: 'followup'
+    } as AIMessage)
     aiState.done({
-      ...aiState.get(),
-      messages: [
-        ...aiState.get().messages,
-        {
-          id: groupeId,
-          role: 'assistant',
-          content: definition,
-          type: 'response',
-        },
-        {
-          id: groupeId,
-          role: 'assistant',
-          content: JSON.stringify(relatedQueries),
-          type: 'related',
-        },
-        {
-          id: groupeId,
-          role: 'assistant',
-          content: 'followup',
-          type: 'followup',
-        },
-      ],
-    });
+      ...currentAIState,
+      conversations: [...currentAIState.conversations]
+    })
 
     isGenerating.done(false);
     uiStream.done();
@@ -263,17 +274,16 @@ async function submit(formData?: FormData, skip?: boolean) {
     : 'inquiry'
 
   if (content) {
+    const userMessage: AIMessage = {
+      id: nanoid(),
+      role: 'user',
+      content,
+      type
+    }
+    lastConversation.messages.push(userMessage)
     aiState.update({
-      ...aiState.get(),
-      messages: [
-        ...aiState.get().messages,
-        {
-          id: nanoid(),
-          role: 'user',
-          content,
-          type
-        }
-      ]
+      ...currentAIState,
+      conversations: [...currentAIState.conversations]
     })
     messages.push({
       role: 'user',
@@ -298,16 +308,15 @@ async function submit(formData?: FormData, skip?: boolean) {
       uiStream.done()
       isGenerating.done()
       isCollapsed.done(false)
+      lastConversation.messages.push({
+        id: nanoid(),
+        role: 'assistant',
+        content: `inquiry: ${inquiry?.question}`,
+        type: 'inquiry'
+      } as AIMessage)
       aiState.done({
-        ...aiState.get(),
-        messages: [
-          ...aiState.get().messages,
-          {
-            id: nanoid(),
-            role: 'assistant',
-            content: `inquiry: ${inquiry?.question}`
-          }
-        ]
+        ...currentAIState,
+        conversations: [...currentAIState.conversations]
       })
       return
     }
@@ -336,37 +345,36 @@ async function submit(formData?: FormData, skip?: boolean) {
       errorOccurred = hasError
 
       if (toolOutputs.length > 0) {
-        toolOutputs.map(output => {
-          aiState.update({
-            ...aiState.get(),
-            messages: [
-              ...aiState.get().messages,
-              {
-                id: groupeId,
-                role: 'tool',
-                content: JSON.stringify(output.result),
-                name: output.toolName,
-                type: 'tool'
-              }
-            ]
-          })
+        toolOutputs.forEach(output => {
+          lastConversation.messages.push({
+            id: groupeId,
+            role: 'tool',
+            content: JSON.stringify(output.result),
+            name: output.toolName,
+            type: 'tool'
+          } as AIMessage)
+        })
+        aiState.update({
+          ...currentAIState,
+          conversations: [...currentAIState.conversations]
         })
       }
     }
 
     if (useSpecificAPI && answer.length === 0) {
-      const modifiedMessages = aiState
-        .get()
-        .messages.map(msg =>
-          msg.role === 'tool'
-            ? {
-                ...msg,
-                role: 'assistant',
-                content: JSON.stringify(msg.content),
-                type: 'tool'
-              }
-            : msg
-        ) as CoreMessage[]
+      const currentAIState = aiState.get()
+      const lastConversation =
+        currentAIState.conversations[currentAIState.conversations.length - 1]
+      const modifiedMessages = lastConversation.messages.map(msg =>
+        msg.role === 'tool'
+          ? {
+              ...msg,
+              role: 'assistant',
+              content: JSON.stringify(msg.content),
+              type: 'tool'
+            }
+          : msg
+      ) as CoreMessage[]
       const latestMessages = modifiedMessages.slice(maxMessages * -1)
       answer = await writer(
         currentSystemPrompt,
@@ -388,29 +396,27 @@ async function submit(formData?: FormData, skip?: boolean) {
 
       await new Promise(resolve => setTimeout(resolve, 500))
 
+      lastConversation.messages.push({
+        id: groupeId,
+        role: 'assistant',
+        content: answer,
+        type: 'response'
+      } as AIMessage)
+      lastConversation.messages.push({
+        id: groupeId,
+        role: 'assistant',
+        content: JSON.stringify(relatedQueries),
+        type: 'related'
+      } as AIMessage)
+      lastConversation.messages.push({
+        id: groupeId,
+        role: 'assistant',
+        content: 'followup',
+        type: 'followup'
+      } as AIMessage)
       aiState.done({
-        ...aiState.get(),
-        messages: [
-          ...aiState.get().messages,
-          {
-            id: groupeId,
-            role: 'assistant',
-            content: answer,
-            type: 'response'
-          },
-          {
-            id: groupeId,
-            role: 'assistant',
-            content: JSON.stringify(relatedQueries),
-            type: 'related'
-          },
-          {
-            id: groupeId,
-            role: 'assistant',
-            content: 'followup',
-            type: 'followup'
-          }
-        ]
+        ...currentAIState,
+        conversations: [...currentAIState.conversations]
       })
     }
 
@@ -428,21 +434,15 @@ async function submit(formData?: FormData, skip?: boolean) {
   }
 }
 
-async function clearChat() {
-  'use server'
-
-  const aiState = getMutableAIState<typeof AI>()
-
-  aiState.done({
-    chatId: nanoid(),
-    messages: []
-  })
+export type Conversation = {
+  id: string
+  chatId: string
+  messages: AIMessage[]
+  isSharePage?: boolean
 }
 
 export type AIState = {
-  messages: AIMessage[]
-  chatId: string
-  isSharePage?: boolean
+  conversations: Conversation[]
 }
 
 export type UIState = {
@@ -453,97 +453,111 @@ export type UIState = {
 }[]
 
 const initialAIState: AIState = {
-  chatId: nanoid(),
-  messages: []
+  conversations: [
+    {
+      id: nanoid(),
+      chatId: nanoid(),
+      messages: []
+    }
+  ]
 }
 
 const initialUIState: UIState = []
 
 export const AI = createAI<AIState, UIState>({
   actions: {
-    submit,
-    clearChat
+    submit
   },
   initialUIState,
   initialAIState,
   onGetUIState: async () => {
     'use server'
-
     const aiState = getAIState() as AIState
     if (aiState) {
-      const uiState = getUIStateFromAIState(aiState)
-      return uiState
+      const allUiComponents: UIState = []
+      aiState.conversations.forEach((conversation, index) => {
+        const uiStateForConvo = getUIStateFromAIState(conversation)
+        if (index > 0 && uiStateForConvo.length > 0) {
+          allUiComponents.push({
+            id: `separator-${conversation.id}`,
+            component: <hr className="my-8 border-zinc-700" />
+          })
+        }
+        allUiComponents.push(...uiStateForConvo)
+      })
+      return allUiComponents
     }
     return initialUIState
   },
   onSetAIState: async ({ state }) => {
     'use server'
 
-    if (!state.messages.some(e => e.type === 'response')) {
-      return
-    }
+    // Find the conversation that was updated and save it.
+    for (const conversation of state.conversations) {
+      if (conversation.messages.some(e => e.type === 'response')) {
+        const { chatId, messages } = conversation
+        const createdAt = new Date()
+        const path = `/search/${chatId}`
 
-    const { chatId, messages } = state
-    const createdAt = new Date()
-    const path = `/search/${chatId}`
-
-    let title = 'Untitled Chat'
-    if (messages.length > 0) {
-      const firstMessageContent = messages[0].content
-      if (typeof firstMessageContent === 'string') {
-        try {
-          const parsedContent = JSON.parse(firstMessageContent)
-          title = parsedContent.input?.substring(0, 100) || 'Untitled Chat'
-        } catch (e) {
-          title = firstMessageContent.substring(0, 100)
+        let title = 'Untitled Chat'
+        if (messages.length > 0) {
+          const firstMessageContent = messages[0].content
+          if (typeof firstMessageContent === 'string') {
+            try {
+              const parsedContent = JSON.parse(firstMessageContent)
+              title = parsedContent.input?.substring(0, 100) || 'Untitled Chat'
+            } catch (e) {
+              title = firstMessageContent.substring(0, 100)
+            }
+          } else if (Array.isArray(firstMessageContent)) {
+            const textPart = (
+              firstMessageContent as { type: string; text?: string }[]
+            ).find(p => p.type === 'text')
+            title =
+              textPart && textPart.text
+                ? textPart.text.substring(0, 100)
+                : 'Image Message'
+          }
         }
-      } else if (Array.isArray(firstMessageContent)) {
-        const textPart = (
-          firstMessageContent as { type: string; text?: string }[]
-        ).find(p => p.type === 'text')
-        title =
-          textPart && textPart.text
-            ? textPart.text.substring(0, 100)
-            : 'Image Message'
+
+        const updatedMessages: AIMessage[] = [
+          ...messages,
+          {
+            id: nanoid(),
+            role: 'assistant',
+            content: `end`,
+            type: 'end'
+          }
+        ]
+
+        const { getCurrentUserIdOnServer } = await import(
+          '@/lib/auth/get-current-user'
+        )
+        const actualUserId = await getCurrentUserIdOnServer()
+
+        if (!actualUserId) {
+          console.error(
+            'onSetAIState: User not authenticated. Chat not saved.'
+          )
+          continue // Continue to the next conversation
+        }
+
+        const chat: Chat = {
+          id: chatId,
+          createdAt,
+          userId: actualUserId,
+          path,
+          title,
+          messages: updatedMessages
+        }
+        await saveChat(chat, actualUserId)
       }
     }
-
-    const updatedMessages: AIMessage[] = [
-      ...messages,
-      {
-        id: nanoid(),
-        role: 'assistant',
-        content: `end`,
-        type: 'end'
-      }
-    ]
-
-    const { getCurrentUserIdOnServer } = await import(
-      '@/lib/auth/get-current-user'
-    )
-    const actualUserId = await getCurrentUserIdOnServer()
-
-    if (!actualUserId) {
-      console.error('onSetAIState: User not authenticated. Chat not saved.')
-      return
-    }
-
-    const chat: Chat = {
-      id: chatId,
-      createdAt,
-      userId: actualUserId,
-      path,
-      title,
-      messages: updatedMessages
-    }
-    await saveChat(chat, actualUserId)
   }
 })
-
-export const getUIStateFromAIState = (aiState: AIState): UIState => {
-  const chatId = aiState.chatId
-  const isSharePage = aiState.isSharePage
-  return aiState.messages
+export const getUIStateFromAIState = (conversation: Conversation): UIState => {
+  const { chatId, isSharePage, messages } = conversation
+  return messages
     .map((message, index) => {
       const { role, content, id, type, name } = message
 
