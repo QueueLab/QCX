@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 
 type UseWorkerReturnType<T> = {
   postMessage: (data: any) => void;
@@ -14,7 +14,6 @@ export function useWorker<T>(workerUrl: URL): UseWorkerReturnType<T> {
   const workerRef = useRef<Worker | null>(null);
 
   useEffect(() => {
-    // Create a new worker instance
     const worker = new Worker(workerUrl, { type: 'module' });
     workerRef.current = worker;
 
@@ -28,7 +27,11 @@ export function useWorker<T>(workerUrl: URL): UseWorkerReturnType<T> {
       setIsLoading(false);
     };
 
-    // Cleanup worker on component unmount
+    worker.onmessageerror = (err: MessageEvent) => {
+      setError('Worker message deserialization error');
+      setIsLoading(false);
+    };
+
     return () => {
       if (workerRef.current) {
         workerRef.current.terminate();
@@ -37,14 +40,19 @@ export function useWorker<T>(workerUrl: URL): UseWorkerReturnType<T> {
     };
   }, [workerUrl]);
 
-  const postMessage = (messageData: any) => {
+  const postMessage = useCallback((messageData: any) => {
     if (workerRef.current) {
       setIsLoading(true);
       setError(null);
       setData(null);
       workerRef.current.postMessage(messageData);
     }
-  };
+  }, []);
 
-  return { postMessage, data, error, isLoading };
+  return useMemo(() => ({
+    postMessage,
+    data,
+    error,
+    isLoading
+  }), [postMessage, data, error, isLoading]);
 }

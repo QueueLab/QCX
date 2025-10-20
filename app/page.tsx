@@ -1,6 +1,6 @@
 import { Chat } from '@/components/chat'
 import {nanoid } from 'nanoid'
-import { AI } from './actions'
+import { AI, AIState } from './actions'
 
 export const maxDuration = 60
 
@@ -8,7 +8,7 @@ import { MapDataProvider } from '@/components/map/map-data-context'
 
 export default function Page() {
   const id = nanoid()
-  const initialAIState = {
+  const initialAIState: AIState = {
     conversations: [
       {
         id: nanoid(),

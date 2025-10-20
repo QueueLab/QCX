@@ -115,7 +115,6 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
   }
 
   const handleNewConversation = async () => {
-    setMessages([])
     clearAttachment()
     const formData = new FormData()
     formData.append('newChat', 'true')

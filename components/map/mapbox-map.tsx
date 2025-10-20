@@ -3,7 +3,6 @@
 import { useEffect, useRef, useCallback } from 'react' // Removed useState
 import mapboxgl from 'mapbox-gl'
 import MapboxDraw from '@mapbox/mapbox-gl-draw'
-import * as turf from '@turf/turf'
 import { toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import 'mapbox-gl/dist/mapbox-gl.css'
@@ -39,7 +38,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   // Refs for long-press functionality
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isMouseDownRef = useRef<boolean>(false);
-  const turfWorker = useWorker<any[]>(new URL('/workers/turf.worker.ts', import.meta.url));
+  const turfWorker = useWorker<any[]>(new URL('../../workers/turf.worker.ts', import.meta.url));
 
 
   // const [isMapLoaded, setIsMapLoaded] = useState(false); // Removed local state
@@ -76,7 +75,8 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     const features = drawRef.current.getAll().features
     turfWorker.postMessage({ features });
 
-  }, [turfWorker])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [turfWorker.postMessage])
 
   useEffect(() => {
     if (turfWorker.data && map.current && drawRef.current) {

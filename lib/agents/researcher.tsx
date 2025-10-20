@@ -16,7 +16,6 @@ export async function researcher(
   uiStream: ReturnType<typeof createStreamableUI>,
   streamText: ReturnType<typeof createStreamableValue<string>>,
   messages: CoreMessage[],
-  // mcp: any, // Removed mcp parameter
   useSpecificModel?: boolean
 ) {
   let fullResponse = ''
@@ -28,7 +27,6 @@ export async function researcher(
   )
 
   const currentDate = new Date().toLocaleString()
-  // Default system prompt, used if dynamicSystemPrompt is not provided
   const default_system_prompt = `As a comprehensive AI assistant, you can search the web, retrieve information from URLs except from maps -here use the Geospatial tools provided, and understand geospatial queries to assist the user and display information on a map.
 Current date and time: ${currentDate}. When tools are not needed, provide direct, helpful answers based on your knowledge.Match the language of your response to the user's language.
 Always aim to directly address the user's question. If using information from a tool (like web search), cite the source URL.
@@ -71,43 +69,37 @@ Analysis & Planning
      const result = await nonexperimental_streamText({
        model: getModel() as LanguageModel,
        maxTokens: 2500,
-       system: systemToUse, // Use the dynamic or default system prompt
+       system: systemToUse,
        messages,
-       tools: getTools({
-      uiStream,
-      fullResponse,
-      // mcp // mcp parameter is no longer passed to getTools
-    })
+       tools: getTools({ uiStream, fullResponse })
   })
 
-  // Remove the spinner
   uiStream.update(null)
-
-  // Process the response
   uiStream.update(answerSection);
 
-  const { text, toolCalls, toolResults } = await result;
+  const [text, toolResults, toolCalls] = await Promise.all([
+    result.text,
+    result.toolResults,
+    result.toolCalls,
+  ]);
 
-  fullResponse = await text;
+  fullResponse = text;
   streamText.done(fullResponse);
 
-  const finalToolResults = await toolResults;
-  const toolResponses: ToolResultPart[] = (finalToolResults || []).map(toolResult => ({
+  const toolResponses: ToolResultPart[] = (toolResults || []).map(toolResult => ({
     ...toolResult
   }));
 
-  if (toolResponses.some(tr => !tr.result)) {
+  if (toolResponses.some(tr => tr.result === undefined || tr.result === null)) {
     hasError = true;
   }
 
-  const finalToolCalls = await toolCalls;
   messages.push({
     role: 'assistant',
-    content: [{ type: 'text', text: fullResponse }, ...(finalToolCalls || [])]
+    content: [{ type: 'text', text: fullResponse }, ...(toolCalls || [])]
   })
 
   if (toolResponses.length > 0) {
-    // Add tool responses to the messages
     messages.push({ role: 'tool', content: toolResponses })
   }
 

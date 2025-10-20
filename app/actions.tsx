@@ -33,6 +33,32 @@ type RelatedQueries = {
   items: { query: string }[]
 }
 
+function ensureConversations(aiState: AIState): AIState {
+  // Migration: Handle old state structure without conversations array
+  if (!aiState.conversations || !Array.isArray(aiState.conversations)) {
+    return {
+      conversations: [
+        {
+          id: nanoid(),
+          chatId: nanoid(),
+          messages: []
+        }
+      ]
+    }
+  }
+
+  // Ensure at least one conversation exists
+  if (aiState.conversations.length === 0) {
+    aiState.conversations.push({
+      id: nanoid(),
+      chatId: nanoid(),
+      messages: []
+    })
+  }
+
+  return aiState
+}
+
 // Removed mcp parameter from submit, as geospatialTool now handles its client.
 async function submit(formData?: FormData, skip?: boolean) {
   'use server'
@@ -67,16 +93,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     const dataUrl = `data:${file.type};base64,${Buffer.from(buffer).toString('base64')}`;
 
     // Get the current messages from the last conversation, excluding tool-related ones.
-    const currentAIState = aiState.get()
-    if (currentAIState.conversations.length === 0) {
-      // This should not happen in normal operation, but as a safeguard:
-      return {
-        id: nanoid(),
-        isGenerating: createStreamableValue(false).value,
-        component: null,
-        isCollapsed: createStreamableValue(false).value
-      };
-    }
+    const currentAIState = ensureConversations(aiState.get())
     const lastConversation =
       currentAIState.conversations[currentAIState.conversations.length - 1]
     const messages: CoreMessage[] = [...(lastConversation.messages as any[])].filter(
@@ -140,16 +157,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     };
   }
 
-  const currentAIState = aiState.get()
-  if (currentAIState.conversations.length === 0) {
-    // This should not happen in normal operation, but as a safeguard:
-    return {
-      id: nanoid(),
-      isGenerating: createStreamableValue(false).value,
-      component: null,
-      isCollapsed: createStreamableValue(false).value
-    };
-  }
+  const currentAIState = ensureConversations(aiState.get())
   const lastConversation =
     currentAIState.conversations[currentAIState.conversations.length - 1]
   const messages: CoreMessage[] = [...(lastConversation.messages as any[])].filter(
@@ -176,7 +184,8 @@ async function submit(formData?: FormData, skip?: boolean) {
 
       : `QCX-Terra is a model garden of pixel level precision geospatial foundational models for efficient land feature predictions from satellite imagery. Available for our Pro and Enterprise customers. [QCX Pricing] (https://www.queue.cx/#pricing)`;
 
-    const content = JSON.stringify(Object.fromEntries(formData!))
+    const textContent = formData?.get('input') as string || '';
+    const content = JSON.stringify({ input: textContent });
     const type = 'input' as const
 
     const userMessage: AIMessage = { id: nanoid(), role: 'user', content, type }
@@ -200,20 +209,21 @@ async function submit(formData?: FormData, skip?: boolean) {
     const groupeId = nanoid()
     const relatedQueries = { items: [] }
 
+    const groupId = nanoid();
     lastConversation.messages.push({
-      id: groupeId,
+      id: nanoid(),
       role: 'assistant',
       content: definition,
       type: 'response'
     } as AIMessage)
     lastConversation.messages.push({
-      id: groupeId,
+      id: nanoid(),
       role: 'assistant',
       content: JSON.stringify(relatedQueries),
       type: 'related'
     } as AIMessage)
     lastConversation.messages.push({
-      id: groupeId,
+      id: nanoid(),
       role: 'assistant',
       content: 'followup',
       type: 'followup'
@@ -328,8 +338,8 @@ async function submit(formData?: FormData, skip?: boolean) {
       isCollapsed.done(false)
       lastConversation.messages.push({
         id: nanoid(),
-        role: 'assistant',
-        content: `inquiry: ${inquiry?.question}`,
+        role: 'user',
+        content: inquiry?.question || '',
         type: 'inquiry'
       } as AIMessage)
       aiState.done({
@@ -365,7 +375,7 @@ async function submit(formData?: FormData, skip?: boolean) {
       if (toolOutputs.length > 0) {
         toolOutputs.forEach(output => {
           lastConversation.messages.push({
-            id: groupeId,
+            id: nanoid(),
             role: 'tool',
             content: JSON.stringify(output.result),
             name: output.toolName,
@@ -380,15 +390,12 @@ async function submit(formData?: FormData, skip?: boolean) {
     }
 
     if (useSpecificAPI && answer.length === 0) {
-      const currentAIState = aiState.get()
-      const lastConversation =
-        currentAIState.conversations[currentAIState.conversations.length - 1]
       const modifiedMessages = lastConversation.messages.map(msg =>
         msg.role === 'tool'
           ? {
               ...msg,
               role: 'assistant',
-              content: JSON.stringify(msg.content),
+              content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content),
               type: 'tool'
             }
           : msg
@@ -415,19 +422,19 @@ async function submit(formData?: FormData, skip?: boolean) {
       await new Promise(resolve => setTimeout(resolve, 500))
 
       lastConversation.messages.push({
-        id: groupeId,
+        id: nanoid(),
         role: 'assistant',
         content: answer,
         type: 'response'
       } as AIMessage)
       lastConversation.messages.push({
-        id: groupeId,
+        id: nanoid(),
         role: 'assistant',
         content: JSON.stringify(relatedQueries),
         type: 'related'
       } as AIMessage)
       lastConversation.messages.push({
-        id: groupeId,
+        id: nanoid(),
         role: 'assistant',
         content: 'followup',
         type: 'followup'
@@ -490,7 +497,7 @@ export const AI = createAI<AIState, UIState>({
   initialAIState,
   onGetUIState: async () => {
     'use server'
-    const aiState = getAIState() as AIState
+    const aiState = ensureConversations(getAIState() as AIState)
     if (aiState) {
       const allUiComponents: UIState = []
       aiState.conversations.forEach((conversation, index) => {
