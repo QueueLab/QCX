@@ -1,6 +1,8 @@
 import { useState, useCallback, useRef } from 'react';
-import { generateText } from 'ai';
+import { generateText, CoreMessage } from 'ai';
 import { useMcp } from 'use-mcp/react';
+import { getModel } from '@/lib/utils';
+import { z } from 'zod';
 
 
 // Define Tool type locally if needed
@@ -8,7 +10,6 @@ type Tool = {
   name: string;
   // Add other properties as needed based on your usage
 };
-import { getModel } from 'QCX/lib/utils';
 
 // Types for location and mapping data
 interface LocationResult {
@@ -39,7 +40,14 @@ interface PlaceResult {
     mapUrl: string;
   }>;
 }
-
+const safeParseJson = (jsonString: string, fallback: any = {}) => {
+  try {
+    return JSON.parse(jsonString);
+  } catch (e) {
+    console.error('JSON parsing failed:', e);
+    return fallback;
+  }
+};
 /**
  * Custom React hook to interact with the Mapbox MCP server.
  * Manages client connection, tool invocation, and state (loading, error, connection status).
@@ -68,10 +76,13 @@ export const useMCPMapClient = () => {
       try {
         setIsLoading(true);
         setError(null);
-        toolsRef.current = mcp.tools;
+        toolsRef.current = mcp.tools.reduce((acc: any, tool: any) => {
+          acc[tool.name] = tool;
+          return acc;
+        }, {});
         setIsConnected(true);
         console.log('✅ Connected to MCP server');
-        console.log('Available tools:', mcp.tools.map((tool: Tool) => tool.name));
+        console.log('Available tools:', Object.keys(toolsRef.current));
       } catch (err) {
         setError(`Failed to connect to MCP server: ${err}`);
         console.error('❌ MCP connection error:', err);
@@ -154,7 +165,7 @@ Focus on extracting and presenting factual data from the tools.`,
     } finally {
       setIsLoading(false);
     }
-  }, [mcp.state, mcp.tools]);
+  }, [mcp.state]);
 
   const geocodeLocation = useCallback(async (address: string): Promise<LocationResult> => {
     if (mcp.state !== 'ready') {
@@ -165,8 +176,11 @@ Focus on extracting and presenting factual data from the tools.`,
         query: address,
         includeMapPreview: true,
       });
+      if (result.content[1]?.json) {
+        return result.content[1].json;
+      }
       const match = result.content[1]?.text?.match(/```json\n([\s\S]*?)\n```/);
-      return JSON.parse(match?.[1] || '{}');
+      return safeParseJson(match?.[1]);
     } catch (err) {
       console.error('Geocoding error:', err);
       setError(`Geocoding error: ${err}`);
@@ -185,7 +199,10 @@ Focus on extracting and presenting factual data from the tools.`,
         profile,
         includeRouteMap: true,
       });
-      return JSON.parse(result.content[1]?.text?.match(/```json\n(.*?)\n```/s)?.[1] || '{}');
+      if (result.content[1]?.json) {
+        return result.content[1].json;
+      }
+      return safeParseJson(result.content[1]?.text?.match(/```json\n(.*?)\n```/s)?.[1]);
     } catch (err) {
       console.error('Distance calculation error:', err);
       setError(`Distance calculation error: ${err}`);
@@ -204,7 +221,10 @@ Focus on extracting and presenting factual data from the tools.`,
         radius,
         limit,
       });
-      return JSON.parse(result.content[1]?.text?.match(/```json\n(.*?)\n```/s)?.[1] || '{}');
+      if (result.content[1]?.json) {
+        return result.content[1].json;
+      }
+      return safeParseJson(result.content[1]?.text?.match(/```json\n(.*?)\n```/s)?.[1]);
     } catch (err) {
       console.error('Places search error:', err);
       setError(`Places search error: ${err}`);
