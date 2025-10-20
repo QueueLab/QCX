@@ -68,6 +68,15 @@ async function submit(formData?: FormData, skip?: boolean) {
 
     // Get the current messages from the last conversation, excluding tool-related ones.
     const currentAIState = aiState.get()
+    if (currentAIState.conversations.length === 0) {
+      // This should not happen in normal operation, but as a safeguard:
+      return {
+        id: nanoid(),
+        isGenerating: createStreamableValue(false).value,
+        component: null,
+        isCollapsed: createStreamableValue(false).value
+      };
+    }
     const lastConversation =
       currentAIState.conversations[currentAIState.conversations.length - 1]
     const messages: CoreMessage[] = [...(lastConversation.messages as any[])].filter(
@@ -132,6 +141,15 @@ async function submit(formData?: FormData, skip?: boolean) {
   }
 
   const currentAIState = aiState.get()
+  if (currentAIState.conversations.length === 0) {
+    // This should not happen in normal operation, but as a safeguard:
+    return {
+      id: nanoid(),
+      isGenerating: createStreamableValue(false).value,
+      component: null,
+      isCollapsed: createStreamableValue(false).value
+    };
+  }
   const lastConversation =
     currentAIState.conversations[currentAIState.conversations.length - 1]
   const messages: CoreMessage[] = [...(lastConversation.messages as any[])].filter(

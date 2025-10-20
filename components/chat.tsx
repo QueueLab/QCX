@@ -64,11 +64,20 @@ export function Chat({ id }: ChatProps) {
   }, [id, path, messages])
 
   useEffect(() => {
-    if (aiState.messages[aiState.messages.length - 1]?.type === 'response') {
-      // Refresh the page to chat history updates
-      router.refresh()
+    if (
+      aiState.conversations &&
+      aiState.conversations.length > 0
+    ) {
+      const lastConversation = aiState.conversations[aiState.conversations.length - 1];
+      if (lastConversation && lastConversation.messages.length > 0) {
+        const lastMessage = lastConversation.messages[lastConversation.messages.length - 1];
+        if (lastMessage?.type === 'response') {
+          // Refresh the page to chat history updates
+          router.refresh();
+        }
+      }
     }
-  }, [aiState, router])
+  }, [aiState, router]);
 
   // Get mapData to access drawnFeatures
   const { mapData } = useMapData();
