@@ -3,7 +3,6 @@
 import { useEffect, useRef, useCallback } from 'react' // Removed useState
 import mapboxgl from 'mapbox-gl'
 import MapboxDraw from '@mapbox/mapbox-gl-draw'
-import * as turf from '@turf/turf'
 import { toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import 'mapbox-gl/dist/mapbox-gl.css'
@@ -12,6 +11,7 @@ import { useMapToggle, MapToggleEnum } from '../map-toggle-context'
 import { useMapData } from './map-data-context'; // Add this import
 import { useMapLoading } from '../map-loading-context'; // Import useMapLoading
 import { useMap } from './map-context'
+import { useWorker } from '@/hooks/useWorker'
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN as string;
 
@@ -38,6 +38,8 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   // Refs for long-press functionality
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isMouseDownRef = useRef<boolean>(false);
+  const turfWorker = useWorker<any[]>(new URL('../../workers/turf.worker.ts', import.meta.url));
+
 
   // const [isMapLoaded, setIsMapLoaded] = useState(false); // Removed local state
 
@@ -71,98 +73,71 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     lineLabelsRef.current = {}
 
     const features = drawRef.current.getAll().features
-    const currentDrawnFeatures: Array<{ id: string; type: 'Polygon' | 'LineString'; measurement: string; geometry: any }> = []
+    turfWorker.postMessage({ features });
 
-    features.forEach(feature => {
-      const id = feature.id as string
-      let featureType: 'Polygon' | 'LineString' | null = null;
-      let measurement = '';
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [turfWorker.postMessage])
 
-      if (feature.geometry.type === 'Polygon') {
-        featureType = 'Polygon';
-        // Calculate area for polygons
-        const area = turf.area(feature)
-        const formattedArea = formatMeasurement(area, true)
-        measurement = formattedArea;
-        
-        // Get centroid for label placement
-        const centroid = turf.centroid(feature)
-        const coordinates = centroid.geometry.coordinates
-        
-        // Create a label
-        const el = document.createElement('div')
-        el.className = 'area-label'
-        el.style.background = 'rgba(255, 255, 255, 0.8)'
-        el.style.padding = '4px 8px'
-        el.style.borderRadius = '4px'
-        el.style.fontSize = '12px'
-        el.style.fontWeight = 'bold'
-        el.style.color = '#333333' // Added darker color
-        el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)'
-        el.style.pointerEvents = 'none'
-        el.textContent = formattedArea
-        
-        // Add marker for the label
+  useEffect(() => {
+    if (turfWorker.data && map.current && drawRef.current) {
+      const features = drawRef.current.getAll().features;
+      const currentDrawnFeatures: Array<{ id: string; type: 'Polygon' | 'LineString'; measurement: string; geometry: any }> = [];
 
+      turfWorker.data.forEach(result => {
+        const { id, calculation } = result;
+        if (!calculation) return;
 
+        const feature = features.find(f => f.id === id);
+        if (!feature) return;
 
+        let featureType: 'Polygon' | 'LineString' | null = null;
+        let measurement = '';
+        let coordinates: [number, number] | undefined;
 
-
-        if (map.current) {
-          const marker = new mapboxgl.Marker({ element: el })
-            .setLngLat(coordinates as [number, number])
-            .addTo(map.current)
-            
-          polygonLabelsRef.current[id] = marker
+        if (calculation.type === 'Polygon') {
+          featureType = 'Polygon';
+          measurement = formatMeasurement(calculation.area, true);
+          coordinates = calculation.center;
+        } else if (calculation.type === 'LineString') {
+          featureType = 'LineString';
+          measurement = formatMeasurement(calculation.length, false);
+          coordinates = calculation.center;
         }
-      } 
-      else if (feature.geometry.type === 'LineString') {
-        featureType = 'LineString';
-        // Calculate length for lines
-        const length = turf.length(feature, { units: 'kilometers' }) * 1000 // Convert to meters
-        const formattedLength = formatMeasurement(length, false)
-        measurement = formattedLength;
-        
-        // Get midpoint for label placement
-        const line = feature.geometry.coordinates
-        const midIndex = Math.floor(line.length / 2) - 1
-        const midpoint = midIndex >= 0 ? line[midIndex] : line[0]
-        
-        // Create a label
-        const el = document.createElement('div')
-        el.className = 'distance-label'
-        el.style.background = 'rgba(255, 255, 255, 0.8)'
-        el.style.padding = '4px 8px'
-        el.style.borderRadius = '4px'
-        el.style.fontSize = '12px'
-        el.style.fontWeight = 'bold'
-        el.style.color = '#333333' // Added darker color
-        el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)'
-        el.style.pointerEvents = 'none'
-        el.textContent = formattedLength
-        
-        // Add marker for the label
-        if (map.current) {
+
+        if (featureType && measurement && coordinates && map.current) {
+          const el = document.createElement('div');
+          el.className = `${featureType.toLowerCase()}-label`;
+          el.style.background = 'rgba(255, 255, 255, 0.8)';
+          el.style.padding = '4px 8px';
+          el.style.borderRadius = '4px';
+          el.style.fontSize = '12px';
+          el.style.fontWeight = 'bold';
+          el.style.color = '#333333';
+          el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+          el.style.pointerEvents = 'none';
+          el.textContent = measurement;
+
           const marker = new mapboxgl.Marker({ element: el })
-            .setLngLat(midpoint as [number, number])
-            .addTo(map.current)
-            
-          lineLabelsRef.current[id] = marker
+            .setLngLat(coordinates)
+            .addTo(map.current);
+
+          if (featureType === 'Polygon') {
+            polygonLabelsRef.current[id] = marker;
+          } else {
+            lineLabelsRef.current[id] = marker;
+          }
+
+          currentDrawnFeatures.push({
+            id,
+            type: featureType,
+            measurement,
+            geometry: feature.geometry,
+          });
         }
-      }
-
-      if (featureType && id && measurement && feature.geometry) {
-        currentDrawnFeatures.push({
-          id,
-          type: featureType,
-          measurement,
-          geometry: feature.geometry,
-        });
-      }
-    })
-
-    setMapData(prevData => ({ ...prevData, drawnFeatures: currentDrawnFeatures }))
-  }, [formatMeasurement, setMapData])
+      });
+      setMapData(prevData => ({ ...prevData, drawnFeatures: currentDrawnFeatures }));
+    }
+  }, [turfWorker.data, formatMeasurement, setMapData])
 
   // Handle map rotation
   const rotateMap = useCallback(() => {
