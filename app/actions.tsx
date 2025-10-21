@@ -329,7 +329,8 @@ async function submit(formData?: FormData, skip?: boolean) {
         uiStream,
         streamText,
         messages,
-        useSpecificAPI
+        useSpecificAPI,
+        hasImage
       )
       answer = fullResponse
       toolOutputs = toolResponses
@@ -355,18 +356,29 @@ async function submit(formData?: FormData, skip?: boolean) {
     }
 
     if (useSpecificAPI && answer.length === 0) {
-      const modifiedMessages = aiState
-        .get()
-        .messages.map(msg =>
-          msg.role === 'tool'
-            ? {
-                ...msg,
-                role: 'assistant',
-                content: JSON.stringify(msg.content),
-                type: 'tool'
-              }
-            : msg
-        ) as CoreMessage[]
+      const lastConversation = aiState.get()
+      const modifiedMessages = lastConversation.messages.map(msg => {
+        if (msg.role === 'tool') {
+          return {
+            ...msg,
+            role: 'assistant',
+            content:
+              typeof msg.content === 'string'
+                ? msg.content
+                : JSON.stringify(msg.content),
+            type: 'tool'
+          }
+        }
+        if (msg.role === 'user' && Array.isArray(msg.content)) {
+          const textContent = msg.content
+            .filter(part => part.type === 'text')
+            .map(part => (part as { text: string }).text)
+            .join('\n')
+          return { ...msg, content: textContent }
+        }
+        return msg
+      }) as CoreMessage[]
+
       const latestMessages = modifiedMessages.slice(maxMessages * -1)
       answer = await writer(
         currentSystemPrompt,

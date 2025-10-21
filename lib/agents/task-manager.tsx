@@ -5,6 +5,23 @@ import { getModel } from '../utils'
 // Decide whether inquiry is required for the user input
 export async function taskManager(messages: CoreMessage[]) {
   try {
+    // Check if the last message is from the user and if it contains an image
+    const lastMessage = messages[messages.length - 1]
+    if (lastMessage?.role === 'user' && Array.isArray(lastMessage.content)) {
+      const hasImage = lastMessage.content.some(
+        content => content.type === 'image'
+      )
+      // If an image is found, bypass the AI and return a "proceed" action
+      if (hasImage) {
+        return {
+          object: {
+            nextAction: 'proceed',
+            userInquiry: ''
+          }
+        }
+      }
+    }
+
     const result = await generateObject({
       model: getModel() as LanguageModel,
       system: `As a planet computer, your primary objective is to fully comprehend the user's query, conduct thorough web searches and use Geospatial tools to gather preview the necessary information, and provide an appropriate response.

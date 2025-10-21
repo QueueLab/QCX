@@ -17,7 +17,8 @@ export async function researcher(
   streamText: ReturnType<typeof createStreamableValue<string>>,
   messages: CoreMessage[],
   // mcp: any, // Removed mcp parameter
-  useSpecificModel?: boolean
+  useSpecificModel?: boolean,
+  useVisionModel?: boolean
 ) {
   let fullResponse = ''
   let hasError = false
@@ -69,7 +70,7 @@ Analysis & Planning
      const systemToUse = dynamicSystemPrompt && dynamicSystemPrompt.trim() !== '' ? dynamicSystemPrompt : default_system_prompt;
 
      const result = await nonexperimental_streamText({
-       model: getModel() as LanguageModel,
+       model: getModel(useVisionModel) as LanguageModel,
        maxTokens: 2500,
        system: systemToUse, // Use the dynamic or default system prompt
        messages,

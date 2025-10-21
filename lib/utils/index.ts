@@ -16,7 +16,25 @@ export function generateUUID(): string {
   return uuidv4();
 }
 
-export function getModel() {
+export function getModel(useVisionModel = false) {
+  if (useVisionModel) {
+    const openai = createOpenAI({
+      apiKey: process.env.OPENAI_API_KEY
+    })
+    // Assuming 'gpt-4-vision-preview' is the desired vision model.
+    // Replace with the correct model identifier if different.
+    try {
+      return openai('gpt-4-vision-preview')
+    } catch (error) {
+      console.warn(
+        'Vision model unavailable, falling back to default model:',
+        error
+      )
+      // Fallback to the default model if the vision model fails
+      return openai('gpt-4o')
+    }
+  }
+
   const xaiApiKey = process.env.XAI_API_KEY
   const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID
   const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY
