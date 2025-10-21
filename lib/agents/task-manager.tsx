@@ -4,6 +4,15 @@ import { getModel } from '../utils'
 
 // Decide whether inquiry is required for the user input
 export async function taskManager(messages: CoreMessage[]) {
+  const lastUserMessage = messages.filter(msg => msg.role === 'user').pop()
+  if (
+    lastUserMessage &&
+    Array.isArray(lastUserMessage.content) &&
+    lastUserMessage.content.some(part => part.type === 'image')
+  ) {
+    return { object: { next: 'proceed' } }
+  }
+
   try {
     const result = await generateObject({
       model: getModel() as LanguageModel,
