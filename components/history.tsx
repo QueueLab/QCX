@@ -27,11 +27,12 @@ export function History({ location }: HistoryProps) {
           className={cn({
             'rounded-full text-foreground/30': location === 'sidebar'
           })}
+          data-testid="history-button"
         >
           {location === 'header' ? <Menu /> : <ChevronLeft size={16} />}
         </Button>
       </SheetTrigger>
-      <SheetContent className="w-64 rounded-tl-xl rounded-bl-xl">
+      <SheetContent className="w-64 rounded-tl-xl rounded-bl-xl" data-testid="history-panel">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-1 text-sm font-normal mb-2">
             <HistoryIcon size={14} />

@@ -35,26 +35,26 @@ export const MobileIconsBar: React.FC<MobileIconsBarProps> = ({ onAttachmentClic
 
   return (
     <div className="mobile-icons-bar-content">
-      <Button variant="ghost" size="icon" onClick={handleNewChat}>
+      <Button variant="ghost" size="icon" onClick={handleNewChat} data-testid="mobile-new-chat-button">
         <Plus className="h-[1.2rem] w-[1.2rem]" />
       </Button>
-      <Button variant="ghost" size="icon">
+      <Button variant="ghost" size="icon" data-testid="mobile-profile-button">
         <CircleUserRound className="h-[1.2rem] w-[1.2rem]" />
       </Button>
       <MapToggle />
-      <Button variant="ghost" size="icon" onClick={toggleCalendar} title="Open Calendar">
+      <Button variant="ghost" size="icon" onClick={toggleCalendar} title="Open Calendar" data-testid="mobile-calendar-button">
         <CalendarDays className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>
-      <Button variant="ghost" size="icon">
+      <Button variant="ghost" size="icon" data-testid="mobile-search-button">
         <Search className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>
-      <Button variant="ghost" size="icon">
+      <Button variant="ghost" size="icon" data-testid="mobile-tent-tree-button">
         <TentTree className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>
-      <Button variant="ghost" size="icon" onClick={onAttachmentClick}>
+      <Button variant="ghost" size="icon" onClick={onAttachmentClick} data-testid="mobile-attachment-button">
         <Paperclip className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>
-      <Button variant="ghost" size="icon">
+      <Button variant="ghost" size="icon" data-testid="mobile-submit-button">
         <ArrowRight className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>
       <History location="header" />
