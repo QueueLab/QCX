@@ -12,12 +12,12 @@ import { getTools } from './tools'
 import { getModel } from '../utils'
 
 export async function researcher(
-  dynamicSystemPrompt: string, // New parameter
+  dynamicSystemPrompt: string,
   uiStream: ReturnType<typeof createStreamableUI>,
   streamText: ReturnType<typeof createStreamableValue<string>>,
   messages: CoreMessage[],
-  // mcp: any, // Removed mcp parameter
-  useSpecificModel?: boolean
+  useSpecificModel?: boolean,
+  category?: 'geospatial' | 'web_search' | 'general'
 ) {
   let fullResponse = ''
   let hasError = false
@@ -65,9 +65,14 @@ Analysis & Planning
 
   When you use 'geospatialQueryTool', you don't need to describe how the map will change; simply provide your textual answer based on the query, and trust the map will update appropriately.
 `;
+  const geospatial_prompt = `The user's query has been identified as geospatial.
+You MUST use the 'geospatialQueryTool' to answer this question.
+Do not use any other tools. If the query cannot be answered with the geospatial tool, respond that you are unable to answer.`;
 
-     const systemToUse = dynamicSystemPrompt && dynamicSystemPrompt.trim() !== '' ? dynamicSystemPrompt : default_system_prompt;
-
+  let systemToUse = dynamicSystemPrompt && dynamicSystemPrompt.trim() !== '' ? dynamicSystemPrompt : default_system_prompt;
+  if (category === 'geospatial') {
+    systemToUse = `${systemToUse}\n\n${geospatial_prompt}`;
+  }
      const result = await nonexperimental_streamText({
        model: getModel() as LanguageModel,
        maxTokens: 2500,

@@ -285,7 +285,7 @@ async function submit(formData?: FormData, skip?: boolean) {
   const currentSystemPrompt = (await getSystemPrompt(userId)) || ''
 
   async function processEvents() {
-    let action: any = { object: { next: 'proceed' } }
+    let action: any = { object: { next: 'proceed', category: 'general' } }
     if (!skip) {
       const taskManagerResult = await taskManager(messages)
       if (taskManagerResult) {
@@ -329,7 +329,8 @@ async function submit(formData?: FormData, skip?: boolean) {
         uiStream,
         streamText,
         messages,
-        useSpecificAPI
+        useSpecificAPI,
+        action.object.category
       )
       answer = fullResponse
       toolOutputs = toolResponses
