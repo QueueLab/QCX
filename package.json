@@ -86,6 +86,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.56.1",
     "@types/cookie": "^0.6.0",
     "@types/mapbox-gl": "^3.4.1",
     "@types/node": "^20.17.30",

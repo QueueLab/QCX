@@ -129,7 +129,7 @@ export function ChatHistoryClient({}: ChatHistoryClientProps) {
       <div className="mt-auto">
         <AlertDialog open={isAlertDialogOpen} onOpenChange={setIsAlertDialogOpen}>
           <AlertDialogTrigger asChild>
-            <Button variant="outline" className="w-full" disabled={!chats?.length || isClearPending}>
+            <Button variant="outline" className="w-full" disabled={!chats?.length || isClearPending} data-testid="clear-history-button">
               {isClearPending ? <Spinner /> : 'Clear History'}
             </Button>
           </AlertDialogTrigger>
@@ -142,13 +142,14 @@ export function ChatHistoryClient({}: ChatHistoryClientProps) {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={isClearPending} onClick={() => setIsAlertDialogOpen(false)}>Cancel</AlertDialogCancel>
+              <AlertDialogCancel disabled={isClearPending} onClick={() => setIsAlertDialogOpen(false)} data-testid="clear-history-cancel">Cancel</AlertDialogCancel>
               <AlertDialogAction
                 disabled={isClearPending}
                 onClick={(event) => {
                   event.preventDefault();
                   handleClearHistory();
                 }}
+                data-testid="clear-history-confirm"
               >
                 {isClearPending ? <Spinner /> : 'Clear'}
               </AlertDialogAction>

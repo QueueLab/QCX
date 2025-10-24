@@ -59,6 +59,7 @@ const HistoryItem: React.FC<HistoryItemProps> = ({ chat }) => {
         'flex flex-col hover:bg-muted cursor-pointer p-2 rounded border',
         isActive ? 'bg-muted/70 border-border' : 'border-transparent'
       )}
+      data-testid={`history-item-${chat.id}`}
     >
       <div className="text-xs font-medium truncate select-none">
         {chat.title}

@@ -38,13 +38,13 @@ export const Header = () => {
         
         <MapToggle />
         
-        <Button variant="ghost" size="icon" onClick={toggleCalendar} title="Open Calendar">
+        <Button variant="ghost" size="icon" onClick={toggleCalendar} title="Open Calendar" data-testid="calendar-toggle">
           <CalendarDays className="h-[1.2rem] w-[1.2rem]" />
         </Button>
         
         <div id="header-search-portal" />
         
-        <Button variant="ghost" size="icon">
+        <Button variant="ghost" size="icon" data-testid="tent-tree-button">
           <TentTree className="h-[1.2rem] w-[1.2rem]" />
         </Button>
         
