@@ -18,10 +18,9 @@ test.describe('Chat functionality', () => {
     await expect(botMessage.last()).toBeVisible({ timeout: 15000 });
   });
 
-  test('should allow a user to attach a file', async ({ page }) => {
-    const filePath = path.join(__dirname, 'test-file.txt');
-    // Create a dummy file for the test
-    require('fs').writeFileSync(filePath, 'This is a test file.');
+  test('should allow a user to attach a file', async ({ page }, testInfo) => {
+    const filePath = testInfo.outputPath('test-file.txt');
+    await require('fs').promises.writeFile(filePath, 'This is a test file.');
 
     const fileChooserPromise = page.waitForEvent('filechooser');
     await page.click('[data-testid="attachment-button"]');

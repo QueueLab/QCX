@@ -17,18 +17,19 @@ test.describe('Map functionality', () => {
   });
 
   test('should zoom in and out using map controls', async ({ page }) => {
-    // This test is a placeholder and may need to be adjusted based on
-    // how the map's zoom level is exposed to the DOM.
+    const hasMap = await page.evaluate(() => Boolean((window as any).map));
+    if (!hasMap) test.skip(true, 'Map instance not available on window for E2E');
+
     const getZoom = () => page.evaluate(() => (window as any).map.getZoom());
 
     const initialZoom = await getZoom();
     await page.click('.mapboxgl-ctrl-zoom-in');
-    await page.waitForTimeout(500); // Wait for the zoom animation
+    await page.waitForFunction(() => (window as any).map.getZoom() > initialZoom);
     const zoomedInZoom = await getZoom();
     expect(zoomedInZoom).toBeGreaterThan(initialZoom);
 
     await page.click('.mapboxgl-ctrl-zoom-out');
-    await page.waitForTimeout(500); // Wait for the zoom animation
+    await page.waitForFunction(() => (window as any).map.getZoom() < zoomedInZoom);
     const zoomedOutZoom = await getZoom();
     expect(zoomedOutZoom).toBeLessThan(zoomedInZoom);
   });

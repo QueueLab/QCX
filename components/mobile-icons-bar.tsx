@@ -17,6 +17,7 @@ import {
 import { History } from '@/components/history'
 import { MapToggle } from './map-toggle'
 import { ModeToggle } from './mode-toggle'
+import { ProfileToggle } from './profile-toggle'
 import { useCalendarToggle } from './calendar-toggle-context'
 
 interface MobileIconsBarProps {
@@ -38,9 +39,7 @@ export const MobileIconsBar: React.FC<MobileIconsBarProps> = ({ onAttachmentClic
       <Button variant="ghost" size="icon" onClick={handleNewChat} data-testid="mobile-new-chat-button">
         <Plus className="h-[1.2rem] w-[1.2rem]" />
       </Button>
-      <Button variant="ghost" size="icon" data-testid="mobile-profile-button">
-        <CircleUserRound className="h-[1.2rem] w-[1.2rem]" />
-      </Button>
+      <ProfileToggle />
       <MapToggle />
       <Button variant="ghost" size="icon" onClick={toggleCalendar} title="Open Calendar" data-testid="mobile-calendar-button">
         <CalendarDays className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
@@ -54,7 +53,7 @@ export const MobileIconsBar: React.FC<MobileIconsBarProps> = ({ onAttachmentClic
       <Button variant="ghost" size="icon" onClick={onAttachmentClick} data-testid="mobile-attachment-button">
         <Paperclip className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>
-      <Button variant="ghost" size="icon" data-testid="mobile-submit-button">
+      <Button variant="ghost" size="icon" data-testid="mobile-submit-button" disabled aria-disabled="true">
         <ArrowRight className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>
       <History location="header" />

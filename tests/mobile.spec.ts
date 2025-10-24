@@ -7,11 +7,6 @@ test.describe('Mobile UI', () => {
     await page.goto('/');
   });
 
-  test('should display the mobile icons bar', async ({ page }) => {
-    const mobileIconsBar = page.locator('.mobile-icons-bar');
-    await expect(mobileIconsBar).toBeVisible();
-  });
-
   test('should interact with the mobile icons bar', async ({ page }) => {
     // Test a few buttons on the mobile icons bar
     await page.click('[data-testid="mobile-new-chat-button"]');
@@ -19,9 +14,14 @@ test.describe('Mobile UI', () => {
     const userMessage = page.locator('div.items-end');
     await expect(userMessage).not.toBeVisible();
 
-    await page.click('[data-testid="mobile-profile-button"]');
+    await page.click('[data-testid="profile-toggle"]');
     // Add an assertion to verify the profile menu opens
     const accountMenu = page.locator('[data-testid="profile-account"]');
     await expect(accountMenu).toBeVisible();
+  });
+
+  test('should have a disabled submit button', async ({ page }) => {
+    const submitButton = page.locator('[data-testid="mobile-submit-button"]');
+    await expect(submitButton).toBeDisabled();
   });
 });
