@@ -43,6 +43,7 @@ Tool Usage Guide:
 
 - For general web searches for factual information: Use the 'search' tool.
 - For retrieving content from specific URLs provided by the user: Use the 'retrieve' tool. (Do not use this for URLs found in search results).
+- For image searches: Use the 'imageSearch' tool. This is especially useful for visual queries.
 
 - For any questions involving locations, places, addresses, geographical features, finding businesses or points of interest, distances between locations, or directions: You MUST use the 'geospatialQueryTool'. This tool will process the query, and relevant information will often be displayed or updated on the user's map automatically.**
   Examples of queries for 'geospatialQueryTool':

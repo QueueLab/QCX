@@ -2,6 +2,7 @@ import { createStreamableUI } from 'ai/rsc'
 import { retrieveTool } from './retrieve'
 import { searchTool } from './search'
 import { videoSearchTool } from './video-search'
+import { imageSearchTool } from './image-search'
 import { geospatialTool } from './geospatial' // Removed useGeospatialToolMcp import
 
 export interface ToolProps {
@@ -30,6 +31,10 @@ export const getTools = ({ uiStream, fullResponse }: ToolProps) => {
 
   if (process.env.SERPER_API_KEY) {
     tools.videoSearch = videoSearchTool({
+      uiStream,
+      fullResponse
+    })
+    tools.imageSearch = imageSearchTool({
       uiStream,
       fullResponse
     })

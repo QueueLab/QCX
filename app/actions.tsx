@@ -26,6 +26,7 @@ import { GeoJsonLayer } from '@/components/map/geojson-layer'
 import { CopilotDisplay } from '@/components/copilot-display'
 import RetrieveSection from '@/components/retrieve-section'
 import { VideoSearchSection } from '@/components/video-search-section'
+import { ImageSearchSection } from '@/components/image-search-section'
 import { MapQueryHandler } from '@/components/map/map-query-handler' // Add this import
 
 // Define the type for related queries
@@ -681,6 +682,12 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                   component: (
                     <VideoSearchSection result={searchResults.value} />
                   ),
+                  isCollapsed: isCollapsed.value
+                }
+              case 'imageSearch':
+                return {
+                  id,
+                  component: <ImageSearchSection result={searchResults.value} />,
                   isCollapsed: isCollapsed.value
                 }
               default:
