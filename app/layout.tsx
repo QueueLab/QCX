@@ -27,7 +27,7 @@ const description =
   'language to Maps'
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://labs.queue.cx'),
+  metadataBase: new URL('https://www.qcx.world'),
   title,
   description,
   openGraph: {
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
     title,
     description,
     card: 'summary_large_image',
-    creator: '@queuelabs'
+    creator: '@queuelab'
   }
 }
 
