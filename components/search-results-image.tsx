@@ -56,7 +56,7 @@ export const SearchResultsImageSection: React.FC<
   }, [api, selectedIndex])
 
   if (!images || images.length === 0) {
-    return <div className="text-muted-foreground">No images found</div>
+    return null
   }
 
   return (

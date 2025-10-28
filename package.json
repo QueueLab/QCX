@@ -51,7 +51,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cookie": "^0.6.0",
-    "dotenv": "^16.5.0",
+    "dotenv": "^17.2.3",
     "drizzle-kit": "^0.31.1",
     "drizzle-orm": "^0.29.0",
     "embla-carousel-react": "^8.6.0",
