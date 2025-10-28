@@ -583,7 +583,9 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
             case 'inquiry':
               return {
                 id,
-                component: <CopilotDisplay content={content as string} />
+                component: (
+                  <UserMessage content={content as string} chatId={chatId} />
+                )
               }
           }
           break
