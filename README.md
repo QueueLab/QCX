@@ -4,7 +4,7 @@
 
 
 
-[**Sign Up**](https://www.qcx.world) &nbsp;|&nbsp; [**Community**](https://discord.com/invite/NqGY9EWjWj) &nbsp;|&nbsp; [**X**](https://x.com/tryqcx)
+[**Sign Up**](https://www.queue.cx/#pricing) &nbsp;|&nbsp; [**Community**](https://discord.com/invite/NqGY9EWjWj) &nbsp;|&nbsp; [**X**](https://x.com/tryqcx)
 
 </div>
 Planet Computer
