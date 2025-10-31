@@ -16,10 +16,18 @@ export const searchTool = ({ uiStream, fullResponse }: ToolProps) => ({
     query: string
     max_results: number
     search_depth: 'basic' | 'advanced'
-  }) => {
+
+    /* removal 1:
+      }) => {
+    */
+   
+  }, injectedStream?: ReturnType<typeof createStreamableValue<string>>) => {
     let hasError = false
     // Append the search section
-    const streamResults = createStreamableValue<string>()
+    /* removal 1:
+        const streamResults = createStreamableValue<string>()
+    */
+    const streamResults = injectedStream ?? createStreamableValue<string>()
     uiStream.append(<SearchSection result={streamResults.value} />)
 
     // Tavily API requires a minimum of 5 characters in the query
