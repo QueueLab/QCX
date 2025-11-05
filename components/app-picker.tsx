@@ -77,17 +77,17 @@ function AppCard({
   return (
     <Card
       className={`group ${
-        theme === "dark" ? "bg-black/20 border-white/10" : "bg-white/40 border-black/10"
-      } backdrop-blur-xl transition-all duration-300 hover:scale-[1.02] ${
-        isClickable ? (theme === "dark" ? "hover:bg-black/30" : "hover:bg-white/50") : "opacity-60"
-      } ${isClickable ? "cursor-pointer" : ""} overflow-hidden relative`}
+        theme === "dark" ? "glass-effect" : "glass-effect-light"
+      } transition-fluid hover:scale-[1.02] ${
+        isClickable ? (theme === "dark" ? "hover:shadow-2xl hover:border-white/30" : "hover:shadow-2xl hover:border-emerald-300/50") : "opacity-60"
+      } ${isClickable ? "cursor-pointer" : ""} overflow-hidden relative shadow-xl`}
       onClick={handleCardClick}
     >
       {/* Gradient overlay for visual appeal */}
       <div
         className={`absolute inset-0 bg-gradient-to-br ${
-          theme === "dark" ? "from-blue-600/5 to-purple-600/5" : "from-green-600/5 to-blue-600/5"
-        } opacity-0 group-hover:opacity-100 transition-opacity duration-300`}
+          theme === "dark" ? "from-emerald-600/10 to-blue-600/10" : "from-emerald-400/15 to-blue-400/15"
+        } opacity-0 group-hover:opacity-100 transition-fluid`}
       />
 
       <CardContent className="p-6 relative z-10">
@@ -95,9 +95,9 @@ function AppCard({
           <div className="flex-1">
             <div className="flex items-center gap-4 mb-4">
               <div
-                className={`p-3 rounded-xl ${
-                  theme === "dark" ? "bg-blue-600/20 text-blue-400" : "bg-green-600/20 text-green-600"
-                } backdrop-blur-sm transition-all duration-200 group-hover:scale-110`}
+                className={`p-3 rounded-2xl ${
+                  theme === "dark" ? "glass-effect text-emerald-400" : "glass-effect-light text-emerald-600"
+                } transition-smooth group-hover:scale-110 shadow-lg`}
               >
                 {getAppIcon(name)}
               </div>
@@ -177,11 +177,11 @@ function AppCard({
               size="sm"
               variant="outline"
               onClick={onUploadClick}
-              className={`${
+              className={`rounded-xl ${
                 theme === "dark"
-                  ? "border-white/20 text-slate-300 hover:bg-white/10 hover:text-white"
-                  : "border-green-500/30 text-green-700 hover:bg-green-500/10 hover:text-green-800"
-              } backdrop-blur-sm transition-all duration-200 hover:scale-105`}
+                  ? "glass-button text-slate-300 hover:text-white"
+                  : "glass-button-light text-emerald-700 hover:text-emerald-800"
+              } transition-smooth hover:scale-105 shadow-md`}
             >
               <Upload className="w-3 h-3 mr-1" />
               Upload

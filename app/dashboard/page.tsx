@@ -41,7 +41,6 @@ export default function DashboardPage() {
       title: "Signed Out",
       description: "You have been signed out successfully",
     })
-    // Remove the router.push("/landing") line
   }
 
   const handleNavigation = (path: string) => {
@@ -52,26 +51,65 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      <div className="min-h-screen bg-nature-dark flex items-center justify-center relative overflow-hidden">
+        <div className="absolute inset-0 opacity-20">
+          <Image
+            src="/backgrounds/nature-bg-2.jpg"
+            alt="Background"
+            fill
+            className="object-cover blur-3xl"
+            priority
+          />
+        </div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-3 border-green-400 glass-effect p-3"></div>
       </div>
     )
   }
 
   return (
     <>
-      <div
-        className={`flex min-h-screen ${
-          theme === "dark"
-            ? "bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900"
-            : "bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100"
-        }`}
-      >
-        {/* Enhanced Sidebar */}
+      <div className="flex min-h-screen relative overflow-hidden">
+        {/* Nature-Inspired Background Layer */}
+        <div className="fixed inset-0 z-0">
+          {theme === "dark" ? (
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-emerald-950/30 to-slate-900">
+              <div className="absolute inset-0 opacity-15">
+                <Image
+                  src="/backgrounds/nature-bg-2.jpg"
+                  alt="Nature Background"
+                  fill
+                  className="object-cover blur-3xl"
+                  priority
+                />
+              </div>
+              {/* Organic floating shapes */}
+              <div className="absolute top-20 right-20 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl animate-float-slow"></div>
+              <div className="absolute bottom-40 left-40 w-80 h-80 bg-blue-500/5 rounded-full blur-3xl animate-float"></div>
+            </div>
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-emerald-50/50 to-blue-50/30">
+              <div className="absolute inset-0 opacity-30">
+                <Image
+                  src="/backgrounds/nature-bg-1.jpg"
+                  alt="Nature Background"
+                  fill
+                  className="object-cover blur-2xl"
+                  priority
+                />
+              </div>
+              {/* Organic floating shapes */}
+              <div className="absolute top-20 right-20 w-96 h-96 bg-emerald-200/20 rounded-full blur-3xl animate-float-slow"></div>
+              <div className="absolute bottom-40 left-40 w-80 h-80 bg-blue-200/20 rounded-full blur-3xl animate-float"></div>
+              <div className="absolute top-1/2 left-1/3 w-64 h-64 bg-yellow-200/15 rounded-full blur-3xl animate-float"></div>
+            </div>
+          )}
+        </div>
+
+        {/* Enhanced Glassmorphic Sidebar */}
         <div
           className={`w-64 ${
-            theme === "dark" ? "bg-black/20 border-white/10" : "bg-white/30 border-black/10"
-          } backdrop-blur-xl border-r flex flex-col`}
+            theme === "dark" ? "glass-sidebar" : "glass-sidebar-light"
+          } flex flex-col relative z-10 transition-smooth shadow-2xl`}
         >
           <div className={`p-4 border-b ${theme === "dark" ? "border-white/10" : "border-black/10"}`}>
             <div className="flex items-center gap-3">
@@ -93,11 +131,11 @@ export default function DashboardPage() {
           <nav className="flex-1 p-4 space-y-2">
             <Button
               variant="ghost"
-              className={`w-full justify-start gap-3 px-3 py-2 h-auto ${
+              className={`w-full justify-start gap-3 px-3 py-2 h-auto rounded-xl ${
                 theme === "dark"
-                  ? "text-slate-300 hover:bg-white/10 hover:text-white"
-                  : "text-slate-700 hover:bg-black/10 hover:text-slate-900"
-              } backdrop-blur-sm transition-all duration-200`}
+                  ? "text-slate-300 hover:glass-effect hover:text-white"
+                  : "text-slate-700 hover:glass-effect-light hover:text-slate-900"
+              } transition-smooth`}
               onClick={() => setSearchOpen(true)}
             >
               <Search className="w-4 h-4" />
@@ -128,11 +166,11 @@ export default function DashboardPage() {
 
             <div className="flex items-center justify-between pt-2">
               <div className="flex items-center gap-3">
-                <Avatar className="w-8 h-8">
+                <Avatar className="w-8 h-8 ring-2 ring-white/20">
                   <AvatarImage src={user?.user_metadata?.avatar_url || "/placeholder.svg"} />
                   <AvatarFallback
                     className={`${
-                      theme === "dark" ? "bg-blue-600/50 text-white" : "bg-blue-600/70 text-white"
+                      theme === "dark" ? "bg-emerald-600/60 text-white" : "bg-emerald-600/80 text-white"
                     } backdrop-blur-sm`}
                   >
                     {displayName.charAt(0).toUpperCase()}
@@ -152,11 +190,11 @@ export default function DashboardPage() {
                   variant="ghost"
                   size="sm"
                   onClick={handleThemeToggle}
-                  className={`${
+                  className={`rounded-full ${
                     theme === "dark"
-                      ? "text-slate-300 hover:text-white hover:bg-white/10"
-                      : "text-slate-700 hover:text-slate-900 hover:bg-black/10"
-                  } transition-all duration-200`}
+                      ? "text-slate-300 hover:text-white hover:glass-effect"
+                      : "text-slate-700 hover:text-slate-900 hover:glass-effect-light"
+                  } transition-smooth`}
                 >
                   {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                 </Button>
@@ -164,11 +202,11 @@ export default function DashboardPage() {
                   variant="ghost"
                   size="sm"
                   onClick={handleSignOut}
-                  className={`${
+                  className={`rounded-full ${
                     theme === "dark"
-                      ? "text-slate-300 hover:text-white hover:bg-white/10"
-                      : "text-slate-700 hover:text-slate-900 hover:bg-black/10"
-                  } transition-all duration-200`}
+                      ? "text-slate-300 hover:text-white hover:glass-effect"
+                      : "text-slate-700 hover:text-slate-900 hover:glass-effect-light"
+                  } transition-smooth`}
                 >
                   <LogOut className="w-4 h-4" />
                 </Button>
@@ -177,40 +215,48 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Enhanced Main Content */}
-        <div className="flex-1 flex flex-col">
+        {/* Enhanced Main Content with Fluid Design */}
+        <div className="flex-1 flex flex-col relative z-10">
           <div className="p-8">
             <div className="flex items-center justify-between mb-12">
               <div>
-                <h1 className={`text-3xl font-bold mb-2 ${theme === "dark" ? "text-white" : "text-slate-900"}`}>
+                <h1
+                  className={`text-4xl font-bold mb-2 ${
+                    theme === "dark" ? "text-white" : "text-slate-900"
+                  } transition-smooth`}
+                >
                   Good morning, {displayName}
                 </h1>
-                <p className={`text-lg ${theme === "dark" ? "text-slate-400" : "text-slate-600"}`}>
+                <p
+                  className={`text-lg ${
+                    theme === "dark" ? "text-slate-300" : "text-slate-600"
+                  } transition-smooth`}
+                >
                   Welcome back to your QueueCX dashboard
                 </p>
               </div>
             </div>
 
-            {/* Enhanced Search Bar */}
+            {/* Enhanced Glassmorphic Search Bar */}
             <div className="max-w-3xl mx-auto mb-16">
               <div
-                className="relative cursor-pointer group transition-all duration-300 hover:scale-[1.02]"
+                className="relative cursor-pointer group transition-fluid hover:scale-[1.02]"
                 onClick={() => setSearchOpen(true)}
               >
                 <Search
                   className={`absolute left-6 top-1/2 transform -translate-y-1/2 w-6 h-6 ${
                     theme === "dark"
-                      ? "text-slate-400 group-hover:text-slate-300"
-                      : "text-slate-600 group-hover:text-slate-500"
-                  } transition-colors duration-200`}
+                      ? "text-slate-400 group-hover:text-emerald-300"
+                      : "text-slate-600 group-hover:text-emerald-600"
+                  } transition-smooth`}
                 />
                 <Input
                   placeholder="Search your activity, files, and more..."
-                  className={`pl-16 pr-6 py-6 text-lg rounded-2xl shadow-lg cursor-pointer border-2 transition-all duration-300 ${
+                  className={`pl-16 pr-6 py-7 text-lg rounded-3xl shadow-2xl cursor-pointer border-2 transition-fluid ${
                     theme === "dark"
-                      ? "bg-black/20 border-white/10 text-white placeholder:text-slate-400 hover:bg-black/30 hover:border-white/20"
-                      : "bg-white/60 border-black/10 text-slate-900 placeholder:text-slate-600 hover:bg-white/80 hover:border-black/20"
-                  } backdrop-blur-xl group-hover:shadow-xl`}
+                      ? "glass-effect text-white placeholder:text-slate-400 hover:border-white/30 focus-glass"
+                      : "glass-effect-light text-slate-900 placeholder:text-slate-600 hover:border-emerald-300/50 focus-glass"
+                  } group-hover:shadow-[0_20px_60px_rgba(0,0,0,0.15)]`}
                   readOnly
                 />
                 <div
@@ -218,29 +264,31 @@ export default function DashboardPage() {
                     theme === "dark" ? "text-slate-400" : "text-slate-600"
                   }`}
                 >
-                  <span>Type</span>
+                  <span className="hidden sm:inline">Type</span>
                   <kbd
-                    className={`px-3 py-1 rounded-lg text-xs font-mono ${
-                      theme === "dark" ? "bg-black/20 text-slate-300" : "bg-white/40 text-slate-700"
-                    } backdrop-blur-sm`}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono ${
+                      theme === "dark" ? "glass-effect text-slate-300" : "glass-effect-light text-slate-700"
+                    }`}
                   >
                     #
                   </kbd>
-                  <span>for summaries,</span>
+                  <span className="hidden md:inline">for summaries,</span>
                   <kbd
-                    className={`px-3 py-1 rounded-lg text-xs font-mono ${
-                      theme === "dark" ? "bg-black/20 text-slate-300" : "bg-white/40 text-slate-700"
-                    } backdrop-blur-sm`}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono ${
+                      theme === "dark" ? "glass-effect text-slate-300" : "glass-effect-light text-slate-700"
+                    }`}
                   >
                     ?
                   </kbd>
-                  <span>for help</span>
+                  <span className="hidden sm:inline">for help</span>
                 </div>
               </div>
             </div>
 
-            {/* App Picker */}
-            <AppPicker />
+            {/* App Picker with Enhanced Glass Effect */}
+            <div className="transition-smooth">
+              <AppPicker />
+            </div>
           </div>
         </div>
       </div>
@@ -264,17 +312,18 @@ function SidebarItem({ icon: Icon, label, active = false, nested = false, theme,
     <div
       onClick={onClick}
       className={`
-      flex items-center gap-3 px-3 py-2 rounded-lg text-sm cursor-pointer transition-all duration-200
+      flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm cursor-pointer transition-smooth
       ${
         active
           ? theme === "dark"
-            ? "bg-blue-600/30 text-white font-medium backdrop-blur-sm"
-            : "bg-green-600/20 text-slate-900 font-medium backdrop-blur-sm"
+            ? "glass-effect text-white font-medium shadow-lg border-emerald-400/30"
+            : "glass-effect-light text-slate-900 font-medium shadow-lg border-emerald-500/40"
           : theme === "dark"
-            ? "text-slate-300 hover:bg-white/10 hover:text-white hover:backdrop-blur-sm"
-            : "text-slate-700 hover:bg-black/10 hover:text-slate-900 hover:backdrop-blur-sm"
+            ? "text-slate-300 hover:glass-effect hover:text-white"
+            : "text-slate-700 hover:glass-effect-light hover:text-slate-900"
       }
       ${nested ? "ml-4" : ""}
+      hover:translate-x-1
     `}
     >
       <Icon className="w-4 h-4" />
