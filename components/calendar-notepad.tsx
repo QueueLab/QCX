@@ -91,7 +91,7 @@ export function CalendarNotepad({ chatId }: CalendarNotepadProps) {
   };
 
   return (
-    <div data-testid="calendar-notepad" className="bg-card text-card-foreground shadow-lg rounded-lg p-4 max-w-2xl mx-auto my-4 border">
+    <div data-testid="calendar-notepad" className="bg-card text-card-foreground shadow-lg rounded-lg p-4 w-full my-4 border">
       <div className="flex items-center justify-between mb-4">
         <button
           onClick={() => setDateOffset(dateOffset - 7)}
