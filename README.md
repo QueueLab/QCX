@@ -10,8 +10,8 @@
 </div>
 QCX Planet Computer
 
+<iframe title="vimeo-player" src="https://player.vimeo.com/video/1014706363?h=bb6f76a5ba" width="640" height="360" frameborder="0" referrerpolicy="strict-origin-when-cross-origin" allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"   allowfullscreen></iframe>
 
-<img width="1277" alt="Screen Shot 2024-06-18 at 4 27 51 PM" src="https://github.com/QueueLab/MapGPT/assets/115367894/01584e12-b3f5-41c9-8009-a16642568798">
 
 
 
