@@ -10,7 +10,6 @@
 </div>
 QCX Planet Computer
 
-<iframe title="vimeo-player" src="https://player.vimeo.com/video/1014706363?h=bb6f76a5ba" width="640" height="360" frameborder="0" referrerpolicy="strict-origin-when-cross-origin" allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"   allowfullscreen></iframe>
 
 
 
