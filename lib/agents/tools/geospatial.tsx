@@ -250,24 +250,24 @@ Uses the Mapbox Search Box Text Search API endpoint to power searching for and g
         const prefer = (...cands: string[]) => cands.find(n => names.has(n));
 
         switch (queryType) {
-          case 'directions': return prefer('directions_tool') 
-          case 'distance': return prefer('matrix_tool');
-          case 'search': return prefer( 'isochrone_tool','category_search_tool') || 'poi_search_tool';
-          case 'map': return prefer('static_map_image_tool') 
-          case 'reverse': return prefer('reverse_geocode_tool');
-          case 'geocode': return prefer('forward_geocode_tool');
+          case 'directions': return prefer('calculate_distance') 
+          case 'distance': return prefer('calculate_distance');
+          case 'search': return prefer('search_nearby_places');
+          case 'map': return prefer('generate_map_link') 
+          case 'reverse': return prefer('geocode_location');
+          case 'geocode': return prefer('geocode_location');
         }
       })();
 
       // Build arguments
       const toolArgs = (() => {
         switch (queryType) {
-          case 'directions': return { waypoints: [params.origin, params.destination], includeMapPreview: includeMap, profile: params.mode };
-          case 'distance': return { places: [params.origin, params.destination], includeMapPreview: includeMap, mode: params.mode || 'driving' };
-          case 'reverse': return { searchText: `${params.coordinates.latitude},${params.coordinates.longitude}`, includeMapPreview: includeMap, maxResults: params.maxResults || 5 };
-          case 'search': return { searchText: params.query, includeMapPreview: includeMap, maxResults: params.maxResults || 5, ...(params.coordinates && { proximity: `${params.coordinates.latitude},${params.coordinates.longitude}` }), ...(params.radius && { radius: params.radius }) };
-          case 'geocode': 
-          case 'map': return { searchText: params.location, includeMapPreview: includeMap, maxResults: queryType === 'geocode' ? params.maxResults || 5 : undefined };
+          case 'directions': return { from: params.origin, to: params.destination, profile: params.mode, includeRouteMap: includeMap };
+          case 'distance': return { from: params.origin, to: params.destination, profile: params.mode || 'driving', includeRouteMap: includeMap };
+          case 'reverse': return { query: `${params.coordinates.latitude},${params.coordinates.longitude}`, includeMapPreview: includeMap, maxResults: params.maxResults || 5 };
+          case 'search': return { location: params.location, query: params.query, radius: params.radius || 1000, limit: params.maxResults || 5, includeMapPreview: includeMap };
+          case 'geocode': return { query: params.location, includeMapPreview: includeMap, maxResults: params.maxResults || 5 };
+          case 'map': return { location: params.location, includeMapPreview: includeMap };
         }
       })();
 

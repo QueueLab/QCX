@@ -28,9 +28,9 @@ const models = [
     badgeVariant: "default" as const,
   },
   {
-    id: "Grok-3",
-    name: "Grok-3",
-    description: "Fast and efficient model for most everyday tasks and queries.",
+    id: "Grok-4",
+    name: "Grok-4",
+    description: "Fast and efficient model for most everyday tasks and queries. (Updated to Grok-4)",
     icon: Zap,
     badge: "Fast",
     badgeVariant: "secondary" as const,
