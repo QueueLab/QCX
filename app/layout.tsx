@@ -16,6 +16,7 @@ import { CalendarToggleProvider } from '@/components/calendar-toggle-context'
 import { MapLoadingProvider } from '@/components/map-loading-context';
 import ConditionalLottie from '@/components/conditional-lottie';
 import { MapProvider } from '@/components/map/map-context'
+import IntercomMessenger from '@/components/intercom-messenger'
 
 const fontSans = FontSans({
   subsets: ['latin'],
@@ -75,6 +76,7 @@ export default function RootLayout({
                   <Sidebar />
                   <Footer />
                   <Toaster />
+                  <IntercomMessenger />
                 </MapLoadingProvider>
               </MapProvider>
             </ThemeProvider>
