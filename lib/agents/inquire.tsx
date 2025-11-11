@@ -22,8 +22,9 @@ export async function inquire(
   );
 
   let finalInquiry: PartialInquiry = {};
+  const { model } = getModel();
   const result = await streamObject({
-    model: getModel() as LanguageModel,
+    model: model as LanguageModel,
     system: `...`, // Your system prompt remains unchanged
     messages,
     schema: inquirySchema,

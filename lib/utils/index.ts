@@ -22,21 +22,23 @@ export function getModel() {
   const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY
   const awsRegion = process.env.AWS_REGION
   const bedrockModelId = ''
+  let modelBehavior = process.env.MODEL_BEHAVIOR || 'conservative'
+  if (modelBehavior !== 'aggressive' && modelBehavior !== 'conservative') {
+    modelBehavior = 'conservative'
+  }
 
   if (xaiApiKey) {
     const xai = createXai({
       apiKey: xaiApiKey,
       baseURL: 'https://api.x.ai/v1',
     })
-    // Optionally, add a check for credit status or skip xAI if credits are exhausted
     try {
-      return xai('grok-4-fast-non-reasoning')
+      const model = xai('grok-4-fast-non-reasoning')
+      return { model, behavior: modelBehavior }
     } catch (error) {
       console.warn('xAI API unavailable, falling back to OpenAI:')
     }
   }
-
-  // AWS Bedrock
 
   if (awsAccessKeyId && awsSecretAccessKey) {
     const bedrock = createAmazonBedrock({
@@ -51,12 +53,12 @@ export function getModel() {
     const model = bedrock(bedrockModelId, {
       additionalModelRequestFields: { top_k: 350 },
     })
-    return model
+    return { model, behavior: modelBehavior }
   }
 
-  // Default fallback (OpenAI)
   const openai = createOpenAI({
     apiKey: process.env.OPENAI_API_KEY,
   })
-  return openai('gpt-4o')
+  const model = openai('gpt-4o')
+  return { model, behavior: modelBehavior }
 }

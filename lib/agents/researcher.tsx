@@ -68,8 +68,9 @@ Analysis & Planning
 
      const systemToUse = dynamicSystemPrompt && dynamicSystemPrompt.trim() !== '' ? dynamicSystemPrompt : default_system_prompt;
 
+     const { model } = getModel();
      const result = await nonexperimental_streamText({
-       model: getModel() as LanguageModel,
+       model: model as LanguageModel,
        maxTokens: 2500,
        system: systemToUse, // Use the dynamic or default system prompt
        messages,

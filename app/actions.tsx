@@ -124,7 +124,8 @@ async function submit(formData?: FormData, skip?: boolean) {
   )
 
   const groupeId = nanoid()
-  const useSpecificAPI = process.env.USE_SPECIFIC_API_FOR_WRITER === 'true'
+  const { model, behavior } = getModel()
+  const useSpecificAPI = behavior === 'aggressive'
   const maxMessages = useSpecificAPI ? 5 : 10
   messages.splice(0, Math.max(messages.length - maxMessages, 0))
 
