@@ -40,8 +40,9 @@ Analyze the user's prompt and the image to provide a holistic understanding of t
   const filteredMessages = messages.filter(msg => msg.role !== 'system');
 
   // Use generateObject to get the full object at once.
+  const { model } = getModel();
   const { object } = await generateObject({
-    model: getModel(),
+    model: model,
     system: systemPrompt,
     messages: filteredMessages,
     schema: resolutionSearchSchema,
