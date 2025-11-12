@@ -66,8 +66,17 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      <div className="min-h-screen bg-nature-dark flex items-center justify-center relative overflow-hidden">
+        <div className="absolute inset-0 opacity-20">
+          <Image
+            src="/backgrounds/nature-bg-2.jpg"
+            alt="Background"
+            fill
+            className="object-cover blur-3xl"
+            priority
+          />
+        </div>
+        <div className={`animate-spin rounded-full h-12 w-12 border-b-3 ${theme === "dark" ? "border-emerald-400" : "border-emerald-600"} glass-effect p-3`}></div>
       </div>
     )
   }
@@ -143,18 +152,47 @@ export default function SettingsPage() {
 
   return (
     <>
-      <div
-        className={`flex min-h-screen ${
-          theme === "dark"
-            ? "bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900"
-            : "bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100"
-        }`}
-      >
+      <div className="flex min-h-screen relative overflow-hidden">
+        {/* Nature-Inspired Background Layer */}
+        <div className="fixed inset-0 z-0">
+          {theme === "dark" ? (
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-emerald-950/30 to-slate-900">
+              <div className="absolute inset-0 opacity-15">
+                <Image
+                  src="/backgrounds/nature-bg-2.jpg"
+                  alt="Nature Background"
+                  fill
+                  className="object-cover blur-3xl"
+                  priority
+                />
+              </div>
+              {/* Organic floating shapes */}
+              <div className="absolute top-20 right-20 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl animate-float-slow"></div>
+              <div className="absolute bottom-40 left-40 w-80 h-80 bg-blue-500/5 rounded-full blur-3xl animate-float"></div>
+            </div>
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-emerald-50/50 to-blue-50/30">
+              <div className="absolute inset-0 opacity-30">
+                <Image
+                  src="/backgrounds/nature-bg-1.jpg"
+                  alt="Nature Background"
+                  fill
+                  className="object-cover blur-2xl"
+                  priority
+                />
+              </div>
+              {/* Organic floating shapes */}
+              <div className="absolute top-20 right-20 w-96 h-96 bg-emerald-200/20 rounded-full blur-3xl animate-float-slow"></div>
+              <div className="absolute bottom-40 left-40 w-80 h-80 bg-blue-200/20 rounded-full blur-3xl animate-float"></div>
+              <div className="absolute top-1/2 left-1/3 w-64 h-64 bg-yellow-200/15 rounded-full blur-3xl animate-float"></div>
+            </div>
+          )}
+        </div>
         {/* Sidebar */}
         <div
           className={`w-64 ${
-            theme === "dark" ? "bg-black/20 border-white/10" : "bg-white/30 border-black/10"
-          } backdrop-blur-xl border-r flex flex-col`}
+            theme === "dark" ? "glass-sidebar" : "glass-sidebar-light"
+          } flex flex-col relative z-10 transition-smooth shadow-2xl`}
         >
           <div className={`p-4 border-b ${theme === "dark" ? "border-white/10" : "border-black/10"}`}>
             <div className="flex items-center gap-3">
@@ -237,7 +275,7 @@ export default function SettingsPage() {
                   <AvatarImage src={user?.user_metadata?.avatar_url || "/placeholder.svg"} />
                   <AvatarFallback
                     className={`${
-                      theme === "dark" ? "bg-blue-600/50 text-white" : "bg-blue-600/70 text-white"
+                      theme === "dark" ? "bg-emerald-600/60 text-white" : "bg-emerald-600/80 text-white"
                     } backdrop-blur-sm`}
                   >
                     {displayName.charAt(0).toUpperCase()}
@@ -283,7 +321,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 flex flex-col relative z-10 overflow-auto">
           <div className="max-w-4xl mx-auto p-8">
             <div className="mb-8">
               <p className={`text-sm mb-2 ${theme === "dark" ? "text-slate-400" : "text-slate-600"}`}>Settings</p>
@@ -302,8 +340,8 @@ export default function SettingsPage() {
                   value="profile"
                   className={`border-0 rounded-lg py-3 ${
                     theme === "dark"
-                      ? "data-[state=active]:bg-blue-600/30 text-slate-300 data-[state=active]:text-white"
-                      : "data-[state=active]:bg-green-600/20 text-slate-700 data-[state=active]:text-slate-900"
+                      ? "data-[state=active]:bg-emerald-600/30 text-slate-300 data-[state=active]:text-white"
+                      : "data-[state=active]:bg-emerald-600/20 text-slate-700 data-[state=active]:text-slate-900"
                   } data-[state=active]:backdrop-blur-sm`}
                 >
                   Personal profile
@@ -312,8 +350,8 @@ export default function SettingsPage() {
                   value="security"
                   className={`border-0 rounded-lg py-3 ${
                     theme === "dark"
-                      ? "data-[state=active]:bg-blue-600/30 text-slate-300 data-[state=active]:text-white"
-                      : "data-[state=active]:bg-green-600/20 text-slate-700 data-[state=active]:text-slate-900"
+                      ? "data-[state=active]:bg-emerald-600/30 text-slate-300 data-[state=active]:text-white"
+                      : "data-[state=active]:bg-emerald-600/20 text-slate-700 data-[state=active]:text-slate-900"
                   } data-[state=active]:backdrop-blur-sm`}
                 >
                   Security & access
@@ -322,8 +360,8 @@ export default function SettingsPage() {
                   value="billing"
                   className={`border-0 rounded-lg py-3 ${
                     theme === "dark"
-                      ? "data-[state=active]:bg-blue-600/30 text-slate-300 data-[state=active]:text-white"
-                      : "data-[state=active]:bg-green-600/20 text-slate-700 data-[state=active]:text-slate-900"
+                      ? "data-[state=active]:bg-emerald-600/30 text-slate-300 data-[state=active]:text-white"
+                      : "data-[state=active]:bg-emerald-600/20 text-slate-700 data-[state=active]:text-slate-900"
                   } data-[state=active]:backdrop-blur-sm`}
                 >
                   Billing
@@ -354,7 +392,7 @@ export default function SettingsPage() {
                         <AvatarImage src={user?.user_metadata?.avatar_url || "/placeholder.svg"} />
                         <AvatarFallback
                           className={`text-lg ${
-                            theme === "dark" ? "bg-blue-600/50 text-white" : "bg-blue-600/70 text-white"
+                            theme === "dark" ? "bg-emerald-600/60 text-white" : "bg-emerald-600/80 text-white"
                           } backdrop-blur-sm`}
                         >
                           {displayName.charAt(0).toUpperCase()}
@@ -386,7 +424,7 @@ export default function SettingsPage() {
                         className={`${
                           theme === "dark"
                             ? "border-white/20 text-slate-300 hover:bg-white/10 hover:text-white"
-                            : "border-green-500/30 text-green-700 hover:bg-green-500/10 hover:text-green-800"
+                            : "border-emerald-500/30 text-emerald-700 hover:bg-emerald-500/10 hover:text-emerald-800"
                         } backdrop-blur-sm transition-all duration-200 hover:scale-105`}
                       >
                         <Upload className="w-4 h-4 mr-2" />
@@ -433,8 +471,8 @@ export default function SettingsPage() {
                         disabled={isPending}
                         className={`${
                           theme === "dark"
-                            ? "bg-blue-600/80 hover:bg-blue-600 text-white"
-                            : "bg-green-600/80 hover:bg-green-600 text-white"
+                            ? "bg-emerald-600/80 hover:bg-emerald-600 text-white"
+                            : "bg-emerald-600/80 hover:bg-emerald-600 text-white"
                         } backdrop-blur-sm transition-all duration-200 hover:scale-105`}
                       >
                         {isPending ? (
@@ -566,8 +604,8 @@ function SidebarItem({ icon: Icon, label, active = false, nested = false, theme,
       ${
         active
           ? theme === "dark"
-            ? "bg-blue-600/30 text-white font-medium backdrop-blur-sm"
-            : "bg-green-600/20 text-slate-900 font-medium backdrop-blur-sm"
+            ? "bg-emerald-600/30 text-white font-medium backdrop-blur-sm"
+            : "bg-emerald-600/20 text-slate-900 font-medium backdrop-blur-sm"
           : theme === "dark"
             ? "text-slate-300 hover:bg-white/10 hover:text-white hover:backdrop-blur-sm"
             : "text-slate-700 hover:bg-black/10 hover:text-slate-900 hover:backdrop-blur-sm"

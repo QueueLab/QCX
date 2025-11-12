@@ -77,17 +77,17 @@ function AppCard({
   return (
     <Card
       className={`group ${
-        theme === "dark" ? "bg-black/20 border-white/10" : "bg-white/40 border-black/10"
-      } backdrop-blur-xl transition-all duration-300 hover:scale-[1.02] ${
-        isClickable ? (theme === "dark" ? "hover:bg-black/30" : "hover:bg-white/50") : "opacity-60"
-      } ${isClickable ? "cursor-pointer" : ""} overflow-hidden relative`}
+        theme === "dark" ? "glass-effect" : "glass-effect-light"
+      } transition-fluid hover:scale-[1.02] ${
+        isClickable ? (theme === "dark" ? "hover:shadow-2xl hover:border-white/30" : "hover:shadow-2xl hover:border-emerald-300/50") : "opacity-60"
+      } ${isClickable ? "cursor-pointer" : ""} overflow-hidden relative shadow-xl`}
       onClick={handleCardClick}
     >
       {/* Gradient overlay for visual appeal */}
       <div
         className={`absolute inset-0 bg-gradient-to-br ${
-          theme === "dark" ? "from-blue-600/5 to-purple-600/5" : "from-green-600/5 to-blue-600/5"
-        } opacity-0 group-hover:opacity-100 transition-opacity duration-300`}
+          theme === "dark" ? "from-emerald-600/10 to-blue-600/10" : "from-emerald-400/15 to-blue-400/15"
+        } opacity-0 group-hover:opacity-100 transition-fluid`}
       />
 
       <CardContent className="p-6 relative z-10">
@@ -95,15 +95,15 @@ function AppCard({
           <div className="flex-1">
             <div className="flex items-center gap-4 mb-4">
               <div
-                className={`p-3 rounded-xl ${
-                  theme === "dark" ? "bg-blue-600/20 text-blue-400" : "bg-green-600/20 text-green-600"
-                } backdrop-blur-sm transition-all duration-200 group-hover:scale-110`}
+                className={`p-3 rounded-2xl ${
+                  theme === "dark" ? "glass-effect text-emerald-400" : "glass-effect-light text-emerald-600"
+                } transition-smooth group-hover:scale-110 shadow-lg`}
               >
                 {getAppIcon(name)}
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
-                  <h3 className={`text-xl font-bold ${theme === "dark" ? "text-white" : "text-slate-900"}`}>{name}</h3>
+                  <h3 className={`text-xl font-bold transition-smooth ${theme === "dark" ? "text-white" : "text-slate-900"}`}>{name}</h3>
                   {isClickable && (
                     <ExternalLink
                       className={`w-4 h-4 ${theme === "dark" ? "text-slate-400" : "text-slate-600"} opacity-0 group-hover:opacity-100 transition-opacity duration-200`}
@@ -120,7 +120,7 @@ function AppCard({
                     </Badge>
                   )}
                 </div>
-                <p className={`text-base ${theme === "dark" ? "text-slate-400" : "text-slate-600"}`}>{description}</p>
+                <p className={`text-base transition-smooth ${theme === "dark" ? "text-slate-400" : "text-slate-600"}`}>{description}</p>
               </div>
             </div>
           </div>
@@ -132,34 +132,34 @@ function AppCard({
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="flex items-center gap-2">
                 <div
-                  className={`w-2 h-2 rounded-full ${uptime === "99.9%" ? "bg-green-500" : "bg-yellow-500"} animate-pulse`}
+                  className={`w-2 h-2 rounded-full transition-smooth ${uptime === "99.9%" ? "bg-emerald-500" : "bg-yellow-500"} animate-pulse`}
                 ></div>
-                <span className={`text-sm font-medium ${theme === "dark" ? "text-slate-300" : "text-slate-700"}`}>
+                <span className={`text-sm font-medium transition-smooth ${theme === "dark" ? "text-slate-300" : "text-slate-700"}`}>
                   {uptime} uptime
                 </span>
               </div>
 
               <div className="flex items-center gap-2">
                 <Clock className={`w-4 h-4 ${theme === "dark" ? "text-slate-400" : "text-slate-600"}`} />
-                <span className={`text-sm ${theme === "dark" ? "text-slate-300" : "text-slate-700"}`}>
+                <span className={`text-sm transition-smooth ${theme === "dark" ? "text-slate-300" : "text-slate-700"}`}>
                   {lastSession}
                 </span>
               </div>
 
               <div className="flex items-center gap-2">
                 <Crown className={`w-4 h-4 ${theme === "dark" ? "text-slate-400" : "text-slate-600"}`} />
-                <span className={`text-sm ${theme === "dark" ? "text-slate-300" : "text-slate-700"}`}>{tier}</span>
+                <span className={`text-sm transition-smooth ${theme === "dark" ? "text-slate-300" : "text-slate-700"}`}>{tier}</span>
               </div>
             </div>
           </div>
         )}
 
         {/* Data Upload Section */}
-        <div className={`border-t pt-4 ${theme === "dark" ? "border-white/10" : "border-black/10"}`}>
+        <div className={`border-t pt-4 transition-smooth ${theme === "dark" ? "border-white/10" : "border-black/10"}`}>
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <FileText className={`w-4 h-4 ${theme === "dark" ? "text-slate-400" : "text-slate-600"}`} />
-              <span className={`text-sm font-medium ${theme === "dark" ? "text-slate-300" : "text-slate-700"}`}>
+              <span className={`text-sm font-medium transition-smooth ${theme === "dark" ? "text-slate-300" : "text-slate-700"}`}>
                 Data Files
               </span>
               {uploadedFiles.length > 0 && (
@@ -177,18 +177,18 @@ function AppCard({
               size="sm"
               variant="outline"
               onClick={onUploadClick}
-              className={`${
+              className={`rounded-xl ${
                 theme === "dark"
-                  ? "border-white/20 text-slate-300 hover:bg-white/10 hover:text-white"
-                  : "border-green-500/30 text-green-700 hover:bg-green-500/10 hover:text-green-800"
-              } backdrop-blur-sm transition-all duration-200 hover:scale-105`}
+                  ? "glass-button text-slate-300 hover:text-white"
+                  : "glass-button-light text-emerald-700 hover:text-emerald-800"
+              } transition-smooth hover:scale-105 shadow-md`}
             >
               <Upload className="w-3 h-3 mr-1" />
               Upload
             </Button>
           </div>
 
-          <div className={`text-xs ${theme === "dark" ? "text-slate-400" : "text-slate-600"}`}>
+          <div className={`text-xs transition-smooth ${theme === "dark" ? "text-slate-400" : "text-slate-600"}`}>
             {uploadedFiles.length > 0
               ? `${uploadedFiles.length} file${uploadedFiles.length > 1 ? "s" : ""} uploaded`
               : "No files uploaded yet"}
@@ -285,10 +285,10 @@ export function AppPicker() {
     <>
       <div className="space-y-8">
         <div>
-          <h2 className={`text-3xl font-bold mb-4 ${theme === "dark" ? "text-white" : "text-slate-900"}`}>
+          <h2 className={`text-3xl font-bold mb-4 transition-smooth ${theme === "dark" ? "text-white" : "text-slate-900"}`}>
             Your Applications
           </h2>
-          <p className={`text-lg ${theme === "dark" ? "text-slate-400" : "text-slate-600"}`}>
+          <p className={`text-lg transition-smooth ${theme === "dark" ? "text-slate-400" : "text-slate-600"}`}>
             Access your QueueCX applications and manage your data seamlessly
           </p>
         </div>
@@ -311,17 +311,17 @@ export function AppPicker() {
         <DialogContent
           className={`max-w-5xl max-h-[85vh] ${
             theme === "dark" ? "bg-black/40" : "bg-white/40"
-          } backdrop-blur-xl border-white/10`}
+          } backdrop-blur-xl ${theme === "dark" ? "border-white/10" : "border-black/10"}`}
         >
           <DialogHeader>
-            <DialogTitle className={`text-xl font-semibold ${theme === "dark" ? "text-white" : "text-slate-900"}`}>
+            <DialogTitle className={`text-xl font-semibold transition-smooth ${theme === "dark" ? "text-white" : "text-slate-900"}`}>
               Manage Data for {selectedApp}
             </DialogTitle>
           </DialogHeader>
 
           <Tabs defaultValue="upload" className="w-full">
             <TabsList
-              className={`grid w-full grid-cols-2 ${
+              className={`grid w-full grid-cols-2 transition-smooth ${
                 theme === "dark" ? "bg-black/20 border-white/10" : "bg-white/20 border-black/10"
               } backdrop-blur-xl border`}
             >
@@ -329,8 +329,8 @@ export function AppPicker() {
                 value="upload"
                 className={`${
                   theme === "dark"
-                    ? "data-[state=active]:bg-blue-600/30 text-slate-300 data-[state=active]:text-white"
-                    : "data-[state=active]:bg-green-600/20 text-slate-700 data-[state=active]:text-slate-900"
+                    ? "data-[state=active]:bg-emerald-600/30 text-slate-300 data-[state=active]:text-white"
+                    : "data-[state=active]:bg-emerald-600/20 text-slate-700 data-[state=active]:text-slate-900"
                 }`}
               >
                 Upload Files
@@ -339,8 +339,8 @@ export function AppPicker() {
                 value="view"
                 className={`${
                   theme === "dark"
-                    ? "data-[state=active]:bg-blue-600/30 text-slate-300 data-[state=active]:text-white"
-                    : "data-[state=active]:bg-green-600/20 text-slate-700 data-[state=active]:text-slate-900"
+                    ? "data-[state=active]:bg-emerald-600/30 text-slate-300 data-[state=active]:text-white"
+                    : "data-[state=active]:bg-emerald-600/20 text-slate-700 data-[state=active]:text-slate-900"
                 }`}
               >
                 View Files ({uploadedFiles[selectedApp]?.length || 0})
@@ -390,8 +390,8 @@ export function AppPicker() {
                     size="lg"
                     className={`${
                       theme === "dark"
-                        ? "bg-blue-600/80 hover:bg-blue-600 text-white"
-                        : "bg-green-600/80 hover:bg-green-600 text-white"
+                        ? "bg-emerald-600/80 hover:bg-emerald-600 text-white"
+                        : "bg-emerald-600/80 hover:bg-emerald-600 text-white"
                     } transition-all duration-200 hover:scale-105`}
                   >
                     <Upload className="w-5 h-5 mr-2" />
@@ -416,7 +416,7 @@ export function AppPicker() {
                       <div className="flex items-center gap-4">
                         <div
                           className={`p-2 rounded-lg ${
-                            theme === "dark" ? "bg-blue-600/20 text-blue-400" : "bg-green-600/20 text-green-600"
+                            theme === "dark" ? "bg-emerald-600/20 text-emerald-400" : "bg-emerald-600/20 text-emerald-600"
                           }`}
                         >
                           <FileText className="w-5 h-5" />
@@ -462,7 +462,7 @@ export function AppPicker() {
                     <FileText
                       className={`w-16 h-16 mx-auto mb-4 opacity-50 ${theme === "dark" ? "text-slate-400" : "text-slate-600"}`}
                     />
-                    <p className={`text-lg ${theme === "dark" ? "text-slate-400" : "text-slate-600"}`}>
+                    <p className={`text-lg transition-smooth ${theme === "dark" ? "text-slate-400" : "text-slate-600"}`}>
                       No files uploaded to {selectedApp} yet
                     </p>
                     <p className={`text-sm mt-2 ${theme === "dark" ? "text-slate-500" : "text-slate-500"}`}>

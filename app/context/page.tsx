@@ -107,26 +107,64 @@ export default function ContextPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      <div className="min-h-screen bg-nature-dark flex items-center justify-center relative overflow-hidden">
+        <div className="absolute inset-0 opacity-20">
+          <Image
+            src="/backgrounds/nature-bg-2.jpg"
+            alt="Background"
+            fill
+            className="object-cover blur-3xl"
+            priority
+          />
+        </div>
+        <div className={`animate-spin rounded-full h-12 w-12 border-b-3 ${theme === "dark" ? "border-emerald-400" : "border-emerald-600"} glass-effect p-3`}></div>
       </div>
     )
   }
 
   return (
     <>
-      <div
-        className={`flex min-h-screen ${
-          theme === "dark"
-            ? "bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900"
-            : "bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100"
-        }`}
-      >
+      <div className="flex min-h-screen relative overflow-hidden">
+        {/* Nature-Inspired Background Layer */}
+        <div className="fixed inset-0 z-0">
+          {theme === "dark" ? (
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-emerald-950/30 to-slate-900">
+              <div className="absolute inset-0 opacity-15">
+                <Image
+                  src="/backgrounds/nature-bg-2.jpg"
+                  alt="Nature Background"
+                  fill
+                  className="object-cover blur-3xl"
+                  priority
+                />
+              </div>
+              {/* Organic floating shapes */}
+              <div className="absolute top-20 right-20 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl animate-float-slow"></div>
+              <div className="absolute bottom-40 left-40 w-80 h-80 bg-blue-500/5 rounded-full blur-3xl animate-float"></div>
+            </div>
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-emerald-50/50 to-blue-50/30">
+              <div className="absolute inset-0 opacity-30">
+                <Image
+                  src="/backgrounds/nature-bg-1.jpg"
+                  alt="Nature Background"
+                  fill
+                  className="object-cover blur-2xl"
+                  priority
+                />
+              </div>
+              {/* Organic floating shapes */}
+              <div className="absolute top-20 right-20 w-96 h-96 bg-emerald-200/20 rounded-full blur-3xl animate-float-slow"></div>
+              <div className="absolute bottom-40 left-40 w-80 h-80 bg-blue-200/20 rounded-full blur-3xl animate-float"></div>
+              <div className="absolute top-1/2 left-1/3 w-64 h-64 bg-yellow-200/15 rounded-full blur-3xl animate-float"></div>
+            </div>
+          )}
+        </div>
         {/* Sidebar */}
         <div
           className={`w-64 ${
-            theme === "dark" ? "bg-black/20 border-white/10" : "bg-white/30 border-black/10"
-          } backdrop-blur-xl border-r flex flex-col`}
+            theme === "dark" ? "glass-sidebar" : "glass-sidebar-light"
+          } flex flex-col relative z-10 transition-smooth shadow-2xl`}
         >
           <div className={`p-4 border-b ${theme === "dark" ? "border-white/10" : "border-black/10"}`}>
             <div className="flex items-center gap-3">
@@ -232,15 +270,15 @@ export default function ContextPage() {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 flex flex-col relative z-10 overflow-auto">
           <div className="max-w-4xl mx-auto p-8">
             {/* Header */}
             <div className="mb-8">
               <div className="flex items-center gap-3 mb-4">
                 <div
-                  className={`p-3 rounded-xl ${
-                    theme === "dark" ? "bg-blue-600/20 text-blue-400" : "bg-green-600/20 text-green-600"
-                  } backdrop-blur-sm`}
+                  className={`p-3 rounded-2xl ${
+                    theme === "dark" ? "glass-effect text-emerald-400" : "glass-effect-light text-emerald-600"
+                  } transition-smooth shadow-lg`}
                 >
                   <MessageSquare className="w-6 h-6" />
                 </div>
@@ -257,9 +295,9 @@ export default function ContextPage() {
 
             {/* Main Context Card */}
             <Card
-              className={`${
-                theme === "dark" ? "bg-black/20 border-white/10" : "bg-white/40 border-black/10"
-              } backdrop-blur-xl mb-8`}
+              className={`mb-8 ${
+                theme === "dark" ? "glass-effect" : "glass-effect-light"
+              } transition-smooth shadow-xl border-0`}
             >
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -305,9 +343,9 @@ export default function ContextPage() {
                         disabled={isPending}
                         className={`font-mono ${
                           theme === "dark"
-                            ? "bg-blue-600/80 hover:bg-blue-600 text-white"
-                            : "bg-green-600/80 hover:bg-green-600 text-white"
-                        } backdrop-blur-sm`}
+                            ? "bg-emerald-600/80 hover:bg-emerald-600 text-white"
+                            : "bg-emerald-600/80 hover:bg-emerald-600 text-white"
+                        } transition-fluid hover:scale-105 shadow-lg`}
                       >
                         {isPending ? (
                           <>
@@ -329,9 +367,9 @@ export default function ContextPage() {
 
             {/* Tips Card */}
             <Card
-              className={`${
-                theme === "dark" ? "bg-black/10 border-white/10" : "bg-white/30 border-black/10"
-              } backdrop-blur-xl mb-8`}
+              className={`mb-8 ${
+                theme === "dark" ? "glass-effect" : "glass-effect-light"
+              } transition-smooth shadow-xl border-0`}
             >
               <CardHeader>
                 <CardTitle
@@ -398,8 +436,8 @@ export default function ContextPage() {
             {/* Example Templates */}
             <Card
               className={`${
-                theme === "dark" ? "bg-black/10 border-white/10" : "bg-white/30 border-black/10"
-              } backdrop-blur-xl`}
+                theme === "dark" ? "glass-effect" : "glass-effect-light"
+              } transition-smooth shadow-xl border-0`}
             >
               <CardHeader>
                 <CardTitle className={`font-mono ${theme === "dark" ? "text-white" : "text-slate-900"}`}>
