@@ -61,7 +61,7 @@ export default function DashboardPage() {
             priority
           />
         </div>
-        <div className="animate-spin rounded-full h-12 w-12 border-b-3 border-green-400 glass-effect p-3"></div>
+        <div className={`animate-spin rounded-full h-12 w-12 border-b-3 ${theme === "dark" ? "border-emerald-400" : "border-emerald-600"} glass-effect p-3`}></div>
       </div>
     )
   }
@@ -111,7 +111,7 @@ export default function DashboardPage() {
             theme === "dark" ? "glass-sidebar" : "glass-sidebar-light"
           } flex flex-col relative z-10 transition-smooth shadow-2xl`}
         >
-          <div className={`p-4 border-b ${theme === "dark" ? "border-white/10" : "border-black/10"}`}>
+          <div className={`p-4 border-b transition-smooth ${theme === "dark" ? "border-white/10" : "border-black/10"}`}>
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 relative">
                 <Image
@@ -119,10 +119,10 @@ export default function DashboardPage() {
                   alt="QueueCX"
                   width={32}
                   height={32}
-                  className={theme === "dark" ? "invert" : ""}
+                  className={`transition-smooth ${theme === "dark" ? "invert" : ""}`}
                 />
               </div>
-              <span className={`font-semibold text-lg ${theme === "dark" ? "text-white" : "text-slate-900"}`}>
+              <span className={`font-semibold text-lg transition-smooth ${theme === "dark" ? "text-white" : "text-slate-900"}`}>
                 QueueCX
               </span>
             </div>
@@ -160,7 +160,7 @@ export default function DashboardPage() {
             </div>
           </nav>
 
-          <div className={`p-4 border-t ${theme === "dark" ? "border-white/10" : "border-black/10"} space-y-2`}>
+          <div className={`p-4 border-t transition-smooth ${theme === "dark" ? "border-white/10" : "border-black/10"} space-y-2`}>
             <SidebarItem icon={HelpCircle} label="Help Center" theme={theme} onClick={() => {}} />
             <SidebarItem icon={Download} label="Download QueueCX" theme={theme} onClick={() => {}} />
 
@@ -169,7 +169,7 @@ export default function DashboardPage() {
                 <Avatar className="w-8 h-8 ring-2 ring-white/20">
                   <AvatarImage src={user?.user_metadata?.avatar_url || "/placeholder.svg"} />
                   <AvatarFallback
-                    className={`${
+                    className={`transition-smooth ${
                       theme === "dark" ? "bg-emerald-600/60 text-white" : "bg-emerald-600/80 text-white"
                     } backdrop-blur-sm`}
                   >
@@ -177,10 +177,10 @@ export default function DashboardPage() {
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-medium ${theme === "dark" ? "text-white" : "text-slate-900"}`}>
+                  <p className={`text-sm font-medium transition-smooth ${theme === "dark" ? "text-white" : "text-slate-900"}`}>
                     {displayName}
                   </p>
-                  <p className={`text-xs truncate ${theme === "dark" ? "text-slate-400" : "text-slate-600"}`}>
+                  <p className={`text-xs truncate transition-smooth ${theme === "dark" ? "text-slate-400" : "text-slate-600"}`}>
                     {user?.email || "demo@queuecx.com"}
                   </p>
                 </div>
@@ -316,8 +316,8 @@ function SidebarItem({ icon: Icon, label, active = false, nested = false, theme,
       ${
         active
           ? theme === "dark"
-            ? "glass-effect text-white font-medium shadow-lg border-emerald-400/30"
-            : "glass-effect-light text-slate-900 font-medium shadow-lg border-emerald-500/40"
+            ? "glass-effect text-white font-medium shadow-lg border border-emerald-400/30"
+            : "glass-effect-light text-slate-900 font-medium shadow-lg border border-emerald-500/40"
           : theme === "dark"
             ? "text-slate-300 hover:glass-effect hover:text-white"
             : "text-slate-700 hover:glass-effect-light hover:text-slate-900"

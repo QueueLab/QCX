@@ -55,7 +55,7 @@ The dashboard will be available at `http://localhost:3000/dashboard`
 
 ## 📁 Project Structure
 
-```
+```text
 dash/
 ├── app/
 │   ├── dashboard/
