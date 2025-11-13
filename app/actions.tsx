@@ -319,11 +319,16 @@ async function submit(formData?: FormData, skip?: boolean) {
     const streamText = createStreamableValue<string>()
     uiStream.update(<Spinner />)
 
+    /* removal 1:
     while (
-      useSpecificAPI
-        ? answer.length === 0
-        : answer.length === 0 && !errorOccurred
-    ) {
+          useSpecificAPI
+            ? answer.length === 0
+            : answer.length === 0 && !errorOccurred
+        ) {
+    */
+    // Split and stage producers
+    const abortController = new AbortController()
+    const stage1 = (async () => {
       const { fullResponse, hasError, toolResponses } = await researcher(
         currentSystemPrompt,
         uiStream,
@@ -334,7 +339,9 @@ async function submit(formData?: FormData, skip?: boolean) {
       answer = fullResponse
       toolOutputs = toolResponses
       errorOccurred = hasError
+    })()
 
+    /* removal 1:
       if (toolOutputs.length > 0) {
         toolOutputs.map(output => {
           aiState.update({
@@ -353,6 +360,16 @@ async function submit(formData?: FormData, skip?: boolean) {
         })
       }
     }
+    */
+   
+    // Stage 2: cheap producer - related suggestions
+    const stage2 = (async () => {
+      try {
+        await querySuggestor(uiStream, messages)
+      } catch {}
+    })()
+
+    await Promise.allSettled([stage1, stage2])
 
     if (useSpecificAPI && answer.length === 0) {
       const modifiedMessages = aiState
