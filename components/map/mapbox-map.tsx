@@ -34,6 +34,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   const { mapData, setMapData } = useMapData(); // Consume the new context, get setMapData
   const { setIsMapLoaded } = useMapLoading(); // Get setIsMapLoaded from context
   const previousMapTypeRef = useRef<MapToggleEnum | null>(null)
+  const navigationControlRef = useRef<mapboxgl.NavigationControl | null>(null);
 
   // Refs for long-press functionality
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -351,6 +352,19 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
       
       // Handle geolocation setup based on mode
       setupGeolocationWatcher()
+
+      // Handle navigation controls based on mode
+      if (mapType === MapToggleEnum.DrawingMode) {
+        if (!navigationControlRef.current) {
+          navigationControlRef.current = new mapboxgl.NavigationControl();
+          map.current.addControl(navigationControlRef.current, 'top-left');
+        }
+      } else {
+        if (navigationControlRef.current) {
+          map.current.removeControl(navigationControlRef.current);
+          navigationControlRef.current = null;
+        }
+      }
       
       // Handle draw controls based on mode
       if (mapType === MapToggleEnum.DrawingMode) {
@@ -408,8 +422,6 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         attributionControl: true,
         preserveDrawingBuffer: true
       })
-
-      map.current.addControl(new mapboxgl.NavigationControl(), 'top-left')
 
       // Register event listeners
       map.current.on('moveend', captureMapCenter)
