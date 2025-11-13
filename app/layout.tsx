@@ -22,7 +22,7 @@ const fontSans = FontSans({
   variable: '--font-sans'
 })
 
-const title = 'Beta'
+const title = ''
 const description =
   'language to Maps'
 
