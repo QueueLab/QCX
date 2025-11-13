@@ -12,7 +12,8 @@ const StreamingContext = createContext<StreamingContextType | undefined>(undefin
 export const useStreaming = () => {
   const context = useContext(StreamingContext)
   if (!context) {
-    throw new Error('useStreaming must be used within a StreamingProvider')
+    // Return default values if used outside provider (e.g., during SSR)
+    return { isStreaming: false, setIsStreaming: () => {} }
   }
   return context
 }
