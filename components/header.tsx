@@ -2,6 +2,7 @@
 import React from 'react'
 import Image from 'next/image'
 import { useCalendarToggle } from './calendar-toggle-context'
+import { useStreaming } from './streaming-context'
 import { ModeToggle } from './mode-toggle'
 import { cn } from '@/lib/utils'
 import HistoryContainer from './history-container'
@@ -18,6 +19,7 @@ import { ProfileToggle } from './profile-toggle'
 
 export const Header = () => {
   const { toggleCalendar } = useCalendarToggle()
+  const { isStreaming } = useStreaming()
   return (
     <header className="fixed w-full p-1 md:p-2 flex justify-between items-center z-10 backdrop-blur md:backdrop-blur-none bg-background/80 md:bg-transparent">
       <div>
@@ -28,7 +30,16 @@ export const Header = () => {
       
       <div className="absolute left-1">
         <Button variant="ghost" size="icon">
-          <Image src="/images/logo.svg" alt="Logo" width={24} height={24} className="h-6 w-auto" />
+          <Image 
+            src="/images/logo.svg" 
+            alt="Logo" 
+            width={24} 
+            height={24} 
+            className={cn(
+              "h-6 w-auto transition-transform duration-1000",
+              isStreaming && "animate-spin-ccw"
+            )} 
+          />
         </Button>
       </div>
       

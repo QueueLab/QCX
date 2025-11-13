@@ -7,9 +7,16 @@ import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import 'katex/dist/katex.min.css'
+import { useStreaming } from './streaming-context'
+import { useEffect } from 'react'
 
 export function BotMessage({ content }: { content: StreamableValue<string> }) {
   const [data, error, pending] = useStreamableValue(content)
+  const { setIsStreaming } = useStreaming()
+
+  useEffect(() => {
+    setIsStreaming(pending)
+  }, [pending, setIsStreaming])
 
   // Currently, sometimes error occurs after finishing the stream.
   if (error) return <div>Error</div>
