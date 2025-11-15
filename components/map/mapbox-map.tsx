@@ -34,6 +34,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   const { mapData, setMapData } = useMapData(); // Consume the new context, get setMapData
   const { setIsMapLoaded } = useMapLoading(); // Get setIsMapLoaded from context
   const previousMapTypeRef = useRef<MapToggleEnum | null>(null)
+  const navigationControlRef = useRef<mapboxgl.NavigationControl | null>(null);
 
   // Refs for long-press functionality
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -529,6 +530,22 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     //   drawRoute(mapData.mapFeature.route_geometry); // Implement drawRoute function if needed
     // }
   }, [mapData.targetPosition, mapData.mapFeature, updateMapPosition]);
+
+  useEffect(() => {
+    if (map.current && initializedRef.current) {
+      if (mapType === MapToggleEnum.FreeMode || mapType === MapToggleEnum.DrawingMode) {
+        if (!navigationControlRef.current) {
+          navigationControlRef.current = new mapboxgl.NavigationControl();
+          map.current.addControl(navigationControlRef.current, 'top-left');
+        }
+      } else {
+        if (navigationControlRef.current) {
+          map.current.removeControl(navigationControlRef.current);
+          navigationControlRef.current = null;
+        }
+      }
+    }
+  }, [mapType, initializedRef.current]);
 
   // Long-press handlers
   const handleMouseDown = useCallback(() => {
