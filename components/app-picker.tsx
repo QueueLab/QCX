@@ -63,11 +63,11 @@ function AppCard({
 
   const getAppIcon = (appName: string) => {
     switch (appName) {
-      case "QCX":
+      case "QCX (Planet Computer)":
         return <Zap className="w-6 h-6" />
-      case "Fluid":
+      case "Fluidity Index (Next-Generation Super-Intelligence Benchmarks)":
         return <Activity className="w-6 h-6" />
-      case "EVA":
+      case "EVA (Artificial General Intelligence)":
         return <Brain className="w-6 h-6" />
       default:
         return <FileText className="w-6 h-6" />
@@ -205,7 +205,7 @@ export function AppPicker() {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
   const [selectedApp, setSelectedApp] = useState<string>("")
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, UploadedFile[]>>({
-    QCX: [
+    "QCX (Planet Computer)": [
       { id: "1", name: "user_preferences.json", size: "2.4 KB", uploadDate: "2024-01-15", type: "JSON" },
       { id: "2", name: "activity_log.csv", size: "156 KB", uploadDate: "2024-01-14", type: "CSV" },
     ],
@@ -215,8 +215,8 @@ export function AppPicker() {
 
   const apps = [
     {
-      name: "QCX",
-      description: "Multi-agent intelligence platform for exploration and automation",
+      name: "QCX (Planet Computer)",
+      description: "Planet Computer",
       isClickable: true,
       href: "https://planet.queue.cx",
       uptime: "99.9%",
@@ -224,14 +224,14 @@ export function AppPicker() {
       tier: "Standard",
     },
     {
-      name: "Fluid",
-      description: "Advanced benchmark suite for multi-agent systems",
+      name: "Fluidity Index (Next-Generation Super-Intelligence Benchmarks)",
+      description: "Next-Generation Super-Intelligence Benchmarks",
       isClickable: false,
       comingSoon: true,
     },
     {
-      name: "EVA",
-      description: "Environment-aware AI agents with contextual intelligence",
+      name: "EVA (Artificial General Intelligence)",
+      description: "Artificial General Intelligence",
       isClickable: false,
       comingSoon: true,
     },

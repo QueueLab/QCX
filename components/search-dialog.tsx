@@ -79,18 +79,18 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col bg-black/40 backdrop-blur-xl border-white/10">
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col bg-background/90 backdrop-blur-xl border-border">
         <DialogHeader>
-          <DialogTitle className="text-white">Search</DialogTitle>
+          <DialogTitle className="text-foreground">Search</DialogTitle>
         </DialogHeader>
 
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
           <Input
             placeholder="Search your activity..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="pl-10 bg-black/20 backdrop-blur-sm border-white/20 text-white placeholder:text-slate-400"
+            className="pl-10 bg-muted/50 backdrop-blur-sm border-border text-foreground placeholder:text-muted-foreground"
             autoFocus
           />
         </div>
@@ -102,49 +102,49 @@ export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
             </div>
           ) : results.length > 0 ? (
             <div className="space-y-2">
-              {!query && <p className="text-sm text-slate-400 px-2 py-1">Recent Activity</p>}
+              {!query && <p className="text-sm text-muted-foreground px-2 py-1">Recent Activity</p>}
               {results.map((result) => (
                 <Button
                   key={result.id}
                   variant="ghost"
-                  className="w-full justify-start h-auto p-3 text-left hover:bg-white/10 backdrop-blur-sm"
+                  className="w-full justify-start h-auto p-3 text-left hover:bg-accent/50 backdrop-blur-sm"
                   onClick={() => {
                     onOpenChange(false)
                   }}
                 >
                   <div className="flex items-start gap-3 w-full">
-                    <div className="mt-1 text-slate-400">{getActivityIcon(result.activity_type)}</div>
+                    <div className="mt-1 text-muted-foreground">{getActivityIcon(result.activity_type)}</div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate text-white">{result.title}</p>
+                      <p className="font-medium text-sm truncate text-foreground">{result.title}</p>
                       {result.description && (
-                        <p className="text-xs text-slate-400 mt-1 line-clamp-2">{result.description}</p>
+                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{result.description}</p>
                       )}
-                      <p className="text-xs text-slate-500 mt-1">{formatDate(result.created_at)}</p>
+                      <p className="text-xs text-muted-foreground/70 mt-1">{formatDate(result.created_at)}</p>
                     </div>
                   </div>
                 </Button>
               ))}
             </div>
           ) : query ? (
-            <div className="text-center py-8 text-slate-400">
+            <div className="text-center py-8 text-muted-foreground">
               <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
               <p>No results found for "{query}"</p>
             </div>
           ) : (
-            <div className="text-center py-8 text-slate-400">
+            <div className="text-center py-8 text-muted-foreground">
               <Clock className="w-8 h-8 mx-auto mb-2 opacity-50" />
               <p>No recent activity</p>
             </div>
           )}
         </div>
 
-        <div className="border-t border-white/10 pt-3 text-xs text-slate-400">
+        <div className="border-t border-border pt-3 text-xs text-muted-foreground">
           <div className="flex items-center gap-4">
             <span>
-              Type <kbd className="px-1 py-0.5 bg-black/20 backdrop-blur-sm rounded">#</kbd> to access summaries
+              Type <kbd className="px-1 py-0.5 bg-muted/50 backdrop-blur-sm rounded">#</kbd> to access summaries
             </span>
             <span>
-              <kbd className="px-1 py-0.5 bg-black/20 backdrop-blur-sm rounded">?</kbd> for help
+              <kbd className="px-1 py-0.5 bg-muted/50 backdrop-blur-sm rounded">?</kbd> for help
             </span>
           </div>
         </div>

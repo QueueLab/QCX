@@ -7,16 +7,18 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { SearchDialog } from "@/components/search-dialog"
+import { FinetuningDialog } from "@/components/finetuning-dialog"
 import { AppPicker } from "@/components/app-picker"
 import { useTheme } from "@/components/theme-provider"
 import { useAuth } from "@/components/auth/auth-provider"
 import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
-import { Search, Activity, MessageSquare, SettingsIcon, HelpCircle, Download, Sun, Moon, LogOut } from "lucide-react"
+import { Search, Activity, MessageSquare, SettingsIcon, HelpCircle, Download, Sun, Moon, LogOut, SlidersHorizontal } from "lucide-react"
 import Image from "next/image"
 
 export default function DashboardPage() {
   const [searchOpen, setSearchOpen] = useState(false)
+  const [finetuningOpen, setFinetuningOpen] = useState(false)
   const { theme, setTheme } = useTheme()
   const { user, signOut, loading } = useAuth()
   const { toast } = useToast()
@@ -148,9 +150,15 @@ export default function DashboardPage() {
                 icon={MessageSquare}
                 label="Context"
                 nested
-                theme={theme}
-                onClick={() => handleNavigation("/context")}
-              />
+	                theme={theme}
+	                onClick={() => handleNavigation("/context")}
+	              />
+	              <SidebarItem
+	                icon={SlidersHorizontal}
+	                label="Finetuning"
+	                theme={theme}
+	                onClick={() => setFinetuningOpen(true)}
+	              />
               <SidebarItem
                 icon={SettingsIcon}
                 label="Settings"
@@ -294,6 +302,7 @@ export default function DashboardPage() {
       </div>
 
       <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
+      <FinetuningDialog open={finetuningOpen} onOpenChange={setFinetuningOpen} />
     </>
   )
 }
