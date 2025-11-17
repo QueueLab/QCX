@@ -61,7 +61,7 @@ export function PaymentPromptModal() {
             Unlock Full Access
           </DialogTitle>
           <DialogDescription className="text-center pt-2">
-            You've reached the free usage limit. Upgrade now to continue enjoying unlimited access to QCX features.
+            You&apos;ve reached the free usage limit. Upgrade now to continue enjoying unlimited access to QCX features.
           </DialogDescription>
         </DialogHeader>
         
