@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import Image from 'next/image'
 
 const UserMarker: React.FC = () => {
   return (
@@ -15,13 +16,11 @@ const UserMarker: React.FC = () => {
         alignItems: 'center'
       }}
     >
-      <img
+      <Image
         src="/user-location-marker.png"
         alt="User Location"
-        style={{
-          width: '20px',
-          height: '20px'
-        }}
+        width={20}
+        height={20}
       />
     </div>
   )

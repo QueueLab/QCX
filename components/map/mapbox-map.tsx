@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useCallback } from 'react'
-import ReactDOM from 'react-dom'
+import { createRoot } from 'react-dom/client'
 import mapboxgl from 'mapbox-gl'
 import MapboxDraw from '@mapbox/mapbox-gl-draw'
 import * as turf from '@turf/turf'
@@ -217,7 +217,8 @@ export const Mapbox: React.FC<{
             userMarkerRef.current.setLngLat([longitude, latitude])
           } else {
             const markerElement = document.createElement('div')
-            ReactDOM.render(<UserMarker />, markerElement)
+            const root = createRoot(markerElement)
+            root.render(<UserMarker />)
             userMarkerRef.current = new mapboxgl.Marker({
               element: markerElement
             })
