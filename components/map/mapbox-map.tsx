@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useRef, useCallback } from 'react' // Removed useState
+import { useEffect, useRef, useCallback } from 'react'
+import ReactDOM from 'react-dom'
 import mapboxgl from 'mapbox-gl'
 import MapboxDraw from '@mapbox/mapbox-gl-draw'
 import * as turf from '@turf/turf'
@@ -9,16 +10,20 @@ import 'react-toastify/dist/ReactToastify.css'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css'
 import { useMapToggle, MapToggleEnum } from '../map-toggle-context'
-import { useMapData } from './map-data-context'; // Add this import
-import { useMapLoading } from '../map-loading-context'; // Import useMapLoading
+import { useMapData } from './map-data-context'
+import { useMapLoading } from '../map-loading-context'
 import { useMap } from './map-context'
+import UserMarker from './user-marker'
 
-mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN as string;
+mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN as string
 
-export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number; } }> = ({ position }) => {
+export const Mapbox: React.FC<{
+  position?: { latitude: number; longitude: number }
+}> = ({ position }) => {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const { setMap } = useMap()
+  const userMarkerRef = useRef<mapboxgl.Marker | null>(null)
   const drawRef = useRef<MapboxDraw | null>(null)
   const rotationFrameRef = useRef<number | null>(null)
   const polygonLabelsRef = useRef<{ [id: string]: mapboxgl.Marker }>({})
@@ -199,39 +204,54 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     }
   }, [stopRotation])
 
-  const updateMapPosition = useCallback(async (latitude: number, longitude: number) => {
-    if (map.current && !isUpdatingPositionRef.current) {
-      isUpdatingPositionRef.current = true
-      stopRotation()
-      
-      try {
-        // Update our current map center ref
-        currentMapCenterRef.current.center = [longitude, latitude]
-        
-        await new Promise<void>((resolve) => {
-          map.current?.flyTo({
-            center: [longitude, latitude],
-            zoom: 12,
-            essential: true,
-            speed: 0.5,
-            curve: 1,
-          })
-          map.current?.once('moveend', () => {
-            resolve()
-          })
-        })
-        setTimeout(() => {
-          if (mapType === MapToggleEnum.RealTimeMode) {
-            startRotation()
+  const updateMapPosition = useCallback(
+    async (latitude: number, longitude: number) => {
+      if (map.current && !isUpdatingPositionRef.current) {
+        isUpdatingPositionRef.current = true
+        stopRotation()
+
+        try {
+          currentMapCenterRef.current.center = [longitude, latitude]
+
+          if (userMarkerRef.current) {
+            userMarkerRef.current.setLngLat([longitude, latitude])
+          } else {
+            const markerElement = document.createElement('div')
+            ReactDOM.render(<UserMarker />, markerElement)
+            userMarkerRef.current = new mapboxgl.Marker({
+              element: markerElement
+            })
+              .setLngLat([longitude, latitude])
+              .addTo(map.current)
           }
+
+          await new Promise<void>(resolve => {
+            map.current?.flyTo({
+              center: [longitude, latitude],
+              zoom: 12,
+              essential: true,
+              speed: 0.5,
+              curve: 1
+            })
+            map.current?.once('moveend', () => {
+              resolve()
+            })
+          })
+
+          setTimeout(() => {
+            if (mapType === MapToggleEnum.RealTimeMode) {
+              startRotation()
+            }
+            isUpdatingPositionRef.current = false
+          }, 500)
+        } catch (error) {
+          console.error('Error updating map position:', error)
           isUpdatingPositionRef.current = false
-        }, 500)
-      } catch (error) {
-        console.error('Error updating map position:', error)
-        isUpdatingPositionRef.current = false
+        }
       }
-    }
-  }, [mapType, startRotation, stopRotation])
+    },
+    [mapType, startRotation, stopRotation]
+  )
 
   // Set up drawing tools
   const setupDrawingTools = useCallback(() => {
@@ -462,7 +482,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     return () => {
       if (map.current) {
         map.current.off('moveend', captureMapCenter)
-        
+
         if (drawRef.current) {
           try {
             map.current.off('draw.create', updateMeasurementLabels)
@@ -473,14 +493,20 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
             console.log('Draw control already removed')
           }
         }
-        
-        // Clean up any existing labels
-        Object.values(polygonLabelsRef.current).forEach(marker => marker.remove())
+
+        if (userMarkerRef.current) {
+          userMarkerRef.current.remove()
+          userMarkerRef.current = null
+        }
+
+        Object.values(polygonLabelsRef.current).forEach(marker =>
+          marker.remove()
+        )
         Object.values(lineLabelsRef.current).forEach(marker => marker.remove())
-        
+
         stopRotation()
-        setIsMapLoaded(false) // Reset map loaded state on cleanup
-        setMap(null) // Clear map instance from context
+        setIsMapLoaded(false)
+        setMap(null)
         map.current.remove()
         map.current = null
       }
@@ -579,7 +605,14 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
           }
         }
 
-        Object.values(polygonLabelsRef.current).forEach(marker => marker.remove())
+        if (userMarkerRef.current) {
+          userMarkerRef.current.remove()
+          userMarkerRef.current = null
+        }
+
+        Object.values(polygonLabelsRef.current).forEach(marker =>
+          marker.remove()
+        )
         Object.values(lineLabelsRef.current).forEach(marker => marker.remove())
 
         stopRotation()
