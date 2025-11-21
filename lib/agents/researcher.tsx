@@ -74,7 +74,7 @@ These rules override all previous instructions.
 `
 
 export async function researcher(
-  dynamicSystemPrompt?: string,
+  dynamicSystemPrompt: string,
   uiStream: ReturnType<typeof createStreamableUI>,
   streamText: ReturnType<typeof createStreamableValue<string>>,
   messages: CoreMessage[],
