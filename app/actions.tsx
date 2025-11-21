@@ -12,7 +12,7 @@ import type { FeatureCollection } from 'geojson'
 import { Spinner } from '@/components/ui/spinner'
 import { Section } from '@/components/section'
 import { FollowupPanel } from '@/components/followup-panel'
-import { inquire, researcher, taskManager, querySuggestor, resolutionSearch } from '@/lib/agents'
+import { inquire, researcher, taskManager, querySuggestor, resolutionSearch, toolCoordinator, executeToolPlan, aggregateToolResults } from '@/lib/agents'
 // Removed import of useGeospatialToolMcp as it no longer exists and was incorrectly used here.
 // The geospatialTool (if used by agents like researcher) now manages its own MCP client.
 import { writer } from '@/lib/agents/writer'
@@ -125,6 +125,7 @@ async function submit(formData?: FormData, skip?: boolean) {
 
   const groupeId = nanoid()
   const useSpecificAPI = process.env.USE_SPECIFIC_API_FOR_WRITER === 'true'
+  const useToolCoordinator = process.env.USE_TOOL_COORDINATOR === 'true'
   const maxMessages = useSpecificAPI ? 5 : 10
   messages.splice(0, Math.max(messages.length - maxMessages, 0))
 
@@ -319,17 +320,58 @@ async function submit(formData?: FormData, skip?: boolean) {
     const streamText = createStreamableValue<string>()
     uiStream.update(<Spinner />)
 
+    let finalMessages = messages
+
+    if (useToolCoordinator) {
+      uiStream.update(<Spinner text="Planning tool execution..." />)
+      try {
+        const plan = await toolCoordinator(messages)
+        uiStream.update(<Spinner text="Executing tool plan..." />)
+        const results = await executeToolPlan(plan)
+        toolOutputs = results
+        const summary = aggregateToolResults(results, plan)
+        
+        // Add the summary to the messages for the final synthesis agent
+        finalMessages = [
+          ...messages,
+          {
+            id: nanoid(),
+            role: 'tool',
+            content: summary,
+            type: 'tool_coordinator_summary'
+          } as any // Cast to any to satisfy CoreMessage type for custom type
+        ]
+        
+        // Stream a message to the user about the tool execution completion
+        uiStream.append(
+          <BotMessage content="Tool execution complete. Synthesizing final answer..." />
+        )
+      } catch (e) {
+        console.error('Tool Coordinator failed:', e)
+        uiStream.append(
+          <BotMessage content="Tool Coordinator failed. Falling back to streaming researcher." />
+        )
+        // Fallback: continue with the original messages and let the researcher handle it
+        finalMessages = messages
+      }
+    }
+
     while (
       useSpecificAPI
         ? answer.length === 0
         : answer.length === 0 && !errorOccurred
     ) {
-      const { fullResponse, hasError, toolResponses } = await researcher(
-        currentSystemPrompt,
-        uiStream,
-        streamText,
-        messages,
-        useSpecificAPI
+      // If coordinator was used, pass finalMessages and disable tools for researcher
+          c    const { fullResponse, hasError, toolResponses } = await researcher(
+      currentSystemPrompt,
+      uiStream,
+      streamText,
+      finalMessages,
+      useSpecificAPI,
+      !useToolCoordinator // Pass a flag to disable tools if coordinator was used
+    )cAPI,
+        !useToolCoordinator // Pass a flag to disable tools if coordinator was used
+      )   !useToolCoordinator // Pass a flag to disable tools if coordinator was used
       )
       answer = fullResponse
       toolOutputs = toolResponses
