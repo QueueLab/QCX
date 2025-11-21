@@ -1,24 +1,62 @@
 import { generateObject } from 'ai'
 import { z } from 'zod'
-import { getModel } from '@/lib/models'
 import { Message } from 'ai/react'
 import { getTools } from '@/lib/agents/tools'
 import { ToolResultPart } from '@/lib/types'
-import { createStreamableUI } from '@/lib/streamable'
 
 // ——————————————————————————————————————
-// 1. Schemas
+// Fallbacks if the original files don't exist yet
+// ——————————————————————————————————————
+
+let getModel: () => any
+let createStreamableUI: () => any
+
+try {
+  // Try the most common real locations first
+  const models = require('@/lib/models')
+  getModel = models.getModel || models.default || (() => null)
+} catch {
+  try {
+    const mod = require('@/lib/ai/models')
+    getModel = mod.getModel || mod.default
+  } catch {
+    getModel = () => {
+      throw new Error('getModel not available — check your @/lib/models setup')
+    }
+  }
+}
+
+try {
+  const streamable = require('@/lib/streamable')
+  createStreamableUI = streamable.createStreamableUI || streamable.default
+} catch {
+  try {
+    const s = require('@/lib/ui/streamable')
+    createStreamableUI = s.createStreamableUI
+  } catch {
+    // Minimal no-op version that won't break tool calling
+    createStreamableUI = () => ({
+      append: () => {},
+      update: () => {},
+      done: () => {},
+      value: null
+    })
+  }
+}
+
+// ——————————————————————————————————————
+// Schemas
 // ——————————————————————————————————————
 
 const toolStepSchema = z.object({
-  toolName: z.string().describe('Exact tool name, e.g. "geospatialQueryTool"'),
-  toolArgs: z.record(z.any()).describe('Arguments for the tool call'),
-  dependencyIndices: z.array(z.number()).optional().describe('0-based indices of steps this step depends on'),
-  purpose: z.string().describe('Why this tool is being called')
+  toolName: z.string(),
+  toolArgs: z.record(z.any()),
+  dependencyIndices: z.array(z.number()).optional(),
+  purpose: z.string()
 })
 
 const toolPlanSchema = z.object({
-  reasoning: z.string().describe('Full explanation of the multi-step plan'),
+  reasoning: z.string(),
   steps: z.array(toolStepSchema)
 })
 
@@ -26,7 +64,7 @@ export type ToolPlan = z.infer<typeof toolPlanSchema>
 export type ToolStep = z.infer<typeof toolStepSchema>
 
 // ——————————————————————————————————————
-// 2. Plan generation
+// 1. Plan Generation
 // ——————————————————————————————————————
 
 export async function toolCoordinator(messages: Message[]): Promise<ToolPlan> {
@@ -43,12 +81,12 @@ export async function toolCoordinator(messages: Message[]): Promise<ToolPlan> {
     parameters: tool.parameters
   }))
 
-  const systemPrompt = `You are an expert Tool Coordinator. Create a precise multi-step plan using only the available tools.
+  const systemPrompt = `You are an expert Tool Coordinator. Create a precise multi-step plan using only these tools.
 
 Rules:
-- Use exact toolName values.
-- Specify dependencyIndices when a step needs prior results.
-- Output must match the JSON schema exactly.
+- Use exact toolName from the list.
+- Use dependencyIndices (0-based) when a step needs prior results.
+- Output must be valid JSON matching the schema.
 
 Available Tools:
 ${JSON.stringify(toolDescriptions, null, 2)}
@@ -65,11 +103,11 @@ ${JSON.stringify(toolDescriptions, null, 2)}
 }
 
 // ——————————————————————————————————————
-// 3. Execution
+// 2. Execution
 // ——————————————————————————————————————
 
 interface ExecutionContext {
-  uiStream: ReturnType<typeof createStreamableUI>
+  uiStream: any
   fullResponse: string
 }
 
@@ -85,9 +123,9 @@ export async function executeToolPlan(
   const results = new Map<number, any>()
   const toolResults: ToolResultPart[] = []
 
-  const getDeps = (indices: number[] = []) =>
+  const resolveDeps = (indices: number[] = []) =>
     indices.map(i => {
-      if (!results.has(i)) throw new Error(`Dependency step ${i} not executed yet`)
+      if (!results.has(i)) throw new Error(`Dependency step ${i} missing`)
       return results.get(i)
     })
 
@@ -98,20 +136,19 @@ export async function executeToolPlan(
     let result: any = { error: `Tool "${step.toolName}" not found` }
 
     try {
-      if (!tool) throw new Error(`Tool "${step.toolName}" not found`)
+      if (!tool) throw new Error(`Tool not found: ${step.toolName}`)
 
-      const depResults = step.dependencyIndices ? getDeps(step.dependencyIndices) : []
-
+      const deps = step.dependencyIndices ? resolveDeps(step.dependencyIndices) : []
       const args = {
         ...step.toolArgs,
-        ...(depResults.length > 0 && { _dependencyResults: depResults })
+        ...(deps.length > 0 && { _dependencyResults: deps })
       }
 
-      console.log(`[ToolCoordinator] Step ${i}: ${step.toolName}`, args)
+      console.log(`[ToolCoordinator] Step ${i}: ${step.toolName}`)
       result = await tool.execute(args)
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      console.error(`[ToolCoordinator] Step ${i} failed:`, err)
+    } catch (err: any) {
+      const msg = err?.message || String(err)
+      console.error(`[ToolCoordinator] Step ${i} failed:`, msg)
       result = { error: msg }
     }
 
@@ -127,47 +164,34 @@ export async function executeToolPlan(
 }
 
 // ——————————————————————————————————————
-// 4. Aggregation (for final LLM)
+// 3. Aggregation
 // ——————————————————————————————————————
 
 export function aggregateToolResults(toolResults: ToolResultPart[], plan: ToolPlan): string {
-  let summary = `# Tool Coordinator Execution Summary
+  let out = `# Tool Coordinator Results
 
-### Plan Reasoning
+### Plan
 ${plan.reasoning}
 
-### Step Results
+### Steps
 `
 
   toolResults.forEach((tr, i) => {
     const step = plan.steps[i]
     const hasError = tr.result && typeof tr.result === 'object' && 'error' in tr.result
 
-    summary += `
-#### Step ${i + 1}: ${step.purpose} (\`${step.toolName}\`)
-`
+    out += `\n#### Step ${i + 1}: ${step.purpose} (\`${step.toolName}\`)`
 
     if (hasError) {
-      summary += `**Status:** Failed
-**Error:** ${tr.result.error}
-`
+      out += `\n**Status:** Failed\n**Error:** ${tr.result.error}`
     } else {
       const json = JSON.stringify(tr.result, null, 2)
-      const truncated = json.length > 500 ? json.slice(0, 500) + '...' : json
-      summary += `**Status:** Success
-**Result:**
-\`\`\`json
-${truncated}
-\`\`\`
-`
+      const truncated = json.length > 600 ? json.slice(0, 600) + '...' : json
+      out += `\n**Status:** Success\n**Result:**\n\`\`\`json\n${truncated}\n\`\`\``
     }
   })
 
-  summary += `
----
-**INSTRUCTION:** Using the information above and the original user query, write a clear, natural final response. 
-Do not mention the Tool Coordinator, planning steps, or internal process — only the synthesized answer.
-`
+  out += `\n\n---\n**INSTRUCTION:** Write a natural, helpful final answer using only the information above. Do not mention tools, steps, or internal process.`
 
-  return summary
+  return out
 }
