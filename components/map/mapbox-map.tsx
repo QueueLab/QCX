@@ -20,6 +20,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   const map = useRef<mapboxgl.Map | null>(null)
   const { setMap } = useMap()
   const drawRef = useRef<MapboxDraw | null>(null)
+  const navigationControlRef = useRef<mapboxgl.NavigationControl | null>(null)
   const rotationFrameRef = useRef<number | null>(null)
   const polygonLabelsRef = useRef<{ [id: string]: mapboxgl.Marker }>({})
   const lineLabelsRef = useRef<{ [id: string]: mapboxgl.Marker }>({})
@@ -352,6 +353,24 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
       // Handle geolocation setup based on mode
       setupGeolocationWatcher()
       
+      // Add navigation control for DrawingMode or RealTimeMode
+      if (mapType === MapToggleEnum.DrawingMode || mapType === MapToggleEnum.RealTimeMode) {
+        if (!navigationControlRef.current) {
+          navigationControlRef.current = new mapboxgl.NavigationControl()
+          if (map.current) {
+            map.current.addControl(navigationControlRef.current, 'top-left')
+          }
+        }
+      } else {
+        // Remove navigation control in FreeMode
+        if (navigationControlRef.current) {
+          if (map.current) {
+            map.current.removeControl(navigationControlRef.current)
+          }
+          navigationControlRef.current = null
+        }
+      }
+
       // Handle draw controls based on mode
       if (mapType === MapToggleEnum.DrawingMode) {
         // If switching to drawing mode, setup drawing tools
@@ -409,7 +428,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         preserveDrawingBuffer: true
       })
 
-      map.current.addControl(new mapboxgl.NavigationControl(), 'top-left')
+
 
       // Register event listeners
       map.current.on('moveend', captureMapCenter)
