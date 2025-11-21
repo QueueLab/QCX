@@ -2,8 +2,9 @@ import { generateObject } from 'ai'
 import { z } from 'zod'
 import { getModel } from '@/lib/models'
 import { Message } from 'ai/react'
-import { getTools } from '@/lib/tools'
+import { getTools } from '@/lib/agents/tools' // ← Fixed import
 import { ToolResultPart } from '@/lib/types'
+import { createStreamableUI } from '@/lib/streamable'
 
 // --- 1. Schema Definition for Structured Planning ---
 
@@ -29,9 +30,14 @@ export type ToolStep = z.infer<typeof toolStepSchema>
  */
 export async function toolCoordinator(messages: Message[]): Promise<ToolPlan> {
   const model = getModel()
-  const tools = getTools({}) // Get tool definitions for the prompt
 
-  const toolDescriptions = tools.map(tool => ({
+  // getTools now returns an object map: { toolName: toolDefinition }
+  const toolsObj = getTools({
+    uiStream: createStreamableUI(), // dummy stream; real one will be injected during execution
+    fullResponse: ''
+  })
+
+  const toolDescriptions = Object.values(toolsObj).map(tool => ({
     name: tool.toolName,
     description: tool.description,
     parameters: tool.parameters
@@ -61,22 +67,35 @@ ${JSON.stringify(toolDescriptions, null, 2)}
 
 // --- 3. Tool Execution Function ---
 
+interface ExecutionContext {
+  uiStream: ReturnType<typeof createStreamableUI>
+  fullResponse: string
+}
+
 /**
- * Executes the tool plan, handling dependencies and parallel execution.
+ * Executes the tool plan sequentially while respecting dependencies.
+ * Always returns one ToolResultPart per step (preserves 1:1 alignment with plan.steps).
  */
-export async function executeToolPlan(plan: ToolPlan): Promise<ToolResultPart[]> {
-  const allTools = getTools({})
-  const toolMap = new Map(allTools.map(tool => [tool.toolName, tool]))
+export async function executeToolPlan(
+  plan: ToolPlan,
+  context: ExecutionContext
+): Promise<ToolResultPart[]> {
+  const { uiStream, fullResponse } = context
+
+  // getTools returns object map → convert to array and build Map for lookup
+  const toolsObj = getTools({ uiStream, fullResponse })
+  const toolsArray = Object.values(toolsObj)
+  const toolMap = new Map(toolsArray.map(tool => [tool.toolName, tool]))
+
   const results: Map<number, any> = new Map()
   const toolResults: ToolResultPart[] = []
 
-  // Function to get results of dependencies
-  const getDependencyResults = (indices: number[]) => {
-    return indices.map(index => {
-      if (!results.has(index)) {
-        throw new Error(\`Dependency step \${index} has not been executed yet.\`)
+  const getDependencyResults = (indices: number[] = []) => {
+    return indices.map(idx => {
+      if (!results.has(idx)) {
+        throw new Error(`Dependency step ${idx} has not been executed yet.`)
       }
-      return results.get(index)
+      return results.get(idx)
     })
   }
 
@@ -84,42 +103,40 @@ export async function executeToolPlan(plan: ToolPlan): Promise<ToolResultPart[]>
     const step = plan.steps[i]
     const tool = toolMap.get(step.toolName)
 
-    if (!tool) {
-      console.error(\`Tool \${step.toolName} not found.\`)
-      results.set(i, { error: \`Tool \${step.toolName} not found.\` })
-      continue
-    }
+    let result: any
+    let errorMessage: string | undefined
 
     try {
-      const dependencyResults = step.dependencyIndices ? getDependencyResults(step.dependencyIndices) : []
-      
-      // Inject dependency results into tool arguments for the tool to use
-      const argsWithDependencies = {
-        ...step.toolArgs,
-        _dependencyResults: dependencyResults.length > 0 ? dependencyResults : undefined
+      if (!tool) {
+        throw new Error(`Tool "${step.toolName}" not found among available tools.`)
       }
 
-      console.log(\`Executing step \${i}: \${step.toolName} with args: \${JSON.stringify(argsWithDependencies)}\`)
-      
-      // Execute the tool directly
-      const result = await tool.execute(argsWithDependencies)
+      const dependencyResults = step.dependencyIndices
+        ? getDependencyResults(step.dependencyIndices)
+        : []
 
-      results.set(i, result)
-      toolResults.push({
-        toolName: step.toolName,
-        toolCallId: \`coord-\${i}\`,
-        result: result
-      })
-    } catch (error) {
-      console.error(\`Error executing step \${i} (\${step.toolName}):\`, error)
-      const errorMessage = error instanceof Error ? error.message : String(error)
-      results.set(i, { error: errorMessage })
-      toolResults.push({
-        toolName: step.toolName,
-        toolCallId: \`coord-\${i}\`,
-        result: { error: errorMessage }
-      })
+      const argsWithDependencies = {
+        ...step.toolArgs,
+        ...(dependencyResults.length > 0 && { _dependencyResults: dependencyResults })
+      }
+
+      console.log(`Executing step ${i}: ${step.toolName}`, argsWithDependencies)
+
+      result = await tool.execute(argsWithDependencies)
+    } catch (err) {
+      errorMessage = err instanceof Error ? err.message : String(err)
+      console.error(`Error in step ${i} (${step.toolName}):`, err)
+      result = { error: errorMessage }
     }
+
+    // Always store result (even on error) and push a ToolResultPart
+    results.set(i, result)
+
+    toolResults.push({
+      toolName: step.toolName,
+      toolCallId: `coord-${i}`,
+      result
+    })
   }
 
   return toolResults
@@ -128,43 +145,49 @@ export async function executeToolPlan(plan: ToolPlan): Promise<ToolResultPart[]>
 // --- 4. Result Aggregation Function ---
 
 /**
- * Aggregates the tool results into a structured summary for the final agent.
+ * Aggregates the tool results into a markdown summary for the final agent.
  */
 export function aggregateToolResults(toolResults: ToolResultPart[], plan: ToolPlan): string {
-  let summary = \`## Tool Coordinator Execution Summary
+  let summary = `# Tool Coordinator Execution Summary
 
 The Tool Coordinator executed a multi-step plan to address the user's request.
 
 ### Plan Reasoning
-\${plan.reasoning}
+${plan.reasoning}
 
 ### Execution Steps and Results
-\`
+`
 
   toolResults.forEach((toolResult, index) => {
     const step = plan.steps[index]
     const result = toolResult.result
-    const isError = result && typeof result === 'object' && 'error' in result
+    const hasError = result && typeof result === 'object' && 'error' in result
 
-    summary += \`
-#### Step \${index + 1}: \${step.purpose} (\${step.toolName})
-\`
-    if (isError) {
-      summary += \`**Status:** ❌ FAILED
-**Error:** \${result.error}
-\`
+    summary += `
+#### Step ${index + 1}: ${step.purpose} (\`${step.toolName}\`)
+`
+
+    if (hasError) {
+      summary += `**Status:** ❌ FAILED
+**Error:** ${result.error}
+`
     } else {
-      summary += \`**Status:** ✅ SUCCESS
-**Result Summary:** \${JSON.stringify(result, null, 2).substring(0, 500)}...\`
+      const resultStr M= JSON.stringify(result, null, 2)
+      const truncated = resultStr.length > 500 ? resultStr.substring(0, 500) + '...' : resultStr
+      summary += `**Status:** ✅ SUCCESS
+**Result Summary:**
+\`\`\`json
+${truncated}
+\`\`\`
+`
     }
-    summary += '\n'
   })
 
-  summary += \`
+  summary += `
 ---
-**INSTRUCTION:** Use the above summary and the original user messages to generate a final, coherent, and helpful response. Do not mention the Tool Coordinator or the plan execution process in the final answer, only the synthesized information.
-\`
+**INSTRUCTION:** Using the information above and the original user messages, generate a final, coherent, and helpful response to the user. 
+Do not mention the Tool Coordinator, internal planning, or execution details — only present the synthesized answer naturally.
+`
 
   return summary
 }
-
