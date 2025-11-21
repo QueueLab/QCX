@@ -167,3 +167,4 @@ The Tool Coordinator executed a multi-step plan to address the user's request.
 
   return summary
 }
+
