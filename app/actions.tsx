@@ -362,16 +362,13 @@ async function submit(formData?: FormData, skip?: boolean) {
         : answer.length === 0 && !errorOccurred
     ) {
       // If coordinator was used, pass finalMessages and disable tools for researcher
-          c    const { fullResponse, hasError, toolResponses } = await researcher(
-      currentSystemPrompt,
-      uiStream,
-      streamText,
-      finalMessages,
-      useSpecificAPI,
-      !useToolCoordinator // Pass a flag to disable tools if coordinator was used
-    )cAPI,
+      const { fullResponse, hasError, toolResponses } = await researcher(
+        currentSystemPrompt,
+        uiStream,
+        streamText,
+        finalMessages,
+        useSpecificAPI,
         !useToolCoordinator // Pass a flag to disable tools if coordinator was used
-      )   !useToolCoordinator // Pass a flag to disable tools if coordinator was used
       )
       answer = fullResponse
       toolOutputs = toolResponses
