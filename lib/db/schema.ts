@@ -46,6 +46,7 @@ export const calendarNotes = pgTable('calendar_notes', {
   locationTags: jsonb('location_tags'),
   userTags: text('user_tags').array(),
   mapFeatureId: text('map_feature_id'),
+  timezone: varchar('timezone', { length: 100 }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });

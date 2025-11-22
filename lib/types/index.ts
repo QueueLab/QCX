@@ -85,6 +85,7 @@ export type CalendarNote = {
   locationTags: any | null;
   userTags: string[] | null;
   mapFeatureId: string | null;
+  timezone: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
