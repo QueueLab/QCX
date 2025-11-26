@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import { getNotes, saveNote } from '@/lib/actions/calendar'
 import type { CalendarNote, NewCalendarNote } from '@/lib/types'
 import { useMapData } from '@/components/map/map-data-context'
-import { useMapboxMCP } from '@/mapbox_mcp/hooks'
+import { useMCPMapClient } from '@/mapbox_mcp/hooks'
 import { formatPlaceTimeContext, COMMON_TIMEZONES, getCurrentTimezone } from '@/lib/utils/calendar-context'
 
 interface CalendarNotepadEnhancedProps {
@@ -24,7 +24,7 @@ export function CalendarNotepadEnhanced({ chatId }: CalendarNotepadEnhancedProps
   const [isLoadingLocation, setIsLoadingLocation] = useState(false)
   
   const { mapData, setMapData } = useMapData()
-  const { geocodeLocation, isConnected } = useMapboxMCP()
+  const { geocodeLocation, isConnected } = useMCPMapClient()
 
   useEffect(() => {
     const fetchNotes = async () => {
@@ -97,19 +97,32 @@ export function CalendarNotepadEnhanced({ chatId }: CalendarNotepadEnhancedProps
 
   const handleTagLocation = async () => {
     if (mapData.targetPosition) {
+      // Convert LngLatLike to [lng, lat] array
+      let coordinates: [number, number]
+      if (Array.isArray(mapData.targetPosition)) {
+        coordinates = mapData.targetPosition as [number, number]
+      } else if ('lng' in mapData.targetPosition && 'lat' in mapData.targetPosition) {
+        coordinates = [mapData.targetPosition.lng, mapData.targetPosition.lat]
+      } else if ('lon' in mapData.targetPosition && 'lat' in mapData.targetPosition) {
+        coordinates = [mapData.targetPosition.lon, mapData.targetPosition.lat]
+      } else {
+        console.error('Invalid targetPosition format')
+        return
+      }
+
       setTaggedLocation({
         type: 'Point',
-        coordinates: mapData.targetPosition
+        coordinates: coordinates
       })
       
       // Try to get place name using Mapbox MCP if connected
       if (isConnected) {
         setIsLoadingLocation(true)
         try {
-          const [lng, lat] = mapData.targetPosition
+          const [lng, lat] = coordinates
           const result = await geocodeLocation(`${lng},${lat}`)
-          if (result && result.place_name) {
-            setNoteContent(prev => `${prev}\n📍 ${result.place_name}`)
+          if (result && result.location && result.location.place_name) {
+            setNoteContent(prev => `${prev}\n📍 ${result.location.place_name}`)
           }
         } catch (error) {
           console.error('Error geocoding location:', error)

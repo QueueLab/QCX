@@ -63,6 +63,7 @@ export function CalendarNotepad({ chatId }: CalendarNotepadProps) {
             locationTags: taggedLocation,
             userTags: null,
             mapFeatureId: null,
+            timezone: null,
         }
 
         const savedNote = await saveNote(newNote)
