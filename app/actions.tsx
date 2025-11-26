@@ -327,7 +327,7 @@ async function submit(formData?: FormData, skip?: boolean) {
       try {
         const plan = await toolCoordinator(messages)
         uiStream.update(<div><Spinner /> Executing tool plan...</div>)
-        const results = await executeToolPlan(plan)
+        const results = await executeToolPlan(plan, { uiStream, fullResponse: answer })
         toolOutputs = results
         const summary = aggregateToolResults(results, plan)
         
