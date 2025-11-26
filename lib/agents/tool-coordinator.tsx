@@ -1,6 +1,6 @@
 import { generateObject } from 'ai'
 import { z } from 'zod'
-import { Message } from 'ai/react'
+import { CoreMessage } from 'ai'
 import { getTools } from '@/lib/agents/tools'
 import { ToolResultPart } from '@/lib/types'
 
@@ -67,7 +67,7 @@ export type ToolStep = z.infer<typeof toolStepSchema>
 // 1. Plan Generation
 // ——————————————————————————————————————
 
-export async function toolCoordinator(messages: Message[]): Promise<ToolPlan> {
+export async function toolCoordinator(messages: CoreMessage[]): Promise<ToolPlan> {
   const model = getModel()
 
   const toolsObj = getTools({
