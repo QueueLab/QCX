@@ -344,7 +344,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         
         // Stream a message to the user about the tool execution completion
         uiStream.append(
-          <BotMessage content="Tool execution complete. Synthesizing final answer..." />
+          <BotMessage content={createStreamableValue("Tool execution complete. Synthesizing final answer...").value} />
         )
       } catch (e) {
         console.error('Tool Coordinator failed:', e)
