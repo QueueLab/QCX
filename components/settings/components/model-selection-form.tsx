@@ -12,7 +12,7 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Zap, Rocket, Cpu, Earth } from "lucide-react";
+import { Zap, Rocket, Cpu, Sparkles } from "lucide-react";
 
 interface ModelSelectionFormProps {
   form: UseFormReturn<any>;
@@ -20,35 +20,35 @@ interface ModelSelectionFormProps {
 
 const models = [
   {
-    id: "QCX-Terra",
-    name: "QCX-Terra",
-    description: "Geospatial foundational model",
-    icon: Earth,
-    badge: "Recommended",
-    badgeVariant: "default" as const,
-  },
-  {
-    id: "Grok-3",
-    name: "Grok-3",
-    description: "Fast and efficient model for most everyday tasks and queries.",
+    id: "grok-4.1",
+    name: "Grok 4.1",
+    description: "The latest powerhouse model from xAI.",
     icon: Zap,
-    badge: "Fast",
+    badge: "New",
     badgeVariant: "secondary" as const,
   },
   {
-    id: "claude-4-sonnet",
-    name: "Claude-4-sonnet",
-    description: "Advanced model with strong reasoning and detailed planetary knowledge.",
+    id: "gpt-5.1",
+    name: "GPT 5.1",
+    description: "The latest iteration of OpenAI's flagship model.",
+    icon: Sparkles,
+    badge: "New",
+    badgeVariant: "default" as const,
+  },
+  {
+    id: "opus-4.5",
+    name: "Opus 4.5",
+    description: "The latest high-performance model from Anthropic.",
     icon: Rocket,
-    badge: "Advanced",
+    badge: "New",
     badgeVariant: "outline" as const,
   },
   {
-    id: "llama-4",
-    name: "Llama-4",
-    description: "Open-source model with good performance for general planetary information.",
+    id: "deepseek-4.5",
+    name: "Deepseek 4.5",
+    description: "The latest from Deepseek, a powerful open-source model.",
     icon: Cpu,
-    badge: "Open Source",
+    badge: "New",
     badgeVariant: "outline" as const,
   },
 ];
