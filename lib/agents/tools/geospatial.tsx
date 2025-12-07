@@ -217,9 +217,20 @@ Uses the Mapbox Search Box Text Search API endpoint to power searching for and g
 
 ,
   parameters: geospatialQuerySchema,
-  execute: async (params: z.infer<typeof geospatialQuerySchema>) => {
-    const { queryType, includeMap = true } = params;
+  execute: async (params: z.infer<typeof geospatialQuerySchema> & { _dependencyResults?: any[] }) => {
+    const { queryType, includeMap = true, _dependencyResults } = params;
     console.log('[GeospatialTool] Execute called with:', params);
+
+    if (_dependencyResults && _dependencyResults.length > 0) {
+      console.log('[GeospatialTool] Processing dependency results:', _dependencyResults);
+      // Logic to process dependency results can be added here.
+      // For example, if a previous step was a search, the result might contain coordinates
+      // that can be used as input for a subsequent directions query.
+      // Since the full logic for dependency injection is complex and depends on the
+      // specific tool schema, we will log it for now and ensure the tool can handle it.
+      // The LLM planning step is responsible for generating the correct 'params'
+      // based on the dependency results. The tool only needs to be aware of them.
+    }
 
     const uiFeedbackStream = createStreamableValue<string>();
     uiStream.append(<BotMessage content={uiFeedbackStream.value} />);

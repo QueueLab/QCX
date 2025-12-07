@@ -78,7 +78,8 @@ export async function researcher(
   uiStream: ReturnType<typeof createStreamableUI>,
   streamText: ReturnType<typeof createStreamableValue<string>>,
   messages: CoreMessage[],
-  useSpecificModel?: boolean
+  useSpecificModel?: boolean,
+  useTools: boolean = true
 ) {
   let fullResponse = ''
   let hasError = false
@@ -101,7 +102,7 @@ export async function researcher(
     maxTokens: 4096,
     system: systemPromptToUse,
     messages,
-    tools: getTools({ uiStream, fullResponse }),
+    tools: useTools ? getTools({ uiStream, fullResponse }) : undefined,
   })
 
   uiStream.update(null) // remove spinner
