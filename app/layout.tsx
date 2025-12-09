@@ -16,6 +16,8 @@ import { CalendarToggleProvider } from '@/components/calendar-toggle-context'
 import { MapLoadingProvider } from '@/components/map-loading-context';
 import ConditionalLottie from '@/components/conditional-lottie';
 import { MapProvider } from '@/components/map/map-context'
+import { UsageMonitorProvider } from '@/components/usage-monitor-context'
+import { PaymentPromptModal } from '@/components/payment-prompt-modal'
 
 const fontSans = FontSans({
   subsets: ['latin'],
@@ -57,30 +59,33 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={cn('font-sans antialiased', fontSans.variable)}>
-        <CalendarToggleProvider>
-          <MapToggleProvider>
-            <ProfileToggleProvider>
-              <ThemeProvider
-                attribute="class"
-              defaultTheme="earth"
-              enableSystem
-              disableTransitionOnChange
-              themes={['light', 'dark', 'earth']}
-            >
-              <MapProvider>
-                <MapLoadingProvider>
-                  <Header />
-                  <ConditionalLottie />
-                  {children}
-                  <Sidebar />
-                  <Footer />
-                  <Toaster />
-                </MapLoadingProvider>
-              </MapProvider>
-            </ThemeProvider>
-          </ProfileToggleProvider>
-        </MapToggleProvider>
-        </CalendarToggleProvider>
+        <UsageMonitorProvider>
+          <CalendarToggleProvider>
+            <MapToggleProvider>
+              <ProfileToggleProvider>
+                <ThemeProvider
+                  attribute="class"
+                defaultTheme="earth"
+                enableSystem
+                disableTransitionOnChange
+                themes={['light', 'dark', 'earth']}
+              >
+                <MapProvider>
+                  <MapLoadingProvider>
+                    <Header />
+                    <ConditionalLottie />
+                    {children}
+                    <Sidebar />
+                    <Footer />
+                    <Toaster />
+                    <PaymentPromptModal />
+                  </MapLoadingProvider>
+                </MapProvider>
+              </ThemeProvider>
+            </ProfileToggleProvider>
+          </MapToggleProvider>
+          </CalendarToggleProvider>
+        </UsageMonitorProvider>
         <Analytics />
         <SpeedInsights />
       </body>

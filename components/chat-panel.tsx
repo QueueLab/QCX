@@ -10,6 +10,7 @@ import { Button } from './ui/button'
 import { ArrowRight, Plus, Paperclip, X } from 'lucide-react'
 import Textarea from 'react-textarea-autosize'
 import { nanoid } from 'nanoid'
+import { useUsageMonitor } from './usage-monitor-context'
 
 interface ChatPanelProps {
   messages: UIState
@@ -24,6 +25,7 @@ export interface ChatPanelRef {
 export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, input, setInput }, ref) => {
   const [, setMessages] = useUIState<typeof AI>()
   const { submit, clearChat } = useActions()
+  const { incrementClickCount } = useUsageMonitor()
   // Removed mcp instance as it's no longer passed to submit
   const [isMobile, setIsMobile] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -74,6 +76,9 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     if (!input && !selectedFile) {
       return
     }
+
+    // Track button click for usage monitoring
+    incrementClickCount()
 
     const content: ({ type: 'text'; text: string } | { type: 'image'; image: string })[] = []
     if (input) {
