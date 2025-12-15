@@ -80,6 +80,7 @@
     "remark-math": "^6.0.0",
     "smithery": "^0.5.2",
     "sonner": "^1.7.4",
+    "supabase": "^2.66.0",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
     "use-mcp": "^0.0.9",

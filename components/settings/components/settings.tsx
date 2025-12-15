@@ -11,15 +11,13 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { FormProvider, UseFormReturn } from "react-hook-form"; import React from "react";
 import { Loader2, Save, RotateCcw } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
-// Or, if the file does not exist, create it as shown below.
 import { SystemPromptForm } from "./system-prompt-form"
 import { ModelSelectionForm } from "./model-selection-form"
 import { UserManagementForm } from './user-management-form';
 import { Form } from "@/components/ui/form"
 import { useToast } from "@/components/ui/hooks/use-toast"
-import { getSystemPrompt, saveSystemPrompt } from "../../../lib/actions/chat" // Added import
+import { getSystemPrompt, saveSystemPrompt } from "../../../lib/actions/chat"
 
-// Define the form schema
 const settingsFormSchema = z.object({
   systemPrompt: z
     .string()
@@ -36,31 +34,28 @@ const settingsFormSchema = z.object({
     z.object({
       id: z.string(),
       email: z.string().email(),
-      role: z.enum(["admin", "editor", "viewer"]),
+      role: z.enum(["owner", "collaborator"]),
     }),
   ),
   newUserEmail: z.string().email().optional(),
-  newUserRole: z.enum(["admin", "editor", "viewer"]).optional(),
+  newUserRole: z.enum(["owner", "collaborator"]).optional(),
 })
 
 export type SettingsFormValues = z.infer<typeof settingsFormSchema>
 
-// Default values
 const defaultValues: Partial<SettingsFormValues> = {
   systemPrompt:
     "You are a planetary copilot, an AI assistant designed to help users with information about planets, space exploration, and astronomy. Provide accurate, educational, and engaging responses about our solar system and beyond.",
   selectedModel: "gpt-4o",
-  users: [
-    { id: "1", email: "admin@example.com", role: "admin" },
-    { id: "2", email: "user@example.com", role: "editor" },
-  ],
+  users: [],
 }
 
 interface SettingsProps {
   initialTab?: string;
+  chatId: string;
 }
 
-export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
+export function Settings({ initialTab = "system-prompt", chatId }: SettingsProps) {
   const { toast } = useToast()
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
@@ -70,7 +65,6 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
     setCurrentTab(initialTab);
   }, [initialTab]);
 
-  // TODO: Replace 'anonymous' with actual user ID from session/auth context
   const userId = 'anonymous';
 
   const form = useForm<SettingsFormValues>({
@@ -92,27 +86,21 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
     setIsLoading(true)
 
     try {
-      // Save the system prompt
       const saveResult = await saveSystemPrompt(userId, data.systemPrompt);
 
       if (saveResult?.error) {
         throw new Error(saveResult.error);
       }
 
-      // Simulate other API calls if necessary or remove if only saving system prompt for this form
-      await new Promise((resolve) => setTimeout(resolve, 200)) // Shorter delay now
+      await new Promise((resolve) => setTimeout(resolve, 200))
       console.log("Submitted data (including system prompt):", data)
 
-      // Success notification
       toast({
         title: "Settings updated",
         description: "Your settings have been saved successfully.",
       })
 
-      // Refresh the page to reflect changes
-      // router.refresh(); // Consider if refresh is needed or if optimistic update is enough
     } catch (error: any) {
-      // Error notification
       toast({
         title: "Something went wrong",
         description: error.message || "Your settings could not be saved. Please try again.",
@@ -174,7 +162,7 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
                 </Tabs.Content>
 
                 <Tabs.Content value="user-management" className="mt-6">
-                  <UserManagementForm form={form} />
+                  <UserManagementForm form={form} chatId={chatId} />
                 </Tabs.Content>
               </motion.div>
             </AnimatePresence>

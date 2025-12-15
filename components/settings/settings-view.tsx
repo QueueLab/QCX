@@ -5,7 +5,7 @@ import { useProfileToggle, ProfileToggleEnum } from "@/components/profile-toggle
 import { Button } from "@/components/ui/button"
 import { Minus } from "lucide-react"
 
-export default function SettingsView() {
+export default function SettingsView({ chatId }: { chatId: string }) {
   const { toggleProfileSection, activeView } = useProfileToggle();
   const initialTab = activeView === ProfileToggleEnum.Security ? "user-management" : "system-prompt";
 
@@ -28,7 +28,7 @@ export default function SettingsView() {
         </Button>
       </div>
       <Suspense fallback={<SettingsSkeleton />}>
-        <Settings initialTab={initialTab} />
+        <Settings initialTab={initialTab} chatId={chatId} />
       </Suspense>
     </div>
   )
