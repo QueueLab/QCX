@@ -15,9 +15,10 @@ import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
 import { getSupabaseServerClient } from '../supabase/client'
 
 export async function getChats(userId?: string | null): Promise<Chat[]> {
-  if (!userId) {
-    const userId = await getCurrentUserIdOnServer();
-    if (!userId) {
+  let effectiveUserId = userId;
+  if (!effectiveUserId) {
+    effectiveUserId = await getCurrentUserIdOnServer();
+    if (!effectiveUserId) {
       console.warn('getChats called without userId, returning empty array.')
       return []
     }
@@ -27,6 +28,8 @@ export async function getChats(userId?: string | null): Promise<Chat[]> {
   const { data, error } = await supabase
     .from('chats')
     .select('*')
+    .eq('user_id', effectiveUserId)
+    .order('created_at', { ascending: false })
 
   if (error) {
     console.error('Error fetching chats from Supabase:', error)

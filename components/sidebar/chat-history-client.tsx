@@ -19,10 +19,7 @@ import { Spinner } from '@/components/ui/spinner';
 import HistoryItem from '@/components/history-item';
 import { type Chat } from '@/lib/types';
 
-interface ChatHistoryClientProps {
-}
-
-export function ChatHistoryClient({}: ChatHistoryClientProps) {
+export function ChatHistoryClient() {
   const [chats, setChats] = useState<Chat[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

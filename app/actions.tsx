@@ -565,7 +565,7 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
         case 'user':
           switch (type) {
             case 'input':
-            case 'input_related':
+            case 'input_related': {
               let messageContent: string | any[]
               try {
                 // For backward compatibility with old messages that stored a JSON string
@@ -595,6 +595,7 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                   </>
                 )
               }
+            }
             case 'inquiry':
               return {
                 id,
