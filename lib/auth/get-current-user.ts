@@ -61,24 +61,25 @@ export async function getSupabaseUserAndSessionOnServer(): Promise<{
   const cookieStore = cookies();
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
-      async get(name: string): Promise<string | undefined> {
-        const cookie = (await cookieStore).get(name); // Use the correct get method
-        return cookie?.value; // Return the value or undefined
+      get(name: string) {
+        return cookieStore.get(name)?.value;
       },
-      async set(name: string, value: string, options: CookieOptions): Promise<void> {
+      set(name: string, value: string, options: CookieOptions) {
         try {
-          const store = await cookieStore;
-          store.set({ name, value, ...options }); // Set cookie with options
+          cookieStore.set({ name, value, ...options });
         } catch (error) {
-          // console.warn(`[Auth] Failed to set cookie ${name}:`, error);
+          // The `set` method was called from a Server Component.
+          // This can be ignored if you have middleware refreshing
+          // user sessions.
         }
       },
-      async remove(name: string, options: CookieOptions): Promise<void> {
+      remove(name: string, options: CookieOptions) {
         try {
-          const store = await cookieStore;
-          store.set({ name, value: '', ...options, maxAge: 0 }); // Delete cookie by setting maxAge to 0
+          cookieStore.set({ name, value: '', ...options });
         } catch (error) {
-          // console.warn(`[Auth] Failed to delete cookie ${name}:`, error);
+          // The `delete` method was called from a Server Component.
+          // This can be ignored if you have middleware refreshing
+          // user sessions.
         }
       },
     },

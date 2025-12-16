@@ -5,9 +5,7 @@ type HistoryContainerProps = {
   location: 'sidebar' | 'header'
 }
 
-const HistoryContainer: React.FC<HistoryContainerProps> = async ({
-  location
-}) => {
+const HistoryContainer: React.FC<HistoryContainerProps> = ({ location }) => {
   return (
     <div className="block">
       <History location={location} />
