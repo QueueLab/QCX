@@ -32,8 +32,9 @@ export const Header = () => {
         </Button>
       </div>
       
-      <div className="w-1/2 gap-20 hidden md:flex justify-between px-10 items-center z-10">
+      <div className="w-1/2 gap-20 hidden md:flex justify-start px-10 items-center z-10">
         
+        <HistoryContainer location="header" />
           <ProfileToggle/>
         
         <MapToggle />
@@ -52,11 +53,11 @@ export const Header = () => {
         
         <ModeToggle />
         
-        <HistoryContainer location="header" />
       </div>
 
       {/* Mobile menu buttons */}
       <div className="flex md:hidden gap-2">
+        <HistoryContainer location="header" />
         <div id="mobile-header-search-portal" />
         
         <a href="https://buy.stripe.com/3cIaEX3tRcur9EM7tbasg00" target="_blank" rel="noopener noreferrer">

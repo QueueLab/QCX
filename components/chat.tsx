@@ -13,7 +13,7 @@ import MobileIconsBar from './mobile-icons-bar'
 import { useProfileToggle, ProfileToggleEnum } from "@/components/profile-toggle-context";
 import SettingsView from "@/components/settings/settings-view";
 import { MapDataProvider, useMapData } from './map/map-data-context';
-import { updateDrawingContext, getChat } from '@/lib/actions/chat';
+import { updateDrawingContext, getChat, saveChat } from '@/lib/actions/chat';
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser-client'
 import { type AIMessage, type Chat as ChatType } from '@/lib/types'
 import { nanoid } from 'nanoid'
@@ -36,6 +36,20 @@ export function Chat({ id }: ChatProps) {
   const chatPanelRef = useRef<ChatPanelRef>(null);
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
   const [chatData, setChatData] = useState<ChatType | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const supabase = getSupabaseBrowserClient()
+    const getUser = async () => {
+      const {
+        data: { user }
+      } = await supabase.auth.getUser()
+      if (user) {
+        setUserId(user.id)
+      }
+    }
+    getUser()
+  }, [])
 
   const handleAttachment = () => {
     chatPanelRef.current?.handleAttachmentClick();
@@ -73,8 +87,21 @@ export function Chat({ id }: ChatProps) {
   useEffect(() => {
     if (aiState.messages[aiState.messages.length - 1]?.type === 'response') {
       router.refresh()
+      // Save the chat
+      if (id && userId && messages && messages.length > 0) {
+        const chat: ChatType = {
+          id,
+          messages,
+          title: chatData?.title || messages[0].content.substring(0, 100),
+          userId,
+          createdAt: chatData?.createdAt || new Date(),
+          path: `/search/${id}`,
+          sharePath: chatData?.sharePath || ''
+        }
+        saveChat(chat, userId)
+      }
     }
-  }, [aiState, router])
+  }, [aiState, router, id, userId, messages, chatData])
 
   const { mapData } = useMapData();
 

@@ -9,7 +9,7 @@ const HistoryContainer: React.FC<HistoryContainerProps> = async ({
   location
 }) => {
   return (
-    <div className="sm:hidden block">
+    <div className="block">
       <History location={location} />
     </div>
   )
