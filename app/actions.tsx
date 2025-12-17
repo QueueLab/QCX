@@ -80,33 +80,52 @@ async function submit(formData?: FormData, skip?: boolean) {
     });
     messages.push({ role: 'user', content });
 
-    // Call the simplified agent, which now returns data directly.
-    const analysisResult = await resolutionSearch(messages);
+    try {
+      const analysisResult = await resolutionSearch(messages);
+      const summaryStream = createStreamableValue<string>();
+      summaryStream.done(analysisResult.summary || 'Analysis complete.');
 
-    // Create a streamable value for the summary and mark it as done.
-    const summaryStream = createStreamableValue<string>();
-    summaryStream.done(analysisResult.summary || 'Analysis complete.');
+      uiStream.update(
+        <BotMessage content={summaryStream.value} />
+      );
 
-    // Update the UI stream with the BotMessage component.
-    uiStream.update(
-      <BotMessage content={summaryStream.value} />
-    );
+      aiState.done({
+        ...aiState.get(),
+        messages: [
+          ...aiState.get().messages,
+          {
+            id: nanoid(),
+            role: 'assistant',
+            content: JSON.stringify(analysisResult),
+            type: 'resolution_search_result'
+          }
+        ]
+      });
+    } catch (error) {
+      console.error('Error during resolution search:', error);
+      const errorStream = createStreamableValue<string>();
+      const errorMessage = 'Sorry, I encountered an error while analyzing the image. The AI model might be unavailable or the request timed out. Please try again later.';
+      errorStream.done(errorMessage);
+      uiStream.update(
+        <BotMessage content={errorStream.value} />
+      );
+      aiState.done({
+        ...aiState.get(),
+        messages: [
+          ...aiState.get().messages,
+          {
+            id: nanoid(),
+            role: 'assistant',
+            content: errorMessage,
+            type: 'response'
+          }
+        ]
+      });
+    } finally {
+      isGenerating.done(false);
+      uiStream.done();
+    }
 
-    aiState.done({
-      ...aiState.get(),
-      messages: [
-        ...aiState.get().messages,
-        {
-          id: nanoid(),
-          role: 'assistant',
-          content: JSON.stringify(analysisResult),
-          type: 'resolution_search_result'
-        }
-      ]
-    });
-
-    isGenerating.done(false);
-    uiStream.done();
     return {
       id: nanoid(),
       isGenerating: isGenerating.value,
