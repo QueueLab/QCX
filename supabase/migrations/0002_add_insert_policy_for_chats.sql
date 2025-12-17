@@ -1,0 +1,1 @@
+CREATE POLICY "Allow insert for authenticated users" ON "public"."chats" FOR INSERT TO authenticated WITH CHECK (true);
