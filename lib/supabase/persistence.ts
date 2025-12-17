@@ -1,31 +1,50 @@
 'use server'
 
 import { getSupabaseServerClient } from '@/lib/supabase/client'
+import { getSupabaseServiceRoleClient } from './service-role'
 import { type Chat, type AIMessage } from '@/lib/types'
 import { PostgrestError } from '@supabase/supabase-js'
 
 export async function saveChat(chat: Chat, userId: string): Promise<{ data: string | null; error: PostgrestError | null }> {
-  const supabase = getSupabaseServerClient()
-  const messagesToInsert = chat.messages.map(message => ({
-    id: message.id,
-    role: message.role,
-    content: typeof message.content === 'string' ? message.content : JSON.stringify(message.content),
-    createdAt: message.createdAt ? new Date(message.createdAt).toISOString() : new Date().toISOString(),
-  }))
+  const supabase = getSupabaseServiceRoleClient()
 
-  const { data, error } = await supabase.rpc('save_chat_with_messages', {
-    chat_id: chat.id,
-    user_id: userId,
-    title: chat.title,
-    messages: messagesToInsert,
-  })
+  // Insert into chats table
+  const { data: chatData, error: chatError } = await supabase
+    .from('chats')
+    .insert({
+      id: chat.id,
+      user_id: userId,
+      title: chat.title,
+    })
+    .select('id')
+    .single()
 
-  if (error) {
-    console.error('Error saving chat with messages:', error)
-    return { data: null, error }
+  if (chatError) {
+    console.error('Error saving chat:', chatError)
+    return { data: null, error: chatError }
   }
 
-  return { data: data as string, error: null }
+  const messagesToInsert = chat.messages.map(message => ({
+    id: message.id,
+    chat_id: chat.id,
+    user_id: userId,
+    role: message.role,
+    content: typeof message.content === 'string' ? message.content : JSON.stringify(message.content),
+    created_at: message.createdAt ? new Date(message.createdAt).toISOString() : new Date().toISOString(),
+  }))
+
+  const { error: messagesError } = await supabase
+    .from('messages')
+    .insert(messagesToInsert)
+
+  if (messagesError) {
+    console.error('Error saving messages:', messagesError)
+    // Attempt to delete the chat if messages fail to save
+    await supabase.from('chats').delete().eq('id', chat.id)
+    return { data: null, error: messagesError }
+  }
+
+  return { data: chatData.id, error: null }
 }
 
 export async function getMessagesByChatId(chatId: string): Promise<{ data: any[] | null; error: PostgrestError | null }> {
