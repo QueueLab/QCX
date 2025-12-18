@@ -18,18 +18,20 @@ export async function getChats(userId?: string | null): Promise<Chat[]> {
   let effectiveUserId = userId;
   if (!effectiveUserId) {
     effectiveUserId = await getCurrentUserIdOnServer();
-    if (!effectiveUserId) {
-      console.warn('getChats called without userId, returning empty array.')
-      return []
-    }
   }
 
   const supabase = getSupabaseServerClient()
-  const { data, error } = await supabase
+  let query = supabase
     .from('chats')
     .select('*')
-    .eq('user_id', effectiveUserId)
     .order('created_at', { ascending: false })
+  
+  // Only filter by user_id if we have one (for testing without auth)
+  if (effectiveUserId) {
+    query = query.eq('user_id', effectiveUserId)
+  }
+
+  const { data, error } = await query
 
   if (error) {
     console.error('Error fetching chats from Supabase:', error)

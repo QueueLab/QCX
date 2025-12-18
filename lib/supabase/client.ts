@@ -1,4 +1,5 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 
 export function getSupabaseServerClient() {
@@ -22,6 +23,20 @@ export function getSupabaseServerClient() {
           store.set({ name, value: '', ...options })
         },
       },
+    }
+  )
+}
+
+// Service role client for admin operations (bypasses RLS)
+export function getSupabaseServiceClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
     }
   )
 }

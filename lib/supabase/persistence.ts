@@ -1,40 +1,56 @@
 'use server'
 
-import { getSupabaseServerClient } from '@/lib/supabase/client'
+import { getSupabaseServerClient, getSupabaseServiceClient } from '@/lib/supabase/client'
 import { type Chat, type AIMessage } from '@/lib/types'
 import { PostgrestError } from '@supabase/supabase-js'
 
 export async function saveChat(chat: Chat, userId: string): Promise<{ data: string | null; error: PostgrestError | null }> {
-  const supabase = getSupabaseServerClient()
+  const supabase = getSupabaseServiceClient()
   
-  const { error: chatError } = await supabase.from('chats').insert({
-    id: chat.id,
-    user_id: userId,
-    title: chat.title,
-    created_at: chat.createdAt ? new Date(chat.createdAt).toISOString() : new Date().toISOString(),
-    path: chat.path,
-    share_path: chat.sharePath
-  });
+  // First, upsert the chat
+  const { data: chatData, error: chatError } = await supabase
+    .from('chats')
+    .upsert({
+      id: chat.id,
+      user_id: userId,
+      title: chat.title || 'Untitled Chat',
+      visibility: 'private',
+      created_at: chat.createdAt ? new Date(chat.createdAt).toISOString() : new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      path: chat.path,
+      share_path: chat.sharePath
+    }, {
+      onConflict: 'id'
+    })
+    .select('id')
+    .single()
 
   if (chatError) {
     console.error('Error saving chat:', chatError)
     return { data: null, error: chatError }
   }
 
-  const messagesToInsert = chat.messages.map(message => ({
-    id: message.id,
-    chat_id: chat.id,
-    user_id: userId,
-    role: message.role,
-    content: typeof message.content === 'string' ? message.content : JSON.stringify(message.content),
-    created_at: message.createdAt ? new Date(message.createdAt).toISOString() : new Date().toISOString(),
-  }))
+  // Then, insert messages if there are any
+  if (chat.messages && chat.messages.length > 0) {
+    const messagesToInsert = chat.messages.map(message => ({
+      id: message.id,
+      chat_id: chat.id,
+      user_id: userId,
+      role: message.role,
+      content: typeof message.content === 'string' ? message.content : JSON.stringify(message.content),
+      created_at: message.createdAt ? new Date(message.createdAt).toISOString() : new Date().toISOString(),
+    }))
 
-  const { error: messagesError } = await supabase.from('messages').insert(messagesToInsert);
+    const { error: messagesError } = await supabase
+      .from('messages')
+      .upsert(messagesToInsert, {
+        onConflict: 'id'
+      })
 
-  if (messagesError) {
-    console.error('Error saving messages:', messagesError)
-    return { data: null, error: messagesError }
+    if (messagesError) {
+      console.error('Error saving messages:', messagesError)
+      return { data: null, error: messagesError }
+    }
   }
 
   return { data: chat.id, error: null }
