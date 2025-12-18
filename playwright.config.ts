@@ -33,10 +33,10 @@ export default defineConfig({
       use: { ...devices['iPhone 12'] },
     },
   ],
-  webServer: {
-    command: process.env.CI ? 'bun run build && bun run start' : 'bun run dev',
+  /* webServer: {
+    command: process.env.CI ? 'npm run build && npm run start' : 'npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 600000,
-  },
+  }, */
 });
