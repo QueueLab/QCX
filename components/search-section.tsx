@@ -14,7 +14,8 @@ export type SearchSectionProps = {
 
 export function SearchSection({ result }: SearchSectionProps) {
   const [data, error, pending] = useStreamableValue(result)
-  const searchResults: TypeSearchResults = data ? JSON.parse(data) : undefined
+  const searchResults: TypeSearchResults =
+    data && typeof data === 'string' ? JSON.parse(data) : undefined
   return (
     <div>
       {!pending && data ? (
