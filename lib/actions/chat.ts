@@ -245,8 +245,10 @@ export async function getSystemPrompt(
   }
 
   try {
-    const prompt = await redis.get<string>(`system_prompt:${userId}`)
-    return prompt
+    const prompt = (await redis.get<string>(`system_prompt:${userId}`)) || ''
+    const locationGuessingInstruction =
+      '\nWhen an image is added to the context, you should also try to guess where the image was taken.'
+    return prompt + locationGuessingInstruction
   } catch (error) {
     console.error('getSystemPrompt: Error retrieving system prompt:', error)
     return null
