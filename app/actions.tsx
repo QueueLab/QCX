@@ -81,7 +81,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     messages.push({ role: 'user', content });
 
     // Call the simplified agent, which now returns data directly.
-    const analysisResult = await resolutionSearch(messages);
+    const analysisResult = await resolutionSearch(messages) as any;
 
     // Create a streamable value for the summary and mark it as done.
     const summaryStream = createStreamableValue<string>();

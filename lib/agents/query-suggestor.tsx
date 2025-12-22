@@ -38,9 +38,9 @@ export async function querySuggestor(
   })
 
   for await (const obj of result.partialObjectStream) {
-    if (obj.items) {
-      objectStream.update(obj)
-      finalRelatedQueries = obj
+    if (obj && typeof obj === 'object' && 'items' in obj) {
+      objectStream.update(obj as PartialRelated)
+      finalRelatedQueries = obj as PartialRelated
     }
   }
 
