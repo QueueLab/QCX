@@ -20,6 +20,8 @@ import {
 } from '@/components/ui/carousel'
 import { useEffect, useState } from 'react'
 import { PlusCircle } from 'lucide-react'
+import { motion } from 'framer-motion'
+import 'glassmorphic/glassmorphic.css'
 
 interface SearchResultsImageSectionProps {
   images: string[]
@@ -64,9 +66,11 @@ export const SearchResultsImageSection: React.FC<
       {images.slice(0, 4).map((image: any, index: number) => (
         <Dialog key={index}>
           <DialogTrigger asChild>
-            <div
-              className="w-[calc(50%-0.5rem)] md:w-[calc(25%-0.5rem)] aspect-video cursor-pointer relative"
+            <motion.div
+              className="w-[calc(50%-0.5rem)] md:w-[calc(25%-0.5rem)] aspect-video cursor-pointer relative glassmorphic"
               onClick={() => setSelectedIndex(index)}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
               <Card className="flex-1 h-full">
                 <CardContent className="p-2 h-full w-full">
@@ -89,9 +93,9 @@ export const SearchResultsImageSection: React.FC<
                   <PlusCircle size={24} />
                 </div>
               )}
-            </div>
+            </motion.div>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-3xl max-h-[80vh] overflow-auto">
+          <DialogContent className="sm:max-w-3xl max-h-[80vh] overflow-auto glassmorphic">
             <DialogHeader>
               <DialogTitle>Search Images</DialogTitle>
               <DialogDescription className="text-sm">{query}</DialogDescription>

@@ -47,10 +47,12 @@ export const MobileIconsBar: React.FC<MobileIconsBarProps> = ({ onAttachmentClic
       <Button variant="ghost" size="icon" data-testid="mobile-search-button">
         <Search className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>
-      <Button variant="ghost" size="icon" data-testid="mobile-tent-tree-button">
-        <TentTree className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
-      </Button>
-      <Button variant="ghost" size="icon" onClick={onAttachmentClick} data-testid="mobile-attachment-button">
+      <a href="https://buy.stripe.com/3cIaEX3tRcur9EM7tbasg00" target="_blank" rel="noopener noreferrer">
+        <Button variant="ghost" size="icon">
+          <TentTree className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
+        </Button>
+      </a>
+      <Button variant="ghost" size="icon" onClick={onAttachmentClick}>
         <Paperclip className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>
       <Button variant="ghost" size="icon" data-testid="mobile-submit-button" disabled aria-disabled="true">
