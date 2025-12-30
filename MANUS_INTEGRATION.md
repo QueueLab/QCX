@@ -22,16 +22,20 @@ The Manus integration follows a **tool-based architecture** rather than creating
 
 1. **`lib/schema/manus.tsx`** - Zod schema for Manus tool parameters
    - Defines validation for prompt, agentProfile, taskMode, and interactiveMode
-   - Provides TypeScript types for type safety
+   - Provides TypeScript types for type safety using `z.infer`
 
 2. **`lib/agents/tools/manus.tsx`** - Manus tool implementation
    - Handles API calls to Manus AI platform
-   - Manages error handling and UI updates
-   - Creates tasks and returns task information
+   - Implements comprehensive error handling with sanitized messages
+   - Validates API responses and URLs for security
+   - Includes fetch timeout to prevent hanging requests
+   - Filters undefined fields from request body
+   - Manages UI updates with proper streaming
 
 3. **`components/manus-section.tsx`** - UI component for displaying Manus task results
    - Shows task title, ID, and status
-   - Provides links to view task progress and share results
+   - Provides accessible links with aria-labels
+   - Validates URLs before rendering
    - Follows QCX design patterns
 
 ### Files Modified
@@ -42,6 +46,39 @@ The Manus integration follows a **tool-based architecture** rather than creating
 
 2. **`.env.local.example`** - Environment configuration
    - Added MANUS_API_KEY configuration with documentation
+
+## Security Features
+
+The integration implements several security measures:
+
+### 1. Error Message Sanitization
+- Raw API errors are not exposed to users
+- Error messages are sanitized to prevent information leakage
+- Sensitive configuration errors are replaced with generic messages
+
+### 2. URL Validation
+- All URLs from the API are validated before use
+- Only HTTPS URLs from manus.ai domain are allowed
+- Invalid URLs are rejected to prevent injection attacks
+
+### 3. Request Timeout
+- 30-second timeout on API requests using AbortController
+- Prevents indefinite hanging on slow or unresponsive API
+
+### 4. Response Validation
+- API responses are validated against expected schema
+- Malformed responses are rejected
+- Type safety enforced with Zod validation
+
+### 5. Audit Logging
+- Task creation events are logged (without sensitive data)
+- Errors are logged securely with timestamps
+- Helps with debugging and compliance
+
+### 6. Privacy by Default
+- Shareable links are disabled by default
+- Can be enabled when needed for specific use cases
+- Prevents accidental data exposure
 
 ## Configuration
 
@@ -101,10 +138,13 @@ When a user asks a complex question like "Research the latest developments in qu
 ```
 
 The tool will:
-1. Create a task on the Manus platform
-2. Display a loading state in the UI
-3. Show the task information with links to view progress
-4. Return task details to the Researcher Agent for context
+1. Validate the API key is configured
+2. Filter undefined fields from the request
+3. Create a task on the Manus platform with timeout protection
+4. Validate the API response
+5. Validate URLs before displaying
+6. Show the task information with accessible links
+7. Log the task creation for audit trail
 
 ## API Reference
 
@@ -113,6 +153,7 @@ The tool will:
 - **URL**: `https://api.manus.ai/v1/tasks`
 - **Method**: POST
 - **Authentication**: API_KEY header
+- **Timeout**: 30 seconds
 
 ### Request Schema
 
@@ -132,10 +173,20 @@ The tool will:
 {
   task_id: string
   task_title: string
-  task_url: string
-  share_url?: string
+  task_url: string (validated HTTPS URL)
+  share_url?: string (validated HTTPS URL)
 }
 ```
+
+## Accessibility
+
+The integration follows WCAG guidelines:
+
+- Links have descriptive aria-labels
+- Icons are marked as decorative with aria-hidden
+- Semantic HTML structure
+- Keyboard navigation support
+- Screen reader friendly
 
 ## Future Enhancements
 
@@ -147,6 +198,7 @@ Potential improvements for future iterations:
 4. **Dedicated Agent**: Create a specialized Manus agent for complex workflows requiring multiple Manus calls
 5. **File Attachments**: Support file uploads to Manus tasks
 6. **Multi-turn Conversations**: Enable continuing existing Manus tasks
+7. **Configurable Share Links**: Add UI option to enable/disable shareable links per task
 
 ## Testing
 
@@ -156,7 +208,9 @@ To test the integration:
 2. Start the development server: `bun dev`
 3. Ask a complex question that would benefit from Manus capabilities
 4. Verify the Manus tool is called and task information is displayed
-5. Click the task URL to view progress on the Manus platform
+5. Check that URLs are valid and accessible
+6. Verify error handling with invalid API key
+7. Test timeout behavior with network issues
 
 ## Troubleshooting
 
@@ -170,10 +224,26 @@ If the Manus tool is not being used:
 ### API Errors
 
 If you encounter API errors:
-- Check the console for detailed error messages
+- Check the console for detailed error logs (sanitized for security)
 - Verify your API key has not expired
 - Ensure you have sufficient credits on your Manus account
 - Check the Manus API status page for service issues
+- Verify network connectivity
+
+### Timeout Errors
+
+If requests timeout:
+- Check your network connection
+- Verify the Manus API is responding
+- Consider increasing the timeout if needed for complex tasks
+- Check if firewall or proxy is blocking requests
+
+### Invalid URLs
+
+If URL validation fails:
+- Verify the Manus API is returning valid HTTPS URLs
+- Check that URLs are from manus.ai domain
+- Report any issues to Manus support
 
 ## Resources
 
@@ -181,6 +251,7 @@ If you encounter API errors:
 - [Manus API Reference](https://open.manus.im/docs/api-reference)
 - [AI SDK Workflow Patterns](https://ai-sdk.dev/docs/agents/workflows)
 - [QCX Repository](https://github.com/QueueLab/QCX)
+- [WCAG Accessibility Guidelines](https://www.w3.org/WAI/WCAG21/quickref/)
 
 ## License
 

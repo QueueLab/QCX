@@ -1,4 +1,3 @@
-import { DeepPartial } from 'ai'
 import { z } from 'zod'
 
 export const manusSchema = z.object({
@@ -23,4 +22,5 @@ export const manusSchema = z.object({
     )
 })
 
-export type PartialManus = DeepPartial<typeof manusSchema>
+export type ManusInput = z.infer<typeof manusSchema>
+export type PartialManus = Partial<ManusInput>

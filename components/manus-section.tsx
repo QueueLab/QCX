@@ -37,9 +37,10 @@ const ManusSection: React.FC<ManusSectionProps> = ({ data }) => {
             href={data.task_url}
             target="_blank"
             rel="noopener noreferrer"
+            aria-label={`View progress for task: ${data.task_title}`}
             className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
           >
-            <ExternalLink className="w-4 h-4" />
+            <ExternalLink className="w-4 h-4" aria-hidden="true" />
             View Task Progress
           </a>
 
@@ -48,9 +49,10 @@ const ManusSection: React.FC<ManusSectionProps> = ({ data }) => {
               href={data.share_url}
               target="_blank"
               rel="noopener noreferrer"
+              aria-label={`Public share link for task: ${data.task_title}`}
               className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
             >
-              <ExternalLink className="w-4 h-4" />
+              <ExternalLink className="w-4 h-4" aria-hidden="true" />
               Public Share Link
             </a>
           )}
