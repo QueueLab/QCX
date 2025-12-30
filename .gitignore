@@ -39,3 +39,16 @@ next-env.d.ts
 /playwright-report/
 /test-results/
 /dev.log
+# AlphaEarth Embeddings - Sensitive Files
+# Add these lines to your main .gitignore
+
+# GCP Service Account Credentials (NEVER commit)
+gcp_credentials.json
+**/gcp_credentials.json
+
+# AlphaEarth Index File (large, should be downloaded separately)
+aef_index.csv
+
+# Environment variables with GCP credentials
+.env.local
+.env.production.local
