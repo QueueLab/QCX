@@ -16,14 +16,15 @@ export function generateUUID(): string {
   return uuidv4();
 }
 
-export function getModel() {
+export function getModel(requireVision: boolean = false) {
   const xaiApiKey = process.env.XAI_API_KEY
   const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID
   const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY
   const awsRegion = process.env.AWS_REGION
-  const bedrockModelId = ''
+  const bedrockModelId = process.env.BEDROCK_MODEL_ID || 'anthropic.claude-3-5-sonnet-20241022-v2:0'
 
-  if (xaiApiKey) {
+  // If vision is required, skip models that don't support it
+  if (!requireVision && xaiApiKey) {
     const xai = createXai({
       apiKey: xaiApiKey,
       baseURL: 'https://api.x.ai/v1',
@@ -36,9 +37,8 @@ export function getModel() {
     }
   }
 
-  // AWS Bedrock
-
-  if (awsAccessKeyId && awsSecretAccessKey) {
+  // AWS Bedrock - Claude models support vision
+  if (awsAccessKeyId && awsSecretAccessKey && bedrockModelId) {
     const bedrock = createAmazonBedrock({
       bedrockOptions: {
         region: awsRegion,
@@ -54,7 +54,7 @@ export function getModel() {
     return model
   }
 
-  // Default fallback (OpenAI)
+  // Default fallback (OpenAI gpt-4o supports vision)
   const openai = createOpenAI({
     apiKey: process.env.OPENAI_API_KEY,
   })
