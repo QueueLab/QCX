@@ -44,7 +44,7 @@ async function testMapCommandGenerator() {
         type: 'Feature' as const,
         geometry: {
           type: 'Point' as const,
-          coordinates: [2.3522, 48.8566],
+          coordinates: [2.3522, 48.8566] as [number, number],
         },
         properties: {
           name: 'Paris',
@@ -78,7 +78,7 @@ async function testValidator() {
       type: 'Feature',
       geometry: {
         type: 'Point',
-        coordinates: [2.3522, 48.8566],
+        coordinates: [2.3522, 48.8566] as [number, number],
       },
       properties: { name: 'Paris' },
     }],
@@ -93,9 +93,9 @@ async function testValidator() {
 
   // Test valid command
   const validCommand = {
-    command: 'flyTo',
+    command: 'flyTo' as const,
     params: {
-      center: [2.3522, 48.8566],
+      center: [2.3522, 48.8566] as [number, number],
       zoom: 12,
     },
   };

@@ -598,8 +598,14 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
             mapInstance.easeTo(command.params);
             break;
           case 'fitBounds':
-            const { bounds, options } = command.params;
-            mapInstance.fitBounds(bounds, options || {});
+            if (command.params.bounds) {
+              const { bounds, padding, duration, ...otherOptions } = command.params;
+              const fitBoundsOptions: any = {};
+              if (padding !== undefined) fitBoundsOptions.padding = padding;
+              if (duration !== undefined) fitBoundsOptions.duration = duration;
+              Object.assign(fitBoundsOptions, otherOptions);
+              mapInstance.fitBounds(bounds, fitBoundsOptions);
+            }
             break;
           case 'setCenter':
             if (command.params.center) {
@@ -631,12 +637,8 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         const center = mapInstance.getCenter();
         const bounds = mapInstance.getBounds();
         
-        const feedback = {
+        const feedback: any = {
           success: !executionError,
-          currentBounds: [
-            [bounds.getWest(), bounds.getSouth()],
-            [bounds.getEast(), bounds.getNorth()]
-          ] as [[number, number], [number, number]],
           currentCenter: [center.lng, center.lat] as [number, number],
           currentZoom: mapInstance.getZoom(),
           currentPitch: mapInstance.getPitch(),
@@ -644,6 +646,13 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
           error: executionError,
           timestamp: Date.now(),
         };
+
+        if (bounds) {
+          feedback.currentBounds = [
+            [bounds.getWest(), bounds.getSouth()],
+            [bounds.getEast(), bounds.getNorth()]
+          ] as [[number, number], [number, number]];
+        }
 
         console.log('📍 Map feedback:', feedback);
 
@@ -695,7 +704,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
       }));
     }
 
-  }, [mapData.mapCommands, mapData.feedbackCallback, setMapData]);}
+  }, [mapData.mapCommands, mapData.feedbackCallback, setMapData]);
 
   // Long-press handlers
   const handleMouseDown = useCallback(() => {

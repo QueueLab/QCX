@@ -375,7 +375,7 @@ export class MapControlOrchestrator {
             type: 'Feature' as const,
             geometry: {
               type: 'Point' as const,
-              coordinates: [data.location.longitude, data.location.latitude],
+              coordinates: [data.location.longitude, data.location.latitude] as [number, number],
             },
             properties: {
               name: location,
