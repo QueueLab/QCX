@@ -250,8 +250,9 @@ async function submit(formData?: FormData, skip?: boolean) {
   }
 
   const hasImage = messageParts.some(part => part.type === 'image')
-  const content = hasImage
-    ? (messageParts as any)
+  // Properly type the content based on whether it contains images
+  const content: CoreMessage['content'] = hasImage
+    ? messageParts as CoreMessage['content']
     : messageParts.map(part => part.text).join('\n')
 
   const type = skip
@@ -278,7 +279,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     messages.push({
       role: 'user',
       content
-    })
+    } as CoreMessage)
   }
 
   const userId = 'anonymous'
