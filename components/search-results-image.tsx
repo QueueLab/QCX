@@ -63,11 +63,11 @@ export const SearchResultsImageSection: React.FC<
 
   return (
     <div className="flex flex-wrap gap-2">
-      {images.slice(0, 4).map((image: any, index: number) => (
+      {images.slice(0, 8).map((image: any, index: number) => (
         <Dialog key={index}>
           <DialogTrigger asChild>
             <motion.div
-              className="w-[calc(50%-0.5rem)] md:w-[calc(25%-0.5rem)] aspect-video cursor-pointer relative glassmorphic"
+              className="w-[calc(50%-0.5rem)] md:w-[calc(25%-0.5rem)] lg:w-[calc(12.5%-0.5rem)] aspect-video cursor-pointer relative glassmorphic"
               onClick={() => setSelectedIndex(index)}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -88,9 +88,10 @@ export const SearchResultsImageSection: React.FC<
                   )}
                 </CardContent>
               </Card>
-              {index === 3 && images.length > 4 && (
+              {index === 7 && images.length > 8 && (
                 <div className="absolute inset-0 bg-black/30 rounded-md flex items-center justify-center text-white/80 text-sm">
                   <PlusCircle size={24} />
+                  <span className="ml-1">+{images.length - 8}</span>
                 </div>
               )}
             </motion.div>
