@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { FormProvider, UseFormReturn } from "react-hook-form"; import React from "react";
 import { Loader2, Save, RotateCcw } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
 // Or, if the file does not exist, create it as shown below.
 import { SystemPromptForm } from "./system-prompt-form"
 import { ModelSelectionForm } from "./model-selection-form"
@@ -28,8 +29,8 @@ const settingsFormSchema = z.object({
     .max(2000, {
       message: "System prompt cannot exceed 2000 characters.",
     }),
-  selectedModel: z.string({
-    required_error: "Please select a model.",
+  selectedModel: z.string().refine(value => value.trim() !== '', {
+    message: "Please select a model.",
   }),
   users: z.array(
     z.object({
@@ -140,34 +141,43 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
               <Tabs.Trigger value="model" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">Model Selection</Tabs.Trigger>
               <Tabs.Trigger value="user-management" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">User Management</Tabs.Trigger>
             </Tabs.List>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentTab}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+              >
+                <Tabs.Content value="system-prompt" className="mt-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>System Prompt</CardTitle>
+                      <CardDescription>Customize the behavior and persona of your planetary copilot</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <SystemPromptForm form={form} />
+                    </CardContent>
+                  </Card>
+                </Tabs.Content>
 
-            <Tabs.Content value="system-prompt" className="mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>System Prompt</CardTitle>
-                  <CardDescription>Customize the behavior and persona of your planetary copilot</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <SystemPromptForm form={form} />
-                </CardContent>
-              </Card>
-            </Tabs.Content>
+                <Tabs.Content value="model" className="mt-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Model Selection</CardTitle>
+                      <CardDescription>Choose the AI model that powers your planetary copilot</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <ModelSelectionForm form={form} />
+                    </CardContent>
+                  </Card>
+                </Tabs.Content>
 
-            <Tabs.Content value="model" className="mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Model Selection</CardTitle>
-                  <CardDescription>Choose the AI model that powers your planetary copilot</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ModelSelectionForm form={form} />
-                </CardContent>
-              </Card>
-            </Tabs.Content>
-
-            <Tabs.Content value="user-management" className="mt-6">
-              <UserManagementForm form={form} />
-            </Tabs.Content>
+                <Tabs.Content value="user-management" className="mt-6">
+                  <UserManagementForm form={form} />
+                </Tabs.Content>
+              </motion.div>
+            </AnimatePresence>
           </Tabs.Root>
 
           <Card>

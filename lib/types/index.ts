@@ -1,3 +1,5 @@
+import type { CoreMessage } from 'ai'
+
 export type SearchResults = {
   images: string[]
   results: SearchResultItem[]
@@ -56,7 +58,7 @@ export interface Chat extends Record<string, any> {
 
 export type AIMessage = {
   role: 'user' | 'assistant' | 'system' | 'function' | 'data' | 'tool'
-  content: string
+  content: CoreMessage['content']
   id: string
   name?: string
   createdAt?: Date // Added optional createdAt timestamp
@@ -71,4 +73,20 @@ export type AIMessage = {
     | 'followup'
     | 'end'
     | 'drawing_context' // Added custom type for drawing context messages
+    | 'resolution_search_result'
 }
+
+export type CalendarNote = {
+  id: string;
+  userId: string;
+  chatId: string | null;
+  date: Date;
+  content: string;
+  locationTags: any | null;
+  userTags: string[] | null;
+  mapFeatureId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type NewCalendarNote = Omit<CalendarNote, 'id' | 'createdAt' | 'updatedAt'>;

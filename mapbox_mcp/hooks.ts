@@ -8,7 +8,7 @@ type Tool = {
   name: string;
   // Add other properties as needed based on your usage
 };
-import { getModel } from 'QCX/lib/utils';
+import { getModel } from '@/lib/utils';
 
 // Types for location and mapping data
 interface LocationResult {

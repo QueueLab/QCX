@@ -79,6 +79,33 @@
   }
 }
 
+/* Custom scrollbar styles */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted) / 0.5);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--card) / 0.7);
+  border-radius: 10px;
+  border: 1px solid hsl(var(--border));
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--card) / 0.9);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--card) / 0.7) hsl(var(--muted) / 0.5);
+}
+
 /* Mobile layout specific styles */
 @media (max-width: 1024px) {
   .mobile-layout-container {

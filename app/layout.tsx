@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter as FontSans } from 'next/font/google'
 import './globals.css'
+import 'katex/dist/katex.min.css';
 import { cn } from '@/lib/utils'
 import { ThemeProvider } from '@/components/theme-provider'
 import Header from '@/components/header'
@@ -11,20 +12,22 @@ import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Toaster } from '@/components/ui/sonner'
 import { MapToggleProvider } from '@/components/map-toggle-context'
 import { ProfileToggleProvider } from '@/components/profile-toggle-context'
+import { CalendarToggleProvider } from '@/components/calendar-toggle-context'
 import { MapLoadingProvider } from '@/components/map-loading-context';
 import ConditionalLottie from '@/components/conditional-lottie';
+import { MapProvider } from '@/components/map/map-context'
 
 const fontSans = FontSans({
   subsets: ['latin'],
   variable: '--font-sans'
 })
 
-const title = 'Beta'
+const title = ''
 const description =
   'language to Maps'
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://labs.queue.cx'),
+  metadataBase: new URL('https://www.qcx.world'),
   title,
   description,
   openGraph: {
@@ -35,7 +38,7 @@ export const metadata: Metadata = {
     title,
     description,
     card: 'summary_large_image',
-    creator: '@queuelabs'
+    creator: '@queueLab'
   }
 }
 
@@ -54,26 +57,30 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={cn('font-sans antialiased', fontSans.variable)}>
-        <MapToggleProvider>
-          <ProfileToggleProvider>
-            <ThemeProvider
-              attribute="class"
+        <CalendarToggleProvider>
+          <MapToggleProvider>
+            <ProfileToggleProvider>
+              <ThemeProvider
+                attribute="class"
               defaultTheme="earth"
               enableSystem
               disableTransitionOnChange
               themes={['light', 'dark', 'earth']}
             >
-              <MapLoadingProvider>
-                <Header />
-                <ConditionalLottie />
-                {children}
-                <Sidebar />
-                <Footer />
-                <Toaster />
-              </MapLoadingProvider>
+              <MapProvider>
+                <MapLoadingProvider>
+                  <Header />
+                  <ConditionalLottie />
+                  {children}
+                  <Sidebar />
+                  <Footer />
+                  <Toaster />
+                </MapLoadingProvider>
+              </MapProvider>
             </ThemeProvider>
           </ProfileToggleProvider>
         </MapToggleProvider>
+        </CalendarToggleProvider>
         <Analytics />
         <SpeedInsights />
       </body>

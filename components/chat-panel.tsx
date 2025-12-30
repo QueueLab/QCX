@@ -130,6 +130,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
           variant={'secondary'}
           className="rounded-full bg-secondary/80 group transition-all hover:scale-105 pointer-events-auto"
           onClick={() => handleClear()}
+          data-testid="new-chat-button"
         >
           <span className="text-sm mr-2 group-hover:block hidden animate-in fade-in duration-300">
             New
@@ -155,7 +156,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
             <span className="text-sm text-muted-foreground truncate max-w-xs">
               {selectedFile.name}
             </span>
-            <Button variant="ghost" size="icon" onClick={clearAttachment}>
+            <Button variant="ghost" size="icon" onClick={clearAttachment} data-testid="clear-attachment-button">
               <X size={16} />
             </Button>
           </div>
@@ -191,6 +192,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
                 'absolute top-1/2 transform -translate-y-1/2 left-3'
               )}
               onClick={handleAttachmentClick}
+              data-testid="attachment-button"
             >
               <Paperclip size={isMobile ? 18 : 20} />
             </Button>
@@ -204,6 +206,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
             placeholder="Explore"
             spellCheck={false}
             value={input}
+            data-testid="chat-input"
             className={cn(
               'resize-none w-full min-h-12 rounded-fill border border-input pl-14 pr-12 pt-3 pb-1 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
               isMobile
@@ -246,6 +249,8 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
               isMobile ? 'right-1' : 'right-2'
             )}
             disabled={input.length === 0 && !selectedFile}
+            aria-label="Send message"
+            data-testid="chat-submit"
           >
             <ArrowRight size={isMobile ? 18 : 20} />
           </Button>

@@ -1,5 +1,7 @@
+"use client"
 import React from 'react'
 import Image from 'next/image'
+import { useCalendarToggle } from './calendar-toggle-context'
 import { ModeToggle } from './mode-toggle'
 import { cn } from '@/lib/utils'
 import HistoryContainer from './history-container'
@@ -15,6 +17,7 @@ import { MapToggle } from './map-toggle'
 import { ProfileToggle } from './profile-toggle'
 
 export const Header = () => {
+  const { toggleCalendar } = useCalendarToggle()
   return (
     <header className="fixed w-full p-1 md:p-2 flex justify-between items-center z-10 backdrop-blur md:backdrop-blur-none bg-background/80 md:bg-transparent">
       <div>
@@ -35,17 +38,17 @@ export const Header = () => {
         
         <MapToggle />
         
-        <Button variant="ghost" size="icon">
+        <Button variant="ghost" size="icon" onClick={toggleCalendar} title="Open Calendar" data-testid="calendar-toggle">
           <CalendarDays className="h-[1.2rem] w-[1.2rem]" />
         </Button>
         
-        <Button variant="ghost" size="icon">
-          <Search className="h-[1.2rem] w-[1.2rem]" />
-        </Button>
+        <div id="header-search-portal" />
         
-        <Button variant="ghost" size="icon">
-          <TentTree className="h-[1.2rem] w-[1.2rem]" />
-        </Button>
+        <a href="https://buy.stripe.com/3cIaEX3tRcur9EM7tbasg00" target="_blank" rel="noopener noreferrer">
+          <Button variant="ghost" size="icon">
+            <TentTree className="h-[1.2rem] w-[1.2rem]" />
+          </Button>
+        </a>
         
         <ModeToggle />
         
@@ -54,11 +57,13 @@ export const Header = () => {
 
       {/* Mobile menu buttons */}
       <div className="flex md:hidden gap-2">
-        <Button variant="ghost" size="sm">
-          <Search className="h-4 w-4 mr-2" />
-          Search
-        </Button>
+        <div id="mobile-header-search-portal" />
         
+        <a href="https://buy.stripe.com/3cIaEX3tRcur9EM7tbasg00" target="_blank" rel="noopener noreferrer">
+          <Button variant="ghost" size="icon">
+            <TentTree className="h-[1.2rem] w-[1.2rem]" />
+          </Button>
+        </a>
         <ProfileToggle/>
       </div>
     </header>

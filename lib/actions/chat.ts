@@ -120,7 +120,7 @@ export async function saveChat(chat: OldChatType, userId: string): Promise<strin
     id: msg.id, // Keep existing ID
     userId: effectiveUserId, // Ensure messages have a userId
     role: msg.role, // Allow all AIMessage roles to pass through
-    content: msg.content,
+    content: typeof msg.content === 'object' ? JSON.stringify(msg.content) : msg.content,
     createdAt: msg.createdAt ? new Date(msg.createdAt) : new Date(),
     // attachments: (msg as any).attachments, // If AIMessage had attachments
     // type: (msg as any).type // If AIMessage had a type

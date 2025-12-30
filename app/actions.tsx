@@ -8,10 +8,11 @@ import {
 } from 'ai/rsc'
 import { CoreMessage, ToolResultPart } from 'ai'
 import { nanoid } from 'nanoid'
+import type { FeatureCollection } from 'geojson'
 import { Spinner } from '@/components/ui/spinner'
 import { Section } from '@/components/section'
 import { FollowupPanel } from '@/components/followup-panel'
-import { inquire, researcher, taskManager, querySuggestor } from '@/lib/agents'
+import { inquire, researcher, taskManager, querySuggestor, resolutionSearch } from '@/lib/agents'
 import { geojsonEnricher } from '@/lib/agents/geojson-enricher'
 // Removed import of useGeospatialToolMcp as it no longer exists and was incorrectly used here.
 // The geospatialTool (if used by agents like researcher) now manages its own MCP client.
@@ -22,6 +23,7 @@ import { UserMessage } from '@/components/user-message'
 import { BotMessage } from '@/components/message'
 import { SearchSection } from '@/components/search-section'
 import SearchRelated from '@/components/search-related'
+import { GeoJsonLayer } from '@/components/map/geojson-layer'
 import { CopilotDisplay } from '@/components/copilot-display'
 import RetrieveSection from '@/components/retrieve-section'
 import { VideoSearchSection } from '@/components/video-search-section'
@@ -37,6 +39,80 @@ async function submit(formData?: FormData, skip?: boolean) {
   const uiStream = createStreamableUI()
   const isGenerating = createStreamableValue(true)
   const isCollapsed = createStreamableValue(false)
+
+  const action = formData?.get('action') as string;
+  if (action === 'resolution_search') {
+    const file = formData?.get('file') as File;
+    if (!file) {
+      throw new Error('No file provided for resolution search.');
+    }
+
+    const buffer = await file.arrayBuffer();
+    const dataUrl = `data:${file.type};base64,${Buffer.from(buffer).toString('base64')}`;
+
+    // Get the current messages, excluding tool-related ones.
+    const messages: CoreMessage[] = [...(aiState.get().messages as any[])].filter(
+      message =>
+        message.role !== 'tool' &&
+        message.type !== 'followup' &&
+        message.type !== 'related' &&
+        message.type !== 'end'
+    );
+
+    // The user's prompt for this action is static.
+    const userInput = 'Analyze this map view.';
+
+    // Construct the multimodal content for the user message.
+    const content: CoreMessage['content'] = [
+      { type: 'text', text: userInput },
+      { type: 'image', image: dataUrl, mimeType: file.type }
+    ];
+
+    // Add the new user message to the AI state.
+    aiState.update({
+      ...aiState.get(),
+      messages: [
+        ...aiState.get().messages,
+        { id: nanoid(), role: 'user', content }
+      ]
+    });
+    messages.push({ role: 'user', content });
+
+    // Call the simplified agent, which now returns data directly.
+    const analysisResult = await resolutionSearch(messages) as any;
+
+    // Create a streamable value for the summary and mark it as done.
+    const summaryStream = createStreamableValue<string>();
+    summaryStream.done(analysisResult.summary || 'Analysis complete.');
+
+    // Update the UI stream with the BotMessage component.
+    uiStream.update(
+      <BotMessage content={summaryStream.value} />
+    );
+
+    aiState.done({
+      ...aiState.get(),
+      messages: [
+        ...aiState.get().messages,
+        {
+          id: nanoid(),
+          role: 'assistant',
+          content: JSON.stringify(analysisResult),
+          type: 'resolution_search_result'
+        }
+      ]
+    });
+
+    isGenerating.done(false);
+    uiStream.done();
+    return {
+      id: nanoid(),
+      isGenerating: isGenerating.value,
+      component: uiStream.value,
+      isCollapsed: isCollapsed.value
+    };
+  }
+
   const messages: CoreMessage[] = [...(aiState.get().messages as any[])].filter(
     message =>
       message.role !== 'tool' &&
@@ -52,12 +128,14 @@ async function submit(formData?: FormData, skip?: boolean) {
 
   const userInput = skip
     ? `{"action": "skip"}`
-    : (formData?.get('input') as string);
+    : ((formData?.get('related_query') as string) ||
+      (formData?.get('input') as string))
 
   if (userInput.toLowerCase().trim() === 'what is a planet computer?' || userInput.toLowerCase().trim() === 'what is qcx-terra?') {
     const definition = userInput.toLowerCase().trim() === 'what is a planet computer?'
-      ? "A planet computer is a proprietary environment aware system that interoperates Climate forecasting, mapping and scheduling using cutting edge multi-agents to streamline automation and exploration on a planet"
-      : "QCX-Terra is a model garden of pixel level precision geospatial foundational models for efficient land feature predictions from satellite imagery";
+      ? `A planet computer is a proprietary environment aware system that interoperates weather forecasting, mapping and scheduling using cutting edge multi-agents to streamline automation and exploration on a planet. Available for our Pro and Enterprise customers. [QCX Pricing](https://www.queue.cx/#pricing)`
+
+      : `QCX-Terra is a model garden of pixel level precision geospatial foundational models for efficient land feature predictions from satellite imagery. Available for our Pro and Enterprise customers. [QCX Pricing] (https://www.queue.cx/#pricing)`;
 
     const content = JSON.stringify(Object.fromEntries(formData!));
     const type = 'input';
@@ -170,8 +248,9 @@ async function submit(formData?: FormData, skip?: boolean) {
   }
 
   const hasImage = messageParts.some(part => part.type === 'image')
-  const content = hasImage
-    ? (messageParts as any)
+  // Properly type the content based on whether it contains images
+  const content: CoreMessage['content'] = hasImage
+    ? messageParts as CoreMessage['content']
     : messageParts.map(part => part.text).join('\n')
 
   const type = skip
@@ -198,7 +277,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     messages.push({
       role: 'user',
       content
-    })
+    } as CoreMessage)
   }
 
   const userId = 'anonymous'
@@ -206,7 +285,12 @@ async function submit(formData?: FormData, skip?: boolean) {
 
   async function processEvents() {
     let action: any = { object: { next: 'proceed' } }
-    if (!skip) action = (await taskManager(messages)) ?? action
+    if (!skip) {
+      const taskManagerResult = await taskManager(messages)
+      if (taskManagerResult) {
+        action.object = taskManagerResult.object
+      }
+    }
 
     if (action.object.next === 'inquire') {
       const inquiry = await inquire(uiStream, messages)
@@ -555,6 +639,26 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                   </Section>
                 )
               }
+            case 'resolution_search_result': {
+              const analysisResult = JSON.parse(content as string);
+              const summaryValue = createStreamableValue();
+              summaryValue.done(analysisResult.summary);
+              const geoJson = analysisResult.geoJson as FeatureCollection;
+
+              return {
+                id,
+                component: (
+                  <>
+                    <Section title="Map Analysis">
+                      <BotMessage content={summaryValue.value} />
+                    </Section>
+                    {geoJson && (
+                      <GeoJsonLayer id={id} data={geoJson} />
+                    )}
+                  </>
+                )
+              }
+            }
           }
           break
         case 'tool':
