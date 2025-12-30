@@ -18,6 +18,7 @@ export function generateUUID(): string {
 
 export function getModel() {
   const xaiApiKey = process.env.XAI_API_KEY
+  const gemini3ProApiKey = process.env.GEMINI_3_PRO_API_KEY
   const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID
   const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY
   const awsRegion = process.env.AWS_REGION
@@ -33,6 +34,18 @@ export function getModel() {
       return xai('grok-4-fast-non-reasoning')
     } catch (error) {
       console.warn('xAI API unavailable, falling back to OpenAI:')
+    }
+  }
+
+  // Gemini 3 Pro
+  if (gemini3ProApiKey) {
+    const google = createGoogleGenerativeAI({
+      apiKey: gemini3ProApiKey,
+    })
+    try {
+      return google('gemini-3-pro-preview')
+    } catch (error) {
+      console.warn('Gemini 3 Pro API unavailable, falling back to next provider:', error)
     }
   }
 
