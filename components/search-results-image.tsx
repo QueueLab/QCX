@@ -67,7 +67,7 @@ export const SearchResultsImageSection: React.FC<
         <Dialog key={index}>
           <DialogTrigger asChild>
             <motion.div
-              className="w-[calc(50%-0.5rem)] md:w-[calc(25%-0.5rem)] lg:w-[calc(12.5%-0.5rem)] aspect-video cursor-pointer relative glassmorphic"
+              className="w-[calc(50%-0.5rem)] md:w-[calc(33.333%-0.5rem)] lg:w-[calc(25%-0.5rem)] aspect-video cursor-pointer relative glassmorphic"
               onClick={() => setSelectedIndex(index)}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
