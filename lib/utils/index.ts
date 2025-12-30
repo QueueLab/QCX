@@ -16,14 +16,16 @@ export function generateUUID(): string {
   return uuidv4();
 }
 
-export function getModel() {
+export function getModel(requireVision: boolean = false) {
   const xaiApiKey = process.env.XAI_API_KEY
+  const gemini3ProApiKey = process.env.GEMINI_3_PRO_API_KEY
   const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID
   const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY
   const awsRegion = process.env.AWS_REGION
-  const bedrockModelId = ''
+  const bedrockModelId = process.env.BEDROCK_MODEL_ID || 'anthropic.claude-3-5-sonnet-20241022-v2:0'
 
-  if (xaiApiKey) {
+  // If vision is required, skip models that don't support it
+  if (!requireVision && xaiApiKey) {
     const xai = createXai({
       apiKey: xaiApiKey,
       baseURL: 'https://api.x.ai/v1',
@@ -33,6 +35,18 @@ export function getModel() {
       return xai('grok-4-fast-non-reasoning')
     } catch (error) {
       console.warn('xAI API unavailable, falling back to OpenAI:')
+    }
+  }
+
+  // Gemini 3 Pro
+  if (gemini3ProApiKey) {
+    const google = createGoogleGenerativeAI({
+      apiKey: gemini3ProApiKey,
+    })
+    try {
+      return google('gemini-3-pro-preview')
+    } catch (error) {
+      console.warn('Gemini 3 Pro API unavailable, falling back to next provider:', error)
     }
   }
 
@@ -54,7 +68,7 @@ export function getModel() {
     return model
   }
 
-  // Default fallback (OpenAI)
+  // Default fallback (OpenAI gpt-4o supports vision)
   const openai = createOpenAI({
     apiKey: process.env.OPENAI_API_KEY,
   })

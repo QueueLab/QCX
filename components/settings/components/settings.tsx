@@ -27,8 +27,8 @@ const settingsFormSchema = z.object({
     .max(2000, {
       message: "System prompt cannot exceed 2000 characters.",
     }),
-  selectedModel: z.string({
-    required_error: "Please select a model.",
+  selectedModel: z.string().refine(value => value.trim() !== '', {
+    message: "Please select a model.",
   }),
   users: z.array(
     z.object({

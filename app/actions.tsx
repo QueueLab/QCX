@@ -82,7 +82,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     messages.push({ role: 'user', content });
 
     // Call the simplified agent, which now returns data directly.
-    const analysisResult = await resolutionSearch(messages);
+    const analysisResult = await resolutionSearch(messages) as any;
 
     // Create a streamable value for the summary and mark it as done.
     const summaryStream = createStreamableValue<string>();
@@ -251,8 +251,9 @@ async function submit(formData?: FormData, skip?: boolean) {
   }
 
   const hasImage = messageParts.some(part => part.type === 'image')
-  const content = hasImage
-    ? (messageParts as any)
+  // Properly type the content based on whether it contains images
+  const content: CoreMessage['content'] = hasImage
+    ? messageParts as CoreMessage['content']
     : messageParts.map(part => part.text).join('\n')
 
   const type = skip
@@ -279,7 +280,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     messages.push({
       role: 'user',
       content
-    })
+    } as CoreMessage)
   }
 
   const userId = 'anonymous'

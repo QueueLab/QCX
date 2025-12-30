@@ -96,8 +96,14 @@ export async function researcher(
       ? dynamicSystemPrompt
       : getDefaultSystemPrompt(currentDate)
 
+  // Check if any message contains an image
+  const hasImage = messages.some(message => 
+    Array.isArray(message.content) && 
+    message.content.some(part => part.type === 'image')
+  )
+
   const result = await nonexperimental_streamText({
-    model: getModel() as LanguageModel,
+    model: getModel(hasImage) as LanguageModel,
     maxTokens: 4096,
     system: systemPromptToUse,
     messages,
