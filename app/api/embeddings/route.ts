@@ -226,7 +226,9 @@ export async function GET(req: NextRequest) {
     // Extract the 64-channel embedding and dequantize
     const embedding: (number | null)[] = [];
     for (let channel = 0; channel < 64; channel++) {
-      const rawValue = rasters[channel][0];
+      // Type assertion: rasters is an array of TypedArrays, each representing a channel
+      const channelData = rasters[channel] as Int8Array;
+      const rawValue = channelData[0];
       embedding.push(dequantize(rawValue));
     }
 
