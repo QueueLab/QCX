@@ -20,8 +20,6 @@ import {
 } from '@/components/ui/carousel'
 import { useEffect, useState } from 'react'
 import { PlusCircle } from 'lucide-react'
-import { motion } from 'framer-motion'
-import 'glassmorphic/glassmorphic.css'
 
 interface SearchResultsImageSectionProps {
   images: string[]
@@ -63,14 +61,12 @@ export const SearchResultsImageSection: React.FC<
 
   return (
     <div className="flex flex-wrap gap-2">
-      {images.slice(0, 8).map((image: any, index: number) => (
+      {images.slice(0, 4).map((image: any, index: number) => (
         <Dialog key={index}>
           <DialogTrigger asChild>
-            <motion.div
-              className="w-[calc(50%-0.5rem)] md:w-[calc(33.333%-0.5rem)] lg:w-[calc(25%-0.5rem)] aspect-video cursor-pointer relative glassmorphic"
+            <div
+              className="w-[calc(50%-0.5rem)] md:w-[calc(25%-0.5rem)] aspect-video cursor-pointer relative"
               onClick={() => setSelectedIndex(index)}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
             >
               <Card className="flex-1 h-full">
                 <CardContent className="p-2 h-full w-full">
@@ -88,15 +84,14 @@ export const SearchResultsImageSection: React.FC<
                   )}
                 </CardContent>
               </Card>
-              {index === 7 && images.length > 8 && (
+              {index === 3 && images.length > 4 && (
                 <div className="absolute inset-0 bg-black/30 rounded-md flex items-center justify-center text-white/80 text-sm">
                   <PlusCircle size={24} />
-                  <span className="ml-1">+{images.length - 8}</span>
                 </div>
               )}
-            </motion.div>
+            </div>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-3xl max-h-[80vh] overflow-auto glassmorphic">
+          <DialogContent className="sm:max-w-3xl max-h-[80vh] overflow-auto">
             <DialogHeader>
               <DialogTitle>Search Images</DialogTitle>
               <DialogDescription className="text-sm">{query}</DialogDescription>
