@@ -3,6 +3,7 @@ import { retrieveTool } from './retrieve'
 import { searchTool } from './search'
 import { videoSearchTool } from './video-search'
 import { geospatialTool } from './geospatial' // Removed useGeospatialToolMcp import
+import { manusTool } from './manus'
 
 export interface ToolProps {
   uiStream: ReturnType<typeof createStreamableUI>
@@ -30,6 +31,13 @@ export const getTools = ({ uiStream, fullResponse }: ToolProps) => {
 
   if (process.env.SERPER_API_KEY) {
     tools.videoSearch = videoSearchTool({
+      uiStream,
+      fullResponse
+    })
+  }
+
+  if (process.env.MANUS_API_KEY) {
+    tools.manusTask = manusTool({
       uiStream,
       fullResponse
     })
