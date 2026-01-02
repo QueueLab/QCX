@@ -13,7 +13,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { Section } from '@/components/section'
 import { FollowupPanel } from '@/components/followup-panel'
 import { inquire, researcher, taskManager, querySuggestor, resolutionSearch } from '@/lib/agents'
-import { geojsonEnricher } from '@/lib/agents/geojson-enricher'
+import { geojsonEnricherV2 } from '@/lib/agents/geojson-enricher-v2'
 // Removed import of useGeospatialToolMcp as it no longer exists and was incorrectly used here.
 // The geospatialTool (if used by agents like researcher) now manages its own MCP client.
 import { writer } from '@/lib/agents/writer'
@@ -380,7 +380,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     if (!errorOccurred) {
       let locationResponse;
       try {
-        locationResponse = await geojsonEnricher(answer);
+        locationResponse = await geojsonEnricherV2(answer);
       } catch (e) {
         console.error("Error during geojson enrichment:", e);
         // Fallback to a response without location data
