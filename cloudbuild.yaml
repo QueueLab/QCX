@@ -1,0 +1,90 @@
+# Google Cloud Build configuration for QCX
+# This configuration builds, tests, and deploys the Docker container
+
+steps:
+  # Step 1: Build the Docker image with caching
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-image'
+    args:
+      - 'build'
+      - '--cache-from'
+      - 'gcr.io/$PROJECT_ID/qcx:latest'
+      - '--tag'
+      - 'gcr.io/$PROJECT_ID/qcx:$COMMIT_SHA'
+      - '--tag'
+      - 'gcr.io/$PROJECT_ID/qcx:latest'
+      - '--tag'
+      - 'gcr.io/$PROJECT_ID/qcx:$BRANCH_NAME'
+      - '--build-arg'
+      - 'BUILDKIT_INLINE_CACHE=1'
+      - '.'
+    timeout: '1200s'
+
+  # Step 2: Push the image to Google Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-image'
+    args:
+      - 'push'
+      - '--all-tags'
+      - 'gcr.io/$PROJECT_ID/qcx'
+    waitFor: ['build-image']
+
+  # Step 3: (Optional) Deploy to Cloud Run
+  # Uncomment and configure the following step to enable automatic deployment
+  # - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  #   id: 'deploy-cloud-run'
+  #   entrypoint: 'gcloud'
+  #   args:
+  #     - 'run'
+  #     - 'deploy'
+  #     - 'qcx'
+  #     - '--image'
+  #     - 'gcr.io/$PROJECT_ID/qcx:$COMMIT_SHA'
+  #     - '--region'
+  #     - 'us-central1'
+  #     - '--platform'
+  #     - 'managed'
+  #     - '--allow-unauthenticated'
+  #     - '--port'
+  #     - '3000'
+  #     - '--memory'
+  #     - '2Gi'
+  #     - '--cpu'
+  #     - '2'
+  #     - '--max-instances'
+  #     - '10'
+  #     - '--set-env-vars'
+  #     - 'NODE_ENV=production'
+  #   waitFor: ['push-image']
+
+# Images to be pushed to Google Container Registry
+images:
+  - 'gcr.io/$PROJECT_ID/qcx:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/qcx:latest'
+  - 'gcr.io/$PROJECT_ID/qcx:$BRANCH_NAME'
+
+# Build options
+options:
+  # Use high-performance machine type for faster builds
+  machineType: 'E2_HIGHCPU_8'
+  
+  # Enable Docker layer caching
+  substitutionOption: 'ALLOW_LOOSE'
+  
+  # Logging options
+  logging: 'CLOUD_LOGGING_ONLY'
+  
+  # Set build timeout (20 minutes)
+  timeout: '1200s'
+
+# Substitutions for environment-specific builds
+substitutions:
+  _DEPLOY_REGION: 'us-central1'
+  _SERVICE_NAME: 'qcx'
+
+# Tags for build tracking
+tags:
+  - 'qcx'
+  - 'nextjs'
+  - 'bun'
+  - '${BRANCH_NAME}'
