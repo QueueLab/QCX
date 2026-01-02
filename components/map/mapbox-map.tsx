@@ -583,13 +583,26 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
 
   // Effect to execute map commands with feedback
   useEffect(() => {
-    if (!map.current || !mapData.mapCommands || mapData.mapCommands.length === 0) return;
+    console.log('🗺️  Map commands useEffect triggered:', {
+      hasMap: !!map.current,
+      hasCommands: !!mapData.mapCommands,
+      commandCount: mapData.mapCommands?.length || 0,
+      commands: mapData.mapCommands,
+    });
+
+    if (!map.current || !mapData.mapCommands || mapData.mapCommands.length === 0) {
+      console.log('⚠️ Skipping command execution - missing map or commands');
+      return;
+    }
 
     const mapInstance = map.current;
     let executionError: string | undefined;
 
+    console.log(`🗺️  Executing ${mapData.mapCommands.length} map commands...`);
+
     try {
-      mapData.mapCommands.forEach(command => {
+      mapData.mapCommands.forEach((command, idx) => {
+        console.log(`🗺️  Executing command ${idx + 1}/${mapData.mapCommands!.length}: ${command.command}`, command.params);
         switch (command.command) {
           case 'flyTo':
             mapInstance.flyTo(command.params);
