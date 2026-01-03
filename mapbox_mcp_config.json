@@ -1,9 +1,17 @@
 {
-  "composio": {
-    "mapbox": {
-      "authConfigId": "ac_YOUR_MAPBOX_CONFIG_ID",
-      "userId": "user@example.com",
-      "description": "Composio configuration for Mapbox integration. Set COMPOSIO_MAPBOX_AUTH_CONFIG_ID, COMPOSIO_USER_ID, and MAPBOX_ACCESS_TOKEN environment variables."
+  "mcpServers": {
+    "mapbox-mcp-server": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@smithery/cli@latest",
+        "run",
+        "@ngoiyaeric/mapbox-mcp-server",
+        "--key",
+        "705b0222-a657-4cd2-b180-80c406cf6179",
+        "--profile",
+        "smooth-lemur-vfUbUE"
+      ]
     }
   }
 }
