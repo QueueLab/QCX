@@ -292,25 +292,6 @@ nano .env.local
 docker run --env-file .env.production qcx:latest
 ```
 
-### Cloud Run
-
-```bash
-# Set environment variable
-gcloud run services update qcx \
-  --region us-central1 \
-  --set-env-vars KEY=VALUE
-
-# Remove environment variable
-gcloud run services update qcx \
-  --region us-central1 \
-  --remove-env-vars KEY
-
-# Update from env file
-gcloud run services update qcx \
-  --region us-central1 \
-  --env-vars-file .env.production
-```
-
 ## Monitoring
 
 ### Cloud Monitoring

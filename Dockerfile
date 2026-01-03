@@ -37,6 +37,7 @@ WORKDIR /app
 RUN apk add --no-cache \
     nodejs \
     tini \
+    curl \
     && addgroup -g 1001 -S nodejs \
     && adduser -S nextjs -u 1001
 
@@ -59,7 +60,7 @@ EXPOSE 3000
 
 # Health check for container orchestration
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})" || exit 1
+    CMD curl -f http://localhost:3000/api/health || exit 1
 
 # Use tini as init system to handle signals properly
 ENTRYPOINT ["/sbin/tini", "--"]
