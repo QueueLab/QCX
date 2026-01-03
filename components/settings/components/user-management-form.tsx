@@ -9,14 +9,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Trash2, Edit3, UserPlus, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/hooks/use-toast';
-import { addUser } from '@/lib/actions/users';
+import { inviteUserToChat } from '@/lib/actions/collaboration';
 import type { SettingsFormValues } from './settings';
 
 interface UserManagementFormProps {
   form: UseFormReturn<SettingsFormValues>;
+  chatId: string;
 }
 
-export function UserManagementForm({ form }: UserManagementFormProps) {
+export function UserManagementForm({ form, chatId }: UserManagementFormProps) {
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "users",
@@ -24,15 +25,10 @@ export function UserManagementForm({ form }: UserManagementFormProps) {
   const { toast } = useToast();
   const [isAddingUser, setIsAddingUser] = useState(false);
 
-  // const watchNewUserEmail = form.watch("newUserEmail", ""); // Not strictly needed for logic below
-  // const watchNewUserRole = form.watch("newUserRole", "viewer"); // Not strictly needed for logic below
-
   const handleAddUser = async () => {
     setIsAddingUser(true);
     const newUserEmail = form.getValues("newUserEmail");
-    const newUserRole = form.getValues("newUserRole") || "viewer"; // Ensure role has a default
 
-    // Client-side validation first
     if (!newUserEmail) {
       form.setError("newUserEmail", { type: "manual", message: "Email is required." });
       setIsAddingUser(false);
@@ -43,27 +39,22 @@ export function UserManagementForm({ form }: UserManagementFormProps) {
       setIsAddingUser(false);
       return;
     }
-    // Client-side check if user already exists in the local list
-    if (fields.some(user => user.email === newUserEmail)) {
-      form.setError("newUserEmail", { type: "manual", message: "User with this email already exists locally." });
-      setIsAddingUser(false);
-      return;
-    }
-    // Clear any previous local errors for newUserEmail if client checks pass
+
     form.clearErrors("newUserEmail");
 
     try {
-      const result = await addUser('default-user', { email: newUserEmail, role: newUserRole });
+      const result = await inviteUserToChat(chatId, newUserEmail);
 
       if (result.error) {
         toast({ title: 'Error adding user', description: result.error, variant: 'destructive' });
-        form.setError("newUserEmail", { type: "manual", message: result.error }); // Show server error on field
-      } else if (result.user) {
-        toast({ title: 'User Added', description: `${result.user.email} was successfully added.` });
-        append(result.user); // Add user with ID from server
+        form.setError("newUserEmail", { type: "manual", message: result.error });
+      } else {
+        toast({ title: 'User Invited', description: `${newUserEmail} was successfully invited.` });
+        // We don't append here because the user needs to accept the invite.
+        // We can add a "pending invitations" section in the future.
         form.resetField("newUserEmail");
-        form.resetField("newUserRole"); // Or set to default: form.setValue("newUserRole", "viewer");
-        form.clearErrors("newUserEmail"); // Clear any previous errors
+        form.resetField("newUserRole");
+        form.clearErrors("newUserEmail");
       }
     } catch (error) {
       console.error("Failed to add user:", error);
@@ -77,7 +68,7 @@ export function UserManagementForm({ form }: UserManagementFormProps) {
     <Card>
       <CardHeader>
         <CardTitle>User Management</CardTitle>
-        <CardDescription>Add, remove, or edit user access and roles.</CardDescription>
+        <CardDescription>Invite users to collaborate on this chat.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-4">
@@ -99,7 +90,7 @@ export function UserManagementForm({ form }: UserManagementFormProps) {
             <FormField
               control={form.control}
               name="newUserRole"
-              defaultValue="viewer"
+              defaultValue="collaborator"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Role</FormLabel>
@@ -110,9 +101,8 @@ export function UserManagementForm({ form }: UserManagementFormProps) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="editor">Editor</SelectItem>
-                      <SelectItem value="viewer">Viewer</SelectItem>
+                      <SelectItem value="owner">Owner</SelectItem>
+                      <SelectItem value="collaborator">Collaborator</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -122,7 +112,7 @@ export function UserManagementForm({ form }: UserManagementFormProps) {
           </div>
            <Button type="button" onClick={handleAddUser} disabled={isAddingUser} className="mt-2">
              {isAddingUser ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
-             {isAddingUser ? "Adding..." : "Add User"}
+             {isAddingUser ? "Inviting..." : "Invite User"}
            </Button>
         </div>
 
