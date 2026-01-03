@@ -35,26 +35,30 @@ export const MapQueryHandler: React.FC<MapQueryHandlerProps> = ({ toolOutput }) 
       const { latitude, longitude, place_name } = toolOutput.mcp_response.location;
 
       if (typeof latitude === 'number' && typeof longitude === 'number') {
-        console.log(`MapQueryHandler: Received data from geospatialTool. Place: ${place_name}, Lat: ${latitude}, Lng: ${longitude}`);
-        setMapData(prevData => ({
-          ...prevData,
-          // Ensure coordinates are in [lng, lat] format for MapboxGL
-          targetPosition: [longitude, latitude], 
-          // Optionally store more info from mcp_response if needed by MapboxMap component later
-          mapFeature: { 
-            place_name, 
-            // Potentially add mapUrl or other details from toolOutput.mcp_response
-            mapUrl: toolOutput.mcp_response?.mapUrl 
-          } 
-        }));
+        setMapData(prevData => {
+          const isSamePosition = Array.isArray(prevData.targetPosition) && 
+                                 prevData.targetPosition[0] === longitude && 
+                                 prevData.targetPosition[1] === latitude;
+          if (isSamePosition) return prevData;
+          
+          return {
+            ...prevData,
+            targetPosition: [longitude, latitude],
+            mapFeature: { 
+              place_name, 
+              mapUrl: toolOutput.mcp_response?.mapUrl 
+            } 
+          };
+        });
       } else {
-        console.warn("MapQueryHandler: Invalid latitude/longitude in toolOutput.mcp_response:", toolOutput.mcp_response.location);
-        // Clear target position if data is invalid
-        setMapData(prevData => ({
-          ...prevData,
-          targetPosition: null,
-          mapFeature: null
-        }));
+        setMapData(prevData => {
+          if (prevData.targetPosition === null && prevData.mapFeature === null) return prevData;
+          return {
+            ...prevData,
+            targetPosition: null,
+            mapFeature: null
+          };
+        });
       }
     } else {
       // This case handles when toolOutput or its critical parts are missing.

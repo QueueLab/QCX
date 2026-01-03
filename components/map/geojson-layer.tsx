@@ -79,19 +79,24 @@ export function GeoJsonLayer({ id, data }: GeoJsonLayerProps) {
       }
     }
 
-    if (map.isStyleLoaded()) {
+    const isStyleLoaded = map.isStyleLoaded();
+    if (isStyleLoaded) {
       onMapLoad()
     } else {
-      map.on('load', onMapLoad)
+      map.once('load', onMapLoad)
     }
 
-    // Cleanup function
     return () => {
+      map.off('load', onMapLoad);
       if (map.isStyleLoaded()) {
-        if (map.getLayer(pointLayerId)) map.removeLayer(pointLayerId)
-        if (map.getLayer(polygonLayerId)) map.removeLayer(polygonLayerId)
-        if (map.getLayer(polygonOutlineLayerId)) map.removeLayer(polygonOutlineLayerId)
-        if (map.getSource(sourceId)) map.removeSource(sourceId)
+        try {
+          if (map.getLayer(pointLayerId)) map.removeLayer(pointLayerId)
+          if (map.getLayer(polygonLayerId)) map.removeLayer(polygonLayerId)
+          if (map.getLayer(polygonOutlineLayerId)) map.removeLayer(polygonOutlineLayerId)
+          if (map.getSource(sourceId)) map.removeSource(sourceId)
+        } catch (e) {
+          console.warn('Error during GeoJsonLayer cleanup:', e);
+        }
       }
     }
   }, [map, id, data])

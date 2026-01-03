@@ -161,7 +161,12 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
       }
     })
 
-    setMapData(prevData => ({ ...prevData, drawnFeatures: currentDrawnFeatures }))
+    setMapData(prevData => {
+      // Only update if drawnFeatures actually changed to prevent infinite loops
+      const isChanged = JSON.stringify(prevData.drawnFeatures) !== JSON.stringify(currentDrawnFeatures);
+      if (!isChanged) return prevData;
+      return { ...prevData, drawnFeatures: currentDrawnFeatures };
+    });
   }, [formatMeasurement, setMapData])
 
   // Handle map rotation
@@ -513,22 +518,17 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   // Effect to handle map updates from MapDataContext
   useEffect(() => {
     if (mapData.targetPosition && map.current) {
-      // console.log("Mapbox.tsx: Received new targetPosition from context:", mapData.targetPosition);
-      // targetPosition is LngLatLike, which can be [number, number]
-      // updateMapPosition expects (latitude, longitude)
-      const [lng, lat] = mapData.targetPosition as [number, number]; // Assuming LngLatLike is [lng, lat]
+      const [lng, lat] = mapData.targetPosition as [number, number];
       if (typeof lat === 'number' && typeof lng === 'number') {
-        updateMapPosition(lat, lng);
-      } else {
-        // console.error("Mapbox.tsx: Invalid targetPosition format in mapData", mapData.targetPosition);
+        // Check if the map is already at this position to avoid redundant flyTo
+        const center = map.current.getCenter();
+        const distance = Math.sqrt(Math.pow(center.lat - lat, 2) + Math.pow(center.lng - lng, 2));
+        if (distance > 0.0001) {
+          updateMapPosition(lat, lng);
+        }
       }
     }
-    // TODO: Handle mapData.mapFeature for drawing routes, polygons, etc. in a future step.
-    // For example:
-    // if (mapData.mapFeature && mapData.mapFeature.route_geometry && typeof drawRoute === 'function') {
-    //   drawRoute(mapData.mapFeature.route_geometry); // Implement drawRoute function if needed
-    // }
-  }, [mapData.targetPosition, mapData.mapFeature, updateMapPosition]);
+  }, [mapData.targetPosition, updateMapPosition]);
 
   // Long-press handlers
   const handleMouseDown = useCallback(() => {
@@ -555,57 +555,15 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     }
   }, []);
 
-  // Cleanup for the main useEffect
+  // Cleanup for long press timer
   useEffect(() => {
-    // ... existing useEffect logic ...
     return () => {
-      // ... existing cleanup logic ...
-      if (longPressTimerRef.current) { // Cleanup timer on component unmount
+      if (longPressTimerRef.current) {
         clearTimeout(longPressTimerRef.current);
         longPressTimerRef.current = null;
       }
-      // ... existing cleanup logic for map and geolocation ...
-      if (map.current) {
-        map.current.off('moveend', captureMapCenter)
-
-        if (drawRef.current) {
-          try {
-            map.current.off('draw.create', updateMeasurementLabels)
-            map.current.off('draw.delete', updateMeasurementLabels)
-            map.current.off('draw.update', updateMeasurementLabels)
-            map.current.removeControl(drawRef.current)
-          } catch (e) {
-            console.log('Draw control already removed')
-          }
-        }
-
-        Object.values(polygonLabelsRef.current).forEach(marker => marker.remove())
-        Object.values(lineLabelsRef.current).forEach(marker => marker.remove())
-
-        stopRotation()
-        setIsMapLoaded(false)
-        setMap(null)
-        map.current.remove()
-        map.current = null
-      }
-
-      if (geolocationWatchIdRef.current !== null) {
-        navigator.geolocation.clearWatch(geolocationWatchIdRef.current)
-        geolocationWatchIdRef.current = null
-      }
     };
-  }, [
-    handleUserInteraction,
-    startRotation,
-    stopRotation,
-    mapType, // mapType is already here, good.
-    updateMeasurementLabels,
-    setupGeolocationWatcher,
-    captureMapCenter,
-    setupDrawingTools,
-    setIsMapLoaded,
-    setMap
-  ]);
+  }, []);
 
 
   return (
