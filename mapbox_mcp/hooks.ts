@@ -1,7 +1,6 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { generateText } from 'ai';
-import { useMcp } from 'use-mcp/react';
-
+import { getComposioClient, initializeComposioMapbox } from './composio-mapbox';
 
 // Define Tool type locally if needed
 type Tool = {
@@ -41,57 +40,62 @@ interface PlaceResult {
 }
 
 /**
- * Custom React hook to interact with the Mapbox MCP server.
+ * Custom React hook to interact with Mapbox via Composio.
  * Manages client connection, tool invocation, and state (loading, error, connection status).
- * Uses `useMcp` from 'use-mcp/react' for communication.
+ * Uses Composio SDK for authentication and tool execution.
  */
 export const useMCPMapClient = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [connectionId, setConnectionId] = useState<string | null>(null);
 
-  // Refs to hold available tools
+  // Refs to hold available tools and Composio client
   const toolsRef = useRef<any>(null);
+  const composioClientRef = useRef<any>(null);
 
-  // Configure MCP client using useMcp hook
-  const mcp = useMcp({
-    //https://server.smithery.ai/@Waldzell-Agentics/mcp-server/mcp
-    url: `https://server.smithery.ai/@Waldzell-Agentics/mcp-server/mcp?profile=${process.env.NEXT_PUBLIC_SMITHERY_PROFILE_ID}&api_key=${process.env.NEXT_PUBLIC_SMITHERY_API_KEY}`,
-    debug: process.env.NODE_ENV === 'development',
-    autoReconnect: true,
-    autoRetry: 5000,
-  });
+  // Initialize Composio client on mount
+  useEffect(() => {
+    composioClientRef.current = getComposioClient();
+  }, []);
 
-  // Update connection status based on MCP state
+  // Connect to Composio Mapbox
   const connect = useCallback(async () => {
-    if (mcp.state === 'ready') {
-      try {
-        setIsLoading(true);
-        setError(null);
-        toolsRef.current = mcp.tools;
-        setIsConnected(true);
-        console.log('✅ Connected to MCP server');
-        console.log('Available tools:', mcp.tools.map((tool: Tool) => tool.name));
-      } catch (err) {
-        setError(`Failed to connect to MCP server: ${err}`);
-        console.error('❌ MCP connection error:', err);
-      } finally {
-        setIsLoading(false);
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const { connectionId: connId, connectedAccount } = await initializeComposioMapbox();
+      setConnectionId(connId);
+      
+      // Get available tools from Composio
+      if (composioClientRef.current) {
+        const tools = await composioClientRef.current.getTools({
+          apps: ['mapbox']
+        });
+        toolsRef.current = tools;
       }
+      
+      setIsConnected(true);
+      console.log('✅ Connected to Composio Mapbox');
+      console.log('Connection ID:', connId);
+    } catch (err) {
+      setError(`Failed to connect to Composio Mapbox: ${err}`);
+      console.error('❌ Composio connection error:', err);
+    } finally {
+      setIsLoading(false);
     }
-  }, [mcp.state, mcp.tools]);
+  }, []);
 
   const disconnect = useCallback(async () => {
-    if (mcp.state === 'ready') {
-      await mcp.disconnect();
-      toolsRef.current = null;
-      setIsConnected(false);
-    }
-  }, [mcp.state]);
+    toolsRef.current = null;
+    setIsConnected(false);
+    setConnectionId(null);
+  }, []);
 
   const processLocationQuery = useCallback(async (query: string) => {
-    if (mcp.state !== 'ready' || !toolsRef.current) {
-      throw new Error('MCP client not connected');
+    if (!isConnected || !toolsRef.current) {
+      throw new Error('Composio client not connected');
     }
     setIsLoading(true);
     setError(null);
@@ -154,63 +158,74 @@ Focus on extracting and presenting factual data from the tools.`,
     } finally {
       setIsLoading(false);
     }
-  }, [mcp.state, mcp.tools]);
+  }, [isConnected]);
 
   const geocodeLocation = useCallback(async (address: string): Promise<LocationResult> => {
-    if (mcp.state !== 'ready') {
-      throw new Error('MCP client not connected');
+    if (!isConnected || !composioClientRef.current || !connectionId) {
+      throw new Error('Composio client not connected');
     }
     try {
-      const result = await mcp.callTool('geocode_location', {
-        query: address,
-        includeMapPreview: true,
+      const result = await composioClientRef.current.executeAction({
+        action: 'mapbox_geocode_location',
+        params: {
+          query: address,
+          includeMapPreview: true,
+        },
+        connectedAccountId: connectionId,
       });
-      const match = result.content[1]?.text?.match(/```json\n([\s\S]*?)\n```/);
-      return JSON.parse(match?.[1] || '{}');
+      return result.data;
     } catch (err) {
       console.error('Geocoding error:', err);
       setError(`Geocoding error: ${err}`);
       throw err;
     }
-  }, [mcp.state, mcp.callTool]);
+  }, [isConnected, connectionId]);
 
   const calculateDistance = useCallback(async (from: string, to: string, profile: 'driving' | 'walking' | 'cycling' = 'driving'): Promise<DistanceResult> => {
-    if (mcp.state !== 'ready') {
-      throw new Error('MCP client not connected');
+    if (!isConnected || !composioClientRef.current || !connectionId) {
+      throw new Error('Composio client not connected');
     }
     try {
-      const result = await mcp.callTool('calculate_distance', {
-        from,
-        to,
-        profile,
-        includeRouteMap: true,
+      const result = await composioClientRef.current.executeAction({
+        action: 'mapbox_calculate_distance',
+        params: {
+          from,
+          to,
+          profile,
+          includeRouteMap: true,
+        },
+        connectedAccountId: connectionId,
       });
-      return JSON.parse(result.content[1]?.text?.match(/```json\n(.*?)\n```/s)?.[1] || '{}');
+      return result.data;
     } catch (err) {
       console.error('Distance calculation error:', err);
       setError(`Distance calculation error: ${err}`);
       throw err;
     }
-  }, [mcp.state, mcp.callTool]);
+  }, [isConnected, connectionId]);
 
   const searchNearbyPlaces = useCallback(async (location: string, query: string, radius: number = 1000, limit: number = 5): Promise<PlaceResult> => {
-    if (mcp.state !== 'ready') {
-      throw new Error('MCP client not connected');
+    if (!isConnected || !composioClientRef.current || !connectionId) {
+      throw new Error('Composio client not connected');
     }
     try {
-      const result = await mcp.callTool('search_nearby_places', {
-        location,
-        query,
-        radius,
-        limit,
+      const result = await composioClientRef.current.executeAction({
+        action: 'mapbox_search_nearby_places',
+        params: {
+          location,
+          query,
+          radius,
+          limit,
+        },
+        connectedAccountId: connectionId,
       });
-      return JSON.parse(result.content[1]?.text?.match(/```json\n(.*?)\n```/s)?.[1] || '{}');
+      return result.data;
     } catch (err) {
       console.error('Places search error:', err);
       setError(`Places search error: ${err}`);
       throw err;
     }
-  }, [mcp.state, mcp.callTool]);
+  }, [isConnected, connectionId]);
 
   return {
     isConnected,
