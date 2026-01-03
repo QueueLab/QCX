@@ -41,8 +41,7 @@
     "@radix-ui/react-tabs": "^1.1.9",
     "@radix-ui/react-toast": "^1.2.11",
     "@radix-ui/react-tooltip": "^1.2.3",
-    "@smithery/cli": "^1.2.5",
-    "@smithery/sdk": "^1.0.4",
+    "@composio/core": "^0.5.0",
     "@supabase/ssr": "^0.3.0",
     "@supabase/supabase-js": "^2.0.0",
     "@tailwindcss/typography": "^0.5.16",
@@ -87,7 +86,7 @@
     "rehype-katex": "^7.0.1",
     "remark-gfm": "^4.0.1",
     "remark-math": "^6.0.0",
-    "smithery": "^0.5.2",
+
     "sonner": "^1.7.4",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
