@@ -2,6 +2,11 @@
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { LngLatLike } from 'mapbox-gl'; // Import LngLatLike
+import {
+  GeoJSONFeatureCollection,
+  MapCommand,
+  MapStateFeedback,
+} from '@/lib/types/map-schemas';
 
 // Define the shape of the map data you want to share
 export interface MapData {
@@ -14,6 +19,11 @@ export interface MapData {
     measurement: string;
     geometry: any;
   }>;
+  geojson?: GeoJSONFeatureCollection | null;
+  mapCommands?: MapCommand[] | null;
+  // Feedback mechanism for autonomous map control
+  mapStateFeedback?: MapStateFeedback | null;
+  feedbackCallback?: (feedback: MapStateFeedback) => void;
 }
 
 interface MapDataContextType {

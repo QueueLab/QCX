@@ -530,6 +530,195 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     // }
   }, [mapData.targetPosition, mapData.mapFeature, updateMapPosition]);
 
+  // Effect to handle GeoJSON data updates
+  useEffect(() => {
+    if (!map.current) return;
+
+    const mapInstance = map.current;
+    const source = mapInstance.getSource('geojson-data');
+
+    // If GeoJSON data is present, add or update the source and layers
+    if (mapData.geojson) {
+      if (source) {
+        (source as mapboxgl.GeoJSONSource).setData(mapData.geojson as any);
+      } else {
+        mapInstance.addSource('geojson-data', {
+          type: 'geojson',
+          data: mapData.geojson as any,
+        });
+
+        // Add layer for points
+        mapInstance.addLayer({
+          id: 'geojson-points',
+          type: 'circle',
+          source: 'geojson-data',
+          paint: {
+            'circle-radius': 8,
+            'circle-color': '#007cbf',
+            'circle-stroke-width': 2,
+            'circle-stroke-color': '#ffffff',
+          },
+          filter: ['==', '$type', 'Point'],
+        });
+
+        // Add layer for lines
+        mapInstance.addLayer({
+          id: 'geojson-lines',
+          type: 'line',
+          source: 'geojson-data',
+          paint: {
+            'line-color': '#ff4500',
+            'line-width': 3,
+          },
+          filter: ['==', '$type', 'LineString'],
+        });
+      }
+    } else {
+      // If no GeoJSON data, remove layers and source if they exist
+      if (mapInstance.getLayer('geojson-points')) mapInstance.removeLayer('geojson-points');
+      if (mapInstance.getLayer('geojson-lines')) mapInstance.removeLayer('geojson-lines');
+      if (source) mapInstance.removeSource('geojson-data');
+    }
+  }, [mapData.geojson]);
+
+  // Effect to execute map commands with feedback
+  useEffect(() => {
+    console.log('🗺️  Map commands useEffect triggered:', {
+      hasMap: !!map.current,
+      hasCommands: !!mapData.mapCommands,
+      commandCount: mapData.mapCommands?.length || 0,
+      commands: mapData.mapCommands,
+    });
+
+    if (!map.current || !mapData.mapCommands || mapData.mapCommands.length === 0) {
+      console.log('⚠️ Skipping command execution - missing map or commands');
+      return;
+    }
+
+    const mapInstance = map.current;
+    let executionError: string | undefined;
+
+    console.log(`🗺️  Executing ${mapData.mapCommands.length} map commands...`);
+
+    try {
+      mapData.mapCommands.forEach((command, idx) => {
+        console.log(`🗺️  Executing command ${idx + 1}/${mapData.mapCommands!.length}: ${command.command}`, command.params);
+        switch (command.command) {
+          case 'flyTo':
+            mapInstance.flyTo(command.params);
+            break;
+          case 'easeTo':
+            mapInstance.easeTo(command.params);
+            break;
+          case 'fitBounds':
+            if (command.params.bounds) {
+              const { bounds, padding, duration, ...otherOptions } = command.params;
+              const fitBoundsOptions: any = {};
+              if (padding !== undefined) fitBoundsOptions.padding = padding;
+              if (duration !== undefined) fitBoundsOptions.duration = duration;
+              Object.assign(fitBoundsOptions, otherOptions);
+              mapInstance.fitBounds(bounds, fitBoundsOptions);
+            }
+            break;
+          case 'setCenter':
+            if (command.params.center) {
+              mapInstance.setCenter(command.params.center);
+            }
+            break;
+          case 'setZoom':
+            if (command.params.zoom !== undefined) {
+              mapInstance.setZoom(command.params.zoom);
+            }
+            break;
+          case 'setPitch':
+            if (command.params.pitch !== undefined) {
+              mapInstance.setPitch(command.params.pitch);
+            }
+            break;
+          case 'setBearing':
+            if (command.params.bearing !== undefined) {
+              mapInstance.setBearing(command.params.bearing);
+            }
+            break;
+          default:
+            console.warn(`Unknown map command: ${command.command}`);
+        }
+      });
+
+      // Capture feedback after commands complete
+      const feedbackHandler = () => {
+        const center = mapInstance.getCenter();
+        const bounds = mapInstance.getBounds();
+        
+        const feedback: any = {
+          success: !executionError,
+          currentCenter: [center.lng, center.lat] as [number, number],
+          currentZoom: mapInstance.getZoom(),
+          currentPitch: mapInstance.getPitch(),
+          currentBearing: mapInstance.getBearing(),
+          error: executionError,
+          timestamp: Date.now(),
+        };
+
+        if (bounds) {
+          feedback.currentBounds = [
+            [bounds.getWest(), bounds.getSouth()],
+            [bounds.getEast(), bounds.getNorth()]
+          ] as [[number, number], [number, number]];
+        }
+
+        console.log('📍 Map feedback:', feedback);
+
+        // Send feedback via callback if provided
+        if (mapData.feedbackCallback) {
+          mapData.feedbackCallback(feedback);
+        }
+
+        // Store feedback in context
+        setMapData(prev => ({ 
+          ...prev, 
+          mapStateFeedback: feedback,
+          mapCommands: null, // Clear commands after execution
+        }));
+      };
+
+      // Wait for map to finish moving
+      mapInstance.once('moveend', feedbackHandler);
+      
+      // Fallback timeout in case moveend doesn't fire
+      setTimeout(() => {
+        if (mapInstance.isMoving && mapInstance.isMoving()) {
+          return; // Still moving, wait for moveend
+        }
+        // If not moving, trigger feedback immediately
+        mapInstance.off('moveend', feedbackHandler);
+        feedbackHandler();
+      }, 100);
+
+    } catch (error) {
+      executionError = error instanceof Error ? error.message : 'Unknown execution error';
+      console.error('❌ Map command execution error:', error);
+      
+      // Send error feedback
+      const errorFeedback = {
+        success: false,
+        error: executionError,
+        timestamp: Date.now(),
+      };
+
+      if (mapData.feedbackCallback) {
+        mapData.feedbackCallback(errorFeedback);
+      }
+
+      setMapData(prev => ({ 
+        ...prev, 
+        mapStateFeedback: errorFeedback,
+        mapCommands: null,
+      }));
+    }
+
+  }, [mapData.mapCommands, mapData.feedbackCallback, setMapData]);
+
   // Long-press handlers
   const handleMouseDown = useCallback(() => {
     // Only activate long press if not in real-time mode (as that mode has its own interactions)

@@ -13,6 +13,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { Section } from '@/components/section'
 import { FollowupPanel } from '@/components/followup-panel'
 import { inquire, researcher, taskManager, querySuggestor, resolutionSearch } from '@/lib/agents'
+import { geojsonEnricherV2 } from '@/lib/agents/geojson-enricher-v2'
 // Removed import of useGeospatialToolMcp as it no longer exists and was incorrectly used here.
 // The geospatialTool (if used by agents like researcher) now manages its own MCP client.
 import { writer } from '@/lib/agents/writer'
@@ -27,11 +28,8 @@ import { CopilotDisplay } from '@/components/copilot-display'
 import RetrieveSection from '@/components/retrieve-section'
 import { VideoSearchSection } from '@/components/video-search-section'
 import { MapQueryHandler } from '@/components/map/map-query-handler' // Add this import
-
-// Define the type for related queries
-type RelatedQueries = {
-  items: { query: string }[]
-}
+import { LocationResponseHandler } from '@/components/map/location-response-handler'
+import { PartialRelated } from '@/lib/schema/related'
 
 // Removed mcp parameter from submit, as geospatialTool now handles its client.
 async function submit(formData?: FormData, skip?: boolean) {
@@ -306,7 +304,7 @@ async function submit(formData?: FormData, skip?: boolean) {
           {
             id: nanoid(),
             role: 'assistant',
-            content: `inquiry: ${inquiry?.question}`
+            content: `inquiry: ${(inquiry as any)?.question}`
           }
         ]
       })
@@ -380,6 +378,19 @@ async function submit(formData?: FormData, skip?: boolean) {
     }
 
     if (!errorOccurred) {
+      let locationResponse;
+      try {
+        locationResponse = await geojsonEnricherV2(answer);
+      } catch (e) {
+        console.error("Error during geojson enrichment:", e);
+        // Fallback to a response without location data
+        locationResponse = {
+          text: answer,
+          geojson: null,
+          map_commands: null,
+        };
+      }
+
       const relatedQueries = await querySuggestor(uiStream, messages)
       uiStream.append(
         <Section title="Follow-up">
@@ -396,8 +407,15 @@ async function submit(formData?: FormData, skip?: boolean) {
           {
             id: groupeId,
             role: 'assistant',
-            content: answer,
+            content: locationResponse.text,
             type: 'response'
+          },
+          {
+            id: nanoid(),
+            role: 'tool',
+            name: 'geojsonEnrichment',
+            content: JSON.stringify(locationResponse),
+            type: 'tool',
           },
           {
             id: groupeId,
@@ -602,7 +620,7 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                 )
               }
             case 'related':
-              const relatedQueries = createStreamableValue<RelatedQueries>()
+              const relatedQueries = createStreamableValue<PartialRelated>()
               relatedQueries.done(JSON.parse(content as string))
               return {
                 id,
@@ -657,6 +675,28 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                 id,
                 component: <MapQueryHandler toolOutput={toolOutput} />,
                 isCollapsed: false
+              }
+            }
+
+            if (name === 'geojsonEnrichment') {
+              // Runtime validation for the toolOutput
+              if (
+                toolOutput &&
+                typeof toolOutput.text === 'string' &&
+                (toolOutput.geojson === null ||
+                  (typeof toolOutput.geojson === 'object' &&
+                    toolOutput.geojson.type === 'FeatureCollection'))
+              ) {
+                return {
+                  id,
+                  component: (
+                    <LocationResponseHandler locationResponse={toolOutput} />
+                  ),
+                  isCollapsed: false,
+                };
+              } else {
+                console.warn('Invalid toolOutput for geojsonEnrichment:', toolOutput);
+                return { id, component: null };
               }
             }
 
