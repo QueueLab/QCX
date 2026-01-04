@@ -1,7 +1,5 @@
 "use client"
 
-"use client"
-
 import type React from "react"
 import { useState, useEffect } from "react"
 import { ChevronLeft, ChevronRight, MapPin } from "lucide-react"
@@ -23,11 +21,21 @@ export function CalendarNotepad({ chatId }: CalendarNotepadProps) {
   const [taggedLocation, setTaggedLocation] = useState<any | null>(null)
 
   useEffect(() => {
+    let isMounted = true;
     const fetchNotes = async () => {
-      const fetchedNotes = await getNotes(selectedDate, chatId ?? null)
-      setNotes(fetchedNotes)
+      try {
+        const fetchedNotes = await getNotes(selectedDate, chatId ?? null)
+        if (isMounted) {
+          setNotes(fetchedNotes)
+        }
+      } catch (error) {
+        console.error('Failed to fetch notes:', error);
+      }
     }
     fetchNotes()
+    return () => {
+      isMounted = false;
+    };
   }, [selectedDate, chatId])
 
   const generateDateRange = (offset: number) => {
