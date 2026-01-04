@@ -6,7 +6,7 @@ import { BotMessage } from '@/components/message';
 import { geospatialQuerySchema } from '@/lib/schema/geospatial';
 import { Client as MCPClientClass } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
-import { createSmitheryUrl } from '@smithery/sdk';
+// Smithery SDK removed - using direct URL construction
 import { z } from 'zod';
 
 // Types
@@ -34,17 +34,17 @@ interface MapboxConfig {
  * Establish connection to the MCP server with proper environment validation.
  */
 async function getConnectedMcpClient(): Promise<McpClient | null> {
-  const apiKey = process.env.NEXT_PUBLIC_SMITHERY_API_KEY;
+  const composioApiKey = process.env.NEXT_PUBLIC_COMPOSIO_API_KEY;
   const mapboxAccessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
-  const profileId = process.env.NEXT_PUBLIC_SMITHERY_PROFILE_ID;
+  const composioUserId = process.env.NEXT_PUBLIC_COMPOSIO_USER_ID;
 
   console.log('[GeospatialTool] Environment check:', {
-    apiKey: apiKey ? `${apiKey.substring(0, 8)}...` : 'MISSING',
+    composioApiKey: composioApiKey ? `${composioApiKey.substring(0, 8)}...` : 'MISSING',
     mapboxAccessToken: mapboxAccessToken ? `${mapboxAccessToken.substring(0, 8)}...` : 'MISSING',
-    profileId: profileId ? `${profileId.substring(0, 8)}...` : 'MISSING',
+    composioUserId: composioUserId ? `${composioUserId.substring(0, 8)}...` : 'MISSING',
   });
 
-  if (!apiKey || !mapboxAccessToken || !profileId || !apiKey.trim() || !mapboxAccessToken.trim() || !profileId.trim()) {
+  if (!composioApiKey || !mapboxAccessToken || !composioUserId || !composioApiKey.trim() || !mapboxAccessToken.trim() || !composioUserId.trim()) {
     console.error('[GeospatialTool] Missing or empty required environment variables');
     return null;
   }
@@ -67,20 +67,25 @@ async function getConnectedMcpClient(): Promise<McpClient | null> {
     console.log('[GeospatialTool] Using fallback config');
   }
 
-  // Build Smithery URL
-  const smitheryUrlOptions = { config, apiKey, profileId };
-  const mcpServerBaseUrl = `https://server.smithery.ai/@Waldzell-Agentics/mcp-server/mcp?api_key=${smitheryUrlOptions.apiKey}&profile=${smitheryUrlOptions.profileId}`;
-  let serverUrlToUse;
+  // Build Composio MCP server URL
+  // Note: This should be migrated to use Composio SDK directly instead of MCP client
+  // For now, constructing URL directly without Smithery SDK
+  let serverUrlToUse: URL;
   try {
-    serverUrlToUse = createSmitheryUrl(mcpServerBaseUrl, smitheryUrlOptions);
+    // Construct URL with Composio credentials
+    const baseUrl = 'https://api.composio.dev/v1/mcp/mapbox';
+    serverUrlToUse = new URL(baseUrl);
+    serverUrlToUse.searchParams.set('api_key', composioApiKey);
+    serverUrlToUse.searchParams.set('user_id', composioUserId);
+    
     const urlDisplay = serverUrlToUse.toString().split('?')[0];
-    console.log('[GeospatialTool] MCP Server URL created:', urlDisplay);
+    console.log('[GeospatialTool] Composio MCP Server URL created:', urlDisplay);
 
     if (!serverUrlToUse.href || !serverUrlToUse.href.startsWith('https://')) {
       throw new Error('Invalid server URL generated');
     }
   } catch (urlError: any) {
-    console.error('[GeospatialTool] Error creating Smithery URL:', urlError.message);
+    console.error('[GeospatialTool] Error creating Composio URL:', urlError.message);
     return null;
   }
 
