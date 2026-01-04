@@ -1,26 +1,13 @@
 import { getComposioClient, initializeComposioMapbox } from './composio-mapbox';
 
-// Environment variables required by this script to connect to Composio.
-// - COMPOSIO_MAPBOX_AUTH_CONFIG_ID: Your Composio auth config ID for Mapbox.
-// - COMPOSIO_USER_ID: Your user ID.
-// - MAPBOX_ACCESS_TOKEN: Your Mapbox access token.
-const authConfigId = process.env.COMPOSIO_MAPBOX_AUTH_CONFIG_ID;
-const userId = process.env.COMPOSIO_USER_ID;
-const mapboxToken = process.env.MAPBOX_ACCESS_TOKEN;
-
 async function testComposioConnection() {
-  // Check for required environment variables for Composio connection.
-  if (!authConfigId || !userId || !mapboxToken) {
-    console.error("COMPOSIO_MAPBOX_AUTH_CONFIG_ID, COMPOSIO_USER_ID, and MAPBOX_ACCESS_TOKEN environment variables are required for this script.");
-    return; // Return early if essential credentials are missing.
-  }
-
   let composioClient: any;
 
   try {
     console.log(`Attempting to connect to Composio Mapbox...`);
     
     // Initialize the Composio client and authenticate
+    // This will validate environment variables and throw if any are missing
     const { connectionId, connectedAccount } = await initializeComposioMapbox();
     composioClient = getComposioClient();
 
@@ -57,8 +44,16 @@ async function testComposioConnection() {
 
   } catch (error) {
     console.error("❌ Composio connection or operation failed:", error);
+    if (error instanceof Error) {
+      console.error("Error message:", error.message);
+    }
+    process.exit(1);
   }
 }
 
-// Run the test connection function.
-testComposioConnection();
+// Run the test connection function only if this file is executed directly
+if (require.main === module) {
+  testComposioConnection();
+}
+
+export { testComposioConnection };
