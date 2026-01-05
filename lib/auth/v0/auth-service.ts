@@ -4,7 +4,15 @@
 import { getSupabaseBrowserClient } from "../../supabase/browser-client"
 import type { User, MagicLinkResponse, OAuthResponse, AuthProvider } from "./types"
 
-const supabase = getSupabaseBrowserClient()
+// Initialize Supabase lazily to avoid build-time errors when env vars are missing
+let supabaseInstance: ReturnType<typeof getSupabaseBrowserClient> | null = null
+
+function getSupabase() {
+  if (!supabaseInstance) {
+    supabaseInstance = getSupabaseBrowserClient()
+  }
+  return supabaseInstance
+}
 
 // Configuration - set these based on your auth provider
 export const AUTH_CONFIG = {
@@ -21,7 +29,7 @@ export const AUTH_CONFIG = {
  */
 export async function sendMagicLink(email: string): Promise<MagicLinkResponse> {
   try {
-    const { error } = await supabase.auth.signInWithOtp({
+    const { error } = await getSupabase().auth.signInWithOtp({
       email,
       options: {
         emailRedirectTo: `${window.location.origin}/auth/callback`,
@@ -56,7 +64,7 @@ export async function sendMagicLink(email: string): Promise<MagicLinkResponse> {
  */
 export async function signInWithGoogle(): Promise<OAuthResponse> {
   try {
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { error } = await getSupabase().auth.signInWithOAuth({
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
@@ -95,7 +103,7 @@ export async function signInWithGoogle(): Promise<OAuthResponse> {
  */
 export async function signInWithGitHub(): Promise<OAuthResponse> {
   try {
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { error } = await getSupabase().auth.signInWithOAuth({
       provider: "github",
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
@@ -133,7 +141,7 @@ export async function signInWithGitHub(): Promise<OAuthResponse> {
  */
 export async function getCurrentUser(): Promise<User | null> {
   try {
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { user } } = await getSupabase().auth.getUser()
     if (!user) return null
     
     return {
@@ -156,7 +164,7 @@ export async function getCurrentUser(): Promise<User | null> {
  */
 export async function signOut(): Promise<void> {
   try {
-    await supabase.auth.signOut()
+    await getSupabase().auth.signOut()
     window.location.href = "/"
   } catch (error) {
     console.error("Sign out failed:", error)

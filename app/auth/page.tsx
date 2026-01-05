@@ -1,5 +1,7 @@
 "use client"
 
+export const dynamic = 'force-dynamic'
+
 import Image from "next/image"
 import { AuthPage } from "@/components/auth"
 import { useAuth } from "@/lib/auth/v0"
