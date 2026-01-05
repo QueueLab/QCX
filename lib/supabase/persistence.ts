@@ -57,6 +57,14 @@ export async function saveChat(chat: Chat, userId: string): Promise<{ data: stri
 }
 
 export async function getMessagesByChatId(chatId: string): Promise<{ data: any[] | null; error: PostgrestError | null }> {
+  // Validate chatId looks like a UUID to avoid Postgres errors when
+  // non-UUID ids are passed from dev/mock data.
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  if (!uuidRegex.test(chatId)) {
+    console.warn(`getMessagesByChatId: invalid chatId (not UUID): ${chatId}`)
+    return { data: null, error: null }
+  }
+
   const supabase = getSupabaseServerClient()
   const { data, error } = await supabase
     .from('messages')

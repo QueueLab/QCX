@@ -48,6 +48,15 @@ export async function getChat(id: string): Promise<Chat | null> {
     return null
   }
 
+  // Validate that `id` is a UUID before querying Postgres. Prevents
+  // `invalid input syntax for type uuid` errors when callers pass
+  // short/nanoid-style ids during development.
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  if (!uuidRegex.test(id)) {
+    console.warn(`getChat: provided id does not look like a UUID: ${id}`)
+    return null
+  }
+
   const supabase = getSupabaseServerClient()
   const { data, error } = await supabase
     .from('chats')
