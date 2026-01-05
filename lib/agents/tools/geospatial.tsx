@@ -34,9 +34,9 @@ interface MapboxConfig {
  * Establish connection to the MCP server with proper environment validation.
  */
 async function getConnectedMcpClient(): Promise<McpClient | null> {
-  const composioApiKey = process.env.NEXT_PUBLIC_COMPOSIO_API_KEY;
-  const mapboxAccessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
-  const composioUserId = process.env.NEXT_PUBLIC_COMPOSIO_USER_ID;
+  const composioApiKey = process.env.COMPOSIO_API_KEY;
+  const mapboxAccessToken = process.env.MAPBOX_ACCESS_TOKEN;
+  const composioUserId = process.env.COMPOSIO_USER_ID;
 
   console.log('[GeospatialTool] Environment check:', {
     composioApiKey: composioApiKey ? `${composioApiKey.substring(0, 8)}...` : 'MISSING',
