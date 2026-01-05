@@ -32,6 +32,14 @@ export async function GET(request: Request) {
     )
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
+      try {
+        const { data: { user }, error: userErr } = await supabase.auth.getUser()
+        if (!userErr && user) {
+          console.log('[Auth Callback] User signed in:', user.email)
+        }
+      } catch (e) {
+        console.warn('[Auth Callback] Could not fetch user after exchange', e)
+      }
       return NextResponse.redirect(`${origin}${next}`)
     }
   }

@@ -13,9 +13,9 @@ export function DecorativePanel() {
         xmlns="http://www.w3.org/2000/svg"
       >
         {/* Generate multiple overlapping arcs */}
-        {[...Array(5)].map((_, i) => (
+        {Array.from({ length: 5 }).map((_, i) => (
           <g key={i}>
-            {[...Array(4)].map((_, j) => (
+            {Array.from({ length: 4 }).map((_, j) => (
               <ellipse
                 key={`${i}-${j}`}
                 cx={100 + j * 80}
