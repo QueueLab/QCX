@@ -66,10 +66,10 @@ export default async function RootLayout({
       <body className={cn('font-sans antialiased', fontSans.variable)}>
         <ThemeProvider
           attribute="class"
-          defaultTheme="earth"
+          defaultTheme="light"
           enableSystem
           disableTransitionOnChange
-          themes={['light', 'dark', 'earth']}
+          themes={['light', 'dark']}
         >
           {user ? (
             <CalendarToggleProvider>
