@@ -1,12 +1,20 @@
 'use server'
 
 import { getSupabaseServerClient } from '@/lib/supabase/client'
+import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
 
 export async function retrieveContext(
   query: string,
   chatId?: string,
   location?: any
 ): Promise<string[]> {
+  // Validate authentication
+  const userId = await getCurrentUserIdOnServer()
+  if (!userId) {
+    console.error('retrieveContext: User must be authenticated')
+    return []
+  }
+
   const supabase = getSupabaseServerClient()
 
   // 1. Generate embedding for the query

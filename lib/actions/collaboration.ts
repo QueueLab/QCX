@@ -1,6 +1,6 @@
 'use server'
 
-import { getSupabaseServerClient } from '@/lib/supabase/client'
+import { getSupabaseServerClient, getSupabaseServiceClient } from '@/lib/supabase/client'
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
 
 export async function inviteUserToChat(chatId: string, email: string): Promise<{ error?: string }> {
@@ -23,21 +23,24 @@ export async function inviteUserToChat(chatId: string, email: string): Promise<{
     return { error: 'You do not have permission to invite users to this chat.' }
   }
 
-  // Get the user ID of the person being invited
-  const { data: userData, error: userError } = await supabase
-    .from('users')
-    .select('id')
-    .eq('email', email)
-    .single()
+  // Get the user ID of the person being invited using admin client
+  const adminClient = getSupabaseServiceClient()
+  const { data: { users }, error: userError } = await adminClient.auth.admin.listUsers()
+  
+  if (userError) {
+    console.error('Error fetching users:', userError)
+    return { error: 'Failed to look up user by email.' }
+  }
 
-  if (userError || !userData) {
+  const invitedUser = users.find(u => u.email === email)
+  if (!invitedUser) {
     return { error: 'Could not find a user with that email address.' }
   }
 
   // Add the user to the chat_participants table
   const { error: insertError } = await supabase
     .from('chat_participants')
-    .insert({ chat_id: chatId, user_id: userData.id, role: 'collaborator' })
+    .insert({ chat_id: chatId, user_id: invitedUser.id, role: 'collaborator' })
 
   if (insertError) {
     console.error('Error inviting user to chat:', insertError)
