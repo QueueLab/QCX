@@ -94,9 +94,12 @@ export function Chat({ id }: ChatProps) {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_id=eq.${id}` },
       (payload) => {
         const newMessage = payload.new as AIMessage;
-        if (!messages.some((m: AIMessage) => m.id === newMessage.id)) {
-          setMessages((prevMessages: AIMessage[]) => [...prevMessages, newMessage]);
-        }
+        setMessages((prevMessages: AIMessage[]) => {
+          if (prevMessages.some((m: AIMessage) => m.id === newMessage.id)) {
+            return prevMessages;
+          }
+          return [...prevMessages, newMessage];
+        });
       })
       .on('presence', { event: 'sync' }, () => {
         const newState = channel.presenceState();
