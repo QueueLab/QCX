@@ -104,7 +104,10 @@ Uses the Mapbox Search Box Text Search API endpoint to power searching for and g
       })();
 
       console.log(`[GeospatialTool] Calling Composio action: ${actionName}`, actionArgs);
-      const result = await composio.executeAction(actionName, actionArgs);
+      const result = await composio.tools.execute(actionName, {
+        arguments: actionArgs,
+        userId: process.env.COMPOSIO_USER_ID
+      });
       
       feedbackMessage = `Successfully retrieved data for ${queryType}.`;
       uiFeedbackStream.update(feedbackMessage);
