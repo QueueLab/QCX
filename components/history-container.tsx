@@ -5,7 +5,7 @@ type HistoryContainerProps = {
   location: 'sidebar' | 'header'
 }
 
-const HistoryContainer: React.FC<HistoryContainerProps> = async ({
+const HistoryContainer: React.FC<HistoryContainerProps> = ({
   location
 }) => {
   return (
