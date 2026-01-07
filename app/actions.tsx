@@ -286,7 +286,9 @@ async function submit(formData?: FormData, skip?: boolean) {
   const userId = 'anonymous'
   const currentSystemPrompt = (await getSystemPrompt(userId)) || ''
 
-  const retrievedContext = await retrieveContext(userInput, aiState.get().chatId)
+  const retrievedContext = userInput
+    ? await retrieveContext(userInput, aiState.get().chatId)
+    : []
   const augmentedSystemPrompt = retrievedContext.length > 0
     ? `Context: ${retrievedContext.join('\n')}\n${currentSystemPrompt}`
     : currentSystemPrompt
