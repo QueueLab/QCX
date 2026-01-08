@@ -45,6 +45,14 @@ export const videoSearchTool = ({ uiStream, fullResponse }: ToolProps) => ({
 
     streamResults.done(JSON.stringify(searchResult))
 
+    // Track usage
+    const { trackUsage } = await import('@/lib/metering')
+    trackUsage('tool_usage', {
+      tool: 'video_search',
+      query,
+      results_count: searchResult?.videos?.length || 0
+    })
+
     return searchResult
   }
 })

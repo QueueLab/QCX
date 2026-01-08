@@ -62,6 +62,13 @@ export const retrieveTool = ({ uiStream, fullResponse }: ToolProps) => ({
 
     uiStream.update(<RetrieveSection data={results} />)
 
+    // Track usage
+    const { trackUsage } = await import('@/lib/metering')
+    trackUsage('tool_usage', {
+      tool: 'retrieve',
+      url
+    })
+
     return results
   }
 })
