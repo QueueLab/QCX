@@ -16,6 +16,9 @@ import { SystemPromptForm } from "./system-prompt-form"
 import { ModelSelectionForm } from "./model-selection-form"
 import { UserManagementForm } from './user-management-form';
 import { Form } from "@/components/ui/form"
+import { useSettingsStore, MapProvider } from "@/lib/store/settings";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/hooks/use-toast"
 import { getSystemPrompt, saveSystemPrompt } from "../../../lib/actions/chat" // Added import
 
@@ -65,6 +68,7 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [currentTab, setCurrentTab] = useState(initialTab);
+  const { mapProvider, setMapProvider } = useSettingsStore();
 
   useEffect(() => {
     setCurrentTab(initialTab);
@@ -136,10 +140,11 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
       <form onSubmit={form.handleSubmit(onSubmit)}>
         <div className="space-y-6">
           <Tabs.Root value={currentTab} onValueChange={setCurrentTab} className="w-full">
-            <Tabs.List className="grid w-full grid-cols-3 gap-x-2">
+            <Tabs.List className="grid w-full grid-cols-4 gap-x-2">
               <Tabs.Trigger value="system-prompt" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">System Prompt</Tabs.Trigger>
               <Tabs.Trigger value="model" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">Model Selection</Tabs.Trigger>
               <Tabs.Trigger value="user-management" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">User Management</Tabs.Trigger>
+              <Tabs.Trigger value="map" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">Map</Tabs.Trigger>
             </Tabs.List>
             <AnimatePresence mode="wait">
               <motion.div
@@ -175,6 +180,30 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
 
                 <Tabs.Content value="user-management" className="mt-6">
                   <UserManagementForm form={form} />
+                </Tabs.Content>
+                <Tabs.Content value="map" className="mt-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Map Provider</CardTitle>
+                      <CardDescription>Choose the map provider to use in the application.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <RadioGroup
+                        value={mapProvider}
+                        onValueChange={(value) => setMapProvider(value as MapProvider)}
+                        className="space-y-2"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="mapbox" id="mapbox" />
+                          <Label htmlFor="mapbox">Mapbox</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="google" id="google" />
+                          <Label htmlFor="google">Google Maps</Label>
+                        </div>
+                      </RadioGroup>
+                    </CardContent>
+                  </Card>
                 </Tabs.Content>
               </motion.div>
             </AnimatePresence>
