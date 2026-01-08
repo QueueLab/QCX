@@ -9,12 +9,17 @@ import {
   FormDescription,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, Zap, Rocket, Cpu, Earth } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
 interface ModelSelectionFormProps {
   form: UseFormReturn<any>;
@@ -64,12 +69,33 @@ export function ModelSelectionForm({ form }: ModelSelectionFormProps) {
         <FormItem className="space-y-4">
           <div className="flex items-center justify-between">
             <FormLabel>AI Model</FormLabel>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Quick Select:</span>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Select model" />
+                </SelectTrigger>
+                <SelectContent>
+                  {models.map((model) => {
+                    const Icon = model.icon;
+                    return (
+                      <SelectItem key={model.id} value={model.id}>
+                        <div className="flex items-center gap-2">
+                          <Icon className="h-4 w-4" />
+                          <span>{model.name}</span>
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <FormControl>
             <RadioGroup
               onValueChange={field.onChange}
               value={field.value}
-              className="grid grid-cols-2 md:grid-cols-4 gap-4"
+              className="space-y-3"
             >
               {models.map((model) => {
                 const Icon = model.icon;
@@ -82,14 +108,25 @@ export function ModelSelectionForm({ form }: ModelSelectionFormProps) {
                         className="peer sr-only"
                       />
                     </FormControl>
-                    <FormLabel
-                      htmlFor={model.id}
-                      className={cn(
-                        "flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
-                      )}
-                    >
-                      <Icon className="mb-3 h-6 w-6" />
-                      {model.name}
+                    <FormLabel htmlFor={model.id} className="cursor-pointer">
+                      <Card className="border-2 transition-all peer-data-[state=checked]:border-primary">
+                        <CardContent className="p-4 flex items-start gap-4">
+                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                            <Icon className="h-5 w-5" />
+                          </div>
+                          <div className="flex-1 space-y-1">
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-medium">{model.name}</h4>
+                              <Badge variant={model.badgeVariant}>
+                                {model.badge}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              {model.description}
+                            </p>
+                          </div>
+                        </CardContent>
+                      </Card>
                     </FormLabel>
                   </FormItem>
                 );
