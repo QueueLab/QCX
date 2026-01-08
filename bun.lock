@@ -55,6 +55,7 @@
         "geotiff": "^2.1.4-beta.1",
         "glassmorphic": "^0.0.3",
         "katex": "^0.16.22",
+        "lodash": "^4.17.21",
         "lottie-react": "^2.4.1",
         "lucide-react": "^0.507.0",
         "mapbox-gl": "^3.11.0",
@@ -86,6 +87,7 @@
       "devDependencies": {
         "@playwright/test": "^1.56.1",
         "@types/cookie": "^0.6.0",
+        "@types/lodash": "^4.17.21",
         "@types/mapbox-gl": "^3.4.1",
         "@types/node": "^20.17.30",
         "@types/react": "^19.1.8",
@@ -911,6 +913,8 @@
 
     "@types/katex": ["@types/katex@0.16.7", "", {}, "sha512-HMwFiRujE5PjrgwHQ25+bsLJgowjGjm5Z8FVSf0N6PwgJrwxH0QxzHYDcKsTfV3wva0vzrpqMTJS2jXPr5BMEQ=="],
 
+    "@types/lodash": ["@types/lodash@4.17.21", "", {}, "sha512-FOvQ0YPD5NOfPgMzJihoT+Za5pdkDJWcbpuj1DjaKZIr/gxodQjY/uWEFlTNqW2ugXHUiL8lRQgw63dzKHZdeQ=="],
+
     "@types/mapbox-gl": ["@types/mapbox-gl@3.4.1", "", { "dependencies": { "@types/geojson": "*" } }, "sha512-NsGKKtgW93B+UaLPti6B7NwlxYlES5DpV5Gzj9F75rK5ALKsqSk15CiEHbOnTr09RGbr6ZYiCdI+59NNNcAImg=="],
 
     "@types/mapbox__mapbox-gl-draw": ["@types/mapbox__mapbox-gl-draw@1.4.9", "", { "dependencies": { "@types/geojson": "*", "mapbox-gl": "*" } }, "sha512-8OtRdlSFbF/NDKg3CYQZPbI41JUwRPHIOB1f3fc3AG0Wb7CecSuuUG5EG+IsCmTHyzF6cyKpcjR/jcv62U3w6w=="],
@@ -1684,6 +1688,8 @@
     "lines-and-columns": ["lines-and-columns@1.2.4", "", {}, "sha512-7ylylesZQ/PV29jhEDl3Ufjo6ZX7gCqJr5F7PKrqc93v7fzSymt1BpwEU8nAUXs8qzzvqhbjhK5QZg6Mt/HkBg=="],
 
     "locate-path": ["locate-path@6.0.0", "", { "dependencies": { "p-locate": "5.0.0" } }, "sha512-iPZK6eYjbxRu3uB4/WZ3EsEIMJFMqAoopl3R+zuq0UjcAm/MO6KCweDgPfP3elTztoKP3KtnVHxTn2NHBSDVUw=="],
+
+    "lodash": ["lodash@4.17.21", "", {}, "sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg=="],
 
     "lodash.castarray": ["lodash.castarray@4.4.0", "", {}, "sha512-aVx8ztPv7/2ULbArGJ2Y42bG1mEQ5mGjpdvrbJcJFU3TbYybe+QlLS4pst9zV52ymy2in1KpFPiZnAOATxD4+Q=="],
 

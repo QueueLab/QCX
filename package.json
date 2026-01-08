@@ -67,6 +67,7 @@
     "geotiff": "^2.1.4-beta.1",
     "glassmorphic": "^0.0.3",
     "katex": "^0.16.22",
+    "lodash": "^4.17.21",
     "lottie-react": "^2.4.1",
     "lucide-react": "^0.507.0",
     "mapbox-gl": "^3.11.0",
@@ -98,6 +99,7 @@
   "devDependencies": {
     "@playwright/test": "^1.56.1",
     "@types/cookie": "^0.6.0",
+    "@types/lodash": "^4.17.21",
     "@types/mapbox-gl": "^3.4.1",
     "@types/node": "^20.17.30",
     "@types/react": "^19.1.8",
