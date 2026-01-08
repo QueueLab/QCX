@@ -18,7 +18,6 @@ import { UserManagementForm } from './user-management-form';
 import { Form } from "@/components/ui/form"
 import { useToast } from "@/components/ui/hooks/use-toast"
 import { getSystemPrompt, saveSystemPrompt } from "../../../lib/actions/chat"
-import { getSelectedModel, saveSelectedModel } from "../../../lib/actions/users"
 
 // Define the form schema
 const settingsFormSchema = z.object({
@@ -30,9 +29,6 @@ const settingsFormSchema = z.object({
     .max(2000, {
       message: "System prompt cannot exceed 2000 characters.",
     }),
-  selectedModel: z.string().refine(value => value.trim() !== '', {
-    message: "Please select a model.",
-  }),
   users: z.array(
     z.object({
       id: z.string(),
@@ -80,37 +76,24 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
   })
 
   useEffect(() => {
-    async function fetchData() {
-      const [existingPrompt, selectedModel] = await Promise.all([
-        getSystemPrompt(userId),
-        getSelectedModel(),
-      ]);
-
+    async function fetchPrompt() {
+      const existingPrompt = await getSystemPrompt(userId);
       if (existingPrompt) {
         form.setValue("systemPrompt", existingPrompt, { shouldValidate: true, shouldDirty: false });
       }
-      if (selectedModel) {
-        form.setValue("selectedModel", selectedModel, { shouldValidate: true, shouldDirty: false });
-      }
     }
-    fetchData();
+    fetchPrompt();
   }, [form, userId]);
 
   async function onSubmit(data: SettingsFormValues) {
     setIsLoading(true)
 
     try {
-      // Save the system prompt and selected model
-      const [promptSaveResult, modelSaveResult] = await Promise.all([
-        saveSystemPrompt(userId, data.systemPrompt),
-        saveSelectedModel(data.selectedModel),
-      ]);
+      // Save the system prompt
+      const saveResult = await saveSystemPrompt(userId, data.systemPrompt);
 
-      if (promptSaveResult?.error) {
-        throw new Error(promptSaveResult.error);
-      }
-      if (modelSaveResult?.error) {
-        throw new Error(modelSaveResult.error);
+      if (saveResult?.error) {
+        throw new Error(saveResult.error);
       }
 
       console.log("Submitted data:", data)
@@ -177,10 +160,10 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
                   <Card>
                     <CardHeader>
                       <CardTitle>Model Selection</CardTitle>
-                      <CardDescription>Choose the AI model that powers your planetary copilot</CardDescription>
+                      <CardDescription>The AI model that powers your planetary copilot</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <ModelSelectionForm form={form} />
+                      <ModelSelectionForm />
                     </CardContent>
                   </Card>
                 </Tabs.Content>
