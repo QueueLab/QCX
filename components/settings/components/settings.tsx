@@ -20,7 +20,8 @@ import { useSettingsStore, MapProvider } from "@/lib/store/settings";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/hooks/use-toast"
-import { getSystemPrompt, saveSystemPrompt } from "../../../lib/actions/chat" // Added import
+import { getSystemPrompt, saveSystemPrompt } from "../../../lib/actions/chat"
+import { getSelectedModel, saveSelectedModel } from "../../../lib/actions/users"
 
 // Define the form schema
 const settingsFormSchema = z.object({
@@ -52,7 +53,7 @@ export type SettingsFormValues = z.infer<typeof settingsFormSchema>
 const defaultValues: Partial<SettingsFormValues> = {
   systemPrompt:
     "You are a planetary copilot, an AI assistant designed to help users with information about planets, space exploration, and astronomy. Provide accurate, educational, and engaging responses about our solar system and beyond.",
-  selectedModel: "gpt-4o",
+  selectedModel: "Grok 4.2",
   users: [
     { id: "1", email: "admin@example.com", role: "admin" },
     { id: "2", email: "user@example.com", role: "editor" },
@@ -83,29 +84,40 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
   })
 
   useEffect(() => {
-    async function fetchPrompt() {
-      const existingPrompt = await getSystemPrompt(userId);
+    async function fetchData() {
+      const [existingPrompt, selectedModel] = await Promise.all([
+        getSystemPrompt(userId),
+        getSelectedModel(),
+      ]);
+
       if (existingPrompt) {
         form.setValue("systemPrompt", existingPrompt, { shouldValidate: true, shouldDirty: false });
       }
+      if (selectedModel) {
+        form.setValue("selectedModel", selectedModel, { shouldValidate: true, shouldDirty: false });
+      }
     }
-    fetchPrompt();
+    fetchData();
   }, [form, userId]);
 
   async function onSubmit(data: SettingsFormValues) {
     setIsLoading(true)
 
     try {
-      // Save the system prompt
-      const saveResult = await saveSystemPrompt(userId, data.systemPrompt);
+      // Save the system prompt and selected model
+      const [promptSaveResult, modelSaveResult] = await Promise.all([
+        saveSystemPrompt(userId, data.systemPrompt),
+        saveSelectedModel(data.selectedModel),
+      ]);
 
-      if (saveResult?.error) {
-        throw new Error(saveResult.error);
+      if (promptSaveResult?.error) {
+        throw new Error(promptSaveResult.error);
+      }
+      if (modelSaveResult?.error) {
+        throw new Error(modelSaveResult.error);
       }
 
-      // Simulate other API calls if necessary or remove if only saving system prompt for this form
-      await new Promise((resolve) => setTimeout(resolve, 200)) // Shorter delay now
-      console.log("Submitted data (including system prompt):", data)
+      console.log("Submitted data:", data)
 
       // Success notification
       toast({
