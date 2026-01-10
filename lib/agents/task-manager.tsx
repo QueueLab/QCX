@@ -16,7 +16,7 @@ export async function taskManager(messages: CoreMessage[]) {
     }
 
     const result = await generateObject({
-      model: getModel() as LanguageModel,
+      model: (await getModel()) as LanguageModel,
       system: `As a planet computer, your primary objective is to act as an efficient **Task Manager** for the user's query. Your goal is to minimize unnecessary steps and maximize the efficiency of the subsequent exploration phase (researcher agent).
 
 	    You must first analyze the user's input and determine the optimal course of action. You have two options at your disposal:
