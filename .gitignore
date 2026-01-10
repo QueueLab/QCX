@@ -52,3 +52,4 @@ aef_index.csv
 # Environment variables with GCP credentials
 .env.local
 .env.production.local
+dev_server.log

@@ -20,6 +20,7 @@ import { saveChat, getSystemPrompt } from '@/lib/actions/chat' // Added getSyste
 import { Chat, AIMessage } from '@/lib/types'
 import { UserMessage } from '@/components/user-message'
 import { BotMessage } from '@/components/message'
+import { ReasoningDisplay } from '@/components/reasoning-display'
 import { SearchSection } from '@/components/search-section'
 import SearchRelated from '@/components/search-related'
 import { GeoJsonLayer } from '@/components/map/geojson-layer'
@@ -320,24 +321,37 @@ async function submit(formData?: FormData, skip?: boolean) {
     let toolOutputs: ToolResultPart[] = []
     let errorOccurred = false
     const streamText = createStreamableValue<string>()
-    uiStream.update(<Spinner />)
+    const reasoningStream = createStreamableValue<string>()
+    uiStream.update(
+      <>
+        <Section title="Thinking">
+          <ReasoningDisplay content={reasoningStream.value} />
+        </Section>
+        <Spinner />
+      </>
+    )
 
     while (
       useSpecificAPI
         ? answer.length === 0
         : answer.length === 0 && !errorOccurred
     ) {
-      const { fullResponse, hasError, toolResponses } = await researcher(
-        currentSystemPrompt,
-        uiStream,
-        streamText,
-        messages,
-        mapProvider,
-        useSpecificAPI
-      )
+      const { fullResponse, hasError, toolResponses, reasoningResponse } =
+        await researcher(
+          currentSystemPrompt,
+          uiStream,
+          streamText,
+          reasoningStream,
+          messages,
+          mapProvider,
+          useSpecificAPI
+        )
       answer = fullResponse
       toolOutputs = toolResponses
       errorOccurred = hasError
+      if (reasoningResponse) {
+        reasoningStream.done(reasoningResponse)
+      }
 
       if (toolOutputs.length > 0) {
         toolOutputs.map(output => {
@@ -595,6 +609,15 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
           const answer = createStreamableValue()
           answer.done(content)
           switch (type) {
+            case 'reasoning':
+              return {
+                id,
+                component: (
+                  <Section title="Thinking">
+                    <ReasoningDisplay content={answer.value} />
+                  </Section>
+                )
+              }
             case 'response':
               return {
                 id,

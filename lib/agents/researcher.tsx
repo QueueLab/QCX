@@ -1,5 +1,5 @@
 // lib/agents/researcher.tsx
-import { createStreamableUI, createStreamableValue } from 'ai/rsc'
+import { createStreamableUI, createStreamableValue, getMutableAIState } from 'ai/rsc'
 import {
   CoreMessage,
   LanguageModel,
@@ -12,6 +12,7 @@ import { BotMessage } from '@/components/message'
 import { getTools } from './tools'
 import { getModel } from '../utils'
 import { MapProvider } from '@/lib/store/settings'
+import { nanoid } from 'nanoid'
 
 // This magic tag lets us write raw multi-line strings with backticks, arrows, etc.
 const raw = String.raw
@@ -78,11 +79,13 @@ export async function researcher(
   dynamicSystemPrompt: string,
   uiStream: ReturnType<typeof createStreamableUI>,
   streamText: ReturnType<typeof createStreamableValue<string>>,
+  reasoningStream: ReturnType<typeof createStreamableValue<string>>,
   messages: CoreMessage[],
   mapProvider: MapProvider,
   useSpecificModel?: boolean
 ) {
   let fullResponse = ''
+  let reasoningResponse = ''
   let hasError = false
 
   const answerSection = (
@@ -128,7 +131,12 @@ export async function researcher(
           streamText.update(fullResponse)
         }
         break
-
+      case 'experimental-reasoning-delta':
+        if (delta.reasoningDelta) {
+          reasoningResponse += delta.reasoningDelta
+          reasoningStream.update(reasoningResponse)
+        }
+        break
       case 'tool-call':
         toolCalls.push(delta)
         break
@@ -157,5 +165,21 @@ export async function researcher(
     messages.push({ role: 'tool', content: toolResponses })
   }
 
-  return { result, fullResponse, hasError, toolResponses }
+  if (reasoningResponse) {
+    const aiState = getMutableAIState()
+    aiState.update({
+      ...aiState.get(),
+      messages: [
+        ...aiState.get().messages,
+        {
+          id: nanoid(),
+          role: 'assistant',
+          content: reasoningResponse,
+          type: 'reasoning'
+        }
+      ]
+    })
+  }
+
+  return { result, fullResponse, hasError, toolResponses, reasoningResponse }
 }

@@ -41,12 +41,19 @@ export function getModel(requireVision: boolean = false) {
   // Gemini 3 Pro
   if (gemini3ProApiKey) {
     const google = createGoogleGenerativeAI({
-      apiKey: gemini3ProApiKey,
+      apiKey: gemini3ProApiKey
     })
     try {
-      return google('gemini-3-pro-preview')
+      // Enable Gemini's "thinking mode" to stream reasoning steps.
+      // See: https://ai-sdk.dev/cookbook/guides/gemini#enhanced-reasoning-with-thinking-mode
+      return google('gemini-3-pro-preview', {
+        thinkingLevel: 'low'
+      })
     } catch (error) {
-      console.warn('Gemini 3 Pro API unavailable, falling back to next provider:', error)
+      console.warn(
+        'Gemini 3 Pro API unavailable, falling back to next provider:',
+        error
+      )
     }
   }
 
