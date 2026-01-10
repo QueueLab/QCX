@@ -10,6 +10,7 @@ import { Button } from './ui/button'
 import { ArrowRight, Plus, Paperclip, X } from 'lucide-react'
 import Textarea from 'react-textarea-autosize'
 import { nanoid } from 'nanoid'
+import { useSettingsStore } from '@/lib/store/settings'
 
 interface ChatPanelProps {
   messages: UIState
@@ -25,6 +26,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
   const [, setMessages] = useUIState<typeof AI>()
   const { submit, clearChat } = useActions()
   // Removed mcp instance as it's no longer passed to submit
+  const { mapProvider } = useSettingsStore()
   const [isMobile, setIsMobile] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -176,6 +178,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
             isMobile && 'mobile-chat-input' // Apply mobile chat input styling
           )}
         >
+          <input type="hidden" name="mapProvider" value={mapProvider} />
           <input
             type="file"
             ref={fileInputRef}

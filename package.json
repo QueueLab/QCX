@@ -23,6 +23,7 @@
     "@ai-sdk/xai": "^1.2.18",
     "@composio/core": "^0.3.3",
     "@google-cloud/storage": "^7.18.0",
+    "@google/generative-ai": "^0.24.1",
     "@heroicons/react": "^2.2.0",
     "@hookform/resolvers": "3.3.4",
     "@mapbox/mapbox-gl-draw": "^1.5.0",

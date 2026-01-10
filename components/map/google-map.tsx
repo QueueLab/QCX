@@ -29,14 +29,15 @@ export function GoogleMapComponent() {
     return null
   }
 
+  const cameraOptions = mapData.targetPosition
+    ? { center: mapData.targetPosition, range: 1000, tilt: 60, heading: 0 }
+    : { center: { lat: 37.7749, lng: -122.4194 }, range: 1000, tilt: 60, heading: 0 };
+
   return (
     <APIProvider apiKey={apiKey} version="alpha">
       <Map3D
         style={{ width: '100%', height: '100%' }}
-        center={{ lat: 37.7749, lng: -122.4194, altitude: 0 }}
-        heading={0}
-        tilt={60}
-        range={1000}
+        cameraOptions={cameraOptions}
         mode="SATELLITE"
       />
     </APIProvider>
