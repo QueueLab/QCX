@@ -153,10 +153,18 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
         <div className="space-y-6">
           <Tabs.Root value={currentTab} onValueChange={setCurrentTab} className="w-full">
             <Tabs.List className="grid w-full grid-cols-4 gap-x-2">
-              <Tabs.Trigger value="system-prompt" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">System Prompt</Tabs.Trigger>
-              <Tabs.Trigger value="model" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">Model Selection</Tabs.Trigger>
-              <Tabs.Trigger value="user-management" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">User Management</Tabs.Trigger>
-              <Tabs.Trigger value="map" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">Map</Tabs.Trigger>
+              <Tabs.Trigger value="system-prompt" asChild>
+                <Button variant="outline" className="data-[state=active]:bg-primary/80">System Prompt</Button>
+              </Tabs.Trigger>
+              <Tabs.Trigger value="model" asChild>
+                <Button variant="outline" className="data-[state=active]:bg-primary/80">Model Selection</Button>
+              </Tabs.Trigger>
+              <Tabs.Trigger value="user-management" asChild>
+                <Button variant="outline" className="data-[state=active]:bg-primary/80">User Management</Button>
+              </Tabs.Trigger>
+              <Tabs.Trigger value="map" asChild>
+                <Button variant="outline" className="data-[state=active]:bg-primary/80">Map</Button>
+              </Tabs.Trigger>
             </Tabs.List>
             <AnimatePresence mode="wait">
               <motion.div
