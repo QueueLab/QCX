@@ -1,12 +1,13 @@
 'use client'
 
 import { APIProvider } from '@vis.gl/react-google-maps'
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useToast } from '@/components/ui/hooks/use-toast'
 import { useMapData } from './map-data-context'
 import { useSettingsStore } from '@/lib/store/settings'
 import { useMapLoading } from '../map-loading-context';
 import { Map3D } from './map-3d'
+import { GoogleGeoJsonLayer } from './google-geojson-layer'
 
 export function GoogleMapComponent() {
   const { toast } = useToast()
@@ -34,13 +35,43 @@ export function GoogleMapComponent() {
     };
   }, [setIsMapLoaded]);
 
+  const featureCollection = useMemo(() => {
+    const features = mapData.drawnFeatures?.map(df => ({
+      type: 'Feature' as const,
+      geometry: df.geometry,
+      properties: {
+        id: df.id,
+        measurement: df.measurement
+      }
+    })) || [];
+
+    return {
+      type: 'FeatureCollection' as const,
+      features,
+    };
+  }, [mapData.drawnFeatures]);
+
+  const cameraOptions = useMemo(() => {
+    if (mapData.cameraState) {
+      const { center, zoom, pitch, bearing } = mapData.cameraState;
+      // Convert Mapbox zoom to Google Maps range (approximate)
+      const range = zoom ? 40000000 / Math.pow(2, zoom) : 20000000;
+      return {
+        center,
+        range,
+        tilt: pitch || 0,
+        heading: bearing || 0,
+      };
+    }
+    if (mapData.targetPosition) {
+      return { center: mapData.targetPosition, range: 1000, tilt: 60, heading: 0 };
+    }
+    return { center: { lat: 37.7749, lng: -122.4194 }, range: 1000, tilt: 60, heading: 0 };
+  }, [mapData.cameraState, mapData.targetPosition]);
+
   if (!apiKey) {
     return null
   }
-
-  const cameraOptions = mapData.targetPosition
-    ? { center: mapData.targetPosition, range: 1000, tilt: 60, heading: 0 }
-    : { center: { lat: 37.7749, lng: -122.4194 }, range: 1000, tilt: 60, heading: 0 };
 
   return (
     <APIProvider apiKey={apiKey} version="alpha">
@@ -49,6 +80,7 @@ export function GoogleMapComponent() {
         cameraOptions={cameraOptions}
         mode="SATELLITE"
       />
+      <GoogleGeoJsonLayer data={featureCollection} />
     </APIProvider>
   )
 }

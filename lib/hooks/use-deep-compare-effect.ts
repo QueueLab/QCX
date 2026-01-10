@@ -18,5 +18,5 @@ export function useDeepCompareEffect(
     currentDependenciesRef.current = dependencies;
   }
 
-  useEffect(callback, [currentDependenciesRef.current]);
+  useEffect(callback, [currentDependenciesRef.current, callback]);
 }

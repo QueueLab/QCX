@@ -75,11 +75,14 @@ export function Chat({ id }: ChatProps) {
 
   // useEffect to call the server action when drawnFeatures changes
   useEffect(() => {
-    if (id && mapData.drawnFeatures && mapData.drawnFeatures.length > 0) {
+    if (id && mapData.drawnFeatures && mapData.cameraState) {
       console.log('Chat.tsx: drawnFeatures changed, calling updateDrawingContext', mapData.drawnFeatures);
-      updateDrawingContext(id, mapData.drawnFeatures);
+      updateDrawingContext(id, {
+        drawnFeatures: mapData.drawnFeatures,
+        cameraState: mapData.cameraState,
+      });
     }
-  }, [id, mapData.drawnFeatures]);
+  }, [id, mapData.drawnFeatures, mapData.cameraState]);
 
   // Mobile layout
   if (isMobile) {

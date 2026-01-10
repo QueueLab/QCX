@@ -320,9 +320,20 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
       const center = map.current.getCenter();
       const zoom = map.current.getZoom();
       const pitch = map.current.getPitch();
+      const bearing = map.current.getBearing();
       currentMapCenterRef.current = { center: [center.lng, center.lat], zoom, pitch };
+
+      setMapData(prevData => ({
+        ...prevData,
+        cameraState: {
+          center: { lat: center.lat, lng: center.lng },
+          zoom,
+          pitch,
+          bearing
+        }
+      }));
     }
-  }, [])
+  }, [setMapData])
 
   // Set up idle rotation checker
   useEffect(() => {

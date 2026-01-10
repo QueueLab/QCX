@@ -10,6 +10,8 @@ import { AI } from '@/app/actions'
 import { nanoid } from 'nanoid'
 import { UserMessage } from './user-message'
 import { toast } from 'react-toastify'
+import { useSettingsStore } from '@/lib/store/settings'
+import { useMapData } from './map/map-data-context'
 
 // Define an interface for the actions to help TypeScript during build
 interface HeaderActions {
@@ -18,6 +20,8 @@ interface HeaderActions {
 
 export function HeaderSearchButton() {
   const { map } = useMap()
+  const { mapProvider } = useSettingsStore()
+  const { mapData } = useMapData()
   // Cast the actions to our defined interface to avoid build errors
   const actions = useActions<typeof AI>() as unknown as HeaderActions
   const [, setMessages] = useUIState<typeof AI>()
@@ -32,12 +36,11 @@ export function HeaderSearchButton() {
   }, [])
 
   const handleResolutionSearch = async () => {
-    if (!map) {
+    if (mapProvider === 'mapbox' && !map) {
       toast.error('Map is not available yet. Please wait for it to load.')
       return
     }
     if (!actions) {
-      // This should theoretically not happen if the component is used correctly
       toast.error('Search actions are not available.')
       return
     }
@@ -53,10 +56,31 @@ export function HeaderSearchButton() {
         }
       ])
 
-      const canvas = map.getCanvas()
-      const blob = await new Promise<Blob | null>(resolve => {
-        canvas.toBlob(resolve, 'image/png')
-      })
+      let blob: Blob | null = null;
+
+      if (mapProvider === 'mapbox') {
+        const canvas = map!.getCanvas()
+        blob = await new Promise<Blob | null>(resolve => {
+          canvas.toBlob(resolve, 'image/png')
+        })
+      } else if (mapProvider === 'google') {
+        const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+        if (!apiKey || !mapData.cameraState) {
+          toast.error('Google Maps API key or camera state is not available.')
+          setIsAnalyzing(false)
+          return
+        }
+        const { center, range } = mapData.cameraState
+        const zoom = Math.round(Math.log2(40000000 / (range || 1)));
+
+        let staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${center.lat},${center.lng}&zoom=${zoom}&size=640x480&maptype=satellite&key=${apiKey}`;
+
+        const response = await fetch(staticMapUrl);
+        if (!response.ok) {
+          throw new Error('Failed to fetch static map image.');
+        }
+        blob = await response.blob();
+      }
 
       if (!blob) {
         throw new Error('Failed to capture map image.')
