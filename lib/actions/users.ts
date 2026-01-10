@@ -1,7 +1,7 @@
 // File: lib/actions/users.ts
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, noStore } from 'next/cache';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -124,6 +124,7 @@ export async function updateSettingsAndUsers(
 const modelConfigPath = path.resolve(process.cwd(), 'config', 'model.json');
 
 export async function getSelectedModel(): Promise<string | null> {
+  noStore();
   try {
     const data = await fs.readFile(modelConfigPath, 'utf8');
     const config = JSON.parse(data);

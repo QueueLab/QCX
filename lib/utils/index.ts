@@ -19,7 +19,6 @@ export function generateUUID(): string {
 
 export async function getModel(requireVision: boolean = false) {
   const selectedModel = await getSelectedModel();
-  console.log(`[DEBUG] getModel - selectedModel: "${selectedModel}"`);
 
   const xaiApiKey = process.env.XAI_API_KEY;
   const gemini3ProApiKey = process.env.GEMINI_3_PRO_API_KEY;
