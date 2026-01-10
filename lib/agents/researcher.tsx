@@ -131,9 +131,9 @@ export async function researcher(
           streamText.update(fullResponse)
         }
         break
-      case 'experimental-reasoning-delta':
-        if (delta.reasoningDelta) {
-          reasoningResponse += delta.reasoningDelta
+      case 'reasoning':
+        if (delta.textDelta) {
+          reasoningResponse += delta.textDelta
           reasoningStream.update(reasoningResponse)
         }
         break
