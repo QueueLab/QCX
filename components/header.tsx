@@ -26,10 +26,19 @@ export const Header = () => {
         </a>
       </div>
       
-      <div className="absolute left-1">
+      <div className="absolute left-1 flex items-center">
         <Button variant="ghost" size="icon">
-          <Image src="/images/logo.svg" alt="Logo" width={24} height={24} className="h-6 w-auto" />
+          <Image
+            src="/images/logo.svg"
+            alt="Logo"
+            width={24}
+            height={24}
+            className="h-6 w-auto"
+          />
         </Button>
+        <h1 className="text-2xl font-poppins font-semibold text-primary">
+          QCX
+        </h1>
       </div>
       
       <div className="w-1/2 gap-20 hidden md:flex justify-between px-10 items-center z-10">
