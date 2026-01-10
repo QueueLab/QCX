@@ -23,7 +23,8 @@ interface ChatPanelProps {
 }
 
 export interface ChatPanelRef {
-  handleAttachmentClick: () => void;
+  handleAttachmentClick: () => void
+  submitForm: () => void
 }
 
 export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, input, setInput }, ref) => {
@@ -43,6 +44,9 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
   useImperativeHandle(ref, () => ({
     handleAttachmentClick() {
       fileInputRef.current?.click()
+    },
+    submitForm() {
+      formRef.current?.requestSubmit()
     }
   }));
 

@@ -31,6 +31,7 @@ export function Chat({ id }: ChatProps) {
   const { isCalendarOpen } = useCalendarToggle()
   const [input, setInput] = useState('')
   const [showEmptyScreen, setShowEmptyScreen] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const chatPanelRef = useRef<ChatPanelRef>(null);
 
   const handleAttachment = () => {
@@ -73,6 +74,13 @@ export function Chat({ id }: ChatProps) {
   // Get mapData to access drawnFeatures
   const { mapData } = useMapData();
 
+  useEffect(() => {
+    if (isSubmitting) {
+      chatPanelRef.current?.submitForm()
+      setIsSubmitting(false)
+    }
+  }, [isSubmitting])
+
   // useEffect to call the server action when drawnFeatures changes
   useEffect(() => {
     if (id && mapData.drawnFeatures && mapData.cameraState) {
@@ -106,6 +114,7 @@ export function Chat({ id }: ChatProps) {
             <EmptyScreen
               submitMessage={message => {
                 setInput(message)
+                setIsSubmitting(true)
               }}
             />
           ) : (
@@ -133,6 +142,7 @@ export function Chat({ id }: ChatProps) {
               <EmptyScreen
                 submitMessage={message => {
                   setInput(message)
+                  setIsSubmitting(true)
                 }}
               />
             ) : (
