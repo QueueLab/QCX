@@ -105,7 +105,7 @@ export async function researcher(
   )
 
   const result = await nonexperimental_streamText({
-    model: getModel(hasImage) as LanguageModel,
+    model: (await getModel(hasImage)) as LanguageModel,
     maxTokens: 4096,
     system: systemPromptToUse,
     messages,
