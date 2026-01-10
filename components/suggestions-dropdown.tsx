@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { PartialRelated } from '@/lib/schema/related'
 import { Button } from './ui/button'
 import { ArrowRight } from 'lucide-react'
@@ -20,7 +20,10 @@ export const SuggestionsDropdown: React.FC<SuggestionsDropdownProps> = ({
   const [selectedIndex, setSelectedIndex] = useState(-1)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  const suggestionItems = suggestions?.items?.filter(item => item?.query) || []
+  const suggestionItems = useMemo(
+    () => suggestions?.items?.filter(item => item?.query) || [],
+    [suggestions]
+  )
 
   // Keyboard navigation
   useEffect(() => {
@@ -84,21 +87,24 @@ export const SuggestionsDropdown: React.FC<SuggestionsDropdownProps> = ({
     >
       <div className="p-2">
         <p className="text-sm text-muted-foreground px-2 pb-1">Suggestions</p>
-        {suggestionItems.map((item, index) => (
-          <Button
-            key={index}
-            variant="ghost"
-            className={cn(
-              'w-full justify-start px-2 py-1 h-fit font-normal text-accent-foreground whitespace-normal text-left',
-              selectedIndex === index && 'bg-accent'
-            )}
-            onClick={() => onSelect(item.query!)}
-            onMouseEnter={() => setSelectedIndex(index)}
-          >
-            <ArrowRight className="h-4 w-4 mr-2 flex-shrink-0" />
-            {item.query}
-          </Button>
-        ))}
+        {suggestionItems.map((item, index) => {
+          if (!item?.query) return null
+          return (
+            <Button
+              key={index}
+              variant="ghost"
+              className={cn(
+                'w-full justify-start px-2 py-1 h-fit font-normal text-accent-foreground whitespace-normal text-left',
+                selectedIndex === index && 'bg-accent'
+              )}
+              onClick={() => onSelect(item.query!)}
+              onMouseEnter={() => setSelectedIndex(index)}
+            >
+              <ArrowRight className="h-4 w-4 mr-2 flex-shrink-0" />
+              {item.query}
+            </Button>
+          )
+        })}
       </div>
     </div>
   )
