@@ -403,18 +403,34 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   // Initialize map (only once)
   useEffect(() => {
     if (mapContainer.current && !map.current) {
+      let initialCenter: [number, number] = [position?.longitude ?? 0, position?.latitude ?? 0];
       let initialZoom = 2;
-      if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      let initialPitch = 0;
+      let initialBearing = 0;
+
+      if (mapData.cameraState) {
+        const { center, range, tilt, heading, zoom, pitch, bearing } = mapData.cameraState;
+        initialCenter = [center.lng, center.lat];
+        if (zoom !== undefined) {
+          initialZoom = zoom;
+        } else if (range !== undefined) {
+          initialZoom = Math.log2(40000000 / range);
+        }
+        initialPitch = pitch ?? tilt ?? 0;
+        initialBearing = bearing ?? heading ?? 0;
+      } else if (typeof window !== 'undefined' && window.innerWidth < 768) {
         initialZoom = 1.3;
       }
+
+      currentMapCenterRef.current = { center: initialCenter, zoom: initialZoom, pitch: initialPitch };
 
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/satellite-streets-v12',
-        center: currentMapCenterRef.current.center,
-        zoom: currentMapCenterRef.current.zoom,
-        pitch: currentMapCenterRef.current.pitch,
-        bearing: 0,
+        center: initialCenter,
+        zoom: initialZoom,
+        pitch: initialPitch,
+        bearing: initialBearing,
         maxZoom: 22,
         attributionControl: true,
         preserveDrawingBuffer: true
