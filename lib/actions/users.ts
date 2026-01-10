@@ -1,7 +1,7 @@
 // File: lib/actions/users.ts
 'use server';
 
-import { revalidatePath, noStore } from 'next/cache';
+import { revalidatePath, unstable_noStore as noStore } from 'next/cache';
 import fs from 'fs/promises';
 import path from 'path';
 
