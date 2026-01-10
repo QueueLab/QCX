@@ -5,12 +5,14 @@ import { useEffect } from 'react'
 import { useToast } from '@/components/ui/hooks/use-toast'
 import { useMapData } from './map-data-context'
 import { useSettingsStore } from '@/lib/store/settings'
+import { useMapLoading } from '../map-loading-context';
 import { Map3D } from './map-3d'
 
 export function GoogleMapComponent() {
   const { toast } = useToast()
   const { mapData } = useMapData()
   const { setMapProvider } = useSettingsStore()
+  const { setIsMapLoaded } = useMapLoading();
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
 
@@ -24,6 +26,13 @@ export function GoogleMapComponent() {
       setMapProvider('mapbox')
     }
   }, [apiKey, setMapProvider, toast])
+
+  useEffect(() => {
+    setIsMapLoaded(true);
+    return () => {
+      setIsMapLoaded(false);
+    };
+  }, [setIsMapLoaded]);
 
   if (!apiKey) {
     return null
