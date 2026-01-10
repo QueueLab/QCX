@@ -5,12 +5,14 @@ import { useEffect } from 'react'
 import { useToast } from '@/components/ui/hooks/use-toast'
 import { useMapData } from './map-data-context'
 import { useSettingsStore } from '@/lib/store/settings'
+import { useMapLoading } from '../map-loading-context';
 import { Map3D } from './map-3d'
 
 export function GoogleMapComponent() {
   const { toast } = useToast()
   const { mapData } = useMapData()
   const { setMapProvider } = useSettingsStore()
+  const { setIsMapLoaded } = useMapLoading();
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
 
@@ -25,18 +27,26 @@ export function GoogleMapComponent() {
     }
   }, [apiKey, setMapProvider, toast])
 
+  useEffect(() => {
+    setIsMapLoaded(true);
+    return () => {
+      setIsMapLoaded(false);
+    };
+  }, [setIsMapLoaded]);
+
   if (!apiKey) {
     return null
   }
+
+  const cameraOptions = mapData.targetPosition
+    ? { center: mapData.targetPosition, range: 1000, tilt: 60, heading: 0 }
+    : { center: { lat: 37.7749, lng: -122.4194 }, range: 1000, tilt: 60, heading: 0 };
 
   return (
     <APIProvider apiKey={apiKey} version="alpha">
       <Map3D
         style={{ width: '100%', height: '100%' }}
-        center={{ lat: 37.7749, lng: -122.4194, altitude: 0 }}
-        heading={0}
-        tilt={60}
-        range={1000}
+        cameraOptions={cameraOptions}
         mode="SATELLITE"
       />
     </APIProvider>

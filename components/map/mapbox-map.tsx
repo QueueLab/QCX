@@ -513,14 +513,9 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   // Effect to handle map updates from MapDataContext
   useEffect(() => {
     if (mapData.targetPosition && map.current) {
-      // console.log("Mapbox.tsx: Received new targetPosition from context:", mapData.targetPosition);
-      // targetPosition is LngLatLike, which can be [number, number]
-      // updateMapPosition expects (latitude, longitude)
-      const [lng, lat] = mapData.targetPosition as [number, number]; // Assuming LngLatLike is [lng, lat]
+      const { lat, lng } = mapData.targetPosition;
       if (typeof lat === 'number' && typeof lng === 'number') {
         updateMapPosition(lat, lng);
-      } else {
-        // console.error("Mapbox.tsx: Invalid targetPosition format in mapData", mapData.targetPosition);
       }
     }
     // TODO: Handle mapData.mapFeature for drawing routes, polygons, etc. in a future step.

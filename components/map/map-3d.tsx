@@ -29,14 +29,7 @@ export const Map3D = forwardRef(
       props.onCameraChange(p);
     });
 
-    const [customElementsReady, setCustomElementsReady] = useState(false);
-    useEffect(() => {
-      customElements.whenDefined('gmp-map-3d').then(() => {
-        setCustomElementsReady(true);
-      });
-    }, []);
-
-    const {center, heading, tilt, range, roll, ...map3dOptions} = props;
+    const {center, heading, tilt, range, roll, cameraOptions, ...map3dOptions} = props;
 
     useDeepCompareEffect(() => {
       if (!map3DElement) return;
@@ -45,12 +38,29 @@ export const Map3D = forwardRef(
       Object.assign(map3DElement, map3dOptions);
     }, [map3DElement, map3dOptions]);
 
+    useDeepCompareEffect(() => {
+      if (!map3DElement || !cameraOptions) return;
+
+      const { center, heading, tilt, range } = cameraOptions;
+
+      if (center) {
+        map3DElement.center = { ...center, altitude: 0 };
+      }
+      if (heading !== undefined) {
+        map3DElement.heading = heading;
+      }
+      if (tilt !== undefined) {
+        map3DElement.tilt = tilt;
+      }
+      if (range !== undefined) {
+        map3DElement.range = range;
+      }
+    }, [map3DElement, cameraOptions]);
+
     useImperativeHandle<
       google.maps.maps3d.Map3DElement | null,
       google.maps.maps3d.Map3DElement | null
     >(forwardedRef, () => map3DElement, [map3DElement]);
-
-    if (!customElementsReady) return null;
 
     return (
       <div style={props.style}>
