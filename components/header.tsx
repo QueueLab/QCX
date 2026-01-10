@@ -36,7 +36,7 @@ export const Header = () => {
             className="h-6 w-auto"
           />
         </Button>
-        <h1 className="text-2xl font-poppins font-semibold text-primary">
+        <h1 className="text-2xl font-poppins font-semibold text-primary shimmer">
           QCX
         </h1>
       </div>
