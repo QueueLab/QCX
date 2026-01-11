@@ -73,7 +73,7 @@ interface MapCommandGeneratorInput {
 export async function mapCommandGenerator(
   input: MapCommandGeneratorInput
 ): Promise<MapCommandGeneratorOutput> {
-  const model = getModel();
+  const model = await getModel();
 
   try {
     // Build context string

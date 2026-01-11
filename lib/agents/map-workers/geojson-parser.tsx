@@ -72,7 +72,7 @@ Output: {
 export async function geojsonParser(
   text: string
 ): Promise<GeoJSONParserOutput> {
-  const model = getModel();
+  const model = await getModel();
 
   try {
     const { object } = await generateObject({
