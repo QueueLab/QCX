@@ -121,20 +121,25 @@ export function Chat({ id }: ChatProps) {
             <CalendarNotepad chatId={id} />
           ) : showEmptyScreen ? (
             <div className="relative w-full h-full">
-              <EmptyScreen
-                submitMessage={message => {
-                  setInput(message)
-                  setIsSubmitting(true)
-                }}
-              />
+              <div className={cn("transition-all duration-300", suggestions ? "blur-md pointer-events-none" : "")}>
+                <EmptyScreen
+                  submitMessage={message => {
+                    setInput(message)
+                    setIsSubmitting(true)
+                  }}
+                />
+              </div>
               {suggestions && (
-                <div className="absolute inset-0 bg-background/80 z-20 flex flex-col items-start p-4">
+                <div className="absolute inset-0 z-20 flex flex-col items-start p-4">
                   <SuggestionsDropdown
                     suggestions={suggestions}
                     onSelect={query => {
                       setInput(query)
                       setSuggestions(null)
-                      setIsSubmitting(true)
+                      // Use a small timeout to ensure state update before submission
+                      setTimeout(() => {
+                        setIsSubmitting(true)
+                      }, 0)
                     }}
                     onClose={() => setSuggestions(null)}
                     className="relative bottom-auto mb-0 w-full shadow-none border-none bg-transparent"
@@ -171,20 +176,25 @@ export function Chat({ id }: ChatProps) {
             <div className="relative">
               {showEmptyScreen ? (
                 <>
-                  <EmptyScreen
-                    submitMessage={message => {
-                      setInput(message)
-                      setIsSubmitting(true)
-                    }}
-                  />
+                  <div className={cn("transition-all duration-300", suggestions ? "blur-md pointer-events-none" : "")}>
+                    <EmptyScreen
+                      submitMessage={message => {
+                        setInput(message)
+                        setIsSubmitting(true)
+                      }}
+                    />
+                  </div>
                   {suggestions && (
-                    <div className="absolute inset-0 bg-background/80 z-20 flex flex-col items-start p-4">
+                    <div className="absolute inset-0 z-20 flex flex-col items-start p-4">
                       <SuggestionsDropdown
                         suggestions={suggestions}
                         onSelect={query => {
                           setInput(query)
                           setSuggestions(null)
-                          setIsSubmitting(true)
+                          // Use a small timeout to ensure state update before submission
+                          setTimeout(() => {
+                            setIsSubmitting(true)
+                          }, 0)
                         }}
                         onClose={() => setSuggestions(null)}
                         className="relative bottom-auto mb-0 w-full shadow-none border-none bg-transparent"

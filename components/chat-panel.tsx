@@ -300,17 +300,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
           >
             <ArrowRight size={isMobile ? 18 : 20} />
           </Button>
-          {!isMobile && (
-            <SuggestionsDropdown
-              suggestions={suggestions}
-              onSelect={query => {
-                setInput(query)
-                setSuggestions(null)
-                formRef.current?.requestSubmit()
-              }}
-              onClose={() => setSuggestions(null)}
-            />
-          )}
+          {/* Suggestions are now handled by the parent component (chat.tsx) as an overlay */}
         </div>
       </form>
     </div>
