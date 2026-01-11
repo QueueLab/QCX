@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter as FontSans } from 'next/font/google'
+import { Inter as FontSans, Poppins } from 'next/font/google'
 import './globals.css'
 import 'katex/dist/katex.min.css';
 import { cn } from '@/lib/utils'
@@ -15,11 +15,17 @@ import { ProfileToggleProvider } from '@/components/profile-toggle-context'
 import { CalendarToggleProvider } from '@/components/calendar-toggle-context'
 import { MapLoadingProvider } from '@/components/map-loading-context';
 import ConditionalLottie from '@/components/conditional-lottie';
-import { MapProvider } from '@/components/map/map-context'
+import { MapProvider as MapContextProvider } from '@/components/map/map-context'
 
 const fontSans = FontSans({
   subsets: ['latin'],
   variable: '--font-sans'
+})
+
+const fontPoppins = Poppins({
+  subsets: ['latin'],
+  variable: '--font-poppins',
+  weight: ['400', '500', '600', '700']
 })
 
 const title = ''
@@ -56,7 +62,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={cn('font-sans antialiased', fontSans.variable)}>
+      <body
+        className={cn(
+          'font-sans antialiased',
+          fontSans.variable,
+          fontPoppins.variable
+        )}
+      >
         <CalendarToggleProvider>
           <MapToggleProvider>
             <ProfileToggleProvider>
@@ -67,7 +79,7 @@ export default function RootLayout({
               disableTransitionOnChange
               themes={['light', 'dark', 'earth']}
             >
-              <MapProvider>
+              <MapContextProvider>
                 <MapLoadingProvider>
                   <Header />
                   <ConditionalLottie />
@@ -76,7 +88,7 @@ export default function RootLayout({
                   <Footer />
                   <Toaster />
                 </MapLoadingProvider>
-              </MapProvider>
+              </MapContextProvider>
             </ThemeProvider>
           </ProfileToggleProvider>
         </MapToggleProvider>

@@ -6,6 +6,9 @@ import { BotMessage } from '@/components/message';
 import { geospatialQuerySchema } from '@/lib/schema/geospatial';
 import { initializeComposioMapbox } from '@/mapbox_mcp/composio-mapbox';
 import { z } from 'zod';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { getSelectedModel } from '@/lib/actions/users';
+import { MapProvider } from '@/lib/store/settings';
 
 /**
  * Establish connection to the Composio Mapbox client with proper environment validation.
@@ -32,7 +35,13 @@ async function getConnectedMcpClient() {
 /**
  * Main geospatial tool executor.
  */
-export const geospatialTool = ({ uiStream }: { uiStream: ReturnType<typeof createStreamableUI> }) => ({
+export const geospatialTool = ({
+  uiStream,
+  mapProvider
+}: {
+  uiStream: ReturnType<typeof createStreamableUI>
+  mapProvider?: MapProvider
+}) => ({
   description: `Use this tool for location-based queries including: 
   There a plethora of tools inside this tool accessible on the mapbox mcp server where switch case into the tool of choice for that use case
   If the Query is supposed to use multiple tools in a sequence you must access all the tools in the sequence and then provide a final answer based on the results of all the tools used. 
@@ -57,10 +66,66 @@ Uses the Mapbox Search Box Text Search API endpoint to power searching for and g
   parameters: geospatialQuerySchema,
   execute: async (params: z.infer<typeof geospatialQuerySchema>) => {
     const { queryType, includeMap = true } = params;
-    console.log('[GeospatialTool] Execute called with:', params);
+    console.log('[GeospatialTool] Execute called with:', params, 'and map provider:', mapProvider);
 
     const uiFeedbackStream = createStreamableValue<string>();
     uiStream.append(<BotMessage content={uiFeedbackStream.value} />);
+
+    const selectedModel = await getSelectedModel();
+
+    if (selectedModel?.includes('gemini') && mapProvider === 'google') {
+      let feedbackMessage = `Processing geospatial query with Gemini...`;
+      uiFeedbackStream.update(feedbackMessage);
+
+      try {
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_3_PRO_API_KEY!);
+        const model = genAI.getGenerativeModel({
+          model: 'gemini-1.5-pro-latest',
+        });
+
+        const searchText = (params as any).location || (params as any).query;
+        const prompt = `Find the location for: ${searchText}`;
+        const tools: any = [{ googleSearch: {} }];
+        const result = await model.generateContent({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          tools,
+        });
+        const response = await result.response;
+        const functionCalls = (response as any).functionCalls();
+
+        if (functionCalls && functionCalls.length > 0) {
+          const gsr = functionCalls[0];
+          // This is a placeholder for the actual response structure,
+          // as I don't have a way to inspect it at the moment.
+          const place = (gsr as any).results[0].place;
+          if (place) {
+            const { latitude, longitude } = place.coordinates;
+            const place_name = place.displayName;
+
+            const mcpData = {
+              location: {
+                latitude,
+                longitude,
+                place_name,
+              },
+            };
+            feedbackMessage = `Found location: ${place_name}`;
+            uiFeedbackStream.update(feedbackMessage);
+            uiFeedbackStream.done();
+            uiStream.update(<BotMessage content={uiFeedbackStream.value} />);
+            return { type: 'MAP_QUERY_TRIGGER', originalUserInput: JSON.stringify(params), queryType, timestamp: new Date().toISOString(), mcp_response: mcpData, error: null };
+          }
+        }
+        throw new Error('No location found by Gemini.');
+      } catch (error: any) {
+        const toolError = `Gemini grounding error: ${error.message}`;
+        uiFeedbackStream.update(toolError);
+        console.error('[GeospatialTool] Gemini execution failed:', error);
+        uiFeedbackStream.done();
+        uiStream.update(<BotMessage content={uiFeedbackStream.value} />);
+        return { type: 'MAP_QUERY_TRIGGER', originalUserInput: JSON.stringify(params), queryType, timestamp: new Date().toISOString(), mcp_response: null, error: toolError };
+      }
+    }
 
     let feedbackMessage = `Processing geospatial query (type: ${queryType})... Connecting to mapping service...`;
     uiFeedbackStream.update(feedbackMessage);

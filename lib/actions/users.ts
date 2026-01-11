@@ -1,7 +1,9 @@
 // File: lib/actions/users.ts
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, unstable_noStore as noStore } from 'next/cache';
+import fs from 'fs/promises';
+import path from 'path';
 
 // This is a placeholder for a database or other storage.
 // In a real application, you would interact with your database here.
@@ -117,4 +119,37 @@ export async function updateSettingsAndUsers(
   console.log(`[Action: updateSettingsAndUsers] Updated users for ${userId}:`, usersStore[userId]);
   revalidatePath('/settings');
   return { success: true, message: 'Settings and users updated successfully.', users: usersStore[userId] };
+}
+
+const modelConfigPath = path.resolve(process.cwd(), 'config', 'model.json');
+
+export async function getSelectedModel(): Promise<string | null> {
+  noStore();
+  console.log(`[DEBUG] getSelectedModel - Reading from path: "${modelConfigPath}"`);
+  try {
+    const data = await fs.readFile(modelConfigPath, 'utf8');
+    console.log(`[DEBUG] getSelectedModel - Raw file content: "${data}"`);
+    const config = JSON.parse(data);
+    return config.selectedModel || null;
+  } catch (error) {
+    console.error('Error reading model config:', error);
+    console.log(`[DEBUG] getSelectedModel - Error reading file:`, error);
+    return null;
+  }
+}
+
+export async function saveSelectedModel(model: string): Promise<{ success: boolean; error?: string }> {
+  console.log(`[DEBUG] saveSelectedModel - Received model selection: "${model}"`);
+  console.log(`[DEBUG] saveSelectedModel - Writing to path: "${modelConfigPath}"`);
+  try {
+    const data = JSON.stringify({ selectedModel: model }, null, 2);
+    await fs.writeFile(modelConfigPath, data, 'utf8');
+    console.log(`[DEBUG] saveSelectedModel - Successfully wrote to file.`);
+    revalidatePath('/settings');
+    return { success: true };
+  } catch (error) {
+    console.error('Error saving model config:', error);
+    console.log(`[DEBUG] saveSelectedModel - Error writing to file:`, error);
+    return { success: false, error: 'Failed to save selected model.' };
+  }
 }
