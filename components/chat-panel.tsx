@@ -20,6 +20,7 @@ interface ChatPanelProps {
   messages: UIState
   input: string
   setInput: (value: string) => void
+  onSuggestionsChange?: (suggestions: PartialRelated | null) => void
 }
 
 export interface ChatPanelRef {
@@ -27,14 +28,18 @@ export interface ChatPanelRef {
   submitForm: () => void
 }
 
-export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, input, setInput }, ref) => {
+export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, input, setInput, onSuggestionsChange }, ref) => {
   const [, setMessages] = useUIState<typeof AI>()
   const { submit, clearChat } = useActions()
   // Removed mcp instance as it's no longer passed to submit
   const { mapProvider } = useSettingsStore()
   const [isMobile, setIsMobile] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [suggestions, setSuggestions] = useState<PartialRelated | null>(null)
+  const [suggestions, setSuggestionsState] = useState<PartialRelated | null>(null)
+  const setSuggestions = useCallback((s: PartialRelated | null) => {
+    setSuggestionsState(s)
+    onSuggestionsChange?.(s)
+  }, [onSuggestionsChange])
   const { mapData } = useMapData()
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -295,15 +300,17 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
           >
             <ArrowRight size={isMobile ? 18 : 20} />
           </Button>
-          <SuggestionsDropdown
-            suggestions={suggestions}
-            onSelect={query => {
-              setInput(query)
-              setSuggestions(null)
-              formRef.current?.requestSubmit()
-            }}
-            onClose={() => setSuggestions(null)}
-          />
+          {!isMobile && (
+            <SuggestionsDropdown
+              suggestions={suggestions}
+              onSelect={query => {
+                setInput(query)
+                setSuggestions(null)
+                formRef.current?.requestSubmit()
+              }}
+              onClose={() => setSuggestions(null)}
+            />
+          )}
         </div>
       </form>
     </div>

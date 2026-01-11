@@ -10,12 +10,14 @@ export interface SuggestionsDropdownProps {
   suggestions: PartialRelated | null
   onSelect: (query: string) => void
   onClose: () => void
+  className?: string
 }
 
 export const SuggestionsDropdown: React.FC<SuggestionsDropdownProps> = ({
   suggestions,
   onSelect,
-  onClose
+  onClose,
+  className
 }) => {
   const [selectedIndex, setSelectedIndex] = useState(-1)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -83,7 +85,10 @@ export const SuggestionsDropdown: React.FC<SuggestionsDropdownProps> = ({
   return (
     <div
       ref={dropdownRef}
-      className="absolute bottom-full mb-2 w-full bg-background border border-border rounded-lg shadow-lg"
+      className={cn(
+        'absolute bottom-full mb-2 w-full bg-background border border-border rounded-lg shadow-lg z-50',
+        className
+      )}
     >
       <div className="p-2">
         <p className="text-sm text-muted-foreground px-2 pb-1">Suggestions</p>
