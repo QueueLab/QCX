@@ -2,6 +2,7 @@ import { createStreamableUI } from 'ai/rsc'
 import { retrieveTool } from './retrieve'
 import { searchTool } from './search'
 import { videoSearchTool } from './video-search'
+import { videoUnderstandingTool } from './video-understanding'
 import { geospatialTool } from './geospatial' // Removed useGeospatialToolMcp import
 
 import { MapProvider } from '@/lib/store/settings'
@@ -30,6 +31,13 @@ export const getTools = ({ uiStream, fullResponse, mapProvider }: ToolProps) => 
 
   if (process.env.SERPER_API_KEY) {
     tools.videoSearch = videoSearchTool({
+      uiStream,
+      fullResponse
+    })
+  }
+
+  if (process.env.GEMINI_3_PRO_API_KEY) {
+    tools.videoUnderstanding = videoUnderstandingTool({
       uiStream,
       fullResponse
     })
