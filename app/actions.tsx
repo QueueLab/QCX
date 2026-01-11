@@ -28,6 +28,7 @@ import { GeoJsonLayer } from '@/components/map/geojson-layer'
 import { CopilotDisplay } from '@/components/copilot-display'
 import RetrieveSection from '@/components/retrieve-section'
 import { VideoSearchSection } from '@/components/video-search-section'
+import { VideoUnderstandingSection } from '@/components/video-understanding-section'
 import { MapQueryHandler } from '@/components/map/map-query-handler' // Add this import
 import { LocationResponseHandler } from '@/components/map/location-response-handler'
 import { PartialRelated } from '@/lib/schema/related'
@@ -725,6 +726,14 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                   id,
                   component: (
                     <VideoSearchSection result={searchResults.value} />
+                  ),
+                  isCollapsed: isCollapsed.value
+                }
+              case 'videoUnderstanding':
+                return {
+                  id,
+                  component: (
+                    <VideoUnderstandingSection result={searchResults.value} />
                   ),
                   isCollapsed: isCollapsed.value
                 }
