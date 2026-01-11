@@ -39,7 +39,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
   const setSuggestions = useCallback((s: PartialRelated | null) => {
     setSuggestionsState(s)
     onSuggestionsChange?.(s)
-  }, [onSuggestionsChange])
+  }, [onSuggestionsChange, setSuggestionsState])
   const { mapData } = useMapData()
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
