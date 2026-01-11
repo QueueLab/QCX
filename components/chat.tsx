@@ -7,7 +7,7 @@ import { ChatMessages } from './chat-messages'
 import { EmptyScreen } from './empty-screen'
 import { useCalendarToggle } from './calendar-toggle-context'
 import { CalendarNotepad } from './calendar-notepad'
-import { MapProvider } from './map/map-provider'
+import { Mapbox } from './map/mapbox-map'
 import { useUIState, useAIState } from 'ai/rsc'
 import MobileIconsBar from './mobile-icons-bar'
 import { useProfileToggle, ProfileToggleEnum } from "@/components/profile-toggle-context";
@@ -88,7 +88,7 @@ export function Chat({ id }: ChatProps) {
         <HeaderSearchButton />
         <div className="mobile-layout-container">
           <div className="mobile-map-section">
-          {activeView ? <SettingsView /> : <MapProvider />}
+          {activeView ? <SettingsView /> : <Mapbox />}
         </div>
         <div className="mobile-icons-bar">
           <MobileIconsBar onAttachmentClick={handleAttachment} />
@@ -142,7 +142,7 @@ export function Chat({ id }: ChatProps) {
           className="w-1/2 p-4 fixed h-[calc(100vh-0.5in)] top-0 right-0 mt-[0.5in]"
           style={{ zIndex: 10 }} // Added z-index
         >
-          {activeView ? <SettingsView /> : <MapProvider />}
+          {activeView ? <SettingsView /> : <Mapbox />}
         </div>
       </div>
     </MapDataProvider>

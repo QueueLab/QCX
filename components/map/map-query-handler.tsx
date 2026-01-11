@@ -38,7 +38,8 @@ export const MapQueryHandler: React.FC<MapQueryHandlerProps> = ({ toolOutput }) 
         console.log(`MapQueryHandler: Received data from geospatialTool. Place: ${place_name}, Lat: ${latitude}, Lng: ${longitude}`);
         setMapData(prevData => ({
           ...prevData,
-          targetPosition: { lat: latitude, lng: longitude },
+          // Ensure coordinates are in [lng, lat] format for MapboxGL
+          targetPosition: [longitude, latitude],
           // Optionally store more info from mcp_response if needed by MapboxMap component later
           mapFeature: {
             place_name, 

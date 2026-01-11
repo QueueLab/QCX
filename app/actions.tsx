@@ -285,8 +285,6 @@ async function submit(formData?: FormData, skip?: boolean) {
   const userId = 'anonymous'
   const currentSystemPrompt = (await getSystemPrompt(userId)) || ''
 
-  const mapProvider = formData?.get('mapProvider') as 'mapbox' | 'google'
-
   async function processEvents() {
     let action: any = { object: { next: 'proceed' } }
     if (!skip) {
@@ -332,7 +330,6 @@ async function submit(formData?: FormData, skip?: boolean) {
         uiStream,
         streamText,
         messages,
-        mapProvider,
         useSpecificAPI
       )
       answer = fullResponse

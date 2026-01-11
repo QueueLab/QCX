@@ -4,15 +4,14 @@ import { searchTool } from './search'
 import { videoSearchTool } from './video-search'
 import { geospatialTool } from './geospatial' // Removed useGeospatialToolMcp import
 
-import { MapProvider } from '@/lib/store/settings'
-
 export interface ToolProps {
   uiStream: ReturnType<typeof createStreamableUI>
   fullResponse: string
-  mapProvider?: MapProvider
+  // mcp?: any; // Removed mcp property as it's no longer passed down for geospatialTool
 }
 
-export const getTools = ({ uiStream, fullResponse, mapProvider }: ToolProps) => {
+// Removed mcp from parameters
+export const getTools = ({ uiStream, fullResponse }: ToolProps) => {
   const tools: any = {
     search: searchTool({
       uiStream,
@@ -22,9 +21,10 @@ export const getTools = ({ uiStream, fullResponse, mapProvider }: ToolProps) => 
       uiStream,
       fullResponse
     }),
+    // geospatialTool now only requires uiStream
     geospatialQueryTool: geospatialTool({
-      uiStream,
-      mapProvider
+      uiStream
+      // mcp: mcp || null // Removed mcp argument
     })
   }
 

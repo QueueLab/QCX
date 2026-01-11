@@ -15,7 +15,7 @@ import { ProfileToggleProvider } from '@/components/profile-toggle-context'
 import { CalendarToggleProvider } from '@/components/calendar-toggle-context'
 import { MapLoadingProvider } from '@/components/map-loading-context';
 import ConditionalLottie from '@/components/conditional-lottie';
-import { MapProvider as MapContextProvider } from '@/components/map/map-context'
+import { MapProvider } from '@/components/map/map-context'
 
 const fontSans = FontSans({
   subsets: ['latin'],
@@ -67,7 +67,7 @@ export default function RootLayout({
               disableTransitionOnChange
               themes={['light', 'dark', 'earth']}
             >
-              <MapContextProvider>
+              <MapProvider>
                 <MapLoadingProvider>
                   <Header />
                   <ConditionalLottie />
@@ -76,7 +76,7 @@ export default function RootLayout({
                   <Footer />
                   <Toaster />
                 </MapLoadingProvider>
-              </MapContextProvider>
+              </MapProvider>
             </ThemeProvider>
           </ProfileToggleProvider>
         </MapToggleProvider>

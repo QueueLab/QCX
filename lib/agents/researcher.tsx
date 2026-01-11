@@ -11,7 +11,6 @@ import { Section } from '@/components/section'
 import { BotMessage } from '@/components/message'
 import { getTools } from './tools'
 import { getModel } from '../utils'
-import { MapProvider } from '@/lib/store/settings'
 
 // This magic tag lets us write raw multi-line strings with backticks, arrows, etc.
 const raw = String.raw
@@ -79,7 +78,6 @@ export async function researcher(
   uiStream: ReturnType<typeof createStreamableUI>,
   streamText: ReturnType<typeof createStreamableValue<string>>,
   messages: CoreMessage[],
-  mapProvider: MapProvider,
   useSpecificModel?: boolean
 ) {
   let fullResponse = ''
@@ -109,7 +107,7 @@ export async function researcher(
     maxTokens: 4096,
     system: systemPromptToUse,
     messages,
-    tools: getTools({ uiStream, fullResponse, mapProvider }),
+    tools: getTools({ uiStream, fullResponse }),
   })
 
   uiStream.update(null) // remove spinner

@@ -2,8 +2,6 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import fs from 'fs/promises';
-import path from 'path';
 
 // This is a placeholder for a database or other storage.
 // In a real application, you would interact with your database here.
@@ -119,29 +117,4 @@ export async function updateSettingsAndUsers(
   console.log(`[Action: updateSettingsAndUsers] Updated users for ${userId}:`, usersStore[userId]);
   revalidatePath('/settings');
   return { success: true, message: 'Settings and users updated successfully.', users: usersStore[userId] };
-}
-
-const modelConfigPath = path.resolve(process.cwd(), 'config', 'model.json');
-
-export async function getSelectedModel(): Promise<string | null> {
-  try {
-    const data = await fs.readFile(modelConfigPath, 'utf8');
-    const config = JSON.parse(data);
-    return config.selectedModel || null;
-  } catch (error) {
-    console.error('Error reading model config:', error);
-    return null;
-  }
-}
-
-export async function saveSelectedModel(model: string): Promise<{ success: boolean; error?: string }> {
-  try {
-    const data = JSON.stringify({ selectedModel: model }, null, 2);
-    await fs.writeFile(modelConfigPath, data, 'utf8');
-    revalidatePath('/settings');
-    return { success: true };
-  } catch (error) {
-    console.error('Error saving model config:', error);
-    return { success: false, error: 'Failed to save selected model.' };
-  }
 }
