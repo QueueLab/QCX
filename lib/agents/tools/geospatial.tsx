@@ -327,14 +327,6 @@ Uses the Mapbox Search Box Text Search API endpoint to power searching for and g
       feedbackMessage = `Successfully processed ${queryType} query for: ${mcpData.location.place_name || JSON.stringify(params)}`;
       uiFeedbackStream.update(feedbackMessage);
 
-      // Track usage
-      const { trackUsage } = await import('@/lib/metering')
-      trackUsage('tool_usage', {
-        tool: 'geospatial',
-        queryType,
-        location: mcpData.location.place_name
-      })
-
     } catch (error: any) {
       toolError = `Mapping service error: ${error.message}`;
       uiFeedbackStream.update(toolError);

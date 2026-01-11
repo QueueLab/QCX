@@ -32,15 +32,6 @@ export const searchTool = ({ uiStream, fullResponse }: ToolProps) => ({
         searchAPI === 'tavily'
           ? await tavilySearch(filledQuery, max_results, search_depth)
           : await exaSearch(query)
-      
-      // Track usage
-      const { trackUsage } = await import('@/lib/metering')
-      trackUsage('tool_usage', {
-        tool: 'search',
-        query,
-        api: searchAPI,
-        results_count: searchResult?.results?.length || 0
-      })
     } catch (error) {
       console.error('Search API error:', error)
       hasError = true
