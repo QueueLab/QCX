@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { MapCommand, MapStateFeedback } from '@/lib/types/map-schemas';
 // Define the shape of the map data you want to share
 export interface CameraState {
   center: { lat: number; lng: number };
@@ -28,6 +29,10 @@ export interface MapData {
     longitude: number;
     title?: string;
   }>;
+  geojson?: any;
+  mapCommands?: MapCommand[] | null;
+  mapStateFeedback?: MapStateFeedback | null;
+  feedbackCallback?: (feedback: MapStateFeedback) => void;
 }
 
 interface MapDataContextType {
