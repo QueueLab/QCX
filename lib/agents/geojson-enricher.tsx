@@ -37,7 +37,7 @@ Here is the text to process:
 export async function geojsonEnricher(
   researcherResponse: string
 ): Promise<LocationResponse> {
-  const model = getModel() as LanguageModel;
+  const model = (await getModel()) as LanguageModel;
   const messages: CoreMessage[] = [
     {
       role: 'user',

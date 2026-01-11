@@ -50,7 +50,7 @@ interface FeedbackAnalyzerInput {
 export async function feedbackAnalyzer(
   input: FeedbackAnalyzerInput
 ): Promise<FeedbackAnalysis> {
-  const model = getModel();
+  const model = await getModel();
 
   try {
     // Build context string
