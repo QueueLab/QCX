@@ -148,7 +148,8 @@ export async function saveChat(chat: Chat, userId: string): Promise<string | nul
   }
 }
 
-export async function updateDrawingContext(chatId: string, drawnFeatures: any[]) {
+export async function updateDrawingContext(chatId: string, contextData: { drawnFeatures: any[], cameraState: any }) {
+  'use server';
   try {
     console.log('[Action] updateDrawingContext called for chatId:', chatId);
 
@@ -158,7 +159,10 @@ export async function updateDrawingContext(chatId: string, drawnFeatures: any[])
       return { error: 'User not authenticated' };
     }
 
-    const { data: locationData, error: drawingError } = await supabaseSaveDrawing(chatId, userId, { features: drawnFeatures });
+    const { data: locationData, error: drawingError } = await supabaseSaveDrawing(chatId, userId, { 
+      features: contextData.drawnFeatures,
+      cameraState: contextData.cameraState 
+    });
 
     if (drawingError || !locationData) {
       return { error: 'Failed to save drawing' };

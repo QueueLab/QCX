@@ -76,7 +76,7 @@ async function submit(formData?: FormData, skip?: boolean) {
       ...aiState.get(),
       messages: [
         ...aiState.get().messages,
-        { id: nanoid(), role: 'user', content }
+        { id: nanoid(), role: 'user', content: JSON.stringify(content) }
       ]
     });
     messages.push({ role: 'user', content });
@@ -272,7 +272,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         {
           id: nanoid(),
           role: 'user',
-          content,
+          content: typeof content === 'string' ? content : JSON.stringify(content),
           type
         }
       ]
@@ -292,6 +292,7 @@ async function submit(formData?: FormData, skip?: boolean) {
   const augmentedSystemPrompt = retrievedContext.length > 0
     ? `Context: ${retrievedContext.join('\n')}\n${currentSystemPrompt}`
     : currentSystemPrompt
+  const mapProvider = formData?.get('mapProvider') as 'mapbox' | 'google'
 
   async function processEvents() {
     let action: any = { object: { next: 'proceed' } }
@@ -338,6 +339,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         uiStream,
         streamText,
         messages,
+        mapProvider,
         useSpecificAPI
       )
       answer = fullResponse
@@ -395,8 +397,6 @@ async function submit(formData?: FormData, skip?: boolean) {
         </Section>
       )
 
-      await new Promise(resolve => setTimeout(resolve, 500))
-
       aiState.done({
         ...aiState.get(),
         messages: [
@@ -421,6 +421,8 @@ async function submit(formData?: FormData, skip?: boolean) {
           }
         ]
       })
+    } else {
+      aiState.done(aiState.get())
     }
 
     isGenerating.done(false)
@@ -439,19 +441,32 @@ async function submit(formData?: FormData, skip?: boolean) {
 
 async function clearChat() {
   'use server'
-
   const aiState = getMutableAIState<typeof AI>()
-
   aiState.done({
     chatId: nanoid(),
     messages: []
   })
 }
 
+export type Message = {
+  id: string
+  role: 'user' | 'assistant' | 'system' | 'tool'
+  content: string
+  name?: string
+  type?:
+    | 'response'
+    | 'inquiry'
+    | 'related'
+    | 'followup'
+    | 'input'
+    | 'input_related'
+    | 'tool'
+    | 'resolution_search_result'
+}
+
 export type AIState = {
-  messages: AIMessage[]
   chatId: string
-  isSharePage?: boolean
+  messages: Message[]
 }
 
 export type UIState = {
@@ -461,267 +476,92 @@ export type UIState = {
   isCollapsed?: StreamableValue<boolean>
 }[]
 
-const initialAIState: AIState = {
-  chatId: nanoid(),
-  messages: []
-}
-
-const initialUIState: UIState = []
-
 export const AI = createAI<AIState, UIState>({
   actions: {
     submit,
     clearChat
   },
-  initialUIState,
-  initialAIState,
+  initialUIState: [],
+  initialAIState: { chatId: nanoid(), messages: [] },
   onGetUIState: async () => {
     'use server'
 
-    const aiState = getAIState() as AIState
-    if (aiState) {
-      const uiState = getUIStateFromAIState(aiState)
-      return uiState
-    }
-    return initialUIState
-  },
-  onSetAIState: async ({ state }) => {
-    'use server'
+    const aiState = getAIState()
 
-    if (!state.messages.some(e => e.type === 'response')) {
+    if (aiState) {
+      const uiState = getUIStateFromAIState(aiState as Chat)
+      return uiState
+    } else {
       return
     }
+  },
+  onSetAIState: async ({ state, done }) => {
+    'use server'
 
     const { chatId, messages } = state
-    const createdAt = new Date()
-    const path = `/search/${chatId}`
 
-    let title = 'Untitled Chat'
-    if (messages.length > 0) {
-      const firstMessageContent = messages[0].content
-      if (typeof firstMessageContent === 'string') {
-        try {
-          const parsedContent = JSON.parse(firstMessageContent)
-          title = parsedContent.input?.substring(0, 100) || 'Untitled Chat'
-        } catch (e) {
-          title = firstMessageContent.substring(0, 100)
-        }
-      } else if (Array.isArray(firstMessageContent)) {
-        const textPart = (
-          firstMessageContent as { type: string; text?: string }[]
-        ).find(p => p.type === 'text')
-        title =
-          textPart && textPart.text
-            ? textPart.text.substring(0, 100)
-            : 'Image Message'
+    const userId = 'anonymous'
+
+    const lastMessage = messages[messages.length - 1]
+    if (lastMessage && lastMessage.role === 'assistant' && done) {
+      const chat: Chat = {
+        id: chatId,
+        title: messages[0].content.substring(0, 100),
+        userId,
+        createdAt: new Date(),
+        messages,
+        path: `/search/${chatId}`
       }
+
+      await saveChat(chat, userId)
     }
-
-    const updatedMessages: AIMessage[] = [
-      ...messages,
-      {
-        id: nanoid(),
-        role: 'assistant',
-        content: `end`,
-        type: 'end'
-      }
-    ]
-
-    const { getCurrentUserIdOnServer } = await import(
-      '@/lib/auth/get-current-user'
-    )
-    const actualUserId = await getCurrentUserIdOnServer()
-
-    // Temporarily allow without auth for testing
-    const userId = actualUserId || 'test-user-id'
-
-    const chat: Chat = {
-      id: chatId,
-      createdAt,
-      userId: userId,
-      path,
-      title,
-      messages: updatedMessages
-    }
-    await saveChat(chat, userId)
   }
 })
 
-export const getUIStateFromAIState = (aiState: AIState): UIState => {
-  const chatId = aiState.chatId
-  const isSharePage = aiState.isSharePage
-  return aiState.messages
+export const getUIStateFromAIState = (aiState: Chat) => {
+  const messages = aiState.messages
+    .filter(
+      message => message.role !== 'system' && message.role !== 'tool' && message.type !== 'followup' && message.type !== 'related'
+    )
     .map((message, index) => {
-      const { role, content, id, type, name } = message
+      const { role, content, id, type } = message
 
-      if (
-        !type ||
-        type === 'end' ||
-        (isSharePage && type === 'related') ||
-        (isSharePage && type === 'followup')
-      )
-        return null
+      if (role === 'user') {
+        let userContent: any = content;
+        try {
+          userContent = JSON.parse(content);
+          if (userContent.input) userContent = userContent.input;
+        } catch (e) {
+          // Not JSON, use as is
+        }
 
-      switch (role) {
-        case 'user':
-          switch (type) {
-            case 'input':
-            case 'input_related': {
-              let messageContent: string | any[]
-              try {
-                // For backward compatibility with old messages that stored a JSON string
-                const json = JSON.parse(content as string)
-                messageContent =
-                  type === 'input' ? json.input : json.related_query
-              } catch (e) {
-                // New messages will store the content array or string directly
-                messageContent = content
-              }
-              const location = (message as any).locations
-              return {
-                id,
-                component: (
-                  <>
-                    <UserMessage
-                      content={messageContent}
-                      chatId={chatId}
-                      showShare={index === 0 && !isSharePage}
-                    />
-                    {location && (
-                      <GeoJsonLayer
-                        id={`${id}-geojson`}
-                        data={location.geojson}
-                      />
-                    )}
-                  </>
-                )
-              }
-            }
-            case 'inquiry':
-              return {
-                id,
-                component: <CopilotDisplay content={content as string} />
-              }
-          }
-          break
-        case 'assistant':
-          const answer = createStreamableValue()
-          answer.done(content)
-          switch (type) {
-            case 'response':
-              return {
-                id,
-                component: (
-                  <Section title="response">
-                    <BotMessage content={answer.value} />
-                  </Section>
-                )
-              }
-            case 'related':
-              const relatedQueries = createStreamableValue<RelatedQueries>()
-              relatedQueries.done(JSON.parse(content as string))
-              return {
-                id,
-                component: (
-                  <Section title="Related" separator={true}>
-                    <SearchRelated relatedQueries={relatedQueries.value} />
-                  </Section>
-                )
-              }
-            case 'followup':
-              return {
-                id,
-                component: (
-                  <Section title="Follow-up" className="pb-8">
-                    <FollowupPanel />
-                  </Section>
-                )
-              }
-            case 'resolution_search_result': {
-              const analysisResult = JSON.parse(content as string);
-              const summaryValue = createStreamableValue();
-              summaryValue.done(analysisResult.summary);
-              const geoJson = analysisResult.geoJson as FeatureCollection;
-
-              return {
-                id,
-                component: (
-                  <>
-                    <Section title="Map Analysis">
-                      <BotMessage content={summaryValue.value} />
-                    </Section>
-                    {geoJson && (
-                      <GeoJsonLayer id={id} data={geoJson} />
-                    )}
-                  </>
-                )
-              }
-            }
-          }
-          break
-        case 'tool':
-          try {
-            const toolOutput = JSON.parse(content as string)
-            const isCollapsed = createStreamableValue()
-            isCollapsed.done(true)
-
-            if (
-              toolOutput.type === 'MAP_QUERY_TRIGGER' &&
-              name === 'geospatialQueryTool'
-            ) {
-              return {
-                id,
-                component: <MapQueryHandler toolOutput={toolOutput} />,
-                isCollapsed: false
-              }
-            }
-
-            const searchResults = createStreamableValue()
-            searchResults.done(JSON.stringify(toolOutput))
-            switch (name) {
-              case 'search':
-                return {
-                  id,
-                  component: <SearchSection result={searchResults.value} />,
-                  isCollapsed: isCollapsed.value
-                }
-              case 'retrieve':
-                return {
-                  id,
-                  component: <RetrieveSection data={toolOutput} />,
-                  isCollapsed: isCollapsed.value
-                }
-              case 'videoSearch':
-                return {
-                  id,
-                  component: (
-                    <VideoSearchSection result={searchResults.value} />
-                  ),
-                  isCollapsed: isCollapsed.value
-                }
-              default:
-                console.warn(
-                  `Unhandled tool result in getUIStateFromAIState: ${name}`
-                )
-                return { id, component: null }
-            }
-          } catch (error) {
-            console.error(
-              'Error parsing tool content in getUIStateFromAIState:',
-              error
-            )
-            return {
-              id,
-              component: null
-            }
-          }
-          break
-        default:
+        return {
+          id,
+          component: (
+            <UserMessage
+              content={userContent}
+            />
+          )
+        }
+      } else if (role === 'assistant') {
+        if (type === 'resolution_search_result') {
+          const analysisResult = JSON.parse(content);
+          const summaryStream = createStreamableValue<string>();
+          summaryStream.done(analysisResult.summary || 'Analysis complete.');
           return {
             id,
-            component: null
-          }
+            component: <BotMessage content={summaryStream.value} />
+          };
+        }
+        return {
+          id,
+          component: <BotMessage content={content} />
+        }
+      } else {
+        return null
       }
     })
     .filter(message => message !== null) as UIState
+
+  return messages
 }

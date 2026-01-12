@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter as FontSans } from 'next/font/google'
+import { Inter as FontSans, Poppins } from 'next/font/google'
 import './globals.css'
 import 'katex/dist/katex.min.css';
 import { cn } from '@/lib/utils'
@@ -24,6 +24,12 @@ export const dynamic = 'force-dynamic'
 const fontSans = FontSans({
   subsets: ['latin'],
   variable: '--font-sans'
+})
+
+const fontPoppins = Poppins({
+  subsets: ['latin'],
+  variable: '--font-poppins',
+  weight: ['400', '500', '600', '700']
 })
 
 const title = ''
@@ -63,7 +69,13 @@ export default async function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={cn('font-sans antialiased', fontSans.variable)}>
+      <body
+        className={cn(
+          'font-sans antialiased',
+          fontSans.variable,
+          fontPoppins.variable
+        )}
+      >
         <ThemeProvider
           attribute="class"
           defaultTheme="earth"

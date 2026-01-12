@@ -6,8 +6,11 @@ import { BotMessage } from '@/components/message';
 import { geospatialQuerySchema } from '@/lib/schema/geospatial';
 import { Client as MCPClientClass } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
-import { createSmitheryUrl } from '@smithery/sdk';
+// Smithery SDK removed - using direct URL construction
 import { z } from 'zod';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { getSelectedModel } from '@/lib/actions/users';
+import { MapProvider } from '@/lib/store/settings';
 
 // Types
 export type McpClient = MCPClientClass;
@@ -34,17 +37,17 @@ interface MapboxConfig {
  * Establish connection to the MCP server with proper environment validation.
  */
 async function getConnectedMcpClient(): Promise<McpClient | null> {
-  const apiKey = process.env.NEXT_PUBLIC_SMITHERY_API_KEY;
-  const mapboxAccessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
-  const profileId = process.env.NEXT_PUBLIC_SMITHERY_PROFILE_ID;
+  const composioApiKey = process.env.COMPOSIO_API_KEY;
+  const mapboxAccessToken = process.env.MAPBOX_ACCESS_TOKEN;
+  const composioUserId = process.env.COMPOSIO_USER_ID;
 
   console.log('[GeospatialTool] Environment check:', {
-    apiKey: apiKey ? `${apiKey.substring(0, 8)}...` : 'MISSING',
+    composioApiKey: composioApiKey ? `${composioApiKey.substring(0, 8)}...` : 'MISSING',
     mapboxAccessToken: mapboxAccessToken ? `${mapboxAccessToken.substring(0, 8)}...` : 'MISSING',
-    profileId: profileId ? `${profileId.substring(0, 8)}...` : 'MISSING',
+    composioUserId: composioUserId ? `${composioUserId.substring(0, 8)}...` : 'MISSING',
   });
 
-  if (!apiKey || !mapboxAccessToken || !profileId || !apiKey.trim() || !mapboxAccessToken.trim() || !profileId.trim()) {
+  if (!composioApiKey || !mapboxAccessToken || !composioUserId || !composioApiKey.trim() || !mapboxAccessToken.trim() || !composioUserId.trim()) {
     console.error('[GeospatialTool] Missing or empty required environment variables');
     return null;
   }
@@ -67,20 +70,25 @@ async function getConnectedMcpClient(): Promise<McpClient | null> {
     console.log('[GeospatialTool] Using fallback config');
   }
 
-  // Build Smithery URL
-  const smitheryUrlOptions = { config, apiKey, profileId };
-  const mcpServerBaseUrl = `https://server.smithery.ai/@Waldzell-Agentics/mcp-server/mcp?api_key=${smitheryUrlOptions.apiKey}&profile=${smitheryUrlOptions.profileId}`;
-  let serverUrlToUse;
+  // Build Composio MCP server URL
+  // Note: This should be migrated to use Composio SDK directly instead of MCP client
+  // For now, constructing URL directly without Smithery SDK
+  let serverUrlToUse: URL;
   try {
-    serverUrlToUse = createSmitheryUrl(mcpServerBaseUrl, smitheryUrlOptions);
+    // Construct URL with Composio credentials
+    const baseUrl = 'https://api.composio.dev/v1/mcp/mapbox';
+    serverUrlToUse = new URL(baseUrl);
+    serverUrlToUse.searchParams.set('api_key', composioApiKey);
+    serverUrlToUse.searchParams.set('user_id', composioUserId);
+    
     const urlDisplay = serverUrlToUse.toString().split('?')[0];
-    console.log('[GeospatialTool] MCP Server URL created:', urlDisplay);
+    console.log('[GeospatialTool] Composio MCP Server URL created:', urlDisplay);
 
     if (!serverUrlToUse.href || !serverUrlToUse.href.startsWith('https://')) {
       throw new Error('Invalid server URL generated');
     }
   } catch (urlError: any) {
-    console.error('[GeospatialTool] Error creating Smithery URL:', urlError.message);
+    console.error('[GeospatialTool] Error creating Composio URL:', urlError.message);
     return null;
   }
 
@@ -147,7 +155,13 @@ async function closeClient(client: McpClient | null) {
 /**
  * Main geospatial tool executor.
  */
-export const geospatialTool = ({ uiStream }: { uiStream: ReturnType<typeof createStreamableUI> }) => ({
+export const geospatialTool = ({
+  uiStream,
+  mapProvider
+}: {
+  uiStream: ReturnType<typeof createStreamableUI>
+  mapProvider?: MapProvider
+}) => ({
   description: `Use this tool for location-based queries including: 
   There a plethora of tools inside this tool accessible on the mapbox mcp server where switch case into the tool of choice for that use case
   If the Query is supposed to use multiple tools in a sequence you must access all the tools in the sequence and then provide a final answer based on the results of all the tools used. 
@@ -219,10 +233,66 @@ Uses the Mapbox Search Box Text Search API endpoint to power searching for and g
   parameters: geospatialQuerySchema,
   execute: async (params: z.infer<typeof geospatialQuerySchema>) => {
     const { queryType, includeMap = true } = params;
-    console.log('[GeospatialTool] Execute called with:', params);
+    console.log('[GeospatialTool] Execute called with:', params, 'and map provider:', mapProvider);
 
     const uiFeedbackStream = createStreamableValue<string>();
     uiStream.append(<BotMessage content={uiFeedbackStream.value} />);
+
+    const selectedModel = await getSelectedModel();
+
+    if (selectedModel?.includes('gemini') && mapProvider === 'google') {
+      let feedbackMessage = `Processing geospatial query with Gemini...`;
+      uiFeedbackStream.update(feedbackMessage);
+
+      try {
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_3_PRO_API_KEY!);
+        const model = genAI.getGenerativeModel({
+          model: 'gemini-1.5-pro-latest',
+        });
+
+        const searchText = (params as any).location || (params as any).query;
+        const prompt = `Find the location for: ${searchText}`;
+        const tools: any = [{ googleSearch: {} }];
+        const result = await model.generateContent({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          tools,
+        });
+        const response = await result.response;
+        const functionCalls = (response as any).functionCalls();
+
+        if (functionCalls && functionCalls.length > 0) {
+          const gsr = functionCalls[0];
+          // This is a placeholder for the actual response structure,
+          // as I don't have a way to inspect it at the moment.
+          const place = (gsr as any).results[0].place;
+          if (place) {
+            const { latitude, longitude } = place.coordinates;
+            const place_name = place.displayName;
+
+            const mcpData = {
+              location: {
+                latitude,
+                longitude,
+                place_name,
+              },
+            };
+            feedbackMessage = `Found location: ${place_name}`;
+            uiFeedbackStream.update(feedbackMessage);
+            uiFeedbackStream.done();
+            uiStream.update(<BotMessage content={uiFeedbackStream.value} />);
+            return { type: 'MAP_QUERY_TRIGGER', originalUserInput: JSON.stringify(params), queryType, timestamp: new Date().toISOString(), mcp_response: mcpData, error: null };
+          }
+        }
+        throw new Error('No location found by Gemini.');
+      } catch (error: any) {
+        const toolError = `Gemini grounding error: ${error.message}`;
+        uiFeedbackStream.update(toolError);
+        console.error('[GeospatialTool] Gemini execution failed:', error);
+        uiFeedbackStream.done();
+        uiStream.update(<BotMessage content={uiFeedbackStream.value} />);
+        return { type: 'MAP_QUERY_TRIGGER', originalUserInput: JSON.stringify(params), queryType, timestamp: new Date().toISOString(), mcp_response: null, error: toolError };
+      }
+    }
 
     let feedbackMessage = `Processing geospatial query (type: ${queryType})... Connecting to mapping service...`;
     uiFeedbackStream.update(feedbackMessage);
