@@ -53,7 +53,7 @@ export const MobileIconsBar: React.FC<MobileIconsBarProps> = ({ onAttachmentClic
           <TentTree className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
         </Button>
       </a>
-      <Button variant="ghost" size="icon" onClick={onAttachmentClick}>
+      <Button variant="ghost" size="icon" onClick={onAttachmentClick} data-testid="mobile-attachment-button">
         <Paperclip className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>
       <Button variant="ghost" size="icon" data-testid="mobile-submit-button" onClick={onSubmitClick}>
