@@ -436,7 +436,9 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         preserveDrawingBuffer: true
       })
 
-      map.current.addControl(new mapboxgl.NavigationControl(), 'top-left')
+      if (window.innerWidth > 768) {
+        map.current.addControl(new mapboxgl.NavigationControl(), 'top-left')
+      }
 
       // Register event listeners
       map.current.on('moveend', captureMapCenter)
