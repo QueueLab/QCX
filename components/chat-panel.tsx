@@ -16,6 +16,13 @@ import { getSuggestions } from '@/lib/actions/suggest'
 import { useMapData } from './map/map-data-context'
 import SuggestionsDropdown from './suggestions-dropdown'
 
+function sanitizeMapData(mapData: any) {
+  return {
+    cameraState: mapData.cameraState,
+    drawnFeatures: mapData.drawnFeatures,
+  };
+}
+
 interface ChatPanelProps {
   messages: UIState
   input: string
@@ -143,7 +150,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
       }
 
       debounceTimeoutRef.current = setTimeout(async () => {
-        const suggestionsStream = await getSuggestions(value, mapData)
+        const suggestionsStream = await getSuggestions(value, sanitizeMapData(mapData))
         for await (const partialSuggestions of readStreamableValue(
           suggestionsStream
         )) {
