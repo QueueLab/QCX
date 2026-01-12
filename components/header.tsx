@@ -31,9 +31,9 @@ export const Header = () => {
           <Image
             src="/images/logo.svg"
             alt="Logo"
-            width={24}
-            height={24}
-            className="h-6 w-auto"
+            width={20}
+            height={20}
+            className="h-5 w-auto"
           />
         </Button>
         <h1 className="text-2xl font-poppins font-semibold text-primary">
@@ -66,7 +66,6 @@ export const Header = () => {
 
       {/* Mobile menu buttons */}
       <div className="flex md:hidden gap-2">
-        <div id="mobile-header-search-portal" />
         
         <a href="https://buy.stripe.com/3cIaEX3tRcur9EM7tbasg00" target="_blank" rel="noopener noreferrer">
           <Button variant="ghost" size="icon">

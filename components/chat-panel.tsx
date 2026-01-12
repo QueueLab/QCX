@@ -89,7 +89,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (!input && !selectedFile) {
+    if (!input.trim() && !selectedFile) {
       return
     }
 
@@ -137,7 +137,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
       }
 
       const wordCount = value.trim().split(/\s+/).filter(Boolean).length
-      if (wordCount < 3) {
+      if (wordCount < 2) {
         setSuggestions(null)
         return
       }
@@ -195,7 +195,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
       )}
     >
       {selectedFile && (
-        <div className="w-full px-4 pb-2">
+        <div className="w-full px-4 pb-2 mb-2">
           <div className="flex items-center justify-between p-2 bg-muted rounded-lg">
             <span className="text-sm text-muted-foreground truncate max-w-xs">
               {selectedFile.name}
