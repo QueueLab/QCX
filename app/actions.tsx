@@ -521,37 +521,39 @@ export const AI = createAI<AIState, UIState>({
 export const getUIStateFromAIState = (aiState: Chat) => {
   const messages = aiState.messages
     .filter(
-      message => message.role !== 'system' && message.role !== 'tool' && message.type !== 'followup' && message.type !== 'related'
+      message =>
+        message.role !== 'system' &&
+        message.role !== 'tool' &&
+        message.type !== 'followup' &&
+        message.type !== 'related'
     )
     .map((message, index) => {
       const { role, content, id, type } = message
 
       if (role === 'user') {
-        let userContent: any = content;
-        try {
-          userContent = JSON.parse(content);
-          if (userContent.input) userContent = userContent.input;
-        } catch (e) {
-          // Not JSON, use as is
+        let userContent: any = content
+        if (typeof content === 'string') {
+          try {
+            userContent = JSON.parse(content)
+            if (userContent.input) userContent = userContent.input
+          } catch (e) {
+            // Not JSON, use as is
+          }
         }
 
         return {
           id,
-          component: (
-            <UserMessage
-              content={userContent}
-            />
-          )
+          component: <UserMessage content={userContent} />
         }
       } else if (role === 'assistant') {
         if (type === 'resolution_search_result') {
-          const analysisResult = JSON.parse(content);
-          const summaryStream = createStreamableValue<string>();
-          summaryStream.done(analysisResult.summary || 'Analysis complete.');
+          const analysisResult = JSON.parse(content)
+          const summaryStream = createStreamableValue<string>()
+          summaryStream.done(analysisResult.summary || 'Analysis complete.')
           return {
             id,
             component: <BotMessage content={summaryStream.value} />
-          };
+          }
         }
         return {
           id,
