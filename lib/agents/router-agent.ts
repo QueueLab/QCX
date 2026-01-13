@@ -41,8 +41,11 @@ export async function routerAgent(messages: CoreMessage[]) {
   // 2. Execute the chosen tool based on the object returned by the model.
   switch (toolChoice.tool) {
     case 'analyzeSatelliteImage': {
+      // The `execute` function expects the arguments object and a ToolCallOptions object.
+      // We pass an empty object for the options as we don't need to specify anything.
       const result = await satelliteTools.analyzeSatelliteImage.execute(
-        toolChoice.args
+        toolChoice.args,
+        {}
       );
       console.log('Router agent executed analyzeSatelliteImage:', result);
       return result;
@@ -50,7 +53,8 @@ export async function routerAgent(messages: CoreMessage[]) {
 
     case 'generateEmbeddings': {
       const result = await satelliteTools.generateEmbeddings.execute(
-        toolChoice.args
+        toolChoice.args,
+        {}
       );
       console.log('Router agent executed generateEmbeddings:', result);
       return result;
