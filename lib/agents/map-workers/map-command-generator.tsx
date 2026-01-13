@@ -1,4 +1,4 @@
-import { generateObject } from 'ai';
+import { generateObject, generateText } from 'ai';
 import { getModel } from '@/lib/utils';
 import {
   MapCommandGeneratorOutputSchema,
@@ -75,55 +75,37 @@ export async function mapCommandGenerator(
 ): Promise<MapCommandGeneratorOutput> {
   const model = await getModel();
 
+  const prompt = `${MAP_COMMAND_GENERATOR_PROMPT}\n\n${buildContextString(input)}\n\nGenerate appropriate map commands for this context.`;
+
   try {
-    // Build context string
-    let contextString = `Text: ${input.text}\n\n`;
-    
-    if (input.geojson && input.geojson.features.length > 0) {
-      contextString += `GeoJSON Features:\n`;
-      input.geojson.features.forEach((feature, idx) => {
-        contextString += `${idx + 1}. Type: ${feature.geometry.type}, `;
-        contextString += `Properties: ${JSON.stringify(feature.properties)}\n`;
-      });
-      contextString += `\n`;
-    }
-
-    if (input.currentMapState) {
-      contextString += `Current Map State:\n`;
-      contextString += `- Center: [${input.currentMapState.center[0]}, ${input.currentMapState.center[1]}]\n`;
-      contextString += `- Zoom: ${input.currentMapState.zoom}\n`;
-      contextString += `- Bounds: ${JSON.stringify(input.currentMapState.bounds)}\n`;
-    }
-
     const { object } = await generateObject({
       model,
       schema: MapCommandGeneratorOutputSchema,
-      prompt: `${MAP_COMMAND_GENERATOR_PROMPT}\n\n${contextString}\n\nGenerate appropriate map commands for this context.`,
+      prompt,
       maxTokens: 1536,
     });
 
-    // Sort commands by priority if specified
-    if (object.commands.length > 1) {
-      object.commands.sort((a, b) => (a.priority || 0) - (b.priority || 0));
-    }
-
-    // Calculate estimated duration if not provided
-    if (!object.estimatedDuration && object.commands.length > 0) {
-      object.estimatedDuration = object.commands.reduce((total, cmd) => {
-        if (cmd.command === 'flyTo') {
-          return total + (cmd.params.duration || 2000);
-        } else if (cmd.command === 'easeTo') {
-          return total + (cmd.params.duration || 1000);
-        } else if (cmd.command === 'fitBounds') {
-          return total + 1500;
-        }
-        return total + 500;
-      }, 0);
-    }
-
-    return object;
+    return postProcessOutput(object);
   } catch (error) {
-    console.error('Map Command Generator error:', error);
+    console.warn('Map Command Generator: generateObject failed, attempting fallback to generateText:', error);
+    
+    try {
+      const { text: jsonText } = await generateText({
+        model,
+        prompt: `${prompt}\n\nIMPORTANT: Return ONLY valid JSON matching the Output Structure. Do not include markdown formatting.`,
+        maxTokens: 1536,
+      });
+
+      const cleanedText = jsonText.replace(/```json\n?|\n?```/g, '').trim();
+      const object = JSON.parse(cleanedText);
+      
+      const parsed = MapCommandGeneratorOutputSchema.safeParse(object);
+      if (parsed.success) {
+        return postProcessOutput(parsed.data);
+      }
+    } catch (fallbackError) {
+      console.error('Map Command Generator: Fallback failed:', fallbackError);
+    }
     
     // Fallback: Generate basic command based on GeoJSON
     if (input.geojson && input.geojson.features.length > 0) {
@@ -152,4 +134,47 @@ export async function mapCommandGenerator(
       estimatedDuration: 0,
     };
   }
+}
+
+function buildContextString(input: MapCommandGeneratorInput): string {
+    let contextString = `Text: ${input.text}\n\n`;
+    
+    if (input.geojson && input.geojson.features.length > 0) {
+      contextString += `GeoJSON Features:\n`;
+      input.geojson.features.forEach((feature, idx) => {
+        contextString += `${idx + 1}. Type: ${feature.geometry.type}, `;
+        contextString += `Properties: ${JSON.stringify(feature.properties)}\n`;
+      });
+      contextString += `\n`;
+    }
+
+    if (input.currentMapState) {
+      contextString += `Current Map State:\n`;
+      contextString += `- Center: [${input.currentMapState.center[0]}, ${input.currentMapState.center[1]}]\n`;
+      contextString += `- Zoom: ${input.currentMapState.zoom}\n`;
+      contextString += `- Bounds: ${JSON.stringify(input.currentMapState.bounds)}\n`;
+    }
+    return contextString;
+}
+
+function postProcessOutput(object: MapCommandGeneratorOutput): MapCommandGeneratorOutput {
+    // Sort commands by priority if specified
+    if (object.commands.length > 1) {
+      object.commands.sort((a, b) => (a.priority || 0) - (b.priority || 0));
+    }
+
+    // Calculate estimated duration if not provided
+    if (!object.estimatedDuration && object.commands.length > 0) {
+      object.estimatedDuration = object.commands.reduce((total, cmd) => {
+        if (cmd.command === 'flyTo') {
+          return total + (cmd.params.duration || 2000);
+        } else if (cmd.command === 'easeTo') {
+          return total + (cmd.params.duration || 1000);
+        } else if (cmd.command === 'fitBounds') {
+          return total + 1500;
+        }
+        return total + 500;
+      }, 0);
+    }
+    return object;
 }

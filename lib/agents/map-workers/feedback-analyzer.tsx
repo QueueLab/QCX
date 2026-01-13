@@ -1,4 +1,4 @@
-import { generateObject } from 'ai';
+import { generateObject, generateText } from 'ai';
 import { getModel } from '@/lib/utils';
 import {
   FeedbackAnalysisSchema,
@@ -52,8 +52,67 @@ export async function feedbackAnalyzer(
 ): Promise<FeedbackAnalysis> {
   const model = await getModel();
 
+  const prompt = `${FEEDBACK_ANALYZER_PROMPT}\n\n${buildContextString(input)}\n\nAnalyze this feedback and provide recommendations.`;
+
   try {
-    // Build context string
+    const { object } = await generateObject({
+      model,
+      schema: FeedbackAnalysisSchema,
+      prompt,
+      maxTokens: 1024,
+    });
+
+    return postProcessAnalysis(object, input.attemptNumber);
+  } catch (error) {
+    console.warn('Feedback Analyzer: generateObject failed, attempting fallback to generateText:', error);
+    
+    try {
+      const { text: jsonText } = await generateText({
+        model,
+        prompt: `${prompt}\n\nIMPORTANT: Return ONLY valid JSON matching the Output Structure. Do not include markdown formatting.`,
+        maxTokens: 1024,
+      });
+
+      const cleanedText = jsonText.replace(/```json\n?|\n?```/g, '').trim();
+      const object = JSON.parse(cleanedText);
+      const parsed = FeedbackAnalysisSchema.safeParse(object);
+      
+      if (parsed.success) {
+        return postProcessAnalysis(parsed.data, input.attemptNumber);
+      }
+    } catch (fallbackError) {
+      console.error('Feedback Analyzer: Fallback failed:', fallbackError);
+    }
+    
+    // Fallback analysis
+    if (!input.feedback.success) {
+      return {
+        status: 'failed',
+        issues: [
+          input.feedback.error || 'Unknown error occurred',
+          `Analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        ],
+        recommendations: {
+          action: input.attemptNumber >= 3 ? 'abort' : 'retry',
+          reasoning: input.attemptNumber >= 3 
+            ? 'Maximum attempts reached, aborting'
+            : 'Retrying with same commands due to analysis failure',
+        },
+      };
+    }
+
+    return {
+      status: 'success',
+      issues: [],
+      recommendations: {
+        action: 'continue',
+        reasoning: 'Feedback indicates success, continuing despite analysis error',
+      },
+    };
+  }
+}
+
+function buildContextString(input: FeedbackAnalyzerInput): string {
     let contextString = `Attempt Number: ${input.attemptNumber}\n\n`;
     
     contextString += `Feedback:\n`;
@@ -90,51 +149,17 @@ export async function feedbackAnalyzer(
         contextString += `- Bounds: ${JSON.stringify(input.expectedOutcome.bounds)}\n`;
       }
     }
+    return contextString;
+}
 
-    const { object } = await generateObject({
-      model,
-      schema: FeedbackAnalysisSchema,
-      prompt: `${FEEDBACK_ANALYZER_PROMPT}\n\n${contextString}\n\nAnalyze this feedback and provide recommendations.`,
-      maxTokens: 1024,
-    });
-
+function postProcessAnalysis(object: FeedbackAnalysis, attemptNumber: number): FeedbackAnalysis {
     // Apply attempt-based logic
-    if (input.attemptNumber >= 3 && object.recommendations.action !== 'continue') {
+    if (attemptNumber >= 3 && object.recommendations.action !== 'continue') {
       // After 3 attempts, force abort if not successful
       object.recommendations.action = 'abort';
       object.recommendations.reasoning = 'Maximum retry attempts reached (3). Aborting to prevent infinite loop.';
     }
-
     return object;
-  } catch (error) {
-    console.error('Feedback Analyzer error:', error);
-    
-    // Fallback analysis
-    if (!input.feedback.success) {
-      return {
-        status: 'failed',
-        issues: [
-          input.feedback.error || 'Unknown error occurred',
-          `Analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        ],
-        recommendations: {
-          action: input.attemptNumber >= 3 ? 'abort' : 'retry',
-          reasoning: input.attemptNumber >= 3 
-            ? 'Maximum attempts reached, aborting'
-            : 'Retrying with same commands due to analysis failure',
-        },
-      };
-    }
-
-    return {
-      status: 'success',
-      issues: [],
-      recommendations: {
-        action: 'continue',
-        reasoning: 'Feedback indicates success, continuing despite analysis error',
-      },
-    };
-  }
 }
 
 /**

@@ -1,4 +1,4 @@
-import { generateObject } from 'ai';
+import { generateObject, generateText } from 'ai';
 import { getModel } from '@/lib/utils';
 import {
   GeoJSONParserOutputSchema,
@@ -82,7 +82,44 @@ export async function geojsonParser(
       maxTokens: 2048,
     });
 
-    // Additional validation
+    return validateAndReturn(object);
+  } catch (error) {
+    console.warn('GeoJSON Parser: generateObject failed, attempting fallback to generateText:', error);
+    
+    try {
+      const { text: jsonText } = await generateText({
+        model,
+        prompt: `${GEOJSON_PARSER_PROMPT}\n\nText to analyze:\n${text}\n\nIMPORTANT: Return ONLY valid JSON matching the Output Structure. Do not include markdown formatting or explanations.`,
+        maxTokens: 2048,
+      });
+
+      const cleanedText = jsonText.replace(/```json\n?|\n?```/g, '').trim();
+      const object = JSON.parse(cleanedText);
+      
+      // Attempt to validate structure roughly or use SafeParse if strict
+      const parsed = GeoJSONParserOutputSchema.safeParse(object);
+      
+      if (parsed.success) {
+         return validateAndReturn(parsed.data);
+      } else {
+         console.error('GeoJSON Parser: Fallback JSON validation failed:', parsed.error);
+         // Try to use the object anyway if it looks close enough? No, safer to return empty.
+      }
+
+    } catch (fallbackError) {
+      console.error('GeoJSON Parser: Fallback failed:', fallbackError);
+    }
+
+    return {
+      geojson: null,
+      confidence: 0,
+      extractedLocations: [],
+      warnings: [`Parser error: ${error instanceof Error ? error.message : 'Unknown error'}`],
+    };
+  }
+}
+
+function validateAndReturn(object: GeoJSONParserOutput): GeoJSONParserOutput {
     if (object.geojson) {
       // Validate coordinate ranges
       for (const feature of object.geojson.features) {
@@ -97,15 +134,5 @@ export async function geojsonParser(
         }
       }
     }
-
     return object;
-  } catch (error) {
-    console.error('GeoJSON Parser error:', error);
-    return {
-      geojson: null,
-      confidence: 0,
-      extractedLocations: [],
-      warnings: [`Parser error: ${error instanceof Error ? error.message : 'Unknown error'}`],
-    };
-  }
 }
