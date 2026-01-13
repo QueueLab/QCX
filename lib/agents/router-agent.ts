@@ -1,21 +1,23 @@
 // lib/agents/router-agent.ts
 import { CoreMessage, generateObject } from 'ai';
 import { getModel } from '@/lib/utils';
-import { satelliteTools } from './tools/satellite-tools';
+import {
+  analyzeSatelliteImageSchema,
+  executeAnalyzeSatelliteImage,
+  generateEmbeddingsSchema,
+  executeGenerateEmbeddings,
+} from './tools/satellite-tools';
 import { z } from 'zod';
 
 // Schema to guide the router's decision. The model will populate this object.
 const routerSchema = z.union([
   z.object({
     tool: z.literal('analyzeSatelliteImage'),
-    // Pass an empty args object for consistency, even if not used by the tool.
-    args: z.object({}).describe('The arguments for analyzing the satellite image.'),
+    args: analyzeSatelliteImageSchema,
   }),
   z.object({
     tool: z.literal('generateEmbeddings'),
-    args: z.object({
-      text: z.string(),
-    }),
+    args: generateEmbeddingsSchema,
   }),
 ]);
 
@@ -41,21 +43,13 @@ export async function routerAgent(messages: CoreMessage[]) {
   // 2. Execute the chosen tool based on the object returned by the model.
   switch (toolChoice.tool) {
     case 'analyzeSatelliteImage': {
-      // The `execute` function expects the arguments object and a ToolCallOptions object.
-      // We pass an empty object for the options as we don't need to specify anything.
-      const result = await satelliteTools.analyzeSatelliteImage.execute(
-        toolChoice.args,
-        {}
-      );
+      const result = await executeAnalyzeSatelliteImage();
       console.log('Router agent executed analyzeSatelliteImage:', result);
       return result;
     }
 
     case 'generateEmbeddings': {
-      const result = await satelliteTools.generateEmbeddings.execute(
-        toolChoice.args,
-        {}
-      );
+      const result = await executeGenerateEmbeddings(toolChoice.args);
       console.log('Router agent executed generateEmbeddings:', result);
       return result;
     }
