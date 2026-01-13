@@ -42,11 +42,6 @@ export function getModel(requireVision: boolean = false) {
   if (gemini3ProApiKey) {
     const google = createGoogleGenerativeAI({
       apiKey: gemini3ProApiKey,
-      // Enable Gemini's "thinking mode" to stream reasoning steps.
-      // See: https://ai-sdk.dev/cookbook/guides/gemini#enhanced-reasoning-with-thinking-mode
-      structuredOutput: {
-        thinkingLevel: 'low'
-      }
     })
     try {
       return google('gemini-3-pro-preview')
