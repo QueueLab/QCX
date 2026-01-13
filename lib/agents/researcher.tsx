@@ -155,7 +155,7 @@ export async function researcher(
   const modelId = (model as any).modelId || (model as any).id || '';
 
   const result = await nonexperimental_streamText({
-    model,
+    model: (await getModel(hasImage)) as LanguageModel,
     maxTokens: 4096,
     system: systemPromptToUse,
     messages,

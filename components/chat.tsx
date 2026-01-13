@@ -5,6 +5,9 @@ import { usePathname, useRouter } from 'next/navigation'
 import { ChatPanel, ChatPanelRef } from './chat-panel'
 import { ChatMessages } from './chat-messages'
 import { EmptyScreen } from './empty-screen'
+import SuggestionsDropdown from './suggestions-dropdown'
+import { PartialRelated } from '@/lib/schema/related'
+import { cn } from '@/lib/utils'
 import { useCalendarToggle } from './calendar-toggle-context'
 import { CalendarNotepad } from './calendar-notepad'
 import { MapProvider } from './map/map-provider'
@@ -31,10 +34,16 @@ export function Chat({ id }: ChatProps) {
   const { isCalendarOpen } = useCalendarToggle()
   const [input, setInput] = useState('')
   const [showEmptyScreen, setShowEmptyScreen] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [suggestions, setSuggestions] = useState<PartialRelated | null>(null)
   const chatPanelRef = useRef<ChatPanelRef>(null);
 
   const handleAttachment = () => {
     chatPanelRef.current?.handleAttachmentClick();
+  };
+
+  const handleMobileSubmit = () => {
+    chatPanelRef.current?.submitForm();
   };
   
   useEffect(() => {
@@ -73,13 +82,23 @@ export function Chat({ id }: ChatProps) {
   // Get mapData to access drawnFeatures
   const { mapData } = useMapData();
 
+  useEffect(() => {
+    if (isSubmitting) {
+      chatPanelRef.current?.submitForm()
+      setIsSubmitting(false)
+    }
+  }, [isSubmitting])
+
   // useEffect to call the server action when drawnFeatures changes
   useEffect(() => {
-    if (id && mapData.drawnFeatures && mapData.drawnFeatures.length > 0) {
+    if (id && mapData.drawnFeatures && mapData.cameraState) {
       console.log('Chat.tsx: drawnFeatures changed, calling updateDrawingContext', mapData.drawnFeatures);
-      updateDrawingContext(id, mapData.drawnFeatures);
+      updateDrawingContext(id, {
+        drawnFeatures: mapData.drawnFeatures,
+        cameraState: mapData.cameraState,
+      });
     }
-  }, [id, mapData.drawnFeatures]);
+  }, [id, mapData.drawnFeatures, mapData.cameraState]);
 
   // Mobile layout
   if (isMobile) {
@@ -91,20 +110,48 @@ export function Chat({ id }: ChatProps) {
           {activeView ? <SettingsView /> : <MapProvider />}
         </div>
         <div className="mobile-icons-bar">
-          <MobileIconsBar onAttachmentClick={handleAttachment} />
+          <MobileIconsBar onAttachmentClick={handleAttachment} onSubmitClick={handleMobileSubmit} />
         </div>
         <div className="mobile-chat-input-area">
-          <ChatPanel ref={chatPanelRef} messages={messages} input={input} setInput={setInput} />
+          <ChatPanel 
+            ref={chatPanelRef} 
+            messages={messages} 
+            input={input} 
+            setInput={setInput}
+            onSuggestionsChange={setSuggestions}
+          />
         </div>
-        <div className="mobile-chat-messages-area">
+        <div className="mobile-chat-messages-area relative">
           {isCalendarOpen ? (
             <CalendarNotepad chatId={id} />
           ) : showEmptyScreen ? (
-            <EmptyScreen
-              submitMessage={message => {
-                setInput(message)
-              }}
-            />
+            <div className="relative w-full h-full">
+              <div className={cn("transition-all duration-300", suggestions ? "blur-md pointer-events-none" : "")}>
+                <EmptyScreen
+                  submitMessage={message => {
+                    setInput(message)
+                    setIsSubmitting(true)
+                  }}
+                />
+              </div>
+              {suggestions && (
+                <div className="absolute inset-0 z-20 flex flex-col items-start p-4">
+                  <SuggestionsDropdown
+                    suggestions={suggestions}
+                    onSelect={query => {
+                      setInput(query)
+                      setSuggestions(null)
+                      // Use a small timeout to ensure state update before submission
+                      setTimeout(() => {
+                        setIsSubmitting(true)
+                      }, 0)
+                    }}
+                    onClose={() => setSuggestions(null)}
+                    className="relative bottom-auto mb-0 w-full shadow-none border-none bg-transparent"
+                  />
+                </div>
+              )}
+            </div>
           ) : (
             <ChatMessages messages={messages} />
           )}
@@ -120,21 +167,50 @@ export function Chat({ id }: ChatProps) {
       <HeaderSearchButton />
       <div className="flex justify-start items-start">
         {/* This is the new div for scrolling */}
-      <div className="w-1/2 flex flex-col space-y-3 md:space-y-4 px-8 sm:px-12 pt-12 md:pt-14 pb-4 h-[calc(100vh-0.5in)] overflow-y-auto">
+        <div className="w-1/2 flex flex-col space-y-3 md:space-y-4 px-8 sm:px-12 pt-16 md:pt-20 pb-4 h-[calc(100vh-0.5in)] overflow-y-auto">
         {isCalendarOpen ? (
           <CalendarNotepad chatId={id} />
         ) : (
           <>
-            <ChatPanel messages={messages} input={input} setInput={setInput} />
-            {showEmptyScreen ? (
-              <EmptyScreen
-                submitMessage={message => {
-                  setInput(message)
-                }}
-              />
-            ) : (
-              <ChatMessages messages={messages} />
-            )}
+            <ChatPanel 
+              messages={messages} 
+              input={input} 
+              setInput={setInput} 
+              onSuggestionsChange={setSuggestions}
+            />
+            <div className="relative">
+              {showEmptyScreen ? (
+                <>
+                  <div className={cn("transition-all duration-300", suggestions ? "blur-md pointer-events-none" : "")}>
+                    <EmptyScreen
+                      submitMessage={message => {
+                        setInput(message)
+                        setIsSubmitting(true)
+                      }}
+                    />
+                  </div>
+                  {suggestions && (
+                    <div className="absolute inset-0 z-20 flex flex-col items-start p-4">
+                      <SuggestionsDropdown
+                        suggestions={suggestions}
+                        onSelect={query => {
+                          setInput(query)
+                          setSuggestions(null)
+                          // Use a small timeout to ensure state update before submission
+                          setTimeout(() => {
+                            setIsSubmitting(true)
+                          }, 0)
+                        }}
+                        onClose={() => setSuggestions(null)}
+                        className="relative bottom-auto mb-0 w-full shadow-none border-none bg-transparent"
+                      />
+                    </div>
+                  )}
+                </>
+              ) : (
+                <ChatMessages messages={messages} />
+              )}
+            </div>
           </>
         )}
       </div>

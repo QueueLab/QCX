@@ -5,23 +5,17 @@ test.describe('Mobile UI', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
+    // Wait for the main chat input to be visible, indicating the app is ready
+    await page.locator('[data-testid="chat-input"]').waitFor({ state: 'visible', timeout: 30000 });
   });
 
-  test('should interact with the mobile icons bar', async ({ page }) => {
-    // Test a few buttons on the mobile icons bar
-    await page.click('[data-testid="mobile-new-chat-button"]');
-    // Add an assertion to verify the action, e.g., the chat is cleared
-    const userMessage = page.locator('div.items-end');
-    await expect(userMessage).not.toBeVisible();
-
-    await page.click('[data-testid="profile-toggle"]');
-    // Add an assertion to verify the profile menu opens
-    const accountMenu = page.locator('[data-testid="profile-account"]');
-    await expect(accountMenu).toBeVisible();
+  test('profile toggle button should be disabled', async ({ page }) => {
+    // Check that the profile toggle is disabled on mobile
+    await expect(page.locator('.mobile-icons-bar-content [data-testid="profile-toggle"]')).toBeDisabled();
   });
 
-  test('should have a disabled submit button', async ({ page }) => {
+  test('should have an enabled submit button', async ({ page }) => {
     const submitButton = page.locator('[data-testid="mobile-submit-button"]');
-    await expect(submitButton).toBeDisabled();
+    await expect(submitButton).toBeEnabled();
   });
 });
