@@ -450,8 +450,8 @@ async function clearChat() {
 
 export type Message = {
   id: string
-  role: 'user' | 'assistant' | 'system' | 'tool'
-  content: string
+  role: 'user' | 'assistant' | 'system' | 'tool' | 'function' | 'data'
+  content: string | any[]
   name?: string
   type?:
     | 'response'
@@ -462,6 +462,9 @@ export type Message = {
     | 'input_related'
     | 'tool'
     | 'resolution_search_result'
+    | 'skip'
+    | 'end'
+    | 'drawing_context'
 }
 
 export type AIState = {
@@ -506,10 +509,12 @@ export const AI = createAI<AIState, UIState>({
     if (lastMessage && lastMessage.role === 'assistant' && done) {
       const chat: Chat = {
         id: chatId,
-        title: messages[0].content.substring(0, 100),
+        title: typeof messages[0].content === 'string' 
+          ? messages[0].content.substring(0, 100) 
+          : 'New Chat',
         userId,
         createdAt: new Date(),
-        messages,
+        messages: messages as any, // Cast to any to avoid type conflict with Chat interface
         path: `/search/${chatId}`
       }
 
@@ -547,7 +552,14 @@ export const getUIStateFromAIState = (aiState: Chat) => {
         }
       } else if (role === 'assistant') {
         if (type === 'resolution_search_result') {
-          const analysisResult = JSON.parse(content)
+          let analysisResult: any = {}
+          if (typeof content === 'string') {
+             try {
+                analysisResult = JSON.parse(content)
+             } catch (e) {
+                // Not JSON
+             }
+          }
           const summaryStream = createStreamableValue<string>()
           summaryStream.done(analysisResult.summary || 'Analysis complete.')
           return {
@@ -555,9 +567,25 @@ export const getUIStateFromAIState = (aiState: Chat) => {
             component: <BotMessage content={summaryStream.value} />
           }
         }
+        
+        // Handle content that is not a string (e.g., array of parts)
+        let displayContent: string = ''
+        if (typeof content === 'string') {
+            displayContent = content
+        } else if (Array.isArray(content)) {
+            // Convert array content to string representation or extract text
+            displayContent = content.map(part => {
+                if ('text' in part) return part.text
+                return ''
+            }).join('\n')
+        }
+        
+        const contentStream = createStreamableValue<string>()
+        contentStream.done(displayContent)
+
         return {
           id,
-          component: <BotMessage content={content} />
+          component: <BotMessage content={contentStream.value} />
         }
       } else {
         return null
