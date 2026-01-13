@@ -32,7 +32,7 @@ export function getModel(requireVision: boolean = false) {
     })
     // Optionally, add a check for credit status or skip xAI if credits are exhausted
     try {
-      return xai('grok-4-fast-non-reasoning')
+      return xai(process.env.XAI_MODEL_ID || 'grok-2-1212')
     } catch (error) {
       console.warn('xAI API unavailable, falling back to OpenAI:')
     }
@@ -77,5 +77,5 @@ export function getModel(requireVision: boolean = false) {
   const openai = createOpenAI({
     apiKey: process.env.OPENAI_API_KEY,
   })
-  return openai('gpt-4o')
+  return openai(process.env.OPENAI_MODEL_ID || 'gpt-4o')
 }
