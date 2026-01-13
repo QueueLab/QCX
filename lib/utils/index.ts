@@ -41,10 +41,12 @@ export function getModel(requireVision: boolean = false) {
   // Gemini 3 Pro
   if (gemini3ProApiKey) {
     const google = createGoogleGenerativeAI({
-      apiKey: gemini3ProApiKey,
+      apiKey: gemini3ProApiKey
     })
     try {
-      return google('gemini-3-pro-preview')
+      return google('gemini-3-pro-preview', {
+        experimental_enableReasoning: true
+      } as any)
     } catch (error) {
       console.warn(
         'Gemini 3 Pro API unavailable, falling back to next provider:',
