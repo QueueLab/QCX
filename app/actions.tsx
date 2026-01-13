@@ -15,6 +15,7 @@ import { FollowupPanel } from '@/components/followup-panel'
 import { inquire, researcher, taskManager, querySuggestor, resolutionSearch } from '@/lib/agents'
 import { mapControlOrchestrator } from '@/lib/agents/map-control-orchestrator'
 import { initializeComposioMapbox } from '@/mapbox_mcp/composio-mapbox'
+import { Composio } from '@composio/core'
 import { writer } from '@/lib/agents/writer'
 import { saveChat, getSystemPrompt } from '@/lib/actions/chat'
 import { Chat, AIMessage } from '@/lib/types'
@@ -374,7 +375,7 @@ async function submit(formData?: FormData, skip?: boolean) {
 
     if (!errorOccurred) {
       let locationResponse;
-      let mcpClient = null;
+      let mcpClient: Composio | undefined = undefined;
       let connectionId = '';
 
       try {

@@ -230,10 +230,15 @@ export function validateMapCommands(
 ): ValidationResult {
   const allErrors: ValidationResult['errors'] = [];
   const allWarnings: string[] = [];
+  const invalidIndices: number[] = [];
 
   commands.forEach((cmd, idx) => {
     const result = validateMapCommand(cmd);
     
+    if (!result.valid) {
+      invalidIndices.push(idx);
+    }
+
     result.errors.forEach(err => {
       allErrors.push({
         ...err,
@@ -252,5 +257,6 @@ export function validateMapCommands(
     valid: allErrors.length === 0,
     errors: allErrors,
     warnings: allWarnings.length > 0 ? allWarnings : undefined,
+    invalidIndices: invalidIndices.length > 0 ? invalidIndices : undefined,
   };
 }

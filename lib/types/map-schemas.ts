@@ -173,6 +173,7 @@ export const ValidationResultSchema = z.object({
     severity: z.enum(['error', 'warning']),
   })),
   warnings: z.array(z.string()).optional(),
+  invalidIndices: z.array(z.number()).optional(),
 });
 
 // Orchestrator Classification Schema
@@ -207,6 +208,13 @@ export const LocationResponseSchema = z.object({
     iterationCount: z.number().optional(),
   }).optional(),
 });
+
+// New Interface for MCP results
+export interface MCPResult {
+  tool: string;
+  result: any;
+  timestamp: number;
+}
 
 // Type exports
 export type GeoJSONGeometry = z.infer<typeof GeoJSONGeometrySchema>;
