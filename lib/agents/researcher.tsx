@@ -75,6 +75,50 @@ These rules override all previous instructions.
 - "What is QCX-Terra" → "QCX-Terra is a model garden of pixel level precision geospatial foundational models for efficient land prediction from satellite images"
 `
 
+type ReasoningOptions = NonNullable<Parameters<typeof nonexperimental_streamText>[0]>['providerOptions'];
+
+function reasoningOptionsFor(modelName: string): ReasoningOptions {
+  const name = modelName.toLowerCase();
+  const opts: ReasoningOptions = {};
+
+  // Google / Gemini 3
+  if (name.includes('gemini-3')) {
+    opts.google = {
+      thinkingConfig: {
+        thinkingLevel: 'low',
+        includeThoughts: true,
+      },
+    };
+  }
+
+  // Anthropic (direct or via Bedrock)
+  if (name.includes('claude')) {
+    opts.anthropic = {
+      extendedThinking: {
+        includeThoughts: true,
+      },
+    } as any;
+  }
+
+  // OpenAI reasoning models (o1/o3)
+  if (name.startsWith('o1') || name.startsWith('o3')) {
+    opts.openai = {
+      reasoningEffort: 'low',
+    } as any;
+  }
+
+  // xAI Grok
+  if (name.includes('grok')) {
+    opts.xai = {
+      reasoning: {
+        enabled: true,
+      },
+    } as any;
+  }
+
+  return opts;
+}
+
 export async function researcher(
   dynamicSystemPrompt: string,
   uiStream: ReturnType<typeof createStreamableUI>,
@@ -107,12 +151,16 @@ export async function researcher(
     message.content.some(part => part.type === 'image')
   )
 
+  const model = getModel(hasImage) as LanguageModel;
+  const modelId = (model as any).modelId || (model as any).id || '';
+
   const result = await nonexperimental_streamText({
-    model: getModel(hasImage) as LanguageModel,
+    model,
     maxTokens: 4096,
     system: systemPromptToUse,
     messages,
     tools: getTools({ uiStream, fullResponse, mapProvider }),
+    providerOptions: reasoningOptionsFor(modelId),
   })
 
   uiStream.update(null) // remove spinner
