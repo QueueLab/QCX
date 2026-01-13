@@ -88,7 +88,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (!input && !selectedFile) {
+    if (!input.trim() && !selectedFile) {
       return
     }
 
@@ -136,7 +136,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
       }
 
       const wordCount = value.trim().split(/\s+/).filter(Boolean).length
-      if (wordCount < 3) {
+      if (wordCount < 2) {
         setSuggestions(null)
         return
       }
@@ -192,18 +192,6 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
           : 'sticky bottom-0 bg-background z-10 w-full border-t border-border px-2 py-3 md:px-4'
       )}
     >
-      {selectedFile && (
-        <div className="w-full px-4 pb-2">
-          <div className="flex items-center justify-between p-2 bg-muted rounded-lg">
-            <span className="text-sm text-muted-foreground truncate max-w-xs">
-              {selectedFile.name}
-            </span>
-            <Button variant="ghost" size="icon" onClick={clearAttachment} data-testid="clear-attachment-button">
-              <X size={16} />
-            </Button>
-          </div>
-        </div>
-      )}
       <form
         ref={formRef}
         onSubmit={handleSubmit}
@@ -235,7 +223,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
                 'absolute top-1/2 transform -translate-y-1/2 left-3'
               )}
               onClick={handleAttachmentClick}
-              data-testid="attachment-button"
+              data-testid="desktop-attachment-button"
             >
               <Paperclip size={isMobile ? 18 : 20} />
             </Button>
@@ -301,6 +289,18 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
           {/* Suggestions are now handled by the parent component (chat.tsx) as an overlay */}
         </div>
       </form>
+      {selectedFile && (
+        <div className="w-full px-4 pb-2 mb-2">
+          <div className="flex items-center justify-between p-2 bg-muted rounded-lg">
+            <span className="text-sm text-muted-foreground truncate max-w-xs">
+              {selectedFile.name}
+            </span>
+            <Button variant="ghost" size="icon" onClick={clearAttachment} data-testid="clear-attachment-button">
+              <X size={16} />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 })

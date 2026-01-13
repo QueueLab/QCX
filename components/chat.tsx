@@ -45,6 +45,10 @@ export function Chat({ id }: ChatProps) {
   const handleAttachment = () => {
     chatPanelRef.current?.handleAttachmentClick();
   };
+
+  const handleMobileSubmit = () => {
+    chatPanelRef.current?.submitForm();
+  };
   
   useEffect(() => {
     async function fetchChatData() {
@@ -144,7 +148,7 @@ export function Chat({ id }: ChatProps) {
           {activeView ? <SettingsView chatId={id || ''} /> : <MapProvider />}
         </div>
         <div className="mobile-icons-bar">
-          <MobileIconsBar onAttachmentClick={handleAttachment} />
+          <MobileIconsBar onAttachmentClick={handleAttachment} onSubmitClick={handleMobileSubmit} />
         </div>
         <div className="mobile-chat-input-area">
           <ChatPanel 

@@ -23,6 +23,12 @@ test.describe('Map functionality', () => {
   });
 
   test('should zoom in and out using map controls', async ({ page }) => {
+    // This test should only run on desktop where the controls are visible
+    if (page.viewportSize()!.width <= 768) {
+      test.skip(true, 'Zoom controls are not visible on mobile');
+      return;
+    }
+
     const isMapbox = await page.locator('.mapboxgl-canvas').isVisible();
     if (!isMapbox) {
       test.skip(true, 'Zoom controls test is only for Mapbox');

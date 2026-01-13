@@ -14,8 +14,8 @@ test.describe('Mobile UI', () => {
     await expect(page.locator('.mobile-icons-bar-content [data-testid="profile-toggle"]')).toBeDisabled();
   });
 
-  test('should have a disabled submit button', async ({ page }) => {
+  test('should have an enabled submit button', async ({ page }) => {
     const submitButton = page.locator('[data-testid="mobile-submit-button"]');
-    await expect(submitButton).toBeDisabled();
+    await expect(submitButton).toBeEnabled();
   });
 });
