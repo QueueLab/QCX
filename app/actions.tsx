@@ -23,6 +23,7 @@ import { BotMessage } from '@/components/message'
 import { SearchSection } from '@/components/search-section'
 import SearchRelated from '@/components/search-related'
 import { GeoJsonLayer } from '@/components/map/geojson-layer'
+import { SatelliteIntelligenceDisplay } from '@/components/chat/satellite-intelligence-display'
 import { CopilotDisplay } from '@/components/copilot-display'
 import RetrieveSection from '@/components/retrieve-section'
 import { VideoSearchSection } from '@/components/video-search-section'
@@ -120,6 +121,12 @@ async function submit(formData?: FormData, skip?: boolean) {
                 role: 'assistant',
                 content: JSON.stringify(analysisResult),
                 type: 'resolution_search_result'
+            },
+            {
+                id: groupeId,
+                role: 'assistant',
+                content: JSON.stringify(analysisResult.satelliteIntelligence),
+                type: 'satellite_intelligence'
             },
             {
                 id: groupeId,
@@ -667,6 +674,15 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                       <GeoJsonLayer id={id} data={geoJson} />
                     )}
                   </>
+                )
+              }
+            }
+            case 'satellite_intelligence': {
+              const satelliteData = JSON.parse(content as string);
+              return {
+                id,
+                component: (
+                  <SatelliteIntelligenceDisplay data={satelliteData} />
                 )
               }
             }

@@ -1,10 +1,9 @@
-import { CoreMessage, generateObject } from 'ai'
-import { getModel } from '@/lib/utils'
+import { CoreMessage } from 'ai'
 import { z } from 'zod'
+import { routerAgent } from './router-agent' // Import the new router agent
+import { SatelliteIntelligence } from '../services/mock-satellite-services' // Import the type
 
-// This agent is now a pure data-processing module, with no UI dependencies.
-
-// Define the schema for the structured response from the AI.
+// The schema for the final output remains the same, as this is what the UI expects.
 const resolutionSearchSchema = z.object({
   summary: z.string().describe('A detailed text summary of the analysis, including land feature classification, points of interest, and relevant current news.'),
   geoJson: z.object({
@@ -12,7 +11,7 @@ const resolutionSearchSchema = z.object({
     features: z.array(z.object({
       type: z.literal('Feature'),
       geometry: z.object({
-        type: z.string(), // e.g., 'Point', 'Polygon'
+        type: z.string(),
         coordinates: z.any(),
       }),
       properties: z.object({
@@ -24,35 +23,40 @@ const resolutionSearchSchema = z.object({
 })
 
 export async function resolutionSearch(messages: CoreMessage[]) {
-  const systemPrompt = `
-As a geospatial analyst, your task is to analyze the provided satellite image of a geographic location.
-Your analysis should be comprehensive and include the following components:
+  // Delegate the core analysis to the router agent.
+  const analysisResult = await routerAgent(messages) as SatelliteIntelligence
 
-1.  **Land Feature Classification:** Identify and describe the different types of land cover visible in the image (e.g., urban areas, forests, water bodies, agricultural fields).
-2.  **Points of Interest (POI):** Detect and name any significant landmarks, infrastructure (e.g., bridges, major roads), or notable buildings.
-3.  **Structured Output:** Return your findings in a structured JSON format. The output must include a 'summary' (a detailed text description of your analysis) and a 'geoJson' object. The GeoJSON should contain features (Points or Polygons) for the identified POIs and land classifications, with appropriate properties.
+  // Adapt the result from the sub-agent to the format expected by the UI.
+  const summary = `Analysis: ${analysisResult.analysis}\nConfidence: ${analysisResult.confidenceScore}\nDetected Objects: ${analysisResult.detectedObjects.join(', ')}`
 
-Your analysis should be based solely on the visual information in the image and your general knowledge. Do not attempt to access external websites or perform web searches.
+  // Create a mock GeoJSON object since the mock tool doesn't provide one.
+  // In a real implementation, this would be generated based on the analysis result.
+  const geoJson = {
+    type: 'FeatureCollection',
+    features: [
+      {
+        type: 'Feature',
+        geometry: {
+          type: 'Point',
+          coordinates: [0, 0], // Placeholder coordinates
+        },
+        properties: {
+          name: 'Analysis Center',
+          description: 'This is a placeholder based on mock analysis.',
+        },
+      },
+    ],
+  }
 
-Analyze the user's prompt and the image to provide a holistic understanding of the location.
-`;
+  // Construct the final object that conforms to the expected schema.
+  const finalObject = {
+    summary,
+    geoJson,
+  }
 
-  const filteredMessages = messages.filter(msg => msg.role !== 'system');
-
-  // Check if any message contains an image (resolution search is specifically for image analysis)
-  const hasImage = messages.some(message => 
-    Array.isArray(message.content) && 
-    message.content.some(part => part.type === 'image')
-  )
-
-  // Use generateObject to get the full object at once.
-  const { object } = await generateObject({
-    model: await getModel(hasImage),
-    system: systemPrompt,
-    messages: filteredMessages,
-    schema: resolutionSearchSchema,
-  })
-
-  // Return the complete, validated object.
-  return object
+  // an object that includes the raw analysis result for the UI to use.
+  return {
+    ...resolutionSearchSchema.parse(finalObject),
+    satelliteIntelligence: analysisResult,
+  }
 }
