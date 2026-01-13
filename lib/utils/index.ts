@@ -59,10 +59,10 @@ export async function getModel(requireVision: boolean = false) {
     },
   };
 
-  if (selectedModel && modelInitializers[selectedModel]) {
+  if (selectedModel && selectedModel in modelInitializers) {
     try {
       console.log(`[getModel] Initializing user-selected model: ${selectedModel}`);
-      return modelInitializers[selectedModel]();
+      return modelInitializers[selectedModel as keyof typeof modelInitializers]();
     } catch (error) {
       console.error(`[getModel] Failed to initialize selected model "${selectedModel}":`, error);
       // Fallback to default if the selected model fails for any reason.
