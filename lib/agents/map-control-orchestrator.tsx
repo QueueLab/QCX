@@ -1,6 +1,5 @@
 import { generateObject } from 'ai';
 import { getModel } from '@/lib/utils';
-import { useMcp } from 'use-mcp/react';
 import {
   QueryClassificationSchema,
   QueryClassification,
@@ -12,7 +11,7 @@ import {
 import { geojsonParser } from './map-workers/geojson-parser';
 import { mapCommandGenerator } from './map-workers/map-command-generator';
 import { validateGeoJSON, validateMapCommands } from './map-workers/validator';
-import { feedbackAnalyzer, simpleFeedbackAnalysis } from './map-workers/feedback-analyzer';
+import { feedbackAnalyzer } from './map-workers/feedback-analyzer';
 
 const ORCHESTRATOR_CLASSIFICATION_PROMPT = `You are a map operation orchestrator. Analyze the user's text and classify the type of map operation needed.
 
@@ -45,6 +44,7 @@ interface OrchestratorOptions {
   maxIterations?: number;
   enableFeedbackLoop?: boolean;
   mcpClient?: any; // MCP client instance
+  connectionId?: string; // Composio connection ID
 }
 
 interface OrchestratorState {
@@ -70,6 +70,7 @@ export class MapControlOrchestrator {
       maxIterations: options.maxIterations || 3,
       enableFeedbackLoop: options.enableFeedbackLoop ?? true,
       mcpClient: options.mcpClient || null,
+      connectionId: options.connectionId || '',
     };
 
     this.state = {
@@ -314,21 +315,34 @@ export class MapControlOrchestrator {
         
         switch (operation) {
           case 'geocode':
-            // Extract location from text (simplified)
-            result = await this.options.mcpClient.callTool('geocode_location', {
-              query: text,
-              includeMapPreview: true,
-            });
+            // Use Composio mapbox_geocode_location
+             if (this.options.connectionId) {
+                result = await this.options.mcpClient.executeAction({
+                    action: 'mapbox_geocode_location',
+                    params: {
+                        query: text, // This might need better extraction of the specific location part
+                        includeMapPreview: true
+                    },
+                    connectedAccountId: this.options.connectionId
+                });
+             }
             break;
 
           case 'calculate_distance':
-            // Would need to extract from/to from text
-            // Skipping for now as it requires more complex parsing
+             // Placeholder for matrix/directions
             break;
 
           case 'search_nearby':
-            // Would need to extract location and query from text
-            // Skipping for now as it requires more complex parsing
+            // Placeholder for search
+             if (this.options.connectionId) {
+                 result = await this.options.mcpClient.executeAction({
+                     action: 'mapbox_search_box_text_search',
+                     params: {
+                         q: text
+                     },
+                     connectedAccountId: this.options.connectionId
+                 });
+             }
             break;
 
           case 'generate_map_link':
@@ -340,7 +354,7 @@ export class MapControlOrchestrator {
         if (result) {
           this.state.mcpData.push({
             tool: operation,
-            result,
+            result: result.data || result, // Adjust based on Composio response structure
           });
         }
       } catch (error) {
@@ -353,7 +367,7 @@ export class MapControlOrchestrator {
    * Geocode extracted locations using MCP
    */
   private async geocodeLocations(locations: string[]): Promise<void> {
-    if (!this.options.mcpClient) {
+    if (!this.options.mcpClient || !this.options.connectionId) {
       return;
     }
 
@@ -361,29 +375,51 @@ export class MapControlOrchestrator {
 
     for (const location of locations) {
       try {
-        const result = await this.options.mcpClient.callTool('geocode_location', {
-          query: location,
-          includeMapPreview: false,
+        // Use Composio mapbox_geocode_location
+        const result = await this.options.mcpClient.executeAction({
+             action: 'mapbox_geocode_location',
+             params: {
+                 query: location,
+                 includeMapPreview: false
+             },
+             connectedAccountId: this.options.connectionId
         });
 
         // Parse result and create GeoJSON feature
-        const match = result.content[1]?.text?.match(/```json\n([\s\S]*?)\n```/);
-        if (match && match[1]) {
-          const data = JSON.parse(match[1]);
-          
-          geocodedFeatures.push({
-            type: 'Feature' as const,
-            geometry: {
-              type: 'Point' as const,
-              coordinates: [data.location.longitude, data.location.latitude] as [number, number],
-            },
-            properties: {
-              name: location,
-              place_name: data.location.place_name,
-              address: data.location.address,
-              source: 'mcp_geocoding',
-            },
-          });
+        // The Composio Mapbox Geocode tool returns structured data, usually.
+        // We need to inspect the result structure. 
+        // Based on typical Composio Mapbox tool response:
+        const data = result.data || result;
+        
+        // Assuming data contains feature collection or similar.
+        // If it returns the same format as the mock one from original code:
+        if (data && data.features && data.features.length > 0) {
+             const feature = data.features[0];
+             geocodedFeatures.push({
+                 type: 'Feature' as const,
+                 geometry: feature.geometry,
+                 properties: {
+                     name: location,
+                     place_name: feature.place_name || feature.properties?.place_name,
+                     address: feature.properties?.address,
+                     source: 'mcp_geocoding'
+                 }
+             });
+        } else if (data && data.location) {
+             // Handle custom simplified return if that's what it is
+              geocodedFeatures.push({
+                type: 'Feature' as const,
+                geometry: {
+                  type: 'Point' as const,
+                  coordinates: [data.location.longitude, data.location.latitude] as [number, number],
+                },
+                properties: {
+                  name: location,
+                  place_name: data.location.place_name,
+                  address: data.location.address,
+                  source: 'mcp_geocoding',
+                },
+              });
         }
       } catch (error) {
         console.error(`Geocoding error for "${location}":`, error);

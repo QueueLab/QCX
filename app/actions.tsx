@@ -15,10 +15,8 @@ import { FollowupPanel } from '@/components/followup-panel'
 import { inquire, researcher, taskManager, querySuggestor, resolutionSearch } from '@/lib/agents'
 import { mapControlOrchestrator } from '@/lib/agents/map-control-orchestrator'
 import { initializeComposioMapbox } from '@/mapbox_mcp/composio-mapbox'
-// Removed import of useGeospatialToolMcp as it no longer exists and was incorrectly used here.
-// The geospatialTool (if used by agents like researcher) now manages its own MCP client.
 import { writer } from '@/lib/agents/writer'
-import { saveChat, getSystemPrompt } from '@/lib/actions/chat' // Added getSystemPrompt
+import { saveChat, getSystemPrompt } from '@/lib/actions/chat'
 import { Chat, AIMessage } from '@/lib/types'
 import { UserMessage } from '@/components/user-message'
 import { BotMessage } from '@/components/message'
@@ -28,12 +26,12 @@ import { GeoJsonLayer } from '@/components/map/geojson-layer'
 import { CopilotDisplay } from '@/components/copilot-display'
 import RetrieveSection from '@/components/retrieve-section'
 import { VideoSearchSection } from '@/components/video-search-section'
-import { MapQueryHandler } from '@/components/map/map-query-handler' // Add this import
+import { MapQueryHandler } from '@/components/map/map-query-handler'
 import { LocationResponseHandler } from '@/components/map/location-response-handler'
 import { PartialRelated } from '@/lib/schema/related'
 import { geojsonEnricherV2 } from '@/lib/agents/geojson-enricher-v2'
+import { PartialInquiry } from '@/lib/schema/inquiry'
 
-// Removed mcp parameter from submit, as geospatialTool now handles its client.
 async function submit(formData?: FormData, skip?: boolean) {
   'use server'
 
@@ -52,7 +50,6 @@ async function submit(formData?: FormData, skip?: boolean) {
     const buffer = await file.arrayBuffer();
     const dataUrl = `data:${file.type};base64,${Buffer.from(buffer).toString('base64')}`;
 
-    // Get the current messages, excluding tool-related ones.
     const messages: CoreMessage[] = [...(aiState.get().messages as any[])].filter(
       message =>
         message.role !== 'tool' &&
@@ -61,16 +58,13 @@ async function submit(formData?: FormData, skip?: boolean) {
         message.type !== 'end'
     );
 
-    // The user's prompt for this action is static.
     const userInput = 'Analyze this map view.';
 
-    // Construct the multimodal content for the user message.
     const content: CoreMessage['content'] = [
       { type: 'text', text: userInput },
       { type: 'image', image: dataUrl, mimeType: file.type }
     ];
 
-    // Add the new user message to the AI state.
     aiState.update({
       ...aiState.get(),
       messages: [
@@ -80,14 +74,11 @@ async function submit(formData?: FormData, skip?: boolean) {
     });
     messages.push({ role: 'user', content });
 
-    // Call the simplified agent, which now returns data directly.
     const analysisResult = await resolutionSearch(messages) as any;
 
-    // Create a streamable value for the summary and mark it as done.
     const summaryStream = createStreamableValue<string>();
     summaryStream.done(analysisResult.summary || 'Analysis complete.');
 
-    // Update the UI stream with the BotMessage component.
     uiStream.update(
       <BotMessage content={summaryStream.value} />
     );
@@ -250,7 +241,6 @@ async function submit(formData?: FormData, skip?: boolean) {
   }
 
   const hasImage = messageParts.some(part => part.type === 'image')
-  // Properly type the content based on whether it contains images
   const content: CoreMessage['content'] = hasImage
     ? messageParts as CoreMessage['content']
     : messageParts.map(part => part.text).join('\n')
@@ -297,7 +287,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     }
 
     if (action.object.next === 'inquire') {
-      const inquiry = await inquire(uiStream, messages)
+      const inquiry = await inquire(uiStream, messages) as PartialInquiry
       uiStream.done()
       isGenerating.done()
       isCollapsed.done(false)
@@ -308,7 +298,7 @@ async function submit(formData?: FormData, skip?: boolean) {
           {
             id: nanoid(),
             role: 'assistant',
-            content: `inquiry: ${(inquiry as any)?.question}`
+            content: `inquiry: ${inquiry?.question}`
           }
         ]
       })
@@ -384,18 +374,45 @@ async function submit(formData?: FormData, skip?: boolean) {
 
     if (!errorOccurred) {
       let locationResponse;
+      let mcpClient = null;
+      let connectionId = '';
+
       try {
-        // Attempt to enrich the response with GeoJSON data
-        locationResponse = await geojsonEnricherV2(answer);
-        console.log('✨ Enrichment successful:', locationResponse);
+        // Only attempt to initialize if we have reason to believe it might work
+        // or if we want to log the failure.
+        if (process.env.COMPOSIO_API_KEY && process.env.MAPBOX_ACCESS_TOKEN && process.env.COMPOSIO_USER_ID) {
+           const composioData = await initializeComposioMapbox();
+           mcpClient = composioData.composio;
+           connectionId = composioData.connectionId;
+           console.log('🔌 Composio client initialized for Orchestrator');
+        } else {
+           console.log('ℹ️ Composio env vars missing, skipping MCP initialization');
+        }
       } catch (e) {
-        console.error("Error during geojson enrichment:", e);
-        // Fallback to a response without location data
-        locationResponse = {
-          text: answer,
-          geojson: null,
-          map_commands: null,
-        };
+         console.warn("Failed to initialize Composio for orchestrator (proceeding without MCP):", e);
+      }
+
+      try {
+        // Use the Orchestrator with fallback to basic enricher handled internally if needed
+        console.log('🚀 Starting Map Control Orchestrator...');
+        locationResponse = await mapControlOrchestrator(answer, {
+            mcpClient,
+            connectionId,
+            enableFeedbackLoop: false // Disable for now to reduce latency
+        });
+        console.log('✨ Orchestrator finished:', locationResponse);
+      } catch (e) {
+        console.error("Error during map orchestration:", e);
+        // Fallback to basic enricher
+        try {
+            locationResponse = await geojsonEnricherV2(answer);
+        } catch (fallbackErr) {
+            locationResponse = {
+              text: answer,
+              geojson: null,
+              map_commands: null,
+            };
+        }
       }
 
       const relatedQueries = await querySuggestor(uiStream, messages)
@@ -588,12 +605,10 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
             case 'input_related':
               let messageContent: string | any[]
               try {
-                // For backward compatibility with old messages that stored a JSON string
                 const json = JSON.parse(content as string)
                 messageContent =
                   type === 'input' ? json.input : json.related_query
               } catch (e) {
-                // New messages will store the content array or string directly
                 messageContent = content
               }
               return {
@@ -686,7 +701,6 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
             }
 
             if (name === 'geojsonEnrichment') {
-              // Runtime validation for the toolOutput
               if (
                 toolOutput &&
                 typeof toolOutput.text === 'string' &&
