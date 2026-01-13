@@ -93,17 +93,48 @@ async function submit(formData?: FormData, skip?: boolean) {
       <BotMessage content={summaryStream.value} />
     );
 
+    messages.push({ role: 'assistant', content: analysisResult.summary || 'Analysis complete.' });
+
+    const relatedQueries = await querySuggestor(uiStream, messages);
+    uiStream.append(
+        <Section title="Follow-up">
+            <FollowupPanel />
+        </Section>
+    );
+
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    const groupeId = nanoid();
+
     aiState.done({
-      ...aiState.get(),
-      messages: [
-        ...aiState.get().messages,
-        {
-          id: nanoid(),
-          role: 'assistant',
-          content: JSON.stringify(analysisResult),
-          type: 'resolution_search_result'
-        }
-      ]
+        ...aiState.get(),
+        messages: [
+            ...aiState.get().messages,
+            {
+                id: groupeId,
+                role: 'assistant',
+                content: analysisResult.summary || 'Analysis complete.',
+                type: 'response'
+            },
+            {
+                id: groupeId,
+                role: 'assistant',
+                content: JSON.stringify(analysisResult),
+                type: 'resolution_search_result'
+            },
+            {
+                id: groupeId,
+                role: 'assistant',
+                content: JSON.stringify(relatedQueries),
+                type: 'related'
+            },
+            {
+                id: groupeId,
+                role: 'assistant',
+                content: 'followup',
+                type: 'followup'
+            }
+        ]
     });
 
     isGenerating.done(false);
@@ -649,17 +680,12 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
               }
             case 'resolution_search_result': {
               const analysisResult = JSON.parse(content as string);
-              const summaryValue = createStreamableValue();
-              summaryValue.done(analysisResult.summary);
               const geoJson = analysisResult.geoJson as FeatureCollection;
 
               return {
                 id,
                 component: (
                   <>
-                    <Section title="Map Analysis">
-                      <BotMessage content={summaryValue.value} />
-                    </Section>
                     {geoJson && (
                       <GeoJsonLayer id={id} data={geoJson} />
                     )}
