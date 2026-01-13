@@ -50,7 +50,7 @@ export async function getModel(requireVision: boolean = false) {
     'Gemini 3': () => {
       if (!gemini3ProApiKey) throw new Error('GEMINI_3_PRO_API_KEY for Gemini 3 is not set.');
       const google = createGoogleGenerativeAI({ apiKey: gemini3ProApiKey });
-      return google('models/gemini-1.5-pro-latest');
+      return google('gemini-3-pro-preview');
     },
     'GPT-5.1': () => {
       if (!openaiApiKey) throw new Error('OPENAI_API_KEY for GPT-5.1 is not set.');
