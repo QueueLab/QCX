@@ -31,6 +31,7 @@ import { VideoSearchSection } from '@/components/video-search-section'
 import { MapQueryHandler } from '@/components/map/map-query-handler' // Add this import
 import { LocationResponseHandler } from '@/components/map/location-response-handler'
 import { PartialRelated } from '@/lib/schema/related'
+import { geojsonEnricherV2 } from '@/lib/agents/geojson-enricher-v2'
 
 // Removed mcp parameter from submit, as geospatialTool now handles its client.
 async function submit(formData?: FormData, skip?: boolean) {
@@ -74,7 +75,7 @@ async function submit(formData?: FormData, skip?: boolean) {
       ...aiState.get(),
       messages: [
         ...aiState.get().messages,
-        { id: nanoid(), role: 'user', content }
+        { id: nanoid(), role: 'user', content: JSON.stringify(content) }
       ]
     });
     messages.push({ role: 'user', content });
@@ -384,8 +385,9 @@ async function submit(formData?: FormData, skip?: boolean) {
     if (!errorOccurred) {
       let locationResponse;
       try {
-        const { composio } = await initializeComposioMapbox();
-        locationResponse = await mapControlOrchestrator(answer, { mcpClient: composio });
+        // Attempt to enrich the response with GeoJSON data
+        locationResponse = await geojsonEnricherV2(answer);
+        console.log('✨ Enrichment successful:', locationResponse);
       } catch (e) {
         console.error("Error during geojson enrichment:", e);
         // Fallback to a response without location data
