@@ -1,13 +1,28 @@
 // lib/agents/router-agent.ts
-import { CoreMessage, streamObject } from 'ai';
+import { CoreMessage, generateObject } from 'ai';
 import { getModel } from '@/lib/utils';
 import { satelliteTools } from './tools/satellite-tools';
 import { z } from 'zod';
 
+// Schema to guide the router's decision. The model will populate this object.
+const routerSchema = z.union([
+  z.object({
+    tool: z.literal('analyzeSatelliteImage'),
+    // Pass an empty args object for consistency, even if not used by the tool.
+    args: z.object({}).describe('The arguments for analyzing the satellite image.'),
+  }),
+  z.object({
+    tool: z.literal('generateEmbeddings'),
+    args: z.object({
+      text: z.string(),
+    }),
+  }),
+]);
+
 /**
  * The router agent is responsible for selecting the appropriate sub-agent tool
- * to handle the user's request. It uses the Vercel AI SDK's `streamObject`
- * function to make a decision and execute the tool.
+ * to handle the user's request. It uses the Vercel AI SDK's `generateObject`
+ * function to make a decision, then executes the corresponding tool.
  *
  * @param messages The conversation history.
  * @returns A promise that resolves to the result of the executed tool.
@@ -15,40 +30,35 @@ import { z } from 'zod';
 export async function routerAgent(messages: CoreMessage[]) {
   console.log('Router agent is selecting a tool...');
 
-  // Use `streamObject` to decide which tool to use.
-  const result = await streamObject({
+  // 1. Use `generateObject` to get the model's choice of tool and arguments.
+  const { object: toolChoice } = await generateObject({
     model: await getModel(true), // Assuming image analysis requires a powerful model
     messages,
-    tools: satelliteTools,
-    // The schema is used to constrain the model's output to a valid tool call.
-    schema: z.union([
-      z.object({
-        tool: z.literal('analyzeSatelliteImage'),
-        args: z.object({}),
-      }),
-      z.object({
-        tool: z.literal('generateEmbeddings'),
-        args: z.object({
-          text: z.string(),
-        }),
-      }),
-    ]),
+    schema: routerSchema,
+    prompt: 'Given the user request and the image, which tool is most appropriate? If an image is present, use analyzeSatelliteImage.',
   });
 
-  // The `streamObject` function returns a `StreamObjectResult` object.
-  // The `toolCalls` property contains the tool calls that the model wants to make.
-  const toolCall = (await result.toolCalls[0]) as any;
-  const toolName = toolCall.toolName as keyof typeof satelliteTools;
-  const tool = satelliteTools[toolName];
+  // 2. Execute the chosen tool based on the object returned by the model.
+  switch (toolChoice.tool) {
+    case 'analyzeSatelliteImage': {
+      const result = await satelliteTools.analyzeSatelliteImage.execute(
+        toolChoice.args
+      );
+      console.log('Router agent executed analyzeSatelliteImage:', result);
+      return result;
+    }
 
-  if (!tool) {
-    throw new Error(`Tool not found: ${toolName}`);
+    case 'generateEmbeddings': {
+      const result = await satelliteTools.generateEmbeddings.execute(
+        toolChoice.args
+      );
+      console.log('Router agent executed generateEmbeddings:', result);
+      return result;
+    }
+
+    default: {
+      // This should not be reached if the model adheres to the schema.
+      throw new Error(`Unknown tool selected by the router.`);
+    }
   }
-
-  // Execute the tool with the provided arguments.
-  const toolResult = await tool.execute(toolCall.args);
-
-  console.log('Router agent has executed the tool:', toolResult);
-
-  return toolResult;
 }
