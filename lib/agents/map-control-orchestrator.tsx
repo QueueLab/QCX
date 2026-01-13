@@ -1,5 +1,6 @@
 import { generateObject } from 'ai';
 import { getModel } from '@/lib/utils';
+import { Composio } from '@composio/core';
 import {
   QueryClassificationSchema,
   QueryClassification,
@@ -7,6 +8,7 @@ import {
   MapStateFeedback,
   GeoJSONFeatureCollection,
   MapCommand,
+  GeoJSONFeature
 } from '@/lib/types/map-schemas';
 import { geojsonParser } from './map-workers/geojson-parser';
 import { mapCommandGenerator } from './map-workers/map-command-generator';
@@ -43,7 +45,7 @@ DETERMINE:
 interface OrchestratorOptions {
   maxIterations?: number;
   enableFeedbackLoop?: boolean;
-  mcpClient?: any; // MCP client instance
+  mcpClient?: Composio; // MCP client instance with proper typing
   connectionId?: string; // Composio connection ID
 }
 
@@ -69,9 +71,17 @@ export class MapControlOrchestrator {
     this.options = {
       maxIterations: options.maxIterations || 3,
       enableFeedbackLoop: options.enableFeedbackLoop ?? true,
-      mcpClient: options.mcpClient || null,
+      mcpClient: options.mcpClient as Composio, // Casting to Required<T> type but it can be null internally if passed as null. 
+      // Actually strictly speaking Required<OrchestratorOptions> would require mcpClient to be Composio.
+      // But we default it to null in constructor options.
+      // Let's adjust strict typing logic.
       connectionId: options.connectionId || '',
-    };
+    } as any; // Cast to bypass strict null checks for optional fields in Required
+
+    // Handle null explicitly
+    if (!options.mcpClient) {
+        (this.options as any).mcpClient = null;
+    }
 
     this.state = {
       iteration: 0,
@@ -94,6 +104,7 @@ export class MapControlOrchestrator {
   ): Promise<LocationResponse> {
     const startTime = Date.now();
     this.state.iteration = 0;
+    console.log('🏁 Orchestrator process started');
 
     try {
       // Step 1: Classify the query
@@ -111,6 +122,10 @@ export class MapControlOrchestrator {
       console.log('🗺️ Orchestrator: Parsing GeoJSON...');
       const parserOutput = await geojsonParser(researcherResponse);
       
+      // FIX: Assign parser output to state BEFORE geocoding
+      this.state.geojson = parserOutput.geojson;
+      console.log(`Initial parsed GeoJSON features: ${this.state.geojson?.features.length || 0}`);
+
       // If parser found locations needing geocoding and we have MCP, geocode them
       if (
         parserOutput.extractedLocations &&
@@ -118,10 +133,21 @@ export class MapControlOrchestrator {
         this.options.mcpClient
       ) {
         console.log('📍 Orchestrator: Geocoding extracted locations...');
-        await this.geocodeLocations(parserOutput.extractedLocations);
+        // FIX: Capture returned features and merge into state
+        const geocodedFeatures = await this.geocodeLocations(parserOutput.extractedLocations);
+        
+        if (geocodedFeatures.length > 0) {
+            console.log(`Merged ${geocodedFeatures.length} geocoded features into GeoJSON state.`);
+            if (!this.state.geojson) {
+                this.state.geojson = {
+                    type: 'FeatureCollection',
+                    features: geocodedFeatures,
+                };
+            } else {
+                this.state.geojson.features.push(...geocodedFeatures);
+            }
+        }
       }
-
-      this.state.geojson = parserOutput.geojson;
 
       // Validate GeoJSON
       if (this.state.geojson) {
@@ -173,13 +199,25 @@ export class MapControlOrchestrator {
       };
 
       console.log('✅ Orchestrator: Initial processing complete');
+      
+      // FIX: Invoke feedbackCallback with status
+      if (feedbackCallback) {
+          const feedback: MapStateFeedback = {
+              success: true,
+              timestamp: Date.now(),
+              error: undefined
+          };
+          console.log('Calling feedbackCallback with success state.');
+          feedbackCallback(feedback);
+      }
+
       return response;
 
     } catch (error) {
       console.error('❌ Orchestrator error:', error);
       
       // Fallback response
-      return {
+      const errorResponse = {
         text: researcherResponse,
         geojson: null,
         map_commands: null,
@@ -190,6 +228,17 @@ export class MapControlOrchestrator {
           iterationCount: this.state.iteration,
         },
       };
+
+      if (feedbackCallback) {
+          const feedback: MapStateFeedback = {
+              success: false,
+              timestamp: Date.now(),
+              error: error instanceof Error ? error.message : String(error)
+          };
+          feedbackCallback(feedback);
+      }
+      
+      return errorResponse;
     }
   }
 
@@ -320,7 +369,7 @@ export class MapControlOrchestrator {
                 result = await this.options.mcpClient.executeAction({
                     action: 'mapbox_geocode_location',
                     params: {
-                        query: text, // This might need better extraction of the specific location part
+                        query: text, 
                         includeMapPreview: true
                     },
                     connectedAccountId: this.options.connectionId
@@ -365,16 +414,18 @@ export class MapControlOrchestrator {
 
   /**
    * Geocode extracted locations using MCP
+   * FIX: Now returns features instead of mutating state directly
    */
-  private async geocodeLocations(locations: string[]): Promise<void> {
+  private async geocodeLocations(locations: string[]): Promise<GeoJSONFeature[]> {
     if (!this.options.mcpClient || !this.options.connectionId) {
-      return;
+      return [];
     }
 
-    const geocodedFeatures = [];
+    const geocodedFeatures: GeoJSONFeature[] = [];
 
     for (const location of locations) {
       try {
+        console.log(`Searching location via MCP: ${location}`);
         // Use Composio mapbox_geocode_location
         const result = await this.options.mcpClient.executeAction({
              action: 'mapbox_geocode_location',
@@ -385,14 +436,8 @@ export class MapControlOrchestrator {
              connectedAccountId: this.options.connectionId
         });
 
-        // Parse result and create GeoJSON feature
-        // The Composio Mapbox Geocode tool returns structured data, usually.
-        // We need to inspect the result structure. 
-        // Based on typical Composio Mapbox tool response:
         const data = result.data || result;
         
-        // Assuming data contains feature collection or similar.
-        // If it returns the same format as the mock one from original code:
         if (data && data.features && data.features.length > 0) {
              const feature = data.features[0];
              geocodedFeatures.push({
@@ -406,7 +451,6 @@ export class MapControlOrchestrator {
                  }
              });
         } else if (data && data.location) {
-             // Handle custom simplified return if that's what it is
               geocodedFeatures.push({
                 type: 'Feature' as const,
                 geometry: {
@@ -426,17 +470,7 @@ export class MapControlOrchestrator {
       }
     }
 
-    // Merge geocoded features with existing GeoJSON
-    if (geocodedFeatures.length > 0) {
-      if (!this.state.geojson) {
-        this.state.geojson = {
-          type: 'FeatureCollection',
-          features: geocodedFeatures,
-        };
-      } else {
-        this.state.geojson.features.push(...geocodedFeatures);
-      }
-    }
+    return geocodedFeatures;
   }
 }
 
