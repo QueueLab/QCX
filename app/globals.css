@@ -188,7 +188,7 @@
   }
 
   .mobile-chat-input-area {
-    height: 70px;
+    height: auto;
     padding: 10px;
     background-color: hsl(var(--background));
     /* border-top: 1px solid hsl(var(--border)); */ /* Removed for cleaner separation */

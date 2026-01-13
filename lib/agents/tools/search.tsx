@@ -99,7 +99,7 @@ async function tavilySearch(
     includeRawContent: include_raw_content ? 'text' : undefined
   })
 
-  return response
+  return { ...response, results: response.results.reverse() }
 }
 
 async function exaSearch(query: string, maxResults: number = 10): Promise<any> {
