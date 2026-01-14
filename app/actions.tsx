@@ -93,17 +93,48 @@ async function submit(formData?: FormData, skip?: boolean) {
       <BotMessage content={summaryStream.value} />
     );
 
+    messages.push({ role: 'assistant', content: analysisResult.summary || 'Analysis complete.' });
+
+    const relatedQueries = await querySuggestor(uiStream, messages);
+    uiStream.append(
+        <Section title="Follow-up">
+            <FollowupPanel />
+        </Section>
+    );
+
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    const groupeId = nanoid();
+
     aiState.done({
-      ...aiState.get(),
-      messages: [
-        ...aiState.get().messages,
-        {
-          id: nanoid(),
-          role: 'assistant',
-          content: JSON.stringify(analysisResult),
-          type: 'resolution_search_result'
-        }
-      ]
+        ...aiState.get(),
+        messages: [
+            ...aiState.get().messages,
+            {
+                id: groupeId,
+                role: 'assistant',
+                content: analysisResult.summary || 'Analysis complete.',
+                type: 'response'
+            },
+            {
+                id: groupeId,
+                role: 'assistant',
+                content: JSON.stringify(analysisResult),
+                type: 'resolution_search_result'
+            },
+            {
+                id: groupeId,
+                role: 'assistant',
+                content: JSON.stringify(relatedQueries),
+                type: 'related'
+            },
+            {
+                id: groupeId,
+                role: 'assistant',
+                content: 'followup',
+                type: 'followup'
+            }
+        ]
     });
 
     isGenerating.done(false);
@@ -535,9 +566,97 @@ export const getUIStateFromAIState = (aiState: Chat) => {
     .map((message, index) => {
       const { role, content, id, type } = message
 
-      if (role === 'user') {
-        let userContent: any = content
-        if (typeof content === 'string') {
+      if (
+        !type ||
+        type === 'end' ||
+        (isSharePage && type === 'related') ||
+        (isSharePage && type === 'followup')
+      )
+        return null
+
+      switch (role) {
+        case 'user':
+          switch (type) {
+            case 'input':
+            case 'input_related':
+              let messageContent: string | any[]
+              try {
+                // For backward compatibility with old messages that stored a JSON string
+                const json = JSON.parse(content as string)
+                messageContent =
+                  type === 'input' ? json.input : json.related_query
+              } catch (e) {
+                // New messages will store the content array or string directly
+                messageContent = content
+              }
+              return {
+                id,
+                component: (
+                  <UserMessage
+                    content={messageContent}
+                    chatId={chatId}
+                    showShare={index === 0 && !isSharePage}
+                  />
+                )
+              }
+            case 'inquiry':
+              return {
+                id,
+                component: <CopilotDisplay content={content as string} />
+              }
+          }
+          break
+        case 'assistant':
+          const answer = createStreamableValue()
+          answer.done(content)
+          switch (type) {
+            case 'response':
+              return {
+                id,
+                component: (
+                  <Section title="response">
+                    <BotMessage content={answer.value} />
+                  </Section>
+                )
+              }
+            case 'related':
+              const relatedQueries = createStreamableValue<RelatedQueries>()
+              relatedQueries.done(JSON.parse(content as string))
+              return {
+                id,
+                component: (
+                  <Section title="Related" separator={true}>
+                    <SearchRelated relatedQueries={relatedQueries.value} />
+                  </Section>
+                )
+              }
+            case 'followup':
+              return {
+                id,
+                component: (
+                  <Section title="Follow-up" className="pb-8">
+                    <FollowupPanel />
+                  </Section>
+                )
+              }
+            case 'resolution_search_result': {
+              const analysisResult = JSON.parse(content as string);
+              const geoJson = analysisResult.geoJson as FeatureCollection;
+
+              return {
+                id,
+                component: (
+                  <>
+                    {geoJson && (
+                      <GeoJsonLayer id={id} data={geoJson} />
+                    )}
+                  </>
+                )
+              }
+            }
+          }
+          break
+        case 'tool':
           try {
             userContent = JSON.parse(content)
             if (userContent.input) userContent = userContent.input
