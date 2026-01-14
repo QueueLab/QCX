@@ -2,36 +2,52 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
-import { createClient } from '@/lib/supabase/client';
+import { getSupabaseServerClient } from '@/lib/supabase/client';
 import { TIERS, parseTier } from '@/lib/utils/subscription';
 
 export async function GET(req: NextRequest) {
-  const supabase = createClient();
-  const { data: { user: supabaseUser }, error } = await supabase.auth.getUser();
-
-  if (error || !supabaseUser) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   try {
-    const user = await db.query.users.findFirst({
-      where: eq(users.id, supabaseUser.id),
-    });
+    const supabase = getSupabaseServerClient();
+    const {
+      data: { user },
+      error: userError
+    } = await supabase.auth.getUser();
 
-    if (!user) {
-       // If user doesn't exist in our table yet, return defaults
-       return NextResponse.json({
-        credits: 0,
-        tier: TIERS.FREE
-      });
+    if (userError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
-    return NextResponse.json({
-      credits: user.credits,
-      tier: parseTier(user.tier),
+    // Get user from database
+    const dbUser = await db.query.users.findFirst({
+      where: eq(users.id, user.id)
     });
+
+    if (!dbUser) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    const tier = parseTier(dbUser.tier);
+    // If user is not on Standard tier, they might not need credits logic,
+    // but for now we return the credits regardless.
+    // If the tier doesn't support credits (e.g. Free or Pro), the UI can handle it.
+    
+    return NextResponse.json({
+      credits: dbUser.credits,
+      tier: tier,
+      features: TIERS[tier]
+    });
+
   } catch (error) {
     console.error('Error fetching user credits:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 }
+    );
   }
 }
