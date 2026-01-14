@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useCallback } from 'react'
-import { MapContainer, TileLayer, FeatureGroup, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, FeatureGroup, useMap, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import 'leaflet-draw/dist/leaflet.draw.css'
@@ -93,8 +93,8 @@ const DrawControl = () => {
     const drawControl = new L.Control.Draw({
       edit: { featureGroup },
       draw: {
-        polygon: true,
-        polyline: true,
+        polygon: {},
+        polyline: {},
         rectangle: false,
         circle: false,
         marker: false,
@@ -130,10 +130,17 @@ const DrawControl = () => {
   return null
 }
 
+const MapEvents = ({ onMoveEnd }: { onMoveEnd: (map: L.Map) => void }) => {
+  const map = useMapEvents({
+    moveend: () => onMoveEnd(map),
+    zoomend: () => onMoveEnd(map),
+  });
+  return null;
+};
+
 export function OSMMap() {
   const { mapData, setMapData } = useMapData()
   const { setIsMapLoaded } = useMapLoading()
-  const mapRef = useRef<L.Map>(null)
 
   const initialCenter = mapData.cameraState
     ? [mapData.cameraState.center.lat, mapData.cameraState.center.lng] as [number, number]
@@ -145,20 +152,17 @@ export function OSMMap() {
     return () => setIsMapLoaded(false)
   }, [setIsMapLoaded])
 
-  const handleMapMoveEnd = useCallback(() => {
-    if (mapRef.current) {
-      const map = mapRef.current
-      const center = map.getCenter()
-      const zoom = map.getZoom()
-      setMapData(prev => ({
-        ...prev,
-        cameraState: {
-          ...prev.cameraState,
-          center: { lat: center.lat, lng: center.lng },
-          zoom,
-        },
-      }))
-    }
+  const handleMapMoveEnd = useCallback((map: L.Map) => {
+    const center = map.getCenter()
+    const zoom = map.getZoom()
+    setMapData(prev => ({
+      ...prev,
+      cameraState: {
+        ...prev.cameraState,
+        center: { lat: center.lat, lng: center.lng },
+        zoom,
+      },
+    }))
   }, [setMapData])
 
   return (
@@ -168,10 +172,6 @@ export function OSMMap() {
         zoom={initialZoom}
         scrollWheelZoom={true}
         className="h-full w-full"
-        ref={mapRef}
-        whenReady={() => handleMapMoveEnd()} // Initial camera state
-        onMoveEnd={handleMapMoveEnd}
-        onZoomEnd={handleMapMoveEnd}
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -180,6 +180,7 @@ export function OSMMap() {
         <FeatureGroup>
           <DrawControl />
         </FeatureGroup>
+        <MapEvents onMoveEnd={handleMapMoveEnd} />
       </MapContainer>
     </>
   )
