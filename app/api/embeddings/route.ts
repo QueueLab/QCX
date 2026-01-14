@@ -83,7 +83,8 @@ export async function GET(req: NextRequest) {
     ];
 
     const data = await image.readRasters({ window });
-    const embedding = Array.from(data[0]);
+    const rasterData = data[0];
+    const embedding = typeof rasterData === 'number' ? [rasterData] : Array.from(rasterData);
 
     return NextResponse.json({
       success: true,
