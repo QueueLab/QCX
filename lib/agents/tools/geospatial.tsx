@@ -240,7 +240,7 @@ Uses the Mapbox Search Box Text Search API endpoint to power searching for and g
 
     const selectedModel = await getSelectedModel();
 
-    if (selectedModel?.includes('gemini') && mapProvider === 'google') {
+    if (selectedModel?.includes('gemini') && (mapProvider === 'google' || mapProvider === 'osm')) {
       let feedbackMessage = `Processing geospatial query with Gemini...`;
       uiFeedbackStream.update(feedbackMessage);
 

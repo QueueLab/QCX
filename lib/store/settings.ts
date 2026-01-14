@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type MapProvider = 'mapbox' | 'google'
+export type MapProvider = 'mapbox' | 'google' | 'osm'
 
 interface SettingsState {
   mapProvider: MapProvider
