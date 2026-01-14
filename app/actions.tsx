@@ -555,6 +555,9 @@ export const AI = createAI<AIState, UIState>({
 })
 
 export const getUIStateFromAIState = (aiState: Chat) => {
+  const chatId = aiState.id
+  const isSharePage = false // Defaulting to false as it's not defined
+
   const messages = aiState.messages
     .filter(
       message =>
@@ -607,10 +610,10 @@ export const getUIStateFromAIState = (aiState: Chat) => {
           }
           break
         case 'assistant':
-          const answer = createStreamableValue()
-          answer.done(content)
           switch (type) {
             case 'response':
+              const answer = createStreamableValue()
+              answer.done(content)
               return {
                 id,
                 component: (
@@ -640,13 +643,21 @@ export const getUIStateFromAIState = (aiState: Chat) => {
                 )
               }
             case 'resolution_search_result': {
-              const analysisResult = JSON.parse(content as string);
+              let analysisResult: any = {}
+              try {
+                analysisResult = JSON.parse(content as string);
+              } catch (e) {
+                // Not JSON
+              }
               const geoJson = analysisResult.geoJson as FeatureCollection;
+              const summaryStream = createStreamableValue<string>()
+              summaryStream.done(analysisResult.summary || 'Analysis complete.')
 
               return {
                 id,
                 component: (
                   <>
+                     <BotMessage content={summaryStream.value} />
                     {geoJson && (
                       <GeoJsonLayer id={id} data={geoJson} />
                     )}
@@ -654,60 +665,32 @@ export const getUIStateFromAIState = (aiState: Chat) => {
                 )
               }
             }
+            default: {
+               // Handle generic assistant messages that might not have a specific type or are 'answer' type
+               // Handle content that is not a string (e.g., array of parts)
+                let displayContent: string = ''
+                if (typeof content === 'string') {
+                    displayContent = content
+                } else if (Array.isArray(content)) {
+                    // Convert array content to string representation or extract text
+                    displayContent = content.map(part => {
+                        if ('text' in part) return part.text
+                        return ''
+                    }).join('\n')
+                }
+                
+                const contentStream = createStreamableValue<string>()
+                contentStream.done(displayContent)
+
+                return {
+                  id,
+                  component: <BotMessage content={contentStream.value} />
+                }
+            }
           }
           break
-        case 'tool':
-          try {
-            userContent = JSON.parse(content)
-            if (userContent.input) userContent = userContent.input
-          } catch (e) {
-            // Not JSON, use as is
-          }
-        }
-
-        return {
-          id,
-          component: <UserMessage content={userContent} />
-        }
-      } else if (role === 'assistant') {
-        if (type === 'resolution_search_result') {
-          let analysisResult: any = {}
-          if (typeof content === 'string') {
-             try {
-                analysisResult = JSON.parse(content)
-             } catch (e) {
-                // Not JSON
-             }
-          }
-          const summaryStream = createStreamableValue<string>()
-          summaryStream.done(analysisResult.summary || 'Analysis complete.')
-          return {
-            id,
-            component: <BotMessage content={summaryStream.value} />
-          }
-        }
-        
-        // Handle content that is not a string (e.g., array of parts)
-        let displayContent: string = ''
-        if (typeof content === 'string') {
-            displayContent = content
-        } else if (Array.isArray(content)) {
-            // Convert array content to string representation or extract text
-            displayContent = content.map(part => {
-                if ('text' in part) return part.text
-                return ''
-            }).join('\n')
-        }
-        
-        const contentStream = createStreamableValue<string>()
-        contentStream.done(displayContent)
-
-        return {
-          id,
-          component: <BotMessage content={contentStream.value} />
-        }
-      } else {
-        return null
+        default:
+          return null
       }
     })
     .filter(message => message !== null) as UIState
