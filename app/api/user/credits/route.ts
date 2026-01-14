@@ -3,7 +3,7 @@ import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { getSupabaseServerClient } from '@/lib/supabase/client';
-import { TIERS, parseTier } from '@/lib/utils/subscription';
+import { TIERS, parseTier, getTierConfig } from '@/lib/utils/subscription';
 
 export async function GET(req: NextRequest) {
   try {
@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       credits: dbUser.credits,
       tier: tier,
-      features: TIERS[tier]
+      features: getTierConfig(tier)
     });
 
   } catch (error) {
