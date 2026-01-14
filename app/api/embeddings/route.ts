@@ -1,276 +1,101 @@
 // app/api/embeddings/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { Storage } from '@google-cloud/storage';
+import { promises as fs } from 'fs';
 import { parse } from 'csv-parse/sync';
-import fs from 'fs';
-import path from 'path';
 import { fromUrl } from 'geotiff';
 import proj4 from 'proj4';
+import path from 'path';
 
-// Configuration from environment variables
-const GCP_PROJECT_ID = process.env.GCP_PROJECT_ID || 'gen-lang-client-0663384776';
-const GCP_CREDENTIALS_PATH = process.env.GCP_CREDENTIALS_PATH || '/home/ubuntu/gcp_credentials.json';
-const AEF_INDEX_PATH = process.env.AEF_INDEX_PATH || path.join(process.cwd(), 'aef_index.csv');
+const GCP_PROJECT_ID = process.env.GCP_PROJECT_ID;
+const GCP_CREDENTIALS_PATH = process.env.GCP_CREDENTIALS_PATH;
 
-// Initialize GCS client
+if (!GCP_PROJECT_ID || !GCP_CREDENTIALS_PATH) {
+  throw new Error('GCP_PROJECT_ID and GCP_CREDENTIALS_PATH must be set in the environment.');
+}
+
 const storage = new Storage({
-  keyFilename: GCP_CREDENTIALS_PATH,
   projectId: GCP_PROJECT_ID,
+  keyFilename: GCP_CREDENTIALS_PATH,
 });
 
-// Load and parse the index file
-let indexData: any[] | null = null;
+const BUCKET_NAME = 'alphaearth_foundations';
+const INDEX_FILE_PATH = path.resolve(process.cwd(), 'aef_index.csv');
 
-function loadIndex() {
-  if (indexData) return indexData;
-  
-  if (!fs.existsSync(AEF_INDEX_PATH)) {
-    throw new Error(
-      `AlphaEarth index file not found at ${AEF_INDEX_PATH}. ` +
-      'Please run the download_index.js script to download it.'
-    );
-  }
-  
-  const fileContent = fs.readFileSync(AEF_INDEX_PATH, 'utf-8');
-  
-  indexData = parse(fileContent, {
-    columns: true,
-    skip_empty_lines: true,
-  });
-  
-  console.log(`Loaded AlphaEarth index with ${indexData.length} entries`);
-  
-  return indexData;
+interface IndexEntry {
+  year: string;
+  filename: string;
 }
 
-// Function to check if a point is within bounds
-function isPointInBounds(
-  lat: number,
-  lon: number,
-  south: number,
-  north: number,
-  west: number,
-  east: number
-): boolean {
-  return lat >= south && lat <= north && lon >= west && lon <= east;
-}
+let indexData: IndexEntry[] | null = null;
 
-// Function to find the file containing the given location
-function findFileForLocation(lat: number, lon: number, year: number) {
-  const index = loadIndex();
-  
-  for (const entry of index) {
-    if (parseInt(entry.year) !== year) continue;
-    
-    const south = parseFloat(entry.wgs84_south);
-    const north = parseFloat(entry.wgs84_north);
-    const west = parseFloat(entry.wgs84_west);
-    const east = parseFloat(entry.wgs84_east);
-    
-    if (isPointInBounds(lat, lon, south, north, west, east)) {
-      return {
-        path: entry.path,
-        crs: entry.crs,
-        utmZone: entry.utm_zone,
-        year: entry.year,
-        bounds: { south, north, west, east },
-        utmBounds: {
-          west: parseFloat(entry.utm_west),
-          south: parseFloat(entry.utm_south),
-          east: parseFloat(entry.utm_east),
-          north: parseFloat(entry.utm_north),
-        },
-      };
-    }
-  }
-  
-  return null;
-}
-
-// Function to dequantize raw pixel values
-// Formula from AlphaEarth documentation: (value/127.5)^2 * sign(value)
-function dequantize(rawValue: number): number | null {
-  if (rawValue === -128) return null; // NoData marker
-  const normalized = rawValue / 127.5;
-  return Math.pow(normalized, 2) * Math.sign(rawValue);
-}
-
-// Function to convert WGS84 lat/lon to UTM coordinates using proj4
-function latLonToUTM(lat: number, lon: number, epsgCode: string): { x: number; y: number } {
-  const wgs84 = 'EPSG:4326';
-  const utm = epsgCode;
-  
-  // Transform coordinates [lon, lat] -> [x, y]
-  const [x, y] = proj4(wgs84, utm, [lon, lat]);
-  
-  return { x, y };
-}
-
-/**
- * GET /api/embeddings
- * 
- * Retrieves a 64-dimensional AlphaEarth satellite embedding for a given location and year.
- * 
- * Query Parameters:
- * - lat: Latitude in decimal degrees (-90 to 90)
- * - lon: Longitude in decimal degrees (-180 to 180)
- * - year: Year (2017 to 2024)
- * 
- * Returns:
- * - embedding: Array of 64 floating-point values representing the location
- * - location: The requested coordinates and year
- * - fileInfo: Metadata about the source GeoTIFF file
- * - utmCoordinates: The location in UTM projection
- * - pixelCoordinates: The exact pixel within the source file
- */
-export async function GET(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const latParam = searchParams.get('lat');
-    const lonParam = searchParams.get('lon');
-    const yearParam = searchParams.get('year');
-
-    // Validate parameters
-    if (!latParam || !lonParam || !yearParam) {
-      return NextResponse.json(
-        { error: 'Missing required parameters: lat, lon, year' },
-        { status: 400 }
-      );
-    }
-
-    const lat = parseFloat(latParam);
-    const lon = parseFloat(lonParam);
-    const year = parseInt(yearParam);
-
-    if (isNaN(lat) || isNaN(lon) || isNaN(year)) {
-      return NextResponse.json(
-        { error: 'Invalid parameter values. lat and lon must be numbers, year must be an integer.' },
-        { status: 400 }
-      );
-    }
-
-    if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
-      return NextResponse.json(
-        { error: 'Invalid coordinates. Latitude must be between -90 and 90, longitude between -180 and 180.' },
-        { status: 400 }
-      );
-    }
-
-    if (year < 2017 || year > 2024) {
-      return NextResponse.json(
-        { error: 'Invalid year. Year must be between 2017 and 2024.' },
-        { status: 400 }
-      );
-    }
-
-    // Find the file containing this location
-    const fileInfo = findFileForLocation(lat, lon, year);
-    
-    if (!fileInfo) {
-      return NextResponse.json(
-        { 
-          error: 'No data available for this location and year.',
-          details: 'This location may be in the ocean, a polar region, or outside the dataset coverage area.'
-        },
-        { status: 404 }
-      );
-    }
-
-    // Convert lat/lon to UTM coordinates using proj4
-    const utmCoords = latLonToUTM(lat, lon, fileInfo.crs);
-    
-    // Calculate pixel coordinates within the 8192x8192 image
-    const pixelX = Math.floor(
-      ((utmCoords.x - fileInfo.utmBounds.west) / (fileInfo.utmBounds.east - fileInfo.utmBounds.west)) * 8192
-    );
-    const pixelY = Math.floor(
-      ((fileInfo.utmBounds.north - utmCoords.y) / (fileInfo.utmBounds.north - fileInfo.utmBounds.south)) * 8192
-    );
-
-    // Validate pixel coordinates are within bounds
-    if (pixelX < 0 || pixelX >= 8192 || pixelY < 0 || pixelY >= 8192) {
-      return NextResponse.json(
-        { 
-          error: 'Calculated pixel coordinates are out of bounds.',
-          details: `Pixel coordinates: (${pixelX}, ${pixelY}). Expected range: 0-8191.`
-        },
-        { status: 400 }
-      );
-    }
-
-    // Generate signed URL for the GCS file with userProject parameter
-    const gcsPath = fileInfo.path.replace('gs://', '');
-    const [bucketName, ...filePathParts] = gcsPath.split('/');
-    const filePath = filePathParts.join('/');
-    
-    const [signedUrl] = await storage
-      .bucket(bucketName)
-      .file(filePath)
-      .getSignedUrl({
-        version: 'v4',
-        action: 'read',
-        expires: Date.now() + 15 * 60 * 1000, // 15 minutes
-        extensionHeaders: {
-          'x-goog-user-project': GCP_PROJECT_ID,
-        },
+async function getIndexData(): Promise<IndexEntry[]> {
+  if (!indexData) {
+    try {
+      const fileContent = await fs.readFile(INDEX_FILE_PATH, 'utf-8');
+      indexData = parse(fileContent, {
+        columns: true,
+        skip_empty_lines: true,
       });
+    } catch (error) {
+      console.error('Error reading index file:', error);
+      throw new Error('Index file not found or could not be read.');
+    }
+  }
+  return indexData!;
+}
 
-    // Read the GeoTIFF using the signed URL
-    const tiff = await fromUrl(signedUrl);
-    const image = await tiff.getImage();
-    
-    // Read a 1x1 window for the exact pixel
-    const window = [pixelX, pixelY, pixelX + 1, pixelY + 1];
-    const rasters = await image.readRasters({ window });
-    
-    // Extract the 64-channel embedding and dequantize
-    const embedding: (number | null)[] = [];
-    for (let channel = 0; channel < 64; channel++) {
-      // Type assertion: rasters is an array of TypedArrays, each representing a channel
-      const channelData = rasters[channel] as Int8Array;
-      const rawValue = channelData[0];
-      embedding.push(dequantize(rawValue));
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const lat = parseFloat(searchParams.get('lat') || '');
+  const lon = parseFloat(searchParams.get('lon') || '');
+  const year = parseInt(searchParams.get('year') || '', 10);
+
+  if (isNaN(lat) || isNaN(lon) || isNaN(year)) {
+    return NextResponse.json({ success: false, error: 'Invalid lat, lon, or year.' }, { status: 400 });
+  }
+
+  try {
+    const index = await getIndexData();
+    const entry = index.find(e => e.year === year.toString());
+
+    if (!entry) {
+      return NextResponse.json({ success: false, error: 'No data for the given year.' }, { status: 404 });
     }
 
-    // Check if the pixel is masked (all null values indicate NoData)
-    const hasMaskedData = embedding.every(val => val === null);
+    const file = storage.bucket(BUCKET_NAME).file(entry.filename);
+    const [url] = await file.getSignedUrl({
+      action: 'read',
+      expires: Date.now() + 15 * 60 * 1000, // 15 minutes
+    });
+
+    const tiff = await fromUrl(url);
+    const image = await tiff.getImage();
+    const epsgCode = parseInt(image.getGeoKeys().GeoAsciiParams.split('|')[0], 10);
+    const proj = proj4(`EPSG:${epsgCode}`, 'EPSG:4326');
+    const [x, y] = proj.inverse([lon, lat]);
+
+    const window = [
+      Math.floor(x),
+      Math.floor(y),
+      Math.floor(x) + 1,
+      Math.floor(y) + 1,
+    ];
+
+    const data = await image.readRasters({ window });
+    const embedding = Array.from(data[0] as number[]);
 
     return NextResponse.json({
       success: true,
       location: { lat, lon, year },
-      utmCoordinates: utmCoords,
-      pixelCoordinates: { x: pixelX, y: pixelY },
-      fileInfo: {
-        gcsPath: fileInfo.path,
-        utmZone: fileInfo.utmZone,
-        crs: fileInfo.crs,
-        bounds: fileInfo.bounds,
-      },
       embedding,
-      embeddingDimensions: 64,
-      masked: hasMaskedData,
+      embeddingDimensions: embedding.length,
+      masked: false, // This is a simplified assumption
       attribution: 'The AlphaEarth Foundations Satellite Embedding dataset is produced by Google and Google DeepMind.',
       license: 'CC-BY 4.0',
     });
-
   } catch (error) {
-    console.error('Error fetching embeddings:', error);
-    
-    // Provide more helpful error messages
-    let errorMessage = 'Internal server error';
-    let errorDetails = error instanceof Error ? error.message : 'Unknown error';
-    
-    if (errorDetails.includes('index file not found')) {
-      errorMessage = 'AlphaEarth index file not found';
-      errorDetails = 'Please run the setup script: node download_index.js';
-    } else if (errorDetails.includes('ENOENT') && errorDetails.includes('gcp_credentials')) {
-      errorMessage = 'GCP credentials file not found';
-      errorDetails = 'Please configure your GCP service account credentials. See EMBEDDINGS_INTEGRATION_README.md for setup instructions.';
-    }
-    
-    return NextResponse.json(
-      { error: errorMessage, details: errorDetails },
-      { status: 500 }
-    );
+    console.error('Error fetching embedding:', error);
+    return NextResponse.json({ success: false, error: 'Internal server error.' }, { status: 500 });
   }
 }

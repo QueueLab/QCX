@@ -9,7 +9,9 @@ export const analyzeSatelliteImageSchema = z.object({
 
 // Schema for the generateEmbeddings tool
 export const generateEmbeddingsSchema = z.object({
-  text: z.string().describe('The text to generate embeddings for.'),
+  lat: z.number().describe('The latitude.'),
+  lon: z.number().describe('The longitude.'),
+  year: z.number().describe('The year.'),
 });
 
 /**
@@ -27,12 +29,16 @@ export async function executeAnalyzeSatelliteImage() {
 }
 
 /**
- * Executes the logic for generating embeddings by calling the mock service.
+ * Executes the logic for generating embeddings by calling the local API endpoint.
  */
 export async function executeGenerateEmbeddings(args: z.infer<typeof generateEmbeddingsSchema>) {
   try {
-    console.log(`Executing generateEmbeddings tool with text: "${args.text}"`);
-    const result = await getEmbeddings(args.text);
+    console.log(`Executing generateEmbeddings tool with lat: ${args.lat}, lon: ${args.lon}, year: ${args.year}`);
+    const response = await fetch(`http://localhost:3000/api/embeddings?lat=${args.lat}&lon=${args.lon}&year=${args.year}`);
+    if (!response.ok) {
+      throw new Error(`API request failed with status ${response.status}`);
+    }
+    const result = await response.json();
     return result;
   } catch (error) {
     console.error('Error in generateEmbeddings tool:', error);
