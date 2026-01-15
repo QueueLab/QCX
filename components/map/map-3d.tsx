@@ -13,6 +13,7 @@ import {useMap3DCameraEvents} from '@/lib/hooks/use-map-3d-camera-events';
 import {useDeepCompareEffect} from '@/lib/hooks/use-deep-compare-effect';
 import type {Map3DProps} from './map-3d-types';
 import { useMapData } from './map-data-context';
+import { useMapLoading } from '../map-loading-context';
 
 export const Map3D = forwardRef(
   (
@@ -21,6 +22,15 @@ export const Map3D = forwardRef(
   ) => {
     useMapsLibrary('maps3d');
     const { setMapData } = useMapData();
+    const { setIsMapLoaded } = useMapLoading();
+
+    const [customElementsReady, setCustomElementsReady] = useState(false);
+    useEffect(() => {
+      customElements.whenDefined('gmp-map-3d').then(() => {
+        setCustomElementsReady(true);
+        setIsMapLoaded(true);
+      });
+    }, [setIsMapLoaded]);
 
     const [map3DElement, map3dRef] =
       useCallbackRef<google.maps.maps3d.Map3DElement>();
