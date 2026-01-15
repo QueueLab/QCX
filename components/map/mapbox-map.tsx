@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useCallback } from 'react' // Removed useState
+import { useEffect, useRef, useCallback } from 'react'
 import mapboxgl from 'mapbox-gl'
 import MapboxDraw from '@mapbox/mapbox-gl-draw'
 import * as turf from '@turf/turf'
@@ -9,11 +9,23 @@ import 'react-toastify/dist/ReactToastify.css'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css'
 import { useMapToggle, MapToggleEnum } from '../map-toggle-context'
-import { useMapData } from './map-data-context'; // Add this import
-import { useMapLoading } from '../map-loading-context'; // Import useMapLoading
+import { useMapData } from './map-data-context';
+import { useMapLoading } from '../map-loading-context';
 import { useMap } from './map-context'
+import { FeatureCollection } from 'geojson'
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN as string;
+
+interface MapFeedback {
+  success: boolean;
+  currentCenter: [number, number];
+  currentZoom: number;
+  currentPitch: number;
+  currentBearing: number;
+  currentBounds?: [[number, number], [number, number]];
+  error?: string;
+  timestamp: number;
+}
 
 export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number; } }> = ({ position }) => {
   const mapContainer = useRef<HTMLDivElement>(null)
@@ -30,16 +42,16 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   const initializedRef = useRef<boolean>(false)
   const currentMapCenterRef = useRef<{ center: [number, number]; zoom: number; pitch: number }>({ center: [position?.longitude ?? 0, position?.latitude ?? 0], zoom: 2, pitch: 0 });
   const drawingFeatures = useRef<any>(null)
-  const { mapType, setMapType } = useMapToggle() // Get setMapType
-  const { mapData, setMapData } = useMapData(); // Consume the new context, get setMapData
-  const { setIsMapLoaded } = useMapLoading(); // Get setIsMapLoaded from context
+  const { mapType, setMapType } = useMapToggle()
+  const { mapData, setMapData } = useMapData();
+  const { setIsMapLoaded } = useMapLoading();
   const previousMapTypeRef = useRef<MapToggleEnum | null>(null)
 
   // Refs for long-press functionality
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isMouseDownRef = useRef<boolean>(false);
 
-  // const [isMapLoaded, setIsMapLoaded] = useState(false); // Removed local state
+  const isDebug = process.env.NODE_ENV !== 'production';
 
   // Formats the area or distance for display
   const formatMeasurement = useCallback((value: number, isArea = true) => {
@@ -97,17 +109,12 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         el.style.borderRadius = '4px'
         el.style.fontSize = '12px'
         el.style.fontWeight = 'bold'
-        el.style.color = '#333333' // Added darker color
+        el.style.color = '#333333'
         el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)'
         el.style.pointerEvents = 'none'
         el.textContent = formattedArea
         
         // Add marker for the label
-
-
-
-
-
         if (map.current) {
           const marker = new mapboxgl.Marker({ element: el })
             .setLngLat(coordinates as [number, number])
@@ -136,7 +143,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         el.style.borderRadius = '4px'
         el.style.fontSize = '12px'
         el.style.fontWeight = 'bold'
-        el.style.color = '#333333' // Added darker color
+        el.style.color = '#333333'
         el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)'
         el.style.pointerEvents = 'none'
         el.textContent = formattedLength
@@ -547,12 +554,217 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         updateMapPosition(lat, lng);
       }
     }
-    // TODO: Handle mapData.mapFeature for drawing routes, polygons, etc. in a future step.
-    // For example:
-    // if (mapData.mapFeature && mapData.mapFeature.route_geometry && typeof drawRoute === 'function') {
-    //   drawRoute(mapData.mapFeature.route_geometry); // Implement drawRoute function if needed
-    // }
   }, [mapData.targetPosition, mapData.mapFeature, updateMapPosition]);
+
+  // Effect to handle GeoJSON data updates
+  useEffect(() => {
+    if (!map.current) return;
+
+    const mapInstance = map.current;
+    const source = mapInstance.getSource('geojson-data');
+
+    // If GeoJSON data is present, add or update the source and layers
+    if (mapData.geojson) {
+      const geojsonData = mapData.geojson as FeatureCollection;
+      if (source) {
+        (source as mapboxgl.GeoJSONSource).setData(geojsonData);
+      } else {
+        mapInstance.addSource('geojson-data', {
+          type: 'geojson',
+          data: geojsonData,
+        });
+
+        // Add layer for points
+        mapInstance.addLayer({
+          id: 'geojson-points',
+          type: 'circle',
+          source: 'geojson-data',
+          paint: {
+            'circle-radius': 8,
+            'circle-color': '#007cbf',
+            'circle-stroke-width': 2,
+            'circle-stroke-color': '#ffffff',
+          },
+          filter: ['==', '$type', 'Point'],
+        });
+
+        // Add layer for lines
+        mapInstance.addLayer({
+          id: 'geojson-lines',
+          type: 'line',
+          source: 'geojson-data',
+          paint: {
+            'line-color': '#ff4500',
+            'line-width': 3,
+          },
+          filter: ['==', '$type', 'LineString'],
+        });
+      }
+    } else {
+      // If no GeoJSON data, remove layers and source if they exist
+      if (mapInstance.getLayer('geojson-points')) mapInstance.removeLayer('geojson-points');
+      if (mapInstance.getLayer('geojson-lines')) mapInstance.removeLayer('geojson-lines');
+      if (source) mapInstance.removeSource('geojson-data');
+    }
+  }, [mapData.geojson]);
+
+  // Effect to execute map commands with feedback
+  useEffect(() => {
+    if (isDebug) {
+      console.log('🗺️  Map commands useEffect triggered:', {
+        hasMap: !!map.current,
+        hasCommands: !!mapData.mapCommands,
+        commandCount: mapData.mapCommands?.length || 0,
+        commands: mapData.mapCommands,
+      });
+    }
+
+    if (!map.current || !mapData.mapCommands || mapData.mapCommands.length === 0) {
+      if (isDebug) console.log('⚠️ Skipping command execution - missing map or commands');
+      return;
+    }
+
+    const mapInstance = map.current;
+    let executionError: string | undefined;
+
+    if (isDebug) console.log(`🗺️  Executing ${mapData.mapCommands.length} map commands...`);
+
+    try {
+      mapData.mapCommands.forEach((command, idx) => {
+        if (isDebug) console.log(`🗺️  Executing command ${idx + 1}/${mapData.mapCommands!.length}: ${command.command}`, command.params);
+        switch (command.command) {
+          case 'flyTo':
+            mapInstance.flyTo(command.params);
+            break;
+          case 'easeTo':
+            mapInstance.easeTo(command.params);
+            break;
+          case 'fitBounds':
+            if (command.params.bounds) {
+              const { bounds, padding, duration, ...otherOptions } = command.params;
+              const fitBoundsOptions: any = {};
+              if (padding !== undefined) fitBoundsOptions.padding = padding;
+              if (duration !== undefined) fitBoundsOptions.duration = duration;
+              Object.assign(fitBoundsOptions, otherOptions);
+              mapInstance.fitBounds(bounds, fitBoundsOptions);
+            }
+            break;
+          case 'setCenter':
+            if (command.params.center) {
+              mapInstance.setCenter(command.params.center);
+            }
+            break;
+          case 'setZoom':
+            if (command.params.zoom !== undefined) {
+              mapInstance.setZoom(command.params.zoom);
+            }
+            break;
+          case 'setPitch':
+            if (command.params.pitch !== undefined) {
+              mapInstance.setPitch(command.params.pitch);
+            }
+            break;
+          case 'setBearing':
+            if (command.params.bearing !== undefined) {
+              mapInstance.setBearing(command.params.bearing);
+            }
+            break;
+          default:
+            console.warn(`Unknown map command: ${command.command}`);
+        }
+      });
+
+      // Guard flag to ensure feedbackHandler only runs once
+      let handled = false;
+      let fallbackTimeoutId: NodeJS.Timeout | null = null;
+
+      // Capture feedback after commands complete
+      const feedbackHandler = () => {
+        if (handled) return;
+        handled = true;
+        
+        if (fallbackTimeoutId) {
+          clearTimeout(fallbackTimeoutId);
+        }
+
+        // Clean up event listener
+        mapInstance.off('moveend', feedbackHandler);
+
+        const center = mapInstance.getCenter();
+        const bounds = mapInstance.getBounds();
+        
+        const feedback: MapFeedback = {
+          success: !executionError,
+          currentCenter: [center.lng, center.lat],
+          currentZoom: mapInstance.getZoom(),
+          currentPitch: mapInstance.getPitch(),
+          currentBearing: mapInstance.getBearing(),
+          error: executionError,
+          timestamp: Date.now(),
+        };
+
+        if (bounds) {
+          feedback.currentBounds = [
+            [bounds.getWest(), bounds.getSouth()],
+            [bounds.getEast(), bounds.getNorth()]
+          ];
+        }
+
+        if (isDebug) console.log('📍 Map feedback:', feedback);
+
+        // Send feedback via callback if provided
+        if (mapData.feedbackCallback) {
+          mapData.feedbackCallback(feedback);
+        }
+
+        // Store feedback in context
+        setMapData(prev => ({ 
+          ...prev, 
+          mapStateFeedback: feedback,
+          mapCommands: null, // Clear commands after execution
+        }));
+      };
+
+      // Wait for map to finish moving
+      mapInstance.once('moveend', feedbackHandler);
+      
+      // Fallback timeout in case moveend doesn't fire
+      // Increased timeout to allow for animation start
+      fallbackTimeoutId = setTimeout(() => {
+        if (mapInstance.isMoving && mapInstance.isMoving()) {
+          return; // Still moving, wait for moveend
+        }
+        // If not moving, trigger feedback immediately
+        feedbackHandler();
+      }, 500); 
+
+    } catch (error) {
+      executionError = error instanceof Error ? error.message : 'Unknown execution error';
+      console.error('❌ Map command execution error:', error);
+      
+      // Send error feedback
+      const errorFeedback: MapFeedback = {
+        success: false,
+        error: executionError,
+        timestamp: Date.now(),
+        currentCenter: [mapInstance.getCenter().lng, mapInstance.getCenter().lat],
+        currentZoom: mapInstance.getZoom(),
+        currentPitch: mapInstance.getPitch(),
+        currentBearing: mapInstance.getBearing()
+      };
+
+      if (mapData.feedbackCallback) {
+        mapData.feedbackCallback(errorFeedback);
+      }
+
+      setMapData(prev => ({ 
+        ...prev, 
+        mapStateFeedback: errorFeedback,
+        mapCommands: null,
+      }));
+    }
+
+  }, [mapData.mapCommands, mapData.feedbackCallback, setMapData, isDebug]);
 
   // Long-press handlers
   const handleMouseDown = useCallback(() => {
@@ -581,14 +793,11 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
 
   // Cleanup for the main useEffect
   useEffect(() => {
-    // ... existing useEffect logic ...
     return () => {
-      // ... existing cleanup logic ...
-      if (longPressTimerRef.current) { // Cleanup timer on component unmount
+      if (longPressTimerRef.current) { 
         clearTimeout(longPressTimerRef.current);
         longPressTimerRef.current = null;
       }
-      // ... existing cleanup logic for map and geolocation ...
       if (map.current) {
         map.current.off('moveend', captureMapCenter)
 
@@ -622,7 +831,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     handleUserInteraction,
     startRotation,
     stopRotation,
-    mapType, // mapType is already here, good.
+    mapType,
     updateMeasurementLabels,
     setupGeolocationWatcher,
     captureMapCenter,
@@ -639,7 +848,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         className="h-full w-full overflow-hidden rounded-l-lg"
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp} // Clear timer if mouse leaves container while pressed
+        onMouseLeave={handleMouseUp} 
       />
     </div>
   )
