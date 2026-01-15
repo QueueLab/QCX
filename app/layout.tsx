@@ -78,10 +78,10 @@ export default async function RootLayout({
       >
         <ThemeProvider
           attribute="class"
-          defaultTheme="earth"
+          defaultTheme="light"
           enableSystem
           disableTransitionOnChange
-          themes={['light', 'dark', 'earth']}
+          themes={['light', 'dark']}
         >
           {user ? (
             <CalendarToggleProvider>
