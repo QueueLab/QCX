@@ -117,6 +117,16 @@ export const geospatialQuerySchema = z.discriminatedUnion('queryType', [
       .optional()
       .default(true)
       .describe("Whether to include a map preview/URL in the response"),
+  }),
+  z.object({
+    queryType: z.literal('screenshot'),
+    location: z.string()
+      .min(1, "Location cannot be empty")
+      .describe("Location to take a screenshot of"),
+    async: z.boolean()
+      .optional()
+      .default(true)
+      .describe("Whether to take the screenshot asynchronously"),
   })
 ]);
 

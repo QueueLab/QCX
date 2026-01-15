@@ -11,13 +11,13 @@ const GCP_PROJECT_ID = process.env.GCP_PROJECT_ID;
 const GCP_CREDENTIALS_PATH = process.env.GCP_CREDENTIALS_PATH;
 
 if (!GCP_PROJECT_ID || !GCP_CREDENTIALS_PATH) {
-  throw new Error('GCP_PROJECT_ID and GCP_CREDENTIALS_PATH must be set in the environment.');
+  console.warn('GCP_PROJECT_ID and GCP_CREDENTIALS_PATH are not set. Embeddings API will be unavailable.');
 }
 
-const storage = new Storage({
+const storage = (GCP_PROJECT_ID && GCP_CREDENTIALS_PATH) ? new Storage({
   projectId: GCP_PROJECT_ID,
   keyFilename: GCP_CREDENTIALS_PATH,
-});
+}) : null;
 
 const BUCKET_NAME = 'alphaearth_foundations';
 const INDEX_FILE_PATH = path.resolve(process.cwd(), 'aef_index.csv');
@@ -63,6 +63,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'No data for the given year.' }, { status: 404 });
     }
 
+    if (!storage) {
+      return NextResponse.json({ success: false, error: 'GCP storage not configured.' }, { status: 500 });
+    }
     const file = storage.bucket(BUCKET_NAME).file(entry.filename);
     const [url] = await file.getSignedUrl({
       action: 'read',
