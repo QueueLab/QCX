@@ -232,7 +232,8 @@ Uses the Mapbox Search Box Text Search API endpoint to power searching for and g
 ,
   parameters: geospatialQuerySchema,
   execute: async (params: z.infer<typeof geospatialQuerySchema>) => {
-    const { queryType, includeMap = true } = params;
+    const { queryType } = params;
+    const includeMap = (params as any).includeMap !== false;
     console.log('[GeospatialTool] Execute called with:', params, 'and map provider:', mapProvider);
 
     const uiFeedbackStream = createStreamableValue<string>();
