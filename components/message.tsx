@@ -29,17 +29,39 @@ export function BotMessage({ content }: { content: StreamableValue<string> }) {
             const { children } = props;
             if (typeof children !== 'string') return <>{children}</>;
             const value = children;
-            const coordRegex = /(-?\d+\.\d+),\s*(-?\d+\.\d+)/g;
+            // Improved regex to handle various coordinate formats:
+            // - Decimal: 40.7128, -74.0060
+            // - With degrees and suffixes: 65.2500° N, 52.7500° W
+            // - With just degrees: 40.71° -74.00°
+            const coordRegex = /(-?\d+(?:\.\d+)?)(°?\s*[NS]?|°)?[\s,°]+(-?\d+(?:\.\d+)?)(°?\s*[EW]?|°)?/gi;
             const parts = [];
             let lastIndex = 0;
             let match;
 
             while ((match = coordRegex.exec(value)) !== null) {
-              const lat = parseFloat(match[1]);
-              const lng = parseFloat(match[2]);
+              let lat = parseFloat(match[1]);
+              const latSuffix = match[2];
+              let lng = parseFloat(match[3]);
+              const lngSuffix = match[4];
 
-              // Basic validation for lat/lng ranges
-              if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+              // Handle N/S/E/W suffixes
+              if (latSuffix) {
+                if (/S/i.test(latSuffix)) lat = -Math.abs(lat);
+                else if (/N/i.test(latSuffix)) lat = Math.abs(lat);
+              }
+              if (lngSuffix) {
+                if (/W/i.test(lngSuffix)) lng = -Math.abs(lng);
+                else if (/E/i.test(lngSuffix)) lng = Math.abs(lng);
+              }
+
+              // Validation for lat/lng ranges and basic context to avoid false positives
+              if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+                const hasContext = !!(latSuffix || lngSuffix || match[0].includes('°') || match[0].includes(','));
+
+                // Also check if it's just two plain numbers without decimal points - likely not coordinates unless context is strong
+                const isPlainNumbers = !match[1].includes('.') && !match[3].includes('.');
+                if (isPlainNumbers && !hasContext) continue;
+
                 if (match.index > lastIndex) {
                   parts.push(value.substring(lastIndex, match.index));
                 }
