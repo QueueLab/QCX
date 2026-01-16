@@ -571,9 +571,26 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     // Add or update markers from mapData
     mapData.markers?.forEach(markerData => {
       if (!markersRef.current[markerData.id]) {
-        const marker = new mapboxgl.Marker()
+        // Create a custom element for the marker to include a label
+        const el = document.createElement('div');
+        el.className = 'custom-marker';
+
+        // Marker icon/dot
+        const dot = document.createElement('div');
+        dot.className = 'w-4 h-4 bg-primary border-2 border-white rounded-full shadow-lg';
+        el.appendChild(dot);
+
+        // Label
+        if (markerData.title) {
+          const label = document.createElement('div');
+          label.className = 'absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-white/90 text-primary text-[10px] font-bold rounded shadow-sm whitespace-nowrap pointer-events-none border border-primary/20';
+          label.textContent = markerData.title;
+          el.appendChild(label);
+        }
+
+        const marker = new mapboxgl.Marker({ element: el })
           .setLngLat([markerData.longitude, markerData.latitude])
-          .setPopup(markerData.title ? new mapboxgl.Popup().setHTML(`<h3>${markerData.title}</h3>`) : null)
+          .setPopup(markerData.title ? new mapboxgl.Popup({ offset: 25 }).setHTML(`<h3>${markerData.title}</h3>`) : null)
           .addTo(map.current!);
         markersRef.current[markerData.id] = marker;
       } else {

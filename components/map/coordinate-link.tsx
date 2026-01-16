@@ -41,9 +41,9 @@ export const CoordinateLink: React.FC<CoordinateLinkProps> = ({ lat, lng, label 
       target="_blank"
       rel="noopener noreferrer"
       onClick={handleClick}
-      className="text-accent-foreground underline decoration-dotted hover:text-primary transition-colors cursor-pointer"
+      className="text-primary font-semibold underline decoration-solid hover:text-primary/80 transition-colors cursor-pointer inline-flex items-center gap-1"
     >
-      {label || `${lat.toFixed(4)}, ${lng.toFixed(4)}`}
+      <span className="bg-primary/10 px-1 rounded">{label || `${lat.toFixed(4)}, ${lng.toFixed(4)}`}</span>
     </a>
   );
 };

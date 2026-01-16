@@ -29,58 +29,62 @@ export function BotMessage({ content }: { content: StreamableValue<string> }) {
             const { children } = props;
             if (typeof children !== 'string') return <>{children}</>;
             const value = children;
-            // Improved regex to handle various coordinate formats:
-            // - Decimal: 40.7128, -74.0060
-            // - With degrees and suffixes: 65.2500° N, 52.7500° W
-            // - With just degrees: 40.71° -74.00°
-            const coordRegex = /(-?\d+(?:\.\d+)?)(°?\s*[NS]?|°)?[\s,°]+(-?\d+(?:\.\d+)?)(°?\s*[EW]?|°)?/gi;
+
+            // Highly inclusive regex for coordinates:
+            // Matches numbers with optional degrees/ordinal indicators and N/S/E/W suffixes.
+            const coordRegex = /(-?\d+(?:\.\d+)?)\s*[°\u00B0\u00BA]?\s*([NS])?[\s,°\u00B0\u00BA]+(-?\d+(?:\.\d+)?)\s*[°\u00B0\u00BA]?\s*([EW])?/gi;
+
             const parts = [];
             let lastIndex = 0;
-            let match;
+            const matches = Array.from(value.matchAll(coordRegex));
 
-            while ((match = coordRegex.exec(value)) !== null) {
+            for (const match of matches) {
+              const fullMatch = match[0];
               let lat = parseFloat(match[1]);
               const latSuffix = match[2];
               let lng = parseFloat(match[3]);
               const lngSuffix = match[4];
 
-              // Handle N/S/E/W suffixes
+              // Apply suffixes
               if (latSuffix) {
-                if (/S/i.test(latSuffix)) lat = -Math.abs(lat);
-                else if (/N/i.test(latSuffix)) lat = Math.abs(lat);
+                if (latSuffix.toUpperCase() === 'S') lat = -Math.abs(lat);
+                else if (latSuffix.toUpperCase() === 'N') lat = Math.abs(lat);
               }
               if (lngSuffix) {
-                if (/W/i.test(lngSuffix)) lng = -Math.abs(lng);
-                else if (/E/i.test(lngSuffix)) lng = Math.abs(lng);
+                if (lngSuffix.toUpperCase() === 'W') lng = -Math.abs(lng);
+                else if (lngSuffix.toUpperCase() === 'E') lng = Math.abs(lng);
               }
 
-              // Validation for lat/lng ranges and basic context to avoid false positives
+              // Validate range
               if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-                const hasContext = !!(latSuffix || lngSuffix || match[0].includes('°') || match[0].includes(','));
+                // Ensure we have some context (suffix, comma, or degree symbol) to avoid matching arbitrary pairs of numbers
+                const hasContext = !!(latSuffix || lngSuffix || fullMatch.includes('°') || fullMatch.includes('\u00B0') || fullMatch.includes('\u00BA') || fullMatch.includes(','));
+                const isDecimal = match[1].includes('.') || match[3].includes('.');
 
-                // Also check if it's just two plain numbers without decimal points - likely not coordinates unless context is strong
-                const isPlainNumbers = !match[1].includes('.') && !match[3].includes('.');
-                if (isPlainNumbers && !hasContext) continue;
-
-                if (match.index > lastIndex) {
-                  parts.push(value.substring(lastIndex, match.index));
+                if (hasContext || isDecimal) {
+                  if (match.index! > lastIndex) {
+                    parts.push(value.substring(lastIndex, match.index!));
+                  }
+                  parts.push(
+                    <CoordinateLink
+                      key={`${lat}-${lng}-${match.index!}`}
+                      lat={lat}
+                      lng={lng}
+                      label={fullMatch}
+                    />
+                  );
+                  lastIndex = match.index! + fullMatch.length;
                 }
-                parts.push(
-                  <CoordinateLink
-                    key={`${lat}-${lng}-${match.index}`}
-                    lat={lat}
-                    lng={lng}
-                  />
-                );
-                lastIndex = coordRegex.lastIndex;
               }
             }
+
+            if (parts.length === 0) return <>{value}</>;
 
             if (lastIndex < value.length) {
               parts.push(value.substring(lastIndex));
             }
 
-            return <>{parts.length > 0 ? parts : value}</>;
+            return <>{parts}</>;
           }
         }}
       >
