@@ -24,16 +24,23 @@ export const Map3D = forwardRef(
     const { setMapData } = useMapData();
     const { setIsMapLoaded } = useMapLoading();
 
-    const [customElementsReady, setCustomElementsReady] = useState(false);
-    useEffect(() => {
-      customElements.whenDefined('gmp-map-3d').then(() => {
-        setCustomElementsReady(true);
-        setIsMapLoaded(true);
-      });
-    }, [setIsMapLoaded]);
-
     const [map3DElement, map3dRef] =
       useCallbackRef<google.maps.maps3d.Map3DElement>();
+
+    useEffect(() => {
+      const mapElement = map3DElement;
+      if (!mapElement) return;
+
+      const handleSteadyState = () => {
+        setIsMapLoaded(true);
+      };
+
+      mapElement.addEventListener('gmp-steadystate', handleSteadyState);
+
+      return () => {
+        mapElement.removeEventListener('gmp-steadystate', handleSteadyState);
+      };
+    }, [map3DElement, setIsMapLoaded]);
 
     useMap3DCameraEvents(map3DElement, p => {
       const { center, range, heading, tilt } = p.detail;
