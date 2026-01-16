@@ -70,8 +70,9 @@ export async function GET(req: NextRequest) {
     });
 
     const [fileContents] = await file.download();
+    const blob = new Blob([fileContents], { type: 'image/tiff' });
 
-    return new NextResponse(fileContents, {
+    return new NextResponse(blob, {
       status: 200,
       headers: {
         'Content-Type': 'image/tiff',
