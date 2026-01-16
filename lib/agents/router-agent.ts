@@ -37,7 +37,7 @@ export async function routerAgent(messages: CoreMessage[]) {
     model: await getModel(true), // Assuming image analysis requires a powerful model
     messages,
     schema: routerSchema,
-    prompt: 'Given the user request and the image, which tool is most appropriate? If an image is present, use analyzeSatelliteImage.',
+    prompt: 'Given the user request and potentially an image, select the most appropriate tool. If the user is asking for satellite data or embeddings for a location shown in an image, you MUST choose the `generateEmbeddings` tool and you MUST extract the latitude, longitude, and a recent year (e.g., 2023) from the image context. For a general analysis of an image, choose `analyzeSatelliteImage`.',
   });
 
   // 2. Execute the chosen tool based on the object returned by the model.

@@ -659,13 +659,14 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
             case 'resolution_search_result': {
               const analysisResult = JSON.parse(content as string);
               const geoJson = analysisResult.geoJson as FeatureCollection;
+              const { lat, lon, year } = analysisResult;
 
               return {
                 id,
                 component: (
                   <>
                     {geoJson && (
-                      <MapCompareView geoJson={geoJson} />
+                      <MapCompareView lat={lat} lon={lon} year={year} />
                     )}
                   </>
                 )

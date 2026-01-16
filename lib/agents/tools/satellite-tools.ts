@@ -38,8 +38,8 @@ export async function executeGenerateEmbeddings(args: z.infer<typeof generateEmb
     if (!response.ok) {
       throw new Error(`API request failed with status ${response.status}`);
     }
-    const result = await response.json();
-    return result;
+    const arrayBuffer = await response.arrayBuffer();
+    return arrayBuffer;
   } catch (error) {
     console.error('Error in generateEmbeddings tool:', error);
     return { error: 'Failed to generate embeddings.' };

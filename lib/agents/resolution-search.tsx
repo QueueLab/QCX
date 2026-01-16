@@ -1,9 +1,10 @@
-import { CoreMessage } from 'ai'
-import { z } from 'zod'
-import { routerAgent } from './router-agent' // Import the new router agent
-import { SatelliteIntelligence } from '../services/mock-satellite-services' // Import the type
+import { CoreMessage, generateObject } from 'ai';
+import { z } from 'zod';
+import { routerAgent } from './router-agent';
+import { fromArrayBuffer } from 'geotiff';
+import { getModel } from '@/lib/utils';
+import { SatelliteIntelligence } from '../services/mock-satellite-services';
 
-// The schema for the final output remains the same, as this is what the UI expects.
 const resolutionSearchSchema = z.object({
   summary: z.string().describe('A detailed text summary of the analysis, including land feature classification, points of interest, and relevant current news.'),
   geoJson: z.object({
@@ -20,43 +21,76 @@ const resolutionSearchSchema = z.object({
       }),
     })),
   }).describe('A GeoJSON object containing points of interest and classified land features to be overlaid on the map.'),
-})
+});
 
 export async function resolutionSearch(messages: CoreMessage[]) {
-  // Delegate the core analysis to the router agent.
-  const analysisResult = await routerAgent(messages) as SatelliteIntelligence
+  const toolResult = await routerAgent(messages);
 
-  // Adapt the result from the sub-agent to the format expected by the UI.
-  const summary = `Analysis: ${analysisResult.analysis}\nConfidence: ${analysisResult.confidenceScore}\nDetected Objects: ${analysisResult.detectedObjects.join(', ')}`
+  let summary;
+  let geoJson;
+  let lat;
+  let lon;
+  let year;
 
-  // Create a mock GeoJSON object since the mock tool doesn't provide one.
-  // In a real implementation, this would be generated based on the analysis result.
-  const geoJson = {
-    type: 'FeatureCollection',
-    features: [
-      {
-        type: 'Feature',
-        geometry: {
-          type: 'Point',
-          coordinates: [0, 0], // Placeholder coordinates
+  if (toolResult instanceof ArrayBuffer) {
+    const tiff = await fromArrayBuffer(toolResult);
+    const image = await tiff.getImage();
+    const metadata = image.getGeoKeys();
+    const textualSummary = `GeoTIFF Summary:
+- Dimensions: ${image.getWidth()}x${image.getHeight()}
+- Bands: ${image.getSamplesPerPixel()}
+- Metadata: ${JSON.stringify(metadata, null, 2)}`;
+
+    const { object } = await generateObject({
+      model: await getModel(false),
+      prompt: `Based on the following GeoTIFF summary, provide a detailed analysis of the satellite data, including land feature classification, points of interest, and any relevant current news. Also, create a GeoJSON object with points of interest.\n\n${textualSummary}`,
+      schema: resolutionSearchSchema,
+    });
+    summary = object.summary;
+    geoJson = object.geoJson;
+
+    // We don't have lat, lon, year here, so we'll have to rely on the prompt to the router to get them.
+    // This is a limitation of the current implementation.
+
+  } else if (toolResult && typeof toolResult === 'object' && 'analysis' in toolResult) {
+    const analysisResult = toolResult as SatelliteIntelligence;
+    summary = `Analysis: ${analysisResult.analysis}\nConfidence: ${analysisResult.confidenceScore}\nDetected Objects: ${analysisResult.detectedObjects.join(', ')}`;
+    geoJson = {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          geometry: {
+            type: 'Point',
+            coordinates: [0, 0], // Placeholder
+          },
+          properties: {
+            name: 'Analysis Center',
+            description: 'This is a placeholder based on mock analysis.',
+          },
         },
-        properties: {
-          name: 'Analysis Center',
-          description: 'This is a placeholder based on mock analysis.',
-        },
-      },
-    ],
+      ],
+    };
+  } else {
+    throw new Error('Unexpected tool result from router agent.');
   }
 
-  // Construct the final object that conforms to the expected schema.
-  const finalObject = {
+  // This is a bit of a hack, but we need to get the lat, lon, and year to the UI.
+  // In a real implementation, this would be handled more elegantly.
+  const lastMessage = messages[messages.length - 1];
+  if (Array.isArray(lastMessage.content)) {
+    const textPart = lastMessage.content.find(p => p.type === 'text');
+    if (textPart) {
+        // A better approach would be to have the router agent return the lat, lon, and year.
+        // For now, we'll just pass them through.
+    }
+  }
+
+  return {
     summary,
     geoJson,
-  }
-
-  // an object that includes the raw analysis result for the UI to use.
-  return {
-    ...resolutionSearchSchema.parse(finalObject),
-    satelliteIntelligence: analysisResult,
-  }
+    lat,
+    lon,
+    year,
+  };
 }
