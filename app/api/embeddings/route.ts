@@ -10,14 +10,13 @@ import path from 'path';
 const GCP_PROJECT_ID = process.env.GCP_PROJECT_ID;
 const GCP_CREDENTIALS_PATH = process.env.GCP_CREDENTIALS_PATH;
 
-if (!GCP_PROJECT_ID || !GCP_CREDENTIALS_PATH) {
-  throw new Error('GCP_PROJECT_ID and GCP_CREDENTIALS_PATH must be set in the environment.');
+let storage: Storage | undefined;
+if (GCP_PROJECT_ID && GCP_CREDENTIALS_PATH) {
+  storage = new Storage({
+    projectId: GCP_PROJECT_ID,
+    keyFilename: GCP_CREDENTIALS_PATH,
+  });
 }
-
-const storage = new Storage({
-  projectId: GCP_PROJECT_ID,
-  keyFilename: GCP_CREDENTIALS_PATH,
-});
 
 const BUCKET_NAME = 'alphaearth_foundations';
 const INDEX_FILE_PATH = path.resolve(process.cwd(), 'aef_index.csv');
@@ -46,6 +45,10 @@ async function getIndexData(): Promise<IndexEntry[]> {
 }
 
 export async function GET(req: NextRequest) {
+  if (!storage) {
+    return NextResponse.json({ success: false, error: 'AlphaEarth API is not configured.' }, { status: 500 });
+  }
+
   const { searchParams } = new URL(req.url);
   const lat = parseFloat(searchParams.get('lat') || '');
   const lon = parseFloat(searchParams.get('lon') || '');
