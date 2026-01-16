@@ -7,6 +7,7 @@ import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import 'katex/dist/katex.min.css'
+import { CoordinateLink } from './map/coordinate-link'
 
 export function BotMessage({ content }: { content: StreamableValue<string> }) {
   const [data, error, pending] = useStreamableValue(content)
@@ -23,6 +24,43 @@ export function BotMessage({ content }: { content: StreamableValue<string> }) {
         rehypePlugins={[[rehypeExternalLinks, { target: '_blank' }], rehypeKatex]}
         remarkPlugins={[remarkGfm, remarkMath]}
         className="prose-sm prose-neutral prose-a:text-accent-foreground/50"
+        components={{
+          text: (props) => {
+            const { children } = props;
+            if (typeof children !== 'string') return <>{children}</>;
+            const value = children;
+            const coordRegex = /(-?\d+\.\d+),\s*(-?\d+\.\d+)/g;
+            const parts = [];
+            let lastIndex = 0;
+            let match;
+
+            while ((match = coordRegex.exec(value)) !== null) {
+              const lat = parseFloat(match[1]);
+              const lng = parseFloat(match[2]);
+
+              // Basic validation for lat/lng ranges
+              if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+                if (match.index > lastIndex) {
+                  parts.push(value.substring(lastIndex, match.index));
+                }
+                parts.push(
+                  <CoordinateLink
+                    key={`${lat}-${lng}-${match.index}`}
+                    lat={lat}
+                    lng={lng}
+                  />
+                );
+                lastIndex = coordRegex.lastIndex;
+              }
+            }
+
+            if (lastIndex < value.length) {
+              parts.push(value.substring(lastIndex));
+            }
+
+            return <>{parts.length > 0 ? parts : value}</>;
+          }
+        }}
       >
         {processedData}
       </MemoizedReactMarkdown>

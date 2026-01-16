@@ -23,6 +23,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   const rotationFrameRef = useRef<number | null>(null)
   const polygonLabelsRef = useRef<{ [id: string]: mapboxgl.Marker }>({})
   const lineLabelsRef = useRef<{ [id: string]: mapboxgl.Marker }>({})
+  const markersRef = useRef<{ [id: string]: mapboxgl.Marker }>({})
   const lastInteractionRef = useRef<number>(Date.now())
   const isRotatingRef = useRef<boolean>(false)
   const isUpdatingPositionRef = useRef<boolean>(false)
@@ -553,6 +554,33 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     //   drawRoute(mapData.mapFeature.route_geometry); // Implement drawRoute function if needed
     // }
   }, [mapData.targetPosition, mapData.mapFeature, updateMapPosition]);
+
+  // Effect to synchronize markers from MapDataContext
+  useEffect(() => {
+    if (!map.current || !initializedRef.current) return;
+
+    // Remove markers that are no longer in mapData
+    const currentMarkerIds = new Set(mapData.markers?.map(m => m.id) || []);
+    Object.keys(markersRef.current).forEach(id => {
+      if (!currentMarkerIds.has(id)) {
+        markersRef.current[id].remove();
+        delete markersRef.current[id];
+      }
+    });
+
+    // Add or update markers from mapData
+    mapData.markers?.forEach(markerData => {
+      if (!markersRef.current[markerData.id]) {
+        const marker = new mapboxgl.Marker()
+          .setLngLat([markerData.longitude, markerData.latitude])
+          .setPopup(markerData.title ? new mapboxgl.Popup().setHTML(`<h3>${markerData.title}</h3>`) : null)
+          .addTo(map.current!);
+        markersRef.current[markerData.id] = marker;
+      } else {
+        markersRef.current[markerData.id].setLngLat([markerData.longitude, markerData.latitude]);
+      }
+    });
+  }, [mapData.markers]);
 
   // Long-press handlers
   const handleMouseDown = useCallback(() => {

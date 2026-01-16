@@ -24,6 +24,7 @@ export interface MapData {
     geometry: any;
   }>;
   markers?: Array<{
+    id: string;
     latitude: number;
     longitude: number;
     title?: string;

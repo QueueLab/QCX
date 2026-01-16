@@ -1,11 +1,35 @@
-$ next dev --turbo
- ⚠ Port 3000 is in use, using available port 3003 instead.
+
+> QCX@0.1.0 dev
+> next dev --turbo
+
    ▲ Next.js 15.3.6 (Turbopack)
-   - Local:        http://localhost:3003
-   - Network:      http://192.168.0.2:3003
-   - Environments: .env.local, .env
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.0.2:3000
+   - Environments: .env
 
  ✓ Starting...
- ○ Compiling middleware ...
- ✓ Compiled middleware in 648ms
- ✓ Ready in 2.5s
+ ✓ Compiled middleware in 359ms
+ ✓ Ready in 1716ms
+ ○ Compiling / ...
+ ✓ Compiled / in 27.5s
+Chat DB actions loaded. Ensure getCurrentUserId() is correctly implemented for server-side usage if applicable.
+[Upstash Redis] The 'url' property is missing or undefined in your Redis config.
+[Upstash Redis] The 'token' property is missing or undefined in your Redis config.
+ GET / 200 in 31388ms
+ GET / 200 in 934ms
+ ○ Compiling /search/[id] ...
+ ✓ Compiled /search/[id] in 12.1s
+Chat DB actions loaded. Ensure getCurrentUserId() is correctly implemented for server-side usage if applicable.
+[Upstash Redis] The 'url' property is missing or undefined in your Redis config.
+[Upstash Redis] The 'token' property is missing or undefined in your Redis config.
+ ⨯ [TypeError: action is not a function] { digest: '2341665709' }
+ POST /search/4hlC3SIEkZPxlRUV5KUmP 500 in 15389ms
+[DEBUG] getSelectedModel - Reading from path: "/app/config/model.json"
+[DEBUG] getSelectedModel - Raw file content: "{
+  "selectedModel": null
+}
+"
+ POST /search/4hlC3SIEkZPxlRUV5KUmP 200 in 945ms
+Chat DB actions loaded. Ensure getCurrentUserId() is correctly implemented for server-side usage if applicable.
+[Upstash Redis] The 'url' property is missing or undefined in your Redis config.
+[Upstash Redis] The 'token' property is missing or undefined in your Redis config.
