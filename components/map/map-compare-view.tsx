@@ -51,13 +51,15 @@ const MapCompareView = ({ lat, lon, year }: MapCompareViewProps) => {
       const ctx = canvas.getContext('2d');
       if (ctx) {
         const imageData = ctx.createImageData(canvas.width, canvas.height);
-        for (let i = 0; i < red.length; i++) {
-          imageData.data[i * 4] = red[i];
-          imageData.data[i * 4 + 1] = green[i];
-          imageData.data[i * 4 + 2] = blue[i];
-          imageData.data[i * 4 + 3] = 255;
+        if (typeof red !== 'number' && typeof green !== 'number' && typeof blue !== 'number') {
+          for (let i = 0; i < red.length; i++) {
+            imageData.data[i * 4] = red[i];
+            imageData.data[i * 4 + 1] = green[i];
+            imageData.data[i * 4 + 2] = blue[i];
+            imageData.data[i * 4 + 3] = 255;
+          }
+          ctx.putImageData(imageData, 0, 0);
         }
-        ctx.putImageData(imageData, 0, 0);
 
         afterMap.addSource('tiff-source', {
           type: 'image',
