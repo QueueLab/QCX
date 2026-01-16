@@ -1,0 +1,47 @@
+// lib/agents/tools/satellite-tools.ts
+import { z } from 'zod';
+import { getOnnxAnalysis, getEmbeddings } from '@/lib/services/mock-satellite-services';
+
+// Schema for the analyzeSatelliteImage tool
+export const analyzeSatelliteImageSchema = z.object({
+  // This tool takes no arguments for the mock implementation.
+});
+
+// Schema for the generateEmbeddings tool
+export const generateEmbeddingsSchema = z.object({
+  lat: z.number().describe('The latitude.'),
+  lon: z.number().describe('The longitude.'),
+  year: z.number().describe('The year.'),
+});
+
+/**
+ * Executes the logic for analyzing a satellite image by calling the mock service.
+ */
+export async function executeAnalyzeSatelliteImage() {
+  try {
+    console.log('Executing analyzeSatelliteImage tool...');
+    const result = await getOnnxAnalysis();
+    return result;
+  } catch (error) {
+    console.error('Error in analyzeSatelliteImage tool:', error);
+    return { error: 'Failed to analyze satellite image.' };
+  }
+}
+
+/**
+ * Executes the logic for generating embeddings by calling the local API endpoint.
+ */
+export async function executeGenerateEmbeddings(args: z.infer<typeof generateEmbeddingsSchema>) {
+  try {
+    console.log(`Executing generateEmbeddings tool with lat: ${args.lat}, lon: ${args.lon}, year: ${args.year}`);
+    const response = await fetch(`http://localhost:3000/api/embeddings?lat=${args.lat}&lon=${args.lon}&year=${args.year}`);
+    if (!response.ok) {
+      throw new Error(`API request failed with status ${response.status}`);
+    }
+    const arrayBuffer = await response.arrayBuffer();
+    return arrayBuffer;
+  } catch (error) {
+    console.error('Error in generateEmbeddings tool:', error);
+    return { error: 'Failed to generate embeddings.' };
+  }
+}

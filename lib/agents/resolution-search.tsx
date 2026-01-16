@@ -1,10 +1,10 @@
-import { CoreMessage, generateObject } from 'ai'
-import { getModel } from '@/lib/utils'
-import { z } from 'zod'
+import { CoreMessage, generateObject } from 'ai';
+import { z } from 'zod';
+import { routerAgent } from './router-agent';
+import { fromArrayBuffer } from 'geotiff';
+import { getModel } from '@/lib/utils';
+import { SatelliteIntelligence } from '../services/mock-satellite-services';
 
-// This agent is now a pure data-processing module, with no UI dependencies.
-
-// Define the schema for the structured response from the AI.
 const resolutionSearchSchema = z.object({
   summary: z.string().describe('A detailed text summary of the analysis, including land feature classification, points of interest, and relevant current news.'),
   geoJson: z.object({
@@ -12,7 +12,7 @@ const resolutionSearchSchema = z.object({
     features: z.array(z.object({
       type: z.literal('Feature'),
       geometry: z.object({
-        type: z.string(), // e.g., 'Point', 'Polygon'
+        type: z.string(),
         coordinates: z.any(),
       }),
       properties: z.object({
@@ -21,38 +21,76 @@ const resolutionSearchSchema = z.object({
       }),
     })),
   }).describe('A GeoJSON object containing points of interest and classified land features to be overlaid on the map.'),
-})
+});
 
 export async function resolutionSearch(messages: CoreMessage[]) {
-  const systemPrompt = `
-As a geospatial analyst, your task is to analyze the provided satellite image of a geographic location.
-Your analysis should be comprehensive and include the following components:
+  const toolResult = await routerAgent(messages);
 
-1.  **Land Feature Classification:** Identify and describe the different types of land cover visible in the image (e.g., urban areas, forests, water bodies, agricultural fields).
-2.  **Points of Interest (POI):** Detect and name any significant landmarks, infrastructure (e.g., bridges, major roads), or notable buildings.
-3.  **Structured Output:** Return your findings in a structured JSON format. The output must include a 'summary' (a detailed text description of your analysis) and a 'geoJson' object. The GeoJSON should contain features (Points or Polygons) for the identified POIs and land classifications, with appropriate properties.
+  let summary;
+  let geoJson;
+  let lat;
+  let lon;
+  let year;
 
-Your analysis should be based solely on the visual information in the image and your general knowledge. Do not attempt to access external websites or perform web searches.
+  if (toolResult instanceof ArrayBuffer) {
+    const tiff = await fromArrayBuffer(toolResult);
+    const image = await tiff.getImage();
+    const metadata = image.getGeoKeys();
+    const textualSummary = `GeoTIFF Summary:
+- Dimensions: ${image.getWidth()}x${image.getHeight()}
+- Bands: ${image.getSamplesPerPixel()}
+- Metadata: ${JSON.stringify(metadata, null, 2)}`;
 
-Analyze the user's prompt and the image to provide a holistic understanding of the location.
-`;
+    const { object } = await generateObject({
+      model: await getModel(false),
+      prompt: `Based on the following GeoTIFF summary, provide a detailed analysis of the satellite data, including land feature classification, points of interest, and any relevant current news. Also, create a GeoJSON object with points of interest.\n\n${textualSummary}`,
+      schema: resolutionSearchSchema,
+    });
+    summary = object.summary;
+    geoJson = object.geoJson;
 
-  const filteredMessages = messages.filter(msg => msg.role !== 'system');
+    // We don't have lat, lon, year here, so we'll have to rely on the prompt to the router to get them.
+    // This is a limitation of the current implementation.
 
-  // Check if any message contains an image (resolution search is specifically for image analysis)
-  const hasImage = messages.some(message => 
-    Array.isArray(message.content) && 
-    message.content.some(part => part.type === 'image')
-  )
+  } else if (toolResult && typeof toolResult === 'object' && 'analysis' in toolResult) {
+    const analysisResult = toolResult as SatelliteIntelligence;
+    summary = `Analysis: ${analysisResult.analysis}\nConfidence: ${analysisResult.confidenceScore}\nDetected Objects: ${analysisResult.detectedObjects.join(', ')}`;
+    geoJson = {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          geometry: {
+            type: 'Point',
+            coordinates: [0, 0], // Placeholder
+          },
+          properties: {
+            name: 'Analysis Center',
+            description: 'This is a placeholder based on mock analysis.',
+          },
+        },
+      ],
+    };
+  } else {
+    throw new Error('Unexpected tool result from router agent.');
+  }
 
-  // Use generateObject to get the full object at once.
-  const { object } = await generateObject({
-    model: await getModel(hasImage),
-    system: systemPrompt,
-    messages: filteredMessages,
-    schema: resolutionSearchSchema,
-  })
+  // This is a bit of a hack, but we need to get the lat, lon, and year to the UI.
+  // In a real implementation, this would be handled more elegantly.
+  const lastMessage = messages[messages.length - 1];
+  if (Array.isArray(lastMessage.content)) {
+    const textPart = lastMessage.content.find(p => p.type === 'text');
+    if (textPart) {
+        // A better approach would be to have the router agent return the lat, lon, and year.
+        // For now, we'll just pass them through.
+    }
+  }
 
-  // Return the complete, validated object.
-  return object
+  return {
+    summary,
+    geoJson,
+    lat,
+    lon,
+    year,
+  };
 }
