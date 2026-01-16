@@ -232,8 +232,7 @@ Uses the Mapbox Search Box Text Search API endpoint to power searching for and g
 ,
   parameters: geospatialQuerySchema,
   execute: async (params: z.infer<typeof geospatialQuerySchema>) => {
-    const { queryType } = params;
-    const includeMap = (params as any).includeMap !== false;
+    const { queryType, includeMap = true } = params;
     console.log('[GeospatialTool] Execute called with:', params, 'and map provider:', mapProvider);
 
     const uiFeedbackStream = createStreamableValue<string>();
@@ -327,7 +326,6 @@ Uses the Mapbox Search Box Text Search API endpoint to power searching for and g
           case 'map': return prefer('static_map_image_tool') 
           case 'reverse': return prefer('reverse_geocode_tool');
           case 'geocode': return prefer('forward_geocode_tool');
-          case 'screenshot': return 'google_maps_screenshot_tool';
         }
       })();
 
@@ -340,7 +338,6 @@ Uses the Mapbox Search Box Text Search API endpoint to power searching for and g
           case 'search': return { searchText: params.query, includeMapPreview: includeMap, maxResults: params.maxResults || 5, ...(params.coordinates && { proximity: `${params.coordinates.latitude},${params.coordinates.longitude}` }), ...(params.radius && { radius: params.radius }) };
           case 'geocode': 
           case 'map': return { searchText: params.location, includeMapPreview: includeMap, maxResults: queryType === 'geocode' ? params.maxResults || 5 : undefined };
-          case 'screenshot': return { location: (params as any).location, async: (params as any).async };
         }
       })();
 
@@ -363,14 +360,6 @@ Uses the Mapbox Search Box Text Search API endpoint to power searching for and g
           console.warn(`[GeospatialTool] Retry ${retryCount}/${MAX_RETRIES}: ${error.message}`);
           await new Promise(resolve => setTimeout(resolve, 1000));
         }
-      }
-
-      if (queryType === 'screenshot' && (params as any).async) {
-        feedbackMessage = `Asynchronous screenshot request submitted for: ${(params as any).location}`;
-        uiFeedbackStream.update(feedbackMessage);
-        uiFeedbackStream.done();
-        uiStream.update(<BotMessage content={uiFeedbackStream.value} />);
-        return { type: 'MAP_QUERY_TRIGGER', originalUserInput: JSON.stringify(params), queryType, timestamp: new Date().toISOString(), mcp_response: { location: { place_name: (params as any).location }, status: 'async_started' }, error: null };
       }
 
       // Extract & parse content

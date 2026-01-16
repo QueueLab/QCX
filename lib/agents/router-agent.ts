@@ -32,29 +32,6 @@ const routerSchema = z.union([
 export async function routerAgent(messages: CoreMessage[]) {
   console.log('Router agent is selecting a tool...');
 
-  const parallelEnabled = process.env.PARALLEL_SUB_AGENTS === 'true';
-
-  if (parallelEnabled) {
-    console.log('Parallel sub-agents enabled. Executing all tools...');
-    // In parallel mode, we execute all available tools to extract intelligence from all endpoints.
-    // We use a default set of arguments for tools that require them, or we could potentially
-    // use another LLM call to generate arguments for all tools.
-    // For now, we'll execute them with default/mock arguments as a demonstration.
-    const results = await Promise.all([
-      executeAnalyzeSatelliteImage(),
-      executeGenerateEmbeddings({ lat: 0, lon: 0, year: 2024 }) // Default args
-    ]);
-
-    // Merge results - this is a simplified merge logic
-    const analysisResult = results[0] as any;
-    return {
-      analysis: `Parallel Analysis: ${analysisResult.analysis || 'N/A'}`,
-      confidenceScore: analysisResult.confidenceScore || 0,
-      detectedObjects: analysisResult.detectedObjects || [],
-      embeddings: results[1]
-    };
-  }
-
   // 1. Use `generateObject` to get the model's choice of tool and arguments.
   const { object: toolChoice } = await generateObject({
     model: await getModel(true), // Assuming image analysis requires a powerful model
