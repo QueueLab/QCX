@@ -95,7 +95,17 @@ async function submit(formData?: FormData, skip?: boolean) {
 
     messages.push({ role: 'assistant', content: analysisResult.summary || 'Analysis complete.' });
 
-    const relatedQueries = await querySuggestor(uiStream, messages);
+    const sanitizedMessages: CoreMessage[] = messages.map(m => {
+      if (Array.isArray(m.content)) {
+        return {
+          ...m,
+          content: m.content.filter(part => part.type !== 'image')
+        } as CoreMessage
+      }
+      return m
+    })
+
+    const relatedQueries = await querySuggestor(uiStream, sanitizedMessages);
     uiStream.append(
         <Section title="Follow-up">
             <FollowupPanel />
