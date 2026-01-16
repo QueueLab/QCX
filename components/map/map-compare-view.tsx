@@ -5,13 +5,15 @@ import mapboxgl from 'mapbox-gl';
 import MapboxCompare from 'mapbox-gl-compare';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import 'mapbox-gl-compare/dist/mapbox-gl-compare.css';
-import type { FeatureCollection } from 'geojson';
+import { fromArrayBuffer } from 'geotiff';
 
 interface MapCompareViewProps {
-  geoJson: FeatureCollection;
+  lat: number;
+  lon: number;
+  year: number;
 }
 
-const MapCompareView = ({ geoJson }: MapCompareViewProps) => {
+const MapCompareView = ({ lat, lon, year }: MapCompareViewProps) => {
   const beforeMapContainer = useRef<HTMLDivElement>(null);
   const afterMapContainer = useRef<HTMLDivElement>(null);
   const container = useRef<HTMLDivElement>(null);
@@ -24,32 +26,59 @@ const MapCompareView = ({ geoJson }: MapCompareViewProps) => {
     const beforeMap = new mapboxgl.Map({
       container: beforeMapContainer.current,
       style: 'mapbox://styles/mapbox/satellite-v9',
-      center: [-74.5, 40],
-      zoom: 9,
+      center: [lon, lat],
+      zoom: 12,
     });
 
     const afterMap = new mapboxgl.Map({
       container: afterMapContainer.current,
       style: 'mapbox://styles/mapbox/satellite-v9',
-      center: [-74.5, 40],
-      zoom: 9,
+      center: [lon, lat],
+      zoom: 12,
     });
 
-    afterMap.on('load', () => {
-      afterMap.addSource('geojson-source', {
-        type: 'geojson',
-        data: geoJson,
-      });
+    afterMap.on('load', async () => {
+      const response = await fetch(`/api/embeddings?lat=${lat}&lon=${lon}&year=${year}`);
+      const arrayBuffer = await response.arrayBuffer();
+      const tiff = await fromArrayBuffer(arrayBuffer);
+      const image = await tiff.getImage();
+      const [red, green, blue] = await image.readRasters();
 
-      afterMap.addLayer({
-        id: 'geojson-layer',
-        type: 'fill',
-        source: 'geojson-source',
-        paint: {
-          'fill-color': '#007cbf',
-          'fill-opacity': 0.5,
-        },
-      });
+      // Create a canvas to render the RGB image
+      const canvas = document.createElement('canvas');
+      canvas.width = image.getWidth();
+      canvas.height = image.getHeight();
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        const imageData = ctx.createImageData(canvas.width, canvas.height);
+        for (let i = 0; i < red.length; i++) {
+          imageData.data[i * 4] = red[i];
+          imageData.data[i * 4 + 1] = green[i];
+          imageData.data[i * 4 + 2] = blue[i];
+          imageData.data[i * 4 + 3] = 255;
+        }
+        ctx.putImageData(imageData, 0, 0);
+
+        afterMap.addSource('tiff-source', {
+          type: 'image',
+          url: canvas.toDataURL(),
+          coordinates: [
+            [lon - 0.1, lat + 0.1],
+            [lon + 0.1, lat + 0.1],
+            [lon + 0.1, lat - 0.1],
+            [lon - 0.1, lat - 0.1],
+          ],
+        });
+
+        afterMap.addLayer({
+          id: 'tiff-layer',
+          type: 'raster',
+          source: 'tiff-source',
+          paint: {
+            'raster-opacity': 0.8,
+          },
+        });
+      }
     });
 
     const compare = new MapboxCompare(beforeMap, afterMap, container.current);
@@ -59,7 +88,7 @@ const MapCompareView = ({ geoJson }: MapCompareViewProps) => {
       beforeMap.remove();
       afterMap.remove();
     };
-  }, [geoJson]);
+  }, [lat, lon, year]);
 
   return (
     <div ref={container} className="relative w-full h-96">

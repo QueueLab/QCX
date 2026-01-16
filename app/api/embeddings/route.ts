@@ -69,31 +69,13 @@ export async function GET(req: NextRequest) {
       expires: Date.now() + 15 * 60 * 1000, // 15 minutes
     });
 
-    const tiff = await fromUrl(url);
-    const image = await tiff.getImage();
-    const epsgCode = parseInt(image.getGeoKeys().GeoAsciiParams.split('|')[0], 10);
-    const proj = proj4(`EPSG:${epsgCode}`, 'EPSG:4326');
-    const [x, y] = proj.inverse([lon, lat]);
+    const [fileContents] = await file.download();
 
-    const window = [
-      Math.floor(x),
-      Math.floor(y),
-      Math.floor(x) + 1,
-      Math.floor(y) + 1,
-    ];
-
-    const data = await image.readRasters({ window });
-    const rasterData = data[0];
-    const embedding = typeof rasterData === 'number' ? [rasterData] : Array.from(rasterData);
-
-    return NextResponse.json({
-      success: true,
-      location: { lat, lon, year },
-      embedding,
-      embeddingDimensions: embedding.length,
-      masked: false, // This is a simplified assumption
-      attribution: 'The AlphaEarth Foundations Satellite Embedding dataset is produced by Google and Google DeepMind.',
-      license: 'CC-BY 4.0',
+    return new NextResponse(fileContents, {
+      status: 200,
+      headers: {
+        'Content-Type': 'image/tiff',
+      },
     });
   } catch (error) {
     console.error('Error fetching embedding:', error);
