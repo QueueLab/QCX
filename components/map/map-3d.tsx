@@ -39,6 +39,7 @@ export const Map3D = forwardRef(
 
       return () => {
         mapElement.removeEventListener('gmp-steadystate', handleSteadyState);
+        setIsMapLoaded(false);
       };
     }, [map3DElement, setIsMapLoaded]);
 

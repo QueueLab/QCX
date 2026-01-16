@@ -28,13 +28,6 @@ export function GoogleMapComponent() {
     }
   }, [apiKey, setMapProvider, toast])
 
-  useEffect(() => {
-    setIsMapLoaded(true);
-    return () => {
-      setIsMapLoaded(false);
-    };
-  }, [setIsMapLoaded]);
-
   const featureCollection = useMemo(() => {
     const features = mapData.drawnFeatures?.map(df => ({
       type: 'Feature' as const,
