@@ -1,5 +1,6 @@
 import { Pool } from 'pg'
 import { drizzle } from 'drizzle-orm/node-postgres'
+import * as schema from './schema'
 
 // Lazily create a connection pool and Drizzle DB instance for server-side usage.
 // Keeps similarity with lib/db/migrate.ts but exports the db for application code.
@@ -18,6 +19,6 @@ const pool = new Pool({
   },
 })
 
-export const db = drizzle(pool)
+export const db = drizzle(pool, { schema })
 
 export default db

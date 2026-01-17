@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { Spinner } from '@/components/ui/spinner';
 import HistoryItem from '@/components/history-item';
 import { type Chat } from '@/lib/types';
+import { CreditsDisplay } from '@/components/credits/credits-display';
 
 export function ChatHistoryClient() {
   const [chats, setChats] = useState<Chat[]>([]);
@@ -100,6 +101,9 @@ export function ChatHistoryClient() {
 
   return (
     <div className="flex flex-col flex-1 space-y-3 h-full">
+      <div className="py-2 border-b">
+        <CreditsDisplay />
+      </div>
       <div className="flex flex-col gap-2 flex-1 overflow-y-auto">
         {!chats?.length ? (
           <div className="text-foreground/30 text-sm text-center py-4">

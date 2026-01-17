@@ -3,12 +3,19 @@ import { saveChat } from '@/lib/actions/chat';
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user';
 import { type Chat } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
+import { checkAndConsumeCredits } from '@/lib/middleware/check-credits';
 
 export async function POST(request: NextRequest) {
   try {
     const userId = await getCurrentUserIdOnServer();
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check and consume credits
+    const creditCheck = await checkAndConsumeCredits(request, 10);
+    if (creditCheck.error) {
+       return NextResponse.json({ error: creditCheck.error }, { status: creditCheck.status });
     }
 
     const body = await request.json();

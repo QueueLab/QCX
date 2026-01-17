@@ -1,5 +1,5 @@
 "use client"
-import React from 'react'
+import React, { useState } from 'react'
 import Image from 'next/image'
 import { useCalendarToggle } from './calendar-toggle-context'
 import { ModeToggle } from './mode-toggle'
@@ -15,9 +15,12 @@ import {
 } from 'lucide-react'
 import { MapToggle } from './map-toggle'
 import { ProfileToggle } from './profile-toggle'
+import { PurchaseCreditsPopup } from '@/components/credits/purchase-credits-popup'
 
 export const Header = () => {
   const { toggleCalendar } = useCalendarToggle()
+  const [showCreditsPopup, setShowCreditsPopup] = useState(false);
+
   return (
     <header className="fixed w-full p-1 md:p-2 flex justify-between items-center z-20 backdrop-blur bg-background/95 border-b border-border/40">
       <div>
@@ -53,11 +56,9 @@ export const Header = () => {
         
         <div id="header-search-portal" />
         
-        <a href="https://buy.stripe.com/3cIaEX3tRcur9EM7tbasg00" target="_blank" rel="noopener noreferrer">
-          <Button variant="ghost" size="icon">
-            <TentTree className="h-[1.2rem] w-[1.2rem]" />
-          </Button>
-        </a>
+        <Button variant="ghost" size="icon" onClick={() => setShowCreditsPopup(true)}>
+          <TentTree className="h-[1.2rem] w-[1.2rem]" />
+        </Button>
         
         <ModeToggle />
         
@@ -67,13 +68,17 @@ export const Header = () => {
       {/* Mobile menu buttons */}
       <div className="flex md:hidden gap-2">
         
-        <a href="https://buy.stripe.com/3cIaEX3tRcur9EM7tbasg00" target="_blank" rel="noopener noreferrer">
-          <Button variant="ghost" size="icon">
+        <Button variant="ghost" size="icon" onClick={() => setShowCreditsPopup(true)}>
             <TentTree className="h-[1.2rem] w-[1.2rem]" />
-          </Button>
-        </a>
+        </Button>
         <ProfileToggle/>
       </div>
+
+      {/* Credit Purchase Popup - Using the same component but controlled via state when clicked */}
+      <PurchaseCreditsPopup 
+        isOpenExternal={showCreditsPopup} 
+        setIsOpenExternal={setShowCreditsPopup}
+      />
     </header>
   )
 }
