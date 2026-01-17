@@ -20,11 +20,24 @@ import { Badge } from '@/components/ui/badge';
 // allowing the popup to show again on next visit/login.
 const STORAGE_KEY = 'purchase_credits_popup_shown_session';
 
-export function PurchaseCreditsPopup() {
+interface PurchaseCreditsPopupProps {
+  isOpenExternal?: boolean;
+  setIsOpenExternal?: (isOpen: boolean) => void;
+}
+
+export function PurchaseCreditsPopup({ isOpenExternal, setIsOpenExternal }: PurchaseCreditsPopupProps = {}) {
   const { user, loading: authLoading } = useCurrentUser();
-  const [isOpen, setIsOpen] = React.useState(false);
+  const [internalIsOpen, setInternalIsOpen] = React.useState(false);
+
+  // Determine which state controls the dialog
+  const isControlled = isOpenExternal !== undefined && setIsOpenExternal !== undefined;
+  const isOpen = isControlled ? isOpenExternal : internalIsOpen;
+  const setIsOpen = isControlled ? setIsOpenExternal : setInternalIsOpen;
 
   React.useEffect(() => {
+    // If controlled externally (e.g. by header button), skip the auto-popup logic
+    if (isControlled) return;
+
     // If auth is still loading or no user, do nothing yet.
     if (authLoading || !user) return;
 
@@ -45,7 +58,7 @@ export function PurchaseCreditsPopup() {
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [user, authLoading]);
+  }, [user, authLoading, isControlled, setIsOpen]);
 
   const handleUpgrade = (tier: string) => {
       // Redirect to Stripe checkout
@@ -57,7 +70,9 @@ export function PurchaseCreditsPopup() {
   const standardTier = TIER_CONFIGS[TIERS.STANDARD];
   const freeTier = TIER_CONFIGS[TIERS.FREE];
 
-  if (!user) return null;
+  // If we are in "auto mode" (not controlled), don't render if no user
+  // If controlled (clicked button), we might want to show it even if user state is loading (though likely they are logged in if they see the button)
+  if (!isControlled && !user) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
