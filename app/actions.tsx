@@ -355,9 +355,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     const reasoningStream = createStreamableValue<string>()
     uiStream.update(
       <>
-        <Section title="Thinking">
-          <ReasoningDisplay content={reasoningStream.value} />
-        </Section>
+        <ReasoningDisplay content={reasoningStream.value} />
         <Spinner />
       </>
     )
@@ -643,11 +641,7 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
             case 'reasoning':
               return {
                 id,
-                component: (
-                  <Section title="Thinking">
-                    <ReasoningDisplay content={answer.value} />
-                  </Section>
-                )
+                component: <ReasoningDisplay content={answer.value} />
               }
             case 'response':
               return {

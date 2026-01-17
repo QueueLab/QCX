@@ -151,11 +151,11 @@ export async function researcher(
     message.content.some(part => part.type === 'image')
   )
 
-  const model = getModel(hasImage) as LanguageModel;
-  const modelId = (model as any).modelId || (model as any).id || '';
+  const model = (await getModel(hasImage)) as any;
+  const modelId = model.modelId || model.id || '';
 
   const result = await nonexperimental_streamText({
-    model: (await getModel(hasImage)) as LanguageModel,
+    model: model as LanguageModel,
     maxTokens: 4096,
     system: systemPromptToUse,
     messages,
