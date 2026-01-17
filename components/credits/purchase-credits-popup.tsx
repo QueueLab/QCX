@@ -15,10 +15,13 @@ import { Check, Loader2 } from 'lucide-react';
 import { TIER_CONFIGS, TIERS, TierConfig } from '@/lib/utils/subscription';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { loadStripe } from '@stripe/stripe-js';
 
 // Use sessionStorage so it resets when the tab is closed, 
 // allowing the popup to show again on next visit/login.
 const STORAGE_KEY = 'purchase_credits_popup_shown_session';
+
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
 interface PurchaseCreditsPopupProps {
   isOpenExternal?: boolean;
@@ -28,6 +31,7 @@ interface PurchaseCreditsPopupProps {
 export function PurchaseCreditsPopup({ isOpenExternal, setIsOpenExternal }: PurchaseCreditsPopupProps = {}) {
   const { user, loading: authLoading } = useCurrentUser();
   const [internalIsOpen, setInternalIsOpen] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
 
   // Determine which state controls the dialog
   const isControlled = isOpenExternal !== undefined && setIsOpenExternal !== undefined;
@@ -60,11 +64,37 @@ export function PurchaseCreditsPopup({ isOpenExternal, setIsOpenExternal }: Purc
     return () => clearTimeout(timer);
   }, [user, authLoading, isControlled, setIsOpen]);
 
-  const handleUpgrade = (tier: string) => {
-      // Redirect to Stripe checkout
-      const stripeUrl = 'https://buy.stripe.com/3cIaEX3tRcur9EM7ss';
-      window.open(stripeUrl, '_blank');
-      setIsOpen(false);
+  const handleUpgrade = async (tier: string) => {
+      setLoading(true);
+      try {
+        const response = await fetch('/api/checkout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            // You should store your Price IDs in env vars or a config file
+            priceId: process.env.NEXT_PUBLIC_STRIPE_STANDARD_PRICE_ID, 
+            returnUrl: window.location.href,
+          }),
+        });
+
+        const { url, error } = await response.json();
+
+        if (error) {
+          console.error('Checkout error:', error);
+          // Show error toast or message
+          return;
+        }
+
+        if (url) {
+          window.location.href = url;
+        }
+      } catch (err) {
+        console.error('Error initiating checkout:', err);
+      } finally {
+        setLoading(false);
+      }
   }
 
   const standardTier = TIER_CONFIGS[TIERS.STANDARD];
@@ -134,7 +164,8 @@ export function PurchaseCreditsPopup({ isOpenExternal, setIsOpenExternal }: Purc
                         </li>
                     </ul>
                 </div>
-                 <Button className="w-full" onClick={() => handleUpgrade(TIERS.STANDARD)}>
+                 <Button className="w-full" onClick={() => handleUpgrade(TIERS.STANDARD)} disabled={loading}>
+                    {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2"/> : null}
                     Upgrade to Standard
                 </Button>
             </div>

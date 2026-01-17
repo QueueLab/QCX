@@ -1,6 +1,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { TIER_CONFIGS, TIERS } from '@/lib/utils/subscription';
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -44,6 +45,29 @@ export async function GET(request: Request) {
         const { data: { user }, error: userErr } = await supabase.auth.getUser()
         if (!userErr && user) {
           console.log('[Auth Callback] User signed in:', user.email)
+
+          // Check if user exists in the 'users' table
+          const { data: existingUser, error: fetchError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', user.id)
+            .single()
+
+          if (!existingUser && !fetchError) {
+             console.log('[Auth Callback] Initializing new user:', user.id);
+             // Create new user entry
+             const { error: insertError } = await supabase.from('users').insert({
+                id: user.id,
+                email: user.email,
+                credits: 0, // Start with 0 or free tier credits
+                tier: 'free',
+                // Add other default fields if necessary
+             });
+             
+             if (insertError) {
+                console.error('[Auth Callback] Error creating user record:', insertError);
+             }
+          }
         }
       } catch (e) {
         console.warn('[Auth Callback] Could not fetch user after exchange', e)
