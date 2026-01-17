@@ -5,7 +5,7 @@ import { getSupabaseServiceClient } from '@/lib/supabase/client';
 import { TIER_CONFIGS, TIERS } from '@/lib/utils/subscription';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-02-24.acacia',
+  apiVersion: '2025-12-15.clover' as any,
 });
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;

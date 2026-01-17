@@ -4,7 +4,7 @@ import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user';
 
 // Ensure Stripe is initialized with the secret key
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-02-24.acacia', // Use a valid API version supported by the SDK
+  apiVersion: '2025-12-15.clover' as any, // Use the specific version expected by the SDK
 });
 
 export async function POST(req: NextRequest) {
