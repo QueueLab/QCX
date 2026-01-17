@@ -12,6 +12,7 @@ import { History as HistoryIcon } from 'lucide-react'
 import { ChatHistoryClient } from './sidebar/chat-history-client' // Updated import
 import { Suspense } from 'react'
 import { HistorySkeleton } from './history-skelton'
+import { CreditsDisplay } from './credits/credits-display'
 
 type HistoryProps = {
   location: 'sidebar' | 'header'
@@ -39,6 +40,7 @@ export function History({ location }: HistoryProps) {
             History
           </SheetTitle>
         </SheetHeader>
+        <CreditsDisplay className="mb-4" />
         <div className="my-2 h-full pb-12 md:pb-10">
           <Suspense fallback={<HistorySkeleton />}>
             <ChatHistoryClient />
