@@ -5,7 +5,7 @@ import { db } from '@/lib/db'
 import { calendarNotes } from '@/lib/db/schema'
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
 import type { CalendarNote, NewCalendarNote } from '@/lib/types'
-import { createMessage, NewMessage } from './chat-db'
+import { createMessage } from '@/lib/supabase/persistence'
 
 /**
  * Retrieves notes for a specific date and chat session.
@@ -90,16 +90,16 @@ export async function saveNote(noteData: NewCalendarNote | CalendarNote): Promis
                 .returning();
 
             if (newNote && newNote.chatId) {
-                const calendarContextMessage: NewMessage = {
-                    chatId: newNote.chatId,
-                    userId: userId,
-                    role: 'data',
+                const calendarContextMessage = {
+                    chat_id: newNote.chatId,
+                    user_id: userId,
+                    role: 'data' as any,
                     content: JSON.stringify({
                         type: 'calendar_note',
                         note: newNote,
                     }),
                 };
-                await createMessage(calendarContextMessage);
+                await createMessage(calendarContextMessage as any);
             }
 
             return newNote;

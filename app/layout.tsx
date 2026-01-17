@@ -15,7 +15,11 @@ import { ProfileToggleProvider } from '@/components/profile-toggle-context'
 import { CalendarToggleProvider } from '@/components/calendar-toggle-context'
 import { MapLoadingProvider } from '@/components/map-loading-context';
 import ConditionalLottie from '@/components/conditional-lottie';
-import { MapProvider as MapContextProvider } from '@/components/map/map-context'
+import { MapProvider } from '@/components/map/map-context'
+import { getSupabaseUserAndSessionOnServer } from '@/lib/auth/get-current-user'
+
+// Force dynamic rendering since we check auth with cookies
+export const dynamic = 'force-dynamic'
 
 const fontSans = FontSans({
   subsets: ['latin'],
@@ -55,11 +59,14 @@ export const viewport: Viewport = {
   maximumScale: 1
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  // Check authentication and conditionally render the layout
+  const { user } = await getSupabaseUserAndSessionOnServer();
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body
@@ -69,30 +76,34 @@ export default function RootLayout({
           fontPoppins.variable
         )}
       >
-        <CalendarToggleProvider>
-          <MapToggleProvider>
-            <ProfileToggleProvider>
-              <ThemeProvider
-                attribute="class"
-              defaultTheme="earth"
-              enableSystem
-              disableTransitionOnChange
-              themes={['light', 'dark', 'earth']}
-            >
-              <MapContextProvider>
-                <MapLoadingProvider>
-                  <Header />
-                  <ConditionalLottie />
-                  {children}
-                  <Sidebar />
-                  <Footer />
-                  <Toaster />
-                </MapLoadingProvider>
-              </MapContextProvider>
-            </ThemeProvider>
-          </ProfileToggleProvider>
-        </MapToggleProvider>
-        </CalendarToggleProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="earth"
+          enableSystem
+          disableTransitionOnChange
+          themes={['light', 'dark', 'earth']}
+        >
+          {user ? (
+            <CalendarToggleProvider>
+              <MapToggleProvider>
+                <ProfileToggleProvider>
+                  <MapProvider>
+                    <MapLoadingProvider>
+                      <Header />
+                      <ConditionalLottie />
+                      {children}
+                      <Sidebar />
+                      <Footer />
+                      <Toaster />
+                    </MapLoadingProvider>
+                  </MapProvider>
+                </ProfileToggleProvider>
+              </MapToggleProvider>
+            </CalendarToggleProvider>
+          ) : (
+            children
+          )}
+        </ThemeProvider>
         <Analytics />
         <SpeedInsights />
       </body>
