@@ -16,6 +16,7 @@ import { CalendarToggleProvider } from '@/components/calendar-toggle-context'
 import { MapLoadingProvider } from '@/components/map-loading-context';
 import ConditionalLottie from '@/components/conditional-lottie';
 import { MapProvider as MapContextProvider } from '@/components/map/map-context'
+import { IOSInstallPrompt } from '@/components/pwa/ios-install-prompt'
 
 const fontSans = FontSans({
   subsets: ['latin'],
@@ -28,14 +29,22 @@ const fontPoppins = Poppins({
   weight: ['400', '500', '600', '700']
 })
 
-const title = ''
+const title = 'QCX - AI-powered Search'
 const description =
-  'language to Maps'
+  'A minimalistic AI-powered search tool that uses advanced models for deep analysis and geospatial data.'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.qcx.world'),
   title,
   description,
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'QCX',
+  },
+  formatDetection: {
+    telephone: false,
+  },
   openGraph: {
     title,
     description
@@ -52,7 +61,8 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   minimumScale: 1,
-  maximumScale: 1
+  maximumScale: 1,
+  themeColor: '#171717'
 }
 
 export default function RootLayout({
@@ -84,6 +94,7 @@ export default function RootLayout({
                   <Header />
                   <ConditionalLottie />
                   {children}
+                  <IOSInstallPrompt />
                   <Sidebar />
                   <Footer />
                   <Toaster />
