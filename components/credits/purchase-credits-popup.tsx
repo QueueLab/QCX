@@ -50,9 +50,10 @@ export function PurchaseCreditsPopup() {
   }, [user]);
 
   const handleUpgrade = (tier: string) => {
-      // Placeholder for upgrade logic
-      // In a real app, this would likely redirect to Stripe Checkout
-      console.log(`Upgrading to ${tier}`);
+      // Redirect to Stripe checkout
+      const stripeUrl = 'https://buy.stripe.com/3cIaEX3tRcur9EM7ss';
+      window.open(stripeUrl, '_blank');
+      setIsOpen(false);
   }
 
   const standardTier = TIER_CONFIGS[TIERS.STANDARD];
