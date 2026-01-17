@@ -10,7 +10,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/lib/auth/v0/use-auth';
+import { useCurrentUser } from '@/lib/auth/use-current-user';
 import { Check, Loader2 } from 'lucide-react';
 import { TIER_CONFIGS, TIERS, TierConfig } from '@/lib/utils/subscription';
 import { cn } from '@/lib/utils';
@@ -20,7 +20,7 @@ const COOLDOWN_DAYS = 7;
 const STORAGE_KEY = 'purchase_credits_popup_shown_date';
 
 export function PurchaseCreditsPopup() {
-  const { user } = useAuth();
+  const { user } = useCurrentUser();
   const [isOpen, setIsOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
 
