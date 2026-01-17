@@ -10,6 +10,8 @@ import { Sidebar } from '@/components/sidebar'
 import { Analytics } from "@vercel/analytics/next"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Toaster } from '@/components/ui/sonner'
+import { IosInstallPrompt } from '@/components/pwa/ios-install-prompt'
+import { SwRegistration } from '@/components/pwa/sw-registration'
 import { MapToggleProvider } from '@/components/map-toggle-context'
 import { ProfileToggleProvider } from '@/components/profile-toggle-context'
 import { CalendarToggleProvider } from '@/components/calendar-toggle-context'
@@ -36,6 +38,15 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://www.qcx.world'),
   title,
   description,
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'QCX'
+  },
+  icons: {
+    icon: '/icon-192.png',
+    apple: '/icon-192.png'
+  },
   openGraph: {
     title,
     description
@@ -87,6 +98,8 @@ export default function RootLayout({
                   <Sidebar />
                   <Footer />
                   <Toaster />
+                  <IosInstallPrompt />
+                  <SwRegistration />
                 </MapLoadingProvider>
               </MapContextProvider>
             </ThemeProvider>
