@@ -16,38 +16,36 @@ import { TIER_CONFIGS, TIERS, TierConfig } from '@/lib/utils/subscription';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 
-const COOLDOWN_DAYS = 7;
-const STORAGE_KEY = 'purchase_credits_popup_shown_date';
+// Use sessionStorage so it resets when the tab is closed, 
+// allowing the popup to show again on next visit/login.
+const STORAGE_KEY = 'purchase_credits_popup_shown_session';
 
 export function PurchaseCreditsPopup() {
-  const { user } = useCurrentUser();
+  const { user, loading: authLoading } = useCurrentUser();
   const [isOpen, setIsOpen] = React.useState(false);
-  const [loading, setLoading] = React.useState(false);
 
   React.useEffect(() => {
-    if (!user) return;
+    // If auth is still loading or no user, do nothing yet.
+    if (authLoading || !user) return;
 
-    const lastShownDateStr = localStorage.getItem(STORAGE_KEY);
-    const now = new Date();
-
-    if (lastShownDateStr) {
-      const lastShownDate = new Date(lastShownDateStr);
-      const diffTime = Math.abs(now.getTime() - lastShownDate.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-      if (diffDays < COOLDOWN_DAYS) {
-        return;
-      }
+    // Check if we already showed it this session
+    const alreadyShown = sessionStorage.getItem(STORAGE_KEY);
+    if (alreadyShown) {
+      console.log('Purchase popup already shown this session.');
+      return;
     }
 
+    console.log('Scheduling purchase popup...');
+    
     // Delay slightly to not interfere with initial load
     const timer = setTimeout(() => {
+      console.log('Showing purchase popup now.');
       setIsOpen(true);
-      localStorage.setItem(STORAGE_KEY, now.toISOString());
+      sessionStorage.setItem(STORAGE_KEY, 'true');
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [user]);
+  }, [user, authLoading]);
 
   const handleUpgrade = (tier: string) => {
       // Redirect to Stripe checkout
@@ -58,6 +56,8 @@ export function PurchaseCreditsPopup() {
 
   const standardTier = TIER_CONFIGS[TIERS.STANDARD];
   const freeTier = TIER_CONFIGS[TIERS.FREE];
+
+  if (!user) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
