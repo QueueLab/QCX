@@ -1,5 +1,5 @@
 // lib/agents/researcher.tsx
-import { createStreamableUI, createStreamableValue } from 'ai/rsc'
+import { createStreamableUI, createStreamableValue, getMutableAIState } from 'ai/rsc'
 import {
   CoreMessage,
   LanguageModel,
@@ -12,6 +12,7 @@ import { BotMessage } from '@/components/message'
 import { getTools } from './tools'
 import { getModel } from '../utils'
 import { MapProvider } from '@/lib/store/settings'
+import { nanoid } from 'nanoid'
 
 // This magic tag lets us write raw multi-line strings with backticks, arrows, etc.
 const raw = String.raw
@@ -74,15 +75,61 @@ These rules override all previous instructions.
 - "What is QCX-Terra" → "QCX-Terra is a model garden of pixel level precision geospatial foundational models for efficient land prediction from satellite images"
 `
 
+type ReasoningOptions = NonNullable<Parameters<typeof nonexperimental_streamText>[0]>['providerOptions'];
+
+function reasoningOptionsFor(modelName: string): ReasoningOptions {
+  const name = modelName.toLowerCase();
+  const opts: ReasoningOptions = {};
+
+  // Google / Gemini 3
+  if (name.includes('gemini-3')) {
+    opts.google = {
+      thinkingConfig: {
+        thinkingLevel: 'low',
+        includeThoughts: true,
+      },
+    };
+  }
+
+  // Anthropic (direct or via Bedrock)
+  if (name.includes('claude')) {
+    opts.anthropic = {
+      extendedThinking: {
+        includeThoughts: true,
+      },
+    } as any;
+  }
+
+  // OpenAI reasoning models (o1/o3)
+  if (name.startsWith('o1') || name.startsWith('o3')) {
+    opts.openai = {
+      reasoningEffort: 'low',
+    } as any;
+  }
+
+  // xAI Grok
+  if (name.includes('grok')) {
+    opts.xai = {
+      reasoning: {
+        enabled: true,
+      },
+    } as any;
+  }
+
+  return opts;
+}
+
 export async function researcher(
   dynamicSystemPrompt: string,
   uiStream: ReturnType<typeof createStreamableUI>,
   streamText: ReturnType<typeof createStreamableValue<string>>,
+  reasoningStream: ReturnType<typeof createStreamableValue<string>>,
   messages: CoreMessage[],
   mapProvider: MapProvider,
   useSpecificModel?: boolean
 ) {
   let fullResponse = ''
+  let reasoningResponse = ''
   let hasError = false
 
   const answerSection = (
@@ -104,12 +151,16 @@ export async function researcher(
     message.content.some(part => part.type === 'image')
   )
 
+  const model = (await getModel(hasImage)) as any;
+  const modelId = model.modelId || model.id || '';
+
   const result = await nonexperimental_streamText({
-    model: (await getModel(hasImage)) as LanguageModel,
+    model: model as LanguageModel,
     maxTokens: 4096,
     system: systemPromptToUse,
     messages,
     tools: getTools({ uiStream, fullResponse, mapProvider }),
+    providerOptions: reasoningOptionsFor(modelId),
   })
 
   uiStream.update(null) // remove spinner
@@ -128,7 +179,12 @@ export async function researcher(
           streamText.update(fullResponse)
         }
         break
-
+      case 'reasoning':
+        if (delta.textDelta) {
+          reasoningResponse += delta.textDelta
+          reasoningStream.update(reasoningResponse)
+        }
+        break
       case 'tool-call':
         toolCalls.push(delta)
         break
@@ -157,5 +213,21 @@ export async function researcher(
     messages.push({ role: 'tool', content: toolResponses })
   }
 
-  return { result, fullResponse, hasError, toolResponses }
+  if (reasoningResponse) {
+    const aiState = getMutableAIState()
+    aiState.update({
+      ...aiState.get(),
+      messages: [
+        ...aiState.get().messages,
+        {
+          id: nanoid(),
+          role: 'assistant',
+          content: reasoningResponse,
+          type: 'reasoning'
+        }
+      ]
+    })
+  }
+
+  return { result, fullResponse, hasError, toolResponses, reasoningResponse }
 }
