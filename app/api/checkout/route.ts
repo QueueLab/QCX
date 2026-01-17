@@ -3,7 +3,7 @@ import Stripe from 'stripe';
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user';
 
 // Ensure Stripe is initialized with the secret key
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_dummy', {
   apiVersion: '2025-12-15.clover' as any, // Use the specific version expected by the SDK
 });
 
