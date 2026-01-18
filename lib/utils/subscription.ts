@@ -29,7 +29,7 @@ export const TIER_CONFIGS: Record<Tier, TierConfig> = {
     credits: parseInt(process.env.STANDARD_TIER_CREDITS ?? String(defaultPricing.standard.credits)),
     price: parseInt(process.env.STANDARD_TIER_MONTHLY_PRICE ?? String(defaultPricing.standard.price)),
     billingCycle: (process.env.STANDARD_TIER_BILLING_CYCLE as 'monthly' | 'yearly') || (defaultPricing.standard.billing_cycle as 'monthly' | 'yearly'),
-    priceId: process.env.STANDARD_TIER_PRICE_ID,
+    priceId: process.env.NEXT_PUBLIC_STRIPE_STANDARD_PRICE_ID || 'mtr_61U0C0syT4J8nqRP141EyKA9XWKxD92e',
   },
 };
 

@@ -17,7 +17,7 @@ export function useCurrentUser() {
     }
 
     fetchUser();
-  }, [supabase.auth]);
+  }, [supabase]);
 
   return { user, loading };
 }

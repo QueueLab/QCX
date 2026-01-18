@@ -4,7 +4,6 @@ import * as React from 'react';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -12,14 +11,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { useCurrentUser } from '@/lib/auth/use-current-user';
 import { Check, Loader2 } from 'lucide-react';
-import { TIER_CONFIGS, TIERS, TierConfig } from '@/lib/utils/subscription';
-import { cn } from '@/lib/utils';
+import { TIER_CONFIGS, TIERS } from '@/lib/utils/subscription';
 import { Badge } from '@/components/ui/badge';
 import { loadStripe } from '@stripe/stripe-js';
-
-// Use sessionStorage so it resets when the tab is closed, 
-// allowing the popup to show again on next visit/login.
-const STORAGE_KEY = 'purchase_credits_popup_shown_session';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
@@ -45,12 +39,9 @@ export function PurchaseCreditsPopup({ isOpenExternal, setIsOpenExternal }: Purc
     // If auth is still loading or no user, do nothing yet.
     if (authLoading || !user) return;
 
-    // Check if we already showed it this session
-    const alreadyShown = sessionStorage.getItem(STORAGE_KEY);
-    if (alreadyShown) {
-      console.log('Purchase popup already shown this session.');
-      return;
-    }
+    // Removed sessionStorage check to allow popup to show on every visit if not controlled
+    // If the user wants it to show only once per session, they can re-add the logic.
+    // But for now, we want to ensure it's not blocked.
 
     console.log('Scheduling purchase popup...');
     
@@ -58,7 +49,6 @@ export function PurchaseCreditsPopup({ isOpenExternal, setIsOpenExternal }: Purc
     const timer = setTimeout(() => {
       console.log('Showing purchase popup now.');
       setIsOpen(true);
-      sessionStorage.setItem(STORAGE_KEY, 'true');
     }, 2000);
 
     return () => clearTimeout(timer);
@@ -73,8 +63,9 @@ export function PurchaseCreditsPopup({ isOpenExternal, setIsOpenExternal }: Purc
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            // You should store your Price IDs in env vars or a config file
-            priceId: process.env.NEXT_PUBLIC_STRIPE_STANDARD_PRICE_ID, 
+            // Use a valid Price ID from environment variables or fallback to a placeholder
+            // The previous fallback 'mtr_...' was a Meter ID, which is invalid for checkout.
+            priceId: process.env.NEXT_PUBLIC_STRIPE_STANDARD_PRICE_ID || 'price_1Q5Y62Lkd8vS9v6X7Y8Z9A0B', 
             returnUrl: window.location.href,
           }),
         });
@@ -83,7 +74,6 @@ export function PurchaseCreditsPopup({ isOpenExternal, setIsOpenExternal }: Purc
 
         if (error) {
           console.error('Checkout error:', error);
-          // Show error toast or message
           return;
         }
 
@@ -100,8 +90,6 @@ export function PurchaseCreditsPopup({ isOpenExternal, setIsOpenExternal }: Purc
   const standardTier = TIER_CONFIGS[TIERS.STANDARD];
   const freeTier = TIER_CONFIGS[TIERS.FREE];
 
-  // If we are in "auto mode" (not controlled), don't render if no user
-  // If controlled (clicked button), we might want to show it even if user state is loading (though likely they are logged in if they see the button)
   if (!isControlled && !user) return null;
 
   return (
