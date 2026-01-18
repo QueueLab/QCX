@@ -1,12 +1,13 @@
 'use client'
 
-import React, { useEffect, useState, useTransition } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useChat } from 'ai/react'
-import { toast } from 'sonner'
-import { Spinner } from '@/components/ui/spinner'
-import { type AIMessage, type Chat } from '@/lib/types'
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser-client'
+import { type AIMessage } from '@/lib/types'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Send } from 'lucide-react'
 
 interface ChatProps {
   id: string
@@ -14,10 +15,14 @@ interface ChatProps {
 }
 
 export function Chat({ id, initialMessages = [] }: ChatProps) {
-  const [messages, setMessages] = useState<AIMessage[]>(initialMessages)
+  const { messages, input, handleInputChange, handleSubmit, setMessages } = useChat({
+    api: '/api/chat',
+    id,
+    initialMessages: initialMessages as any,
+  })
+  
   const [onlineUsers, setOnlineUsers] = useState<string[]>([])
   const supabase = getSupabaseBrowserClient()
-  const router = useRouter()
 
   useEffect(() => {
     const channel = supabase.channel(`chat:${id}`)
@@ -26,8 +31,8 @@ export function Chat({ id, initialMessages = [] }: ChatProps) {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_id=eq.${id}` },
        (payload: any) => {
         const newMessage = payload.new as AIMessage;
-        setMessages((prevMessages: AIMessage[]) => {
-          if (prevMessages.some((m: AIMessage) => m.id === newMessage.id)) {
+        setMessages((prevMessages: any) => {
+          if (prevMessages.some((m: any) => m.id === newMessage.id)) {
             return prevMessages;
           }
           return [...prevMessages, newMessage];
@@ -47,7 +52,7 @@ export function Chat({ id, initialMessages = [] }: ChatProps) {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [id, supabase])
+  }, [id, supabase, setMessages])
 
   const renderContent = (content: any) => {
     if (typeof content === 'string') return content;
@@ -72,7 +77,17 @@ export function Chat({ id, initialMessages = [] }: ChatProps) {
         ))}
       </div>
       <div className="p-4 border-t">
-         {/* Chat input would go here */}
+         <form onSubmit={handleSubmit} className="flex gap-2 mb-2">
+           <Input
+             value={input}
+             onChange={handleInputChange}
+             placeholder="Type a message..."
+             className="flex-1"
+           />
+           <Button type="submit" size="icon">
+             <Send className="h-4 w-4" />
+           </Button>
+         </form>
          <div className="text-xs text-muted-foreground">
             Online users: {onlineUsers.length}
          </div>

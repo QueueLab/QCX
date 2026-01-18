@@ -56,13 +56,16 @@ export async function GET(request: Request) {
           // If user doesn't exist, we insert them. PGRST116 means no row found
           if (!existingUser || (fetchError && fetchError.code === 'PGRST116')) {
              console.log('[Auth Callback] Initializing new user:', user.id);
+             
+             // Get free tier credits from config
+             const freeTierCredits = TIER_CONFIGS[TIERS.FREE].credits;
+             
              // Create new user entry
              const { error: insertError } = await supabase.from('users').insert({
                 id: user.id,
                 email: user.email,
-                credits: 0, // Start with 0 or free tier credits
-                tier: 'free',
-                // Add other default fields if necessary
+                credits: freeTierCredits,
+                tier: TIERS.FREE,
              });
              
              if (insertError) {

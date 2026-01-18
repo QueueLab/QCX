@@ -17,7 +17,7 @@ export function useCurrentUser() {
     }
 
     fetchUser();
-  }, []);
+  }, [supabase]);
 
   return { user, loading };
 }
