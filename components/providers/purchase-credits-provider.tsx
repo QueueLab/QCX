@@ -3,6 +3,15 @@
 import React from 'react';
 import { PurchaseCreditsPopup } from '@/components/credits/purchase-credits-popup';
 
-export function PurchaseCreditsProvider() {
-  return <PurchaseCreditsPopup />;
+interface PurchaseCreditsProviderProps {
+  children: React.ReactNode;
+}
+
+export function PurchaseCreditsProvider({ children }: PurchaseCreditsProviderProps) {
+  return (
+    <>
+      {children}
+      <PurchaseCreditsPopup />
+    </>
+  );
 }

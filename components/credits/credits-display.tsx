@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/lib/auth/v0/use-auth';
+import { useCurrentUser } from '@/lib/auth/use-current-user';
 import { Loader2 } from 'lucide-react';
 
 interface CreditsDisplayProps {
@@ -11,7 +11,7 @@ interface CreditsDisplayProps {
 }
 
 export function CreditsDisplay({ className }: CreditsDisplayProps) {
-  const { user } = useAuth();
+  const { user } = useCurrentUser();
   const [credits, setCredits] = React.useState<number | null>(null);
   const [loading, setLoading] = React.useState(true);
 

@@ -74,7 +74,7 @@ export function PurchaseCreditsPopup({ isOpenExternal, setIsOpenExternal }: Purc
           },
           body: JSON.stringify({
             // You should store your Price IDs in env vars or a config file
-            priceId: process.env.NEXT_PUBLIC_STRIPE_STANDARD_PRICE_ID, 
+            priceId: process.env.NEXT_PUBLIC_STRIPE_STANDARD_PRICE_ID || 'mtr_61U0C0syT4J8nqRP141EyKA9XWKxD92e',
             returnUrl: window.location.href,
           }),
         });

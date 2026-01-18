@@ -90,13 +90,14 @@ export default async function RootLayout({
                 <ProfileToggleProvider>
                   <MapProvider>
                     <MapLoadingProvider>
-                      <Header />
-                      <ConditionalLottie />
-                      {children}
-                      <Sidebar />
-                      <PurchaseCreditsProvider />
-                      <Footer />
-                      <Toaster />
+                      <PurchaseCreditsProvider>
+                        <Header />
+                        <ConditionalLottie />
+                        {children}
+                        <Sidebar />
+                        <Footer />
+                        <Toaster />
+                      </PurchaseCreditsProvider>
                     </MapLoadingProvider>
                   </MapProvider>
                 </ProfileToggleProvider>

@@ -27,13 +27,13 @@ export async function getSupabaseUserAndSessionOnServer(): Promise<{
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       async get(name: string): Promise<string | undefined> {
-        const cookie = (await cookieStore).get(name); // Use the correct get method
-        return cookie?.value; // Return the value or undefined
+        const store = await cookieStore;
+        return store.get(name)?.value;
       },
       async set(name: string, value: string, options: CookieOptions): Promise<void> {
         try {
           const store = await cookieStore;
-          store.set({ name, value, ...options }); // Set cookie with options
+          store.set({ name, value, ...options });
         } catch (error) {
           // console.warn(`[Auth] Failed to set cookie ${name}:`, error);
         }
@@ -41,7 +41,7 @@ export async function getSupabaseUserAndSessionOnServer(): Promise<{
       async remove(name: string, options: CookieOptions): Promise<void> {
         try {
           const store = await cookieStore;
-          store.set({ name, value: '', ...options, maxAge: 0 }); // Delete cookie by setting maxAge to 0
+          store.set({ name, value: '', ...options, maxAge: 0 });
         } catch (error) {
           // console.warn(`[Auth] Failed to delete cookie ${name}:`, error);
         }
@@ -49,35 +49,22 @@ export async function getSupabaseUserAndSessionOnServer(): Promise<{
     },
   });
 
+  // getUser is more reliable for server-side checks as it verifies the JWT
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return { user: null, session: null, error: userError };
+  }
+
   const {
     data: { session },
-    error,
+    error: sessionError,
   } = await supabase.auth.getSession();
 
-  if (error) {
-    console.error('[Auth] Error getting Supabase session on server:', error.message);
-    return { user: null, session: null, error };
-  }
-
-  if (!session) {
-    // console.log('[Auth] No active Supabase session found.');
-    return { user: null, session: null, error: null };
-  }
-
-  // Log session details for debugging in development
-  if (process.env.NODE_ENV === 'development') {
-    try {
-      const store = await cookies();
-      const access = store.get('sb-access-token')?.value || store.get('sb:token')?.value || null;
-      const refresh = store.get('sb-refresh-token')?.value || null;
-      console.log('[Auth] Session found for user:', session.user.email, 'accessCookiePresent:', !!access, 'refreshCookiePresent:', !!refresh);
-    } catch (e) {
-      // best-effort logging, not fatal
-      console.warn('[Auth] Could not inspect cookie store for debug logging', e);
-    }
-  }
-
-  return { user: session.user, session, error: null };
+  return { user, session, error: sessionError };
 }
 
 /**
