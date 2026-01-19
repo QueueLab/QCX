@@ -8,7 +8,7 @@
     "dev": "next dev --turbo",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "db:migrate": "cross-env EXECUTE_MIGRATIONS=true bun lib/db/migrate.ts",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
