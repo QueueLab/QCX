@@ -9,6 +9,8 @@ import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock'
 import { createXai } from '@ai-sdk/xai';
 import { v4 as uuidv4 } from 'uuid';
 
+export * from './subscription';
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
