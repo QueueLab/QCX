@@ -34,7 +34,7 @@ export function UsageSidebar({ isOpen, onClose }: UsageSidebarProps) {
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="w-full sm:max-w-[400px] p-0 overflow-y-auto">
+      <SheetContent side="right" className="w-full sm:max-w-[400px] p-0 overflow-y-auto rounded-tl-xl rounded-bl-xl">
         <div className="p-6 space-y-6">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">Usage</h2>

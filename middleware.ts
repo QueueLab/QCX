@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
-export function middleware(request: NextRequest) {
+export default function middleware(request: NextRequest) {
   // If a request is forwarded (for example from a remote editor / codespace)
   // it may set `x-forwarded-host` that doesn't match `origin`. Next's
   // Server Actions will reject such requests. Normalize `origin` and strip

@@ -33,7 +33,7 @@ export function History({ location }: HistoryProps) {
           {location === 'header' ? <Menu /> : <Sprout size={16} />}
         </Button>
       </SheetTrigger>
-      <SheetContent className="w-64 rounded-tl-xl rounded-bl-xl" data-testid="history-panel">
+      <SheetContent side="left" className="w-64 rounded-tr-xl rounded-br-xl" data-testid="history-panel">
         <CreditsDisplay className="mb-4 mt-4" />
         <SheetHeader>
           <SheetTitle className="flex items-center gap-1 text-sm font-normal mb-2">
