@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useAuth } from '@/lib/auth/v0/use-auth';
+import { useCurrentUser } from '@/lib/auth/use-current-user';
 
 interface CreditsContextType {
   credits: number | null;
@@ -12,7 +12,7 @@ interface CreditsContextType {
 const CreditsContext = React.createContext<CreditsContextType | undefined>(undefined);
 
 export function CreditsProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { user } = useCurrentUser();
   const [credits, setCredits] = React.useState<number | null>(null);
   const [loading, setLoading] = React.useState(false);
 
