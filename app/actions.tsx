@@ -17,6 +17,7 @@ import { inquire, researcher, taskManager, querySuggestor, resolutionSearch } fr
 // The geospatialTool (if used by agents like researcher) now manages its own MCP client.
 import { writer } from '@/lib/agents/writer'
 import { saveChat, getSystemPrompt } from '@/lib/actions/chat' // Added getSystemPrompt
+import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
 import { retrieveContext } from '@/lib/actions/rag'
 import { Chat, AIMessage } from '@/lib/types'
 import { UserMessage } from '@/components/user-message'
@@ -324,7 +325,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     } as CoreMessage)
   }
 
-  const userId = 'anonymous'
+  const userId = (await getCurrentUserIdOnServer()) || 'anonymous'
   const currentSystemPrompt = (await getSystemPrompt(userId)) || ''
 
   const retrievedContext = userInput
@@ -544,7 +545,7 @@ export const AI = createAI<AIState, UIState>({
 
     const { chatId, messages } = state
 
-    const userId = 'anonymous'
+    const userId = (await getCurrentUserIdOnServer()) || 'anonymous'
 
     const lastMessage = messages[messages.length - 1]
     if (lastMessage && lastMessage.role === 'assistant' && done) {

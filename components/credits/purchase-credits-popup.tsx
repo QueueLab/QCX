@@ -27,23 +27,9 @@ export function PurchaseCreditsPopup() {
   React.useEffect(() => {
     if (!user) return;
 
-    const lastShownDateStr = localStorage.getItem(STORAGE_KEY);
-    const now = new Date();
-
-    if (lastShownDateStr) {
-      const lastShownDate = new Date(lastShownDateStr);
-      const diffTime = Math.abs(now.getTime() - lastShownDate.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-      if (diffDays < COOLDOWN_DAYS) {
-        return;
-      }
-    }
-
     // Delay slightly to not interfere with initial load
     const timer = setTimeout(() => {
       setIsOpen(true);
-      localStorage.setItem(STORAGE_KEY, now.toISOString());
     }, 2000);
 
     return () => clearTimeout(timer);

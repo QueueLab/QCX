@@ -4,8 +4,8 @@ import Image from 'next/image'
 import { useCalendarToggle } from './calendar-toggle-context'
 import { ModeToggle } from './mode-toggle'
 import { cn } from '@/lib/utils'
-import HistoryContainer from './history-container'
 import { Button } from '@/components/ui/button'
+import { History } from './history'
 import {
   Search,
   CircleUserRound,
@@ -33,18 +33,22 @@ export const Header = () => {
       </div>
       
       <div className="absolute left-1 flex items-center">
-        <Button variant="ghost" size="icon">
-          <Image
-            src="/images/logo.svg"
-            alt="Logo"
-            width={20}
-            height={20}
-            className="h-5 w-auto"
-          />
-        </Button>
-        <h1 className="text-2xl font-poppins font-semibold text-primary">
-          QCX
-        </h1>
+        <History location="header">
+          <div className="flex items-center cursor-pointer group">
+            <Button variant="ghost" size="icon" className="group-hover:bg-accent">
+              <Image
+                src="/images/logo.svg"
+                alt="Logo"
+                width={20}
+                height={20}
+                className="h-5 w-auto"
+              />
+            </Button>
+            <h1 className="text-2xl font-poppins font-semibold text-primary group-hover:text-primary/80 transition-colors">
+              QCX
+            </h1>
+          </div>
+        </History>
       </div>
       
       <div className="w-1/2 gap-20 hidden md:flex justify-between px-10 items-center z-10">
@@ -64,8 +68,6 @@ export const Header = () => {
         </Button>
         
         <ModeToggle />
-        
-        <HistoryContainer location="header" />
       </div>
 
       {/* Mobile menu buttons */}

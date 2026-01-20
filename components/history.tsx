@@ -16,22 +16,27 @@ import { CreditsDisplay } from './credits/credits-display'
 
 type HistoryProps = {
   location: 'sidebar' | 'header'
+  children?: React.ReactNode
 }
 
-export function History({ location }: HistoryProps) {
+export function History({ location, children }: HistoryProps) {
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className={cn({
-            'rounded-full text-foreground/30': location === 'sidebar'
-          })}
-          data-testid="history-button"
-        >
-          {location === 'header' ? <Menu /> : <Sprout size={16} />}
-        </Button>
+        {children ? (
+          children
+        ) : (
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn({
+              'rounded-full text-foreground/30': location === 'sidebar'
+            })}
+            data-testid="history-button"
+          >
+            {location === 'header' ? <Menu /> : <Sprout size={16} />}
+          </Button>
+        )}
       </SheetTrigger>
       <SheetContent side="left" className="w-64 rounded-tr-xl rounded-br-xl" data-testid="history-panel">
         <CreditsDisplay className="mb-4 mt-4" />

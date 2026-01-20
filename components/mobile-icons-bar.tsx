@@ -19,6 +19,8 @@ import { MapToggle } from './map-toggle'
 import { ModeToggle } from './mode-toggle'
 import { ProfileToggle } from './profile-toggle'
 import { useCalendarToggle } from './calendar-toggle-context'
+import { UsageSidebar } from './usage-sidebar'
+import { useState } from 'react'
 
 interface MobileIconsBarProps {
   onAttachmentClick: () => void;
@@ -29,6 +31,7 @@ export const MobileIconsBar: React.FC<MobileIconsBarProps> = ({ onAttachmentClic
   const [, setMessages] = useUIState<typeof AI>()
   const { clearChat } = useActions()
   const { toggleCalendar } = useCalendarToggle()
+  const [isUsageOpen, setIsUsageOpen] = useState(false)
 
   const handleNewChat = async () => {
     setMessages([])
@@ -48,11 +51,10 @@ export const MobileIconsBar: React.FC<MobileIconsBarProps> = ({ onAttachmentClic
       <Button variant="ghost" size="icon" data-testid="mobile-search-button">
         <Search className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>
-      <a href="https://buy.stripe.com/3cIaEX3tRcur9EM7tbasg00" target="_blank" rel="noopener noreferrer">
-        <Button variant="ghost" size="icon">
-          <TentTree className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
-        </Button>
-      </a>
+      <Button variant="ghost" size="icon" onClick={() => setIsUsageOpen(true)}>
+        <TentTree className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
+      </Button>
+      <UsageSidebar isOpen={isUsageOpen} onClose={() => setIsUsageOpen(false)} />
       <Button variant="ghost" size="icon" onClick={onAttachmentClick} data-testid="mobile-attachment-button">
         <Paperclip className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>
