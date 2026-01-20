@@ -15,10 +15,24 @@ import {
 } from 'lucide-react'
 import { MapToggle } from './map-toggle'
 import { ProfileToggle } from './profile-toggle'
+import { PurchaseCreditsPopup } from './purchase-credits-popup'
+import { UsageSidebar } from './usage-sidebar'
+import { useState, useEffect } from 'react'
 
 export const Header = () => {
   const { toggleCalendar } = useCalendarToggle()
+  const [isPurchaseOpen, setIsPurchaseOpen] = useState(false)
+  const [isUsageOpen, setIsUsageOpen] = useState(false)
+
+  useEffect(() => {
+    // Open payment popup as soon as application opens
+    setIsPurchaseOpen(true)
+  }, [])
+
   return (
+    <>
+      <PurchaseCreditsPopup isOpen={isPurchaseOpen} onClose={() => setIsPurchaseOpen(false)} />
+      <UsageSidebar isOpen={isUsageOpen} onClose={() => setIsUsageOpen(false)} />
     <header className="fixed w-full p-1 md:p-2 flex justify-between items-center z-20 backdrop-blur bg-background/95 border-b border-border/40">
       <div>
         <a href="/">
@@ -53,11 +67,9 @@ export const Header = () => {
         
         <div id="header-search-portal" />
         
-        <a href="https://buy.stripe.com/3cIaEX3tRcur9EM7tbasg00" target="_blank" rel="noopener noreferrer">
-          <Button variant="ghost" size="icon">
-            <TentTree className="h-[1.2rem] w-[1.2rem]" />
-          </Button>
-        </a>
+        <Button variant="ghost" size="icon" onClick={() => setIsUsageOpen(true)}>
+          <TentTree className="h-[1.2rem] w-[1.2rem]" />
+        </Button>
         
         <ModeToggle />
         
@@ -67,14 +79,13 @@ export const Header = () => {
       {/* Mobile menu buttons */}
       <div className="flex md:hidden gap-2">
         
-        <a href="https://buy.stripe.com/3cIaEX3tRcur9EM7tbasg00" target="_blank" rel="noopener noreferrer">
-          <Button variant="ghost" size="icon">
-            <TentTree className="h-[1.2rem] w-[1.2rem]" />
-          </Button>
-        </a>
+        <Button variant="ghost" size="icon" onClick={() => setIsUsageOpen(true)}>
+          <TentTree className="h-[1.2rem] w-[1.2rem]" />
+        </Button>
         <ProfileToggle/>
       </div>
     </header>
+    </>
   )
 }
 
