@@ -15,23 +15,15 @@ import {
 } from 'lucide-react'
 import { MapToggle } from './map-toggle'
 import { ProfileToggle } from './profile-toggle'
-import { PurchaseCreditsPopup } from './purchase-credits-popup'
 import { UsageSidebar } from './usage-sidebar'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 
 export const Header = () => {
   const { toggleCalendar } = useCalendarToggle()
-  const [isPurchaseOpen, setIsPurchaseOpen] = useState(false)
   const [isUsageOpen, setIsUsageOpen] = useState(false)
-
-  useEffect(() => {
-    // Open payment popup as soon as application opens
-    setIsPurchaseOpen(true)
-  }, [])
 
   return (
     <>
-      <PurchaseCreditsPopup isOpen={isPurchaseOpen} onClose={() => setIsPurchaseOpen(false)} />
       <UsageSidebar isOpen={isUsageOpen} onClose={() => setIsUsageOpen(false)} />
     <header className="fixed w-full p-1 md:p-2 flex justify-between items-center z-20 backdrop-blur bg-background/95 border-b border-border/40">
       <div>
