@@ -325,7 +325,10 @@ async function submit(formData?: FormData, skip?: boolean) {
     } as CoreMessage)
   }
 
-  const userId = (await getCurrentUserIdOnServer()) || 'anonymous'
+  const userId = await getCurrentUserIdOnServer()
+  if (!userId) {
+    throw new Error('Unauthorized')
+  }
   const currentSystemPrompt = (await getSystemPrompt(userId)) || ''
 
   const retrievedContext = userInput
@@ -545,7 +548,11 @@ export const AI = createAI<AIState, UIState>({
 
     const { chatId, messages } = state
 
-    const userId = (await getCurrentUserIdOnServer()) || 'anonymous'
+    const userId = await getCurrentUserIdOnServer()
+
+    if (!userId) {
+      return
+    }
 
     const lastMessage = messages[messages.length - 1]
     if (lastMessage && lastMessage.role === 'assistant' && done) {

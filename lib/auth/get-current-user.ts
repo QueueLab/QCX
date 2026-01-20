@@ -50,34 +50,23 @@ export async function getSupabaseUserAndSessionOnServer(): Promise<{
   });
 
   const {
-    data: { session },
+    data: { user },
     error,
-  } = await supabase.auth.getSession();
+  } = await supabase.auth.getUser();
 
   if (error) {
-    console.error('[Auth] Error getting Supabase session on server:', error.message);
+    console.error('[Auth] Error getting Supabase user on server:', error.message);
     return { user: null, session: null, error };
   }
 
-  if (!session) {
-    // console.log('[Auth] No active Supabase session found.');
+  if (!user) {
     return { user: null, session: null, error: null };
   }
 
-  // Log session details for debugging in development
-  if (process.env.NODE_ENV === 'development') {
-    try {
-      const store = await cookies();
-      const access = store.get('sb-access-token')?.value || store.get('sb:token')?.value || null;
-      const refresh = store.get('sb-refresh-token')?.value || null;
-      console.log('[Auth] Session found for user:', session.user.email, 'accessCookiePresent:', !!access, 'refreshCookiePresent:', !!refresh);
-    } catch (e) {
-      // best-effort logging, not fatal
-      console.warn('[Auth] Could not inspect cookie store for debug logging', e);
-    }
-  }
+  // Best effort to get session if needed, but we mainly care about the user
+  const { data: { session } } = await supabase.auth.getSession();
 
-  return { user: session.user, session, error: null };
+  return { user, session, error: null };
 }
 
 /**
