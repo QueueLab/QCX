@@ -595,9 +595,14 @@ export const getUIStateFromAIState = (aiState: Chat) => {
               let messageContent: string | any[]
               try {
                 // For backward compatibility with old messages that stored a JSON string
-                const json = JSON.parse(content as string)
-                messageContent =
-                  type === 'input' ? json.input : json.related_query
+                const parsed = JSON.parse(content as string)
+                if (Array.isArray(parsed)) {
+                  messageContent = parsed
+                } else if (typeof parsed === 'object' && parsed !== null) {
+                  messageContent = type === 'input' ? parsed.input : parsed.related_query
+                } else {
+                  messageContent = parsed
+                }
               } catch (e) {
                 // New messages will store the content array or string directly
                 messageContent = content

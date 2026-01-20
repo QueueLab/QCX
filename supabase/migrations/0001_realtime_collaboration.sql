@@ -34,6 +34,12 @@ CREATE POLICY "Only owners can insert participants"
         (SELECT role FROM public.chat_participants
          WHERE chat_id = chat_participants.chat_id
            AND user_id = auth.uid()) = 'owner'
+        OR
+        EXISTS (
+            SELECT 1 FROM public.chats
+            WHERE id = chat_participants.chat_id
+              AND user_id = auth.uid()
+        )
     );
 
 -- Only the owner can UPDATE participants (e.g. change role)
@@ -84,6 +90,13 @@ CREATE POLICY "Participants can view their chats" ON public.chats
 
 CREATE POLICY "Participants can update chat metadata" ON public.chats
     FOR UPDATE USING (
+        EXISTS (
+            SELECT 1 FROM public.chat_participants
+            WHERE chat_participants.chat_id = chats.id
+              AND chat_participants.user_id = auth.uid()
+        )
+    )
+    WITH CHECK (
         EXISTS (
             SELECT 1 FROM public.chat_participants
             WHERE chat_participants.chat_id = chats.id

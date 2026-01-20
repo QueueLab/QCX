@@ -18,6 +18,7 @@ import ConditionalLottie from '@/components/conditional-lottie';
 import { MapProvider } from '@/components/map/map-context'
 import { getSupabaseUserAndSessionOnServer } from '@/lib/auth/get-current-user'
 import { PurchaseCreditsPopup } from '@/components/credits/purchase-credits-popup';
+import { CreditsProvider } from '@/components/credits/credits-provider';
 
 // Force dynamic rendering since we check auth with cookies
 export const dynamic = 'force-dynamic'
@@ -90,11 +91,13 @@ export default async function RootLayout({
                 <ProfileToggleProvider>
                   <MapProvider>
                     <MapLoadingProvider>
+                      <CreditsProvider>
                       <Header />
                       <ConditionalLottie />
                       {children}
                       <Sidebar />
                       <PurchaseCreditsPopup />
+                      </CreditsProvider>
                       <Footer />
                       <Toaster />
                     </MapLoadingProvider>

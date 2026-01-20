@@ -27,10 +27,12 @@ export async function getChats(userId?: string | null): Promise<Chat[]> {
       .select('*')
       .order('created_at', { ascending: false })
     
-    // Only filter by user_id if we have one (for testing without auth)
-    if (effectiveUserId) {
-      query = query.eq('user_id', effectiveUserId)
+    if (!effectiveUserId) {
+      console.warn('getChats: No authenticated user found.')
+      return []
     }
+
+    query = query.eq('user_id', effectiveUserId)
 
     const { data, error } = await query
 
@@ -104,7 +106,7 @@ export async function getChatMessages(chatId: string): Promise<any[]> {
 
 export async function clearChats(
   userId?: string | null
-): Promise<{ error?: string } | void> {
+): Promise<{ error?: string; success?: boolean } | void> {
   try {
     const currentUserId = userId || (await getCurrentUserIdOnServer())
     if (!currentUserId) {
@@ -121,7 +123,7 @@ export async function clearChats(
     }
 
     revalidatePath('/')
-    redirect('/')
+    return { success: true }
   } catch (error) {
     console.error('clearChats: Unexpected error:', error)
     return { error: 'An unexpected error occurred while clearing chats' }

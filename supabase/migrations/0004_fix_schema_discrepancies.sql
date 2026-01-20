@@ -16,9 +16,6 @@ ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE public.chats 
 ADD COLUMN IF NOT EXISTS shareable_link_id UUID UNIQUE DEFAULT gen_random_uuid();
 
--- Create index for shareable_link_id lookups
-CREATE INDEX IF NOT EXISTS idx_chats_shareable_link ON public.chats(shareable_link_id);
-
 -- =============================================
 -- 2. Fix chat_participants Table Schema
 -- =============================================
@@ -148,7 +145,7 @@ BEGIN
     ON CONFLICT (chat_id, user_id) DO NOTHING;
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp;
 
 DROP TRIGGER IF EXISTS trigger_make_creator_owner ON public.chats;
 CREATE TRIGGER trigger_make_creator_owner

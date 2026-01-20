@@ -28,6 +28,7 @@ export function UserManagementForm({ form, chatId }: UserManagementFormProps) {
   const handleAddUser = async () => {
     setIsAddingUser(true);
     const newUserEmail = form.getValues("newUserEmail");
+    const newUserRole = form.getValues("newUserRole") as 'owner' | 'collaborator';
 
     if (!newUserEmail) {
       form.setError("newUserEmail", { type: "manual", message: "Email is required." });
@@ -43,7 +44,7 @@ export function UserManagementForm({ form, chatId }: UserManagementFormProps) {
     form.clearErrors("newUserEmail");
 
     try {
-      const result = await inviteUserToChat(chatId, newUserEmail);
+      const result = await inviteUserToChat(chatId, newUserEmail, newUserRole);
 
       if (result.error) {
         toast({ title: 'Error adding user', description: result.error, variant: 'destructive' });

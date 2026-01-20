@@ -12,11 +12,13 @@ if (!connectionString) {
   throw new Error('DATABASE_URL environment variable is not set')
 }
 
+const ssl = connectionString.includes('supabase.co')
+  ? { rejectUnauthorized: false }
+  : undefined
+
 const pool = new Pool({
   connectionString,
-  ssl: {
-    rejectUnauthorized: false,
-  },
+  ssl,
 })
 
 export const db = drizzle(pool, { schema })

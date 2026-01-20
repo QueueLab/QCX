@@ -3,7 +3,7 @@
 import { getSupabaseServerClient, getSupabaseServiceClient } from '@/lib/supabase/client'
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
 
-export async function inviteUserToChat(chatId: string, email: string): Promise<{ error?: string }> {
+export async function inviteUserToChat(chatId: string, email: string, role: 'owner' | 'collaborator' = 'collaborator'): Promise<{ error?: string }> {
   try {
     const supabase = getSupabaseServerClient()
     const inviterId = await getCurrentUserIdOnServer()
@@ -24,6 +24,11 @@ export async function inviteUserToChat(chatId: string, email: string): Promise<{
       return { error: 'You do not have permission to invite users to this chat.' }
     }
 
+    // Only owners can assign the 'owner' role
+    if (role === 'owner' && ownerData.role !== 'owner') {
+        return { error: 'Only owners can assign the owner role.' }
+    }
+
     // Get the user ID of the person being invited using admin client
     const adminClient = getSupabaseServiceClient()
     const { data: { users }, error: userError } = await adminClient.auth.admin.listUsers()
@@ -41,7 +46,7 @@ export async function inviteUserToChat(chatId: string, email: string): Promise<{
     // Add the user to the chat_participants table
     const { error: insertError } = await supabase
       .from('chat_participants')
-      .insert({ chat_id: chatId, user_id: invitedUser.id, role: 'collaborator' })
+      .insert({ chat_id: chatId, user_id: invitedUser.id, role: role })
 
     if (insertError) {
       console.error('Error inviting user to chat:', insertError)

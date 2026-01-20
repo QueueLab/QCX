@@ -39,6 +39,10 @@ export async function retrieveContext(
       return []
     }
 
+    if (!Array.isArray(searchData)) {
+      return []
+    }
+
     return searchData.map((result: any) => result.content_snippet)
   } catch (error) {
     console.error('retrieveContext: Unexpected error:', error)

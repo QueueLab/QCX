@@ -10,29 +10,11 @@ interface CreditsDisplayProps {
   className?: string;
 }
 
+import { useCredits } from './credits-provider';
+
 export function CreditsDisplay({ className }: CreditsDisplayProps) {
   const { user } = useAuth();
-  const [credits, setCredits] = React.useState<number | null>(null);
-  const [loading, setLoading] = React.useState(true);
-
-  React.useEffect(() => {
-    async function fetchCredits() {
-        if (!user) return;
-        try {
-            const response = await fetch('/api/user/credits');
-            if (response.ok) {
-                const data = await response.json();
-                setCredits(data.credits);
-            }
-        } catch (error) {
-            console.error("Failed to fetch credits", error);
-        } finally {
-            setLoading(false);
-        }
-    }
-
-    fetchCredits();
-  }, [user]);
+  const { credits, loading } = useCredits();
 
   if (!user) return null;
 

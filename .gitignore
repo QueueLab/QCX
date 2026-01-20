@@ -27,12 +27,17 @@ out/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Lock files
 bun.lockb
 
 # Testing
 playwright-report/
 test-results/
 coverage/
+
+# Supabase local CLI state
+supabase/.temp/
 
 # Misc
 .vercel/

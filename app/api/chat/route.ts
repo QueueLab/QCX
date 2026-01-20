@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
       userId: userId,
       title: title || 'New Chat',
       createdAt: new Date(),
-      path: `/chat/${chatId}`,
+      path: `/search/${chatId}`,
       messages: [
         {
           id: uuidv4(),

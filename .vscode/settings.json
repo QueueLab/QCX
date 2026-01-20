@@ -1,5 +1,4 @@
 {
     "editor.formatOnSave": true,
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "IDX.corgiMode": true
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
 }

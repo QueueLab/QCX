@@ -26,9 +26,18 @@ export const TIER_CONFIGS: Record<Tier, TierConfig> = {
   },
   [TIERS.STANDARD]: {
     name: defaultPricing.standard.name,
-    credits: parseInt(process.env.STANDARD_TIER_CREDITS ?? String(defaultPricing.standard.credits)),
-    price: parseInt(process.env.STANDARD_TIER_MONTHLY_PRICE ?? String(defaultPricing.standard.price)),
-    billingCycle: (process.env.STANDARD_TIER_BILLING_CYCLE as 'monthly' | 'yearly') || (defaultPricing.standard.billing_cycle as 'monthly' | 'yearly'),
+    credits: (() => {
+      const val = parseInt(process.env.STANDARD_TIER_CREDITS ?? '');
+      return !isNaN(val) && val > 0 ? val : defaultPricing.standard.credits;
+    })(),
+    price: (() => {
+      const val = parseInt(process.env.STANDARD_TIER_MONTHLY_PRICE ?? '');
+      return !isNaN(val) && val > 0 ? val : defaultPricing.standard.price;
+    })(),
+    billingCycle: (() => {
+      const val = process.env.STANDARD_TIER_BILLING_CYCLE;
+      return val === 'monthly' || val === 'yearly' ? val : (defaultPricing.standard.billing_cycle as 'monthly' | 'yearly');
+    })(),
     priceId: process.env.STANDARD_TIER_PRICE_ID,
   },
 };

@@ -71,4 +71,4 @@ This commit addresses critical security vulnerabilities and auth backend schema 
 ## Related Issues
 
 Addresses CodeRabbit review comments:
-- https://github.com/QueueLab/QCX/pull/327#issuecomment-3714336689
+- [CodeRabbit Review Comment](https://github.com/QueueLab/QCX/pull/327#issuecomment-3714336689)
