@@ -38,7 +38,7 @@ export function History({ location, children }: HistoryProps) {
           </Button>
         )}
       </SheetTrigger>
-      <SheetContent side="left" className="w-64 rounded-tr-xl rounded-br-xl" data-testid="history-panel">
+      <SheetContent side="right" className="w-64 rounded-tl-xl rounded-bl-xl" data-testid="history-panel">
         <CreditsDisplay className="mb-4 mt-4" />
         <SheetHeader>
           <SheetTitle className="flex items-center gap-1 text-sm font-normal mb-2">

@@ -209,11 +209,11 @@ export function Chat({ id }: ChatProps) {
       <div className="flex justify-start items-start">
         {/* This is the new div for scrolling */}
         <div className="w-1/2 flex flex-col space-y-3 md:space-y-4 px-8 sm:px-12 pt-16 md:pt-20 pb-4 h-[calc(100vh-0.5in)] overflow-y-auto">
-        <CreditsDisplay className="mb-2" />
         {isCalendarOpen ? (
           <CalendarNotepad chatId={id} />
         ) : (
           <>
+            <CreditsDisplay className="mb-2" />
             <ChatPanel 
               ref={chatPanelRef}
               messages={messages} 
