@@ -152,6 +152,23 @@ export async function saveChat(chat: Chat, userId: string): Promise<string | nul
       return null
     }
 
+    // Ensure user exists in the database before saving chat
+    const { db } = await import('@/lib/db');
+    const { users } = await import('@/lib/db/schema');
+    const { eq } = await import('drizzle-orm');
+    
+    const dbUser = await db.query.users.findFirst({
+      where: eq(users.id, effectiveUserId)
+    });
+
+    if (!dbUser) {
+      await db.insert(users).values({
+        id: effectiveUserId,
+        credits: 0,
+        tier: 'free'
+      });
+    }
+
     const { data, error } = await supabaseSaveChat(chat, effectiveUserId)
 
     if (error) {
