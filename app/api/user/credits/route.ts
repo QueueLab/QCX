@@ -21,18 +21,15 @@ export async function GET(req: NextRequest) {
     }
 
     // Get user from database
-    let dbUser = await db.query.users.findFirst({
+    const dbUser = await db.query.users.findFirst({
       where: eq(users.id, user.id)
     });
 
     if (!dbUser) {
-      // Create user if they don't exist in the database
-      const [newUser] = await db.insert(users).values({
-        id: user.id,
-        credits: 0,
-        tier: 'free'
-      }).returning();
-      dbUser = newUser;
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
     }
 
     const tier = parseTier(dbUser.tier);

@@ -132,47 +132,15 @@ export async function clearChats(
 
 export async function saveChat(chat: Chat, userId: string): Promise<string | null> {
   try {
-    const effectiveUserId = userId || chat.userId
-    
-    if (!effectiveUserId) {
+    if (!userId && !chat.userId) {
       console.error('saveChat: userId is required either as a parameter or in chat object.')
       return null
     }
-
-    // Verify user is authenticated
-    const authenticatedUserId = await getCurrentUserIdOnServer()
-    if (!authenticatedUserId) {
-      console.error('saveChat: User must be authenticated to save chats')
-      return null
-    }
-
-    // Security check: ensure user can only save their own chats
-    if (authenticatedUserId !== effectiveUserId) {
-      console.error(`saveChat: User ${authenticatedUserId} attempting to save chat for different user ${effectiveUserId}`)
-      return null
-    }
-
-    // Ensure user exists in the database before saving chat
-    const { db } = await import('@/lib/db');
-    const { users } = await import('@/lib/db/schema');
-    const { eq } = await import('drizzle-orm');
-    
-    const dbUser = await db.query.users.findFirst({
-      where: eq(users.id, effectiveUserId)
-    });
-
-    if (!dbUser) {
-      await db.insert(users).values({
-        id: effectiveUserId,
-        credits: 0,
-        tier: 'free'
-      });
-    }
+    const effectiveUserId = userId || chat.userId
 
     const { data, error } = await supabaseSaveChat(chat, effectiveUserId)
 
     if (error) {
-      console.error('saveChat: Supabase error', error)
       return null
     }
     return data

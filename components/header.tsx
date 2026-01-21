@@ -11,8 +11,7 @@ import {
   CircleUserRound,
   Map,
   CalendarDays,
-  TentTree,
-  Sprout
+  TentTree
 } from 'lucide-react'
 import { MapToggle } from './map-toggle'
 import { ProfileToggle } from './profile-toggle'
@@ -33,10 +32,10 @@ export const Header = () => {
         </a>
       </div>
       
-      <div className="absolute left-1 flex items-center gap-1">
-        <div className="flex items-center group">
-          <a href="/" className="flex items-center cursor-pointer">
-            <Button variant="ghost" size="icon" className="group-hover:bg-accent">
+      <div className="absolute left-1 flex items-center">
+        <History location="header">
+          <button className="flex items-center cursor-pointer group outline-none">
+            <div className="p-2 group-hover:bg-accent rounded-md transition-colors">
               <Image
                 src="/images/logo.svg"
                 alt="Logo"
@@ -44,16 +43,11 @@ export const Header = () => {
                 height={20}
                 className="h-5 w-auto"
               />
-            </Button>
-            <h1 className="text-2xl font-poppins font-semibold text-primary group-hover:text-primary/80 transition-colors">
+            </div>
+            <h1 className="text-2xl font-poppins font-semibold text-primary group-hover:text-primary/80 transition-colors ml-1">
               QCX
             </h1>
-          </a>
-        </div>
-        <History location="header">
-          <Button variant="ghost" size="icon" className="text-primary hover:bg-accent" title="Chat History">
-            <Sprout className="h-5 w-5" />
-          </Button>
+          </button>
         </History>
       </div>
       
@@ -69,7 +63,7 @@ export const Header = () => {
         
         <div id="header-search-portal" />
         
-        <Button variant="ghost" size="icon" onClick={() => setIsUsageOpen(true)} title="Usage & Billing">
+        <Button variant="ghost" size="icon" onClick={() => setIsUsageOpen(true)}>
           <TentTree className="h-[1.2rem] w-[1.2rem]" />
         </Button>
         
@@ -79,7 +73,7 @@ export const Header = () => {
       {/* Mobile menu buttons */}
       <div className="flex md:hidden gap-2">
         
-        <Button variant="ghost" size="icon" onClick={() => setIsUsageOpen(true)} title="Usage & Billing">
+        <Button variant="ghost" size="icon" onClick={() => setIsUsageOpen(true)}>
           <TentTree className="h-[1.2rem] w-[1.2rem]" />
         </Button>
         <ProfileToggle/>

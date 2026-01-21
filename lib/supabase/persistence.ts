@@ -7,11 +7,6 @@ import { PostgrestError } from '@supabase/supabase-js'
 export async function saveChat(chat: Chat, userId: string): Promise<{ data: string | null; error: PostgrestError | null }> {
   const supabase = getSupabaseServerClient()
   
-  if (!userId) {
-    console.error('saveChat: userId is required')
-    return { data: null, error: { message: 'User ID is required' } as PostgrestError }
-  }
-
   // First, upsert the chat
   const { data: chatData, error: chatError } = await supabase
     .from('chats')
@@ -21,7 +16,9 @@ export async function saveChat(chat: Chat, userId: string): Promise<{ data: stri
       title: chat.title || 'Untitled Chat',
       visibility: 'private',
       created_at: chat.createdAt ? new Date(chat.createdAt).toISOString() : new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
+      path: chat.path,
+      share_path: chat.sharePath
     }, {
       onConflict: 'id'
     })
@@ -29,14 +26,7 @@ export async function saveChat(chat: Chat, userId: string): Promise<{ data: stri
     .single()
 
   if (chatError) {
-    console.error('Error saving chat:', {
-      message: chatError.message,
-      code: chatError.code,
-      details: chatError.details,
-      hint: chatError.hint,
-      userId,
-      chatId: chat.id
-    })
+    console.error('Error saving chat:', chatError)
     return { data: null, error: chatError }
   }
 
@@ -58,18 +48,11 @@ export async function saveChat(chat: Chat, userId: string): Promise<{ data: stri
       })
 
     if (messagesError) {
-      console.error('Error saving messages:', {
-        message: messagesError.message,
-        code: messagesError.code,
-        userId,
-        chatId: chat.id,
-        messageCount: messagesToInsert.length
-      })
+      console.error('Error saving messages:', messagesError)
       return { data: null, error: messagesError }
     }
   }
 
-  console.log(`Successfully saved chat ${chat.id} for user ${userId}`)
   return { data: chat.id, error: null }
 }
 

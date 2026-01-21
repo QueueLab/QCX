@@ -21,7 +21,6 @@ import { getSupabaseBrowserClient } from '@/lib/supabase/browser-client'
 import { type AIMessage, type Chat as ChatType } from '@/lib/types'
 import { nanoid } from 'nanoid'
 import { HeaderSearchButton } from './header-search-button'
-import { CreditsDisplay } from './credits/credits-display'
 
 type ChatProps = {
   id?: string // This is the chatId
@@ -152,7 +151,6 @@ export function Chat({ id }: ChatProps) {
           <MobileIconsBar onAttachmentClick={handleAttachment} onSubmitClick={handleMobileSubmit} />
         </div>
         <div className="mobile-chat-input-area">
-          <CreditsDisplay className="mb-2 px-4 pt-4" />
           <ChatPanel 
             ref={chatPanelRef} 
             messages={messages} 
@@ -213,7 +211,6 @@ export function Chat({ id }: ChatProps) {
           <CalendarNotepad chatId={id} />
         ) : (
           <>
-            <CreditsDisplay className="mb-2" />
             <ChatPanel 
               ref={chatPanelRef}
               messages={messages} 
