@@ -21,6 +21,7 @@ import { getSupabaseBrowserClient } from '@/lib/supabase/browser-client'
 import { type AIMessage, type Chat as ChatType } from '@/lib/types'
 import { nanoid } from 'nanoid'
 import { HeaderSearchButton } from './header-search-button'
+import { CreditsDisplay } from './credits/credits-display'
 
 type ChatProps = {
   id?: string // This is the chatId
@@ -151,6 +152,7 @@ export function Chat({ id }: ChatProps) {
           <MobileIconsBar onAttachmentClick={handleAttachment} onSubmitClick={handleMobileSubmit} />
         </div>
         <div className="mobile-chat-input-area">
+          <CreditsDisplay className="mb-2 px-4 pt-4" />
           <ChatPanel 
             ref={chatPanelRef} 
             messages={messages} 
@@ -207,6 +209,7 @@ export function Chat({ id }: ChatProps) {
       <div className="flex justify-start items-start">
         {/* This is the new div for scrolling */}
         <div className="w-1/2 flex flex-col space-y-3 md:space-y-4 px-8 sm:px-12 pt-16 md:pt-20 pb-4 h-[calc(100vh-0.5in)] overflow-y-auto">
+        <CreditsDisplay className="mb-2" />
         {isCalendarOpen ? (
           <CalendarNotepad chatId={id} />
         ) : (

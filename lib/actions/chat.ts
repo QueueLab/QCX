@@ -132,15 +132,30 @@ export async function clearChats(
 
 export async function saveChat(chat: Chat, userId: string): Promise<string | null> {
   try {
-    if (!userId && !chat.userId) {
+    const effectiveUserId = userId || chat.userId
+    
+    if (!effectiveUserId) {
       console.error('saveChat: userId is required either as a parameter or in chat object.')
       return null
     }
-    const effectiveUserId = userId || chat.userId
+
+    // Verify user is authenticated
+    const authenticatedUserId = await getCurrentUserIdOnServer()
+    if (!authenticatedUserId) {
+      console.error('saveChat: User must be authenticated to save chats')
+      return null
+    }
+
+    // Security check: ensure user can only save their own chats
+    if (authenticatedUserId !== effectiveUserId) {
+      console.error(`saveChat: User ${authenticatedUserId} attempting to save chat for different user ${effectiveUserId}`)
+      return null
+    }
 
     const { data, error } = await supabaseSaveChat(chat, effectiveUserId)
 
     if (error) {
+      console.error('saveChat: Supabase error', error)
       return null
     }
     return data
