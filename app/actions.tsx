@@ -95,7 +95,7 @@ async function submit(formData?: FormData, skip?: boolean) {
 
         let finalAnalysisResult: any = null;
         for await (const partialObject of result.partialObjects) {
-          if (partialObject?.summary) {
+          if (typeof partialObject?.summary === 'string') {
             summaryStream.update(partialObject.summary);
           }
           finalAnalysisResult = partialObject;
