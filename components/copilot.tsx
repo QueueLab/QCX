@@ -125,7 +125,7 @@ export const Copilot: React.FC<CopilotProps> = ({ inquiry }: CopilotProps) => {
     return (
       <Card className="p-4 rounded-lg w-full mx-auto">
         <div className="mb-4">
-          <p className="text-lg text-foreground text-semibold ml-2">
+          <p className="text-lg text-foreground font-semibold ml-2">
             {data?.question || value.question}
             
             
@@ -146,7 +146,7 @@ export const Copilot: React.FC<CopilotProps> = ({ inquiry }: CopilotProps) => {
                   }
                 />
                 <label
-                  className="text-sm whitespace-nowrap pr-4"
+                  className="text-sm pr-4"
                   htmlFor={option?.value}
                 >
                   {option?.label}
