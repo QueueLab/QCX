@@ -23,16 +23,24 @@ const resolutionSearchSchema = z.object({
   }).describe('A GeoJSON object containing points of interest and classified land features to be overlaid on the map.'),
 })
 
-export async function resolutionSearch(messages: CoreMessage[]) {
+export async function resolutionSearch(
+  messages: CoreMessage[],
+  locationContext?: { lat?: string; lng?: string; zoom?: string }
+) {
+  const locationInfo = locationContext?.lat && locationContext?.lng
+    ? `The image is centered at approximately Latitude: ${locationContext.lat}, Longitude: ${locationContext.lng}${locationContext.zoom ? ` with a zoom level of ${locationContext.zoom}` : ''}.`
+    : '';
+
   const systemPrompt = `
 As a geospatial analyst, your task is to analyze the provided satellite image of a geographic location.
+${locationInfo}
 Your analysis should be comprehensive and include the following components:
 
 1.  **Land Feature Classification:** Identify and describe the different types of land cover visible in the image (e.g., urban areas, forests, water bodies, agricultural fields).
 2.  **Points of Interest (POI):** Detect and name any significant landmarks, infrastructure (e.g., bridges, major roads), or notable buildings.
 3.  **Structured Output:** Return your findings in a structured JSON format. The output must include a 'summary' (a detailed text description of your analysis) and a 'geoJson' object. The GeoJSON should contain features (Points or Polygons) for the identified POIs and land classifications, with appropriate properties.
 
-Your analysis should be based solely on the visual information in the image and your general knowledge. Do not attempt to access external websites or perform web searches.
+Your analysis should be based solely on the visual information in the image, the provided coordinates, and your general knowledge. Do not attempt to access external websites or perform web searches.
 
 Analyze the user's prompt and the image to provide a holistic understanding of the location.
 `;

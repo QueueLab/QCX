@@ -25,13 +25,13 @@ export async function querySuggestor(
 
     "{
       "items": [
-        { "query": "What were the primary objectives achieved during Starship's third test flight?" },
-        { "query": "What factors contributed to the ultimate outcome of Starship's third test flight?" },
-        { "query": "How will the results of the third test flight influence SpaceX's future development plans for Starship?" }
+        { "query": "Achievements in third flight" },
+        { "query": "Flight outcome factors" },
+        { "query": "Future Starship plans" }
       ]
     }"
 
-    Aim to create queries that progressively delve into more specific aspects, implications, or adjacent topics related to the initial query. The goal is to anticipate the user's potential information needs and guide them towards a more comprehensive understanding of the subject matter.
+    Aim to create short, concise queries (ideally under 5-7 words) that progressively delve into more specific aspects, implications, or adjacent topics related to the initial query. The goal is to anticipate the user's potential information needs and guide them towards a more comprehensive understanding of the subject matter.
     Please match the language of the response to the user's language.`,
     messages,
     schema: relatedSchema

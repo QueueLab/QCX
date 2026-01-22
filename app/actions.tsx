@@ -84,10 +84,14 @@ async function submit(formData?: FormData, skip?: boolean) {
     // Create a streamable value for the summary.
     const summaryStream = createStreamableValue<string>();
 
+    const lat = formData?.get('lat') as string;
+    const lng = formData?.get('lng') as string;
+    const zoom = formData?.get('zoom') as string;
+
     async function processResolutionSearch() {
       try {
         // Call the simplified agent, which now returns data directly.
-        const analysisResult = await resolutionSearch(messages) as any;
+        const analysisResult = await resolutionSearch(messages, { lat, lng, zoom }) as any;
 
         // Mark the summary stream as done with the result.
         summaryStream.done(analysisResult.summary || 'Analysis complete.');

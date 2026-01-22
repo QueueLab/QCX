@@ -90,6 +90,21 @@ export function HeaderSearchButton() {
       formData.append('file', blob, 'map_capture.png')
       formData.append('action', 'resolution_search')
 
+      // Add map context for better location accuracy
+      if (mapProvider === 'mapbox' && map) {
+        const center = map.getCenter()
+        const zoom = map.getZoom()
+        formData.append('lat', center.lat.toString())
+        formData.append('lng', center.lng.toString())
+        formData.append('zoom', zoom.toString())
+      } else if (mapProvider === 'google' && mapData.cameraState) {
+        const { center } = mapData.cameraState
+        const zoom = Math.round(Math.log2(40000000 / (mapData.cameraState.range || 1)));
+        formData.append('lat', center.lat.toString())
+        formData.append('lng', center.lng.toString())
+        formData.append('zoom', zoom.toString())
+      }
+
       const responseMessage = await actions.submit(formData)
       setMessages(currentMessages => [...currentMessages, responseMessage as any])
     } catch (error) {
