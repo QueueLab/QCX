@@ -94,7 +94,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         const result = await resolutionSearch(messages, { lat, lng, zoom });
 
         let finalAnalysisResult: any = null;
-        for await (const partialObject of result.partialObjects) {
+        for await (const partialObject of result.partialObjectStream) {
           if (typeof partialObject?.summary === 'string') {
             summaryStream.update(partialObject.summary);
           }
