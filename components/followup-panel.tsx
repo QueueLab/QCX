@@ -3,36 +3,13 @@
 import { useState } from 'react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
-import { useActions, useUIState } from 'ai/rsc'
-// Removed import of useGeospatialToolMcp as it's no longer used/available
-import type { AI } from '@/app/actions'
-import { UserMessage } from './user-message'
 import { ArrowRight } from 'lucide-react'
 
 export function FollowupPanel() {
   const [input, setInput] = useState('')
-  const { submit } = useActions()
-  // Removed mcp instance as it's no longer passed to submit
-  const [, setMessages] = useUIState<typeof AI>()
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    const formData = new FormData(event.currentTarget as HTMLFormElement)
-
-    const userMessage = {
-      id: Date.now(),
-      isGenerating: false,
-      component: <UserMessage content={input} />
-    }
-
-    // Removed mcp argument from submit call
-    const responseMessage = await submit(formData)
-    setMessages(currentMessages => [
-      ...currentMessages,
-      userMessage,
-      responseMessage
-    ])
-
     setInput('')
   }
 
