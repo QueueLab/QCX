@@ -15,14 +15,16 @@ interface ChatPanelProps {
   input: string
   setInput: (value: string) => void
   onSuggestionsChange?: (suggestions: PartialRelated | null) => void
+  handleSubmit: (e: React.FormEvent<HTMLFormElement>) => void
 }
 
 export interface ChatPanelRef {
   handleAttachmentClick: () => void
   submitForm: () => void
+  setSelectedFile: (file: File | null) => void
 }
 
-export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, input, setInput, onSuggestionsChange }, ref) => {
+export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, input, setInput, onSuggestionsChange, handleSubmit }, ref) => {
   const { mapProvider } = useSettingsStore()
   const [isMobile, setIsMobile] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -41,6 +43,9 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     },
     submitForm() {
       formRef.current?.requestSubmit()
+    },
+    setSelectedFile(file: File | null) {
+        setSelectedFile(file)
     }
   }));
 
@@ -110,6 +115,12 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     inputRef.current?.focus()
   }, [])
 
+  const onLocalSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      handleSubmit(e);
+      clearAttachment();
+  }
+
   return (
     <div
       className={cn(
@@ -121,6 +132,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     >
       <form
         ref={formRef}
+        onSubmit={onLocalSubmit}
         className={cn(
           'max-w-full w-full',
           isMobile ? 'px-2 pb-2 pt-1 h-full flex flex-col justify-center' : ''

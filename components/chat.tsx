@@ -47,6 +47,7 @@ export function Chat({ id, initialMessages = [] }: ChatProps) {
   useEffect(() => {
     const handleResolutionSearch = (event: any) => {
       const { file } = event.detail;
+      chatPanelRef.current?.setSelectedFile(file);
       append({
         role: 'user',
         content: 'Analyze this map view.'
@@ -133,6 +134,7 @@ export function Chat({ id, initialMessages = [] }: ChatProps) {
             input={input} 
             setInput={setInput}
             onSuggestionsChange={setSuggestions}
+            handleSubmit={handleSubmit}
           />
         </div>
         <div className="mobile-chat-messages-area relative">
@@ -184,10 +186,12 @@ export function Chat({ id, initialMessages = [] }: ChatProps) {
         ) : (
           <>
             <ChatPanel 
+              ref={chatPanelRef}
               messages={messages} 
               input={input} 
               setInput={setInput} 
               onSuggestionsChange={setSuggestions}
+              handleSubmit={handleSubmit}
             />
             <div className="relative">
               {showEmptyScreen ? (
