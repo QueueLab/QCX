@@ -90,8 +90,18 @@ async function submit(formData?: FormData, skip?: boolean) {
 
     async function processResolutionSearch() {
       try {
-        // Call the simplified agent, which now returns data directly.
-        const analysisResult = await resolutionSearch(messages, { lat, lng, zoom }) as any;
+        // Call the simplified agent, which now returns a stream.
+        const result = await resolutionSearch(messages, { lat, lng, zoom });
+
+        let finalAnalysisResult: any = null;
+        for await (const partialObject of result.partialObjects) {
+          if (partialObject?.summary) {
+            summaryStream.update(partialObject.summary);
+          }
+          finalAnalysisResult = partialObject;
+        }
+
+        const analysisResult = await result.object;
 
         // Mark the summary stream as done with the result.
         summaryStream.done(analysisResult.summary || 'Analysis complete.');
