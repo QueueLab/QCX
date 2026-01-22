@@ -1,13 +1,9 @@
 'use client'
 
 import React from 'react'
-import { useUIState, useActions } from 'ai/rsc'
-import { AI } from '@/app/actions'
 import { Button } from '@/components/ui/button'
 import {
   Search,
-  CircleUserRound,
-  Map,
   CalendarDays,
   TentTree,
   Paperclip,
@@ -26,13 +22,10 @@ interface MobileIconsBarProps {
 }
 
 export const MobileIconsBar: React.FC<MobileIconsBarProps> = ({ onAttachmentClick, onSubmitClick }) => {
-  const [, setMessages] = useUIState<typeof AI>()
-  const { clearChat } = useActions()
   const { toggleCalendar } = useCalendarToggle()
 
   const handleNewChat = async () => {
-    setMessages([])
-    await clearChat()
+     window.location.href = '/'
   }
 
   return (

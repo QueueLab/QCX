@@ -1,23 +1,17 @@
 'use client'
 
 import { useEffect, useState, useRef, ChangeEvent, forwardRef, useImperativeHandle, useCallback } from 'react'
-import type { AI, UIState } from '@/app/actions'
-import { useUIState, useActions, readStreamableValue } from 'ai/rsc'
-// Removed import of useGeospatialToolMcp as it's no longer used/available
 import { cn } from '@/lib/utils'
-import { UserMessage } from './user-message'
 import { Button } from './ui/button'
-import { ArrowRight, Plus, Paperclip, X } from 'lucide-react'
+import { ArrowRight, Paperclip, X } from 'lucide-react'
 import Textarea from 'react-textarea-autosize'
-import { nanoid } from 'nanoid'
 import { useSettingsStore } from '@/lib/store/settings'
 import { PartialRelated } from '@/lib/schema/related'
 import { getSuggestions } from '@/lib/actions/suggest'
 import { useMapData } from './map/map-data-context'
-import SuggestionsDropdown from './suggestions-dropdown'
 
 interface ChatPanelProps {
-  messages: UIState
+  messages: any[]
   input: string
   setInput: (value: string) => void
   onSuggestionsChange?: (suggestions: PartialRelated | null) => void
@@ -29,17 +23,12 @@ export interface ChatPanelRef {
 }
 
 export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, input, setInput, onSuggestionsChange }, ref) => {
-  const [, setMessages] = useUIState<typeof AI>()
-  const { submit, clearChat } = useActions()
-  // Removed mcp instance as it's no longer passed to submit
   const { mapProvider } = useSettingsStore()
   const [isMobile, setIsMobile] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [suggestions, setSuggestionsState] = useState<PartialRelated | null>(null)
   const setSuggestions = useCallback((s: PartialRelated | null) => {
-    setSuggestionsState(s)
     onSuggestionsChange?.(s)
-  }, [onSuggestionsChange, setSuggestionsState])
+  }, [onSuggestionsChange])
   const { mapData } = useMapData()
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -55,7 +44,6 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     }
   }));
 
-  // Detect mobile layout
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth <= 1024)
@@ -82,60 +70,12 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
 
   const clearAttachment = () => {
     setSelectedFile(null)
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
-    }
-  }
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    if (!input.trim() && !selectedFile) {
-      return
-    }
-
-    const content: ({ type: 'text'; text: string } | { type: 'image'; image: string })[] = []
-    if (input) {
-      content.push({ type: 'text', text: input })
-    }
-    if (selectedFile && selectedFile.type.startsWith('image/')) {
-      content.push({
-        type: 'image',
-        image: URL.createObjectURL(selectedFile)
-      })
-    }
-
-    setMessages(currentMessages => [
-      ...currentMessages,
-      {
-        id: nanoid(),
-        component: <UserMessage content={content} />
-      }
-    ])
-
-    const formData = new FormData(e.currentTarget)
-    if (selectedFile) {
-      formData.append('file', selectedFile)
-    }
-
-    setInput('')
-    clearAttachment()
-
-    const responseMessage = await submit(formData)
-    setMessages(currentMessages => [...currentMessages, responseMessage as any])
-  }
-
-  const handleClear = async () => {
-    setMessages([])
-    clearAttachment()
-    await clearChat()
+    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   const debouncedGetSuggestions = useCallback(
     (value: string) => {
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current)
-      }
-
+      if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current)
       const wordCount = value.trim().split(/\s+/).filter(Boolean).length
       if (wordCount < 2) {
         setSuggestions(null)
@@ -143,47 +83,32 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
       }
 
       debounceTimeoutRef.current = setTimeout(async () => {
-        const suggestionsStream = await getSuggestions(value, mapData)
-        for await (const partialSuggestions of readStreamableValue(
-          suggestionsStream
-        )) {
-          if (partialSuggestions) {
-            setSuggestions(partialSuggestions as PartialRelated)
+        try {
+          const response = await getSuggestions(value, mapData)
+          const reader = response.body?.getReader()
+          if (!reader) return
+          let result = ''
+          while (true) {
+            const { done, value: chunk } = await reader.read()
+            if (done) break
+            result += new TextDecoder().decode(chunk)
+            try {
+              const lastFullObject = result.lastIndexOf('}')
+              if (lastFullObject !== -1) {
+                const json = JSON.parse(result.substring(0, lastFullObject + 1))
+                setSuggestions(json)
+              }
+            } catch (e) { }
           }
-        }
-      }, 500) // 500ms debounce delay
+        } catch (error) { }
+      }, 500)
     },
-    [mapData]
+    [mapData, setSuggestions]
   )
 
   useEffect(() => {
     inputRef.current?.focus()
   }, [])
-
-  // New chat button (appears when there are messages)
-  if (messages.length > 0 && !isMobile) {
-    return (
-      <div
-        className={cn(
-          'fixed bottom-2 left-2 flex justify-start items-center pointer-events-none',
-          isMobile ? 'w-full px-2' : 'md:bottom-8'
-        )}
-      >
-        <Button
-          type="button"
-          variant={'secondary'}
-          className="rounded-full bg-secondary/80 group transition-all hover:scale-105 pointer-events-auto"
-          onClick={() => handleClear()}
-          data-testid="new-chat-button"
-        >
-          <span className="text-sm mr-2 group-hover:block hidden animate-in fade-in duration-300">
-            New
-          </span>
-          <Plus size={18} className="group-hover:rotate-90 transition-all" />
-        </Button>
-      </div>
-    )
-  }
 
   return (
     <div
@@ -196,7 +121,6 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     >
       <form
         ref={formRef}
-        onSubmit={handleSubmit}
         className={cn(
           'max-w-full w-full',
           isMobile ? 'px-2 pb-2 pt-1 h-full flex flex-col justify-center' : ''
@@ -205,7 +129,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
         <div
           className={cn(
             'relative flex items-start w-full',
-            isMobile && 'mobile-chat-input' // Apply mobile chat input styling
+            isMobile && 'mobile-chat-input'
           )}
         >
           <input type="hidden" name="mapProvider" value={mapProvider} />
@@ -264,15 +188,6 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
                 formRef.current?.requestSubmit()
               }
             }}
-            onHeightChange={height => {
-              if (!inputRef.current) return
-              const initialHeight = 70
-              const initialBorder = 32
-              const multiple = (height - initialHeight) / 20
-              const newBorder = initialBorder - 4 * multiple
-              inputRef.current.style.borderRadius =
-                Math.max(8, newBorder) + 'px'
-            }}
           />
           <Button
             type="submit"
@@ -288,7 +203,6 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
           >
             <ArrowRight size={isMobile ? 18 : 20} />
           </Button>
-          {/* Suggestions are now handled by the parent component (chat.tsx) as an overlay */}
         </div>
       </form>
       {selectedFile && (

@@ -1,11 +1,20 @@
 'use client'
 
-import { StreamableValue, useUIState } from 'ai/rsc'
-import type { AI, UIState } from '@/app/actions'
+import { Message } from 'ai'
 import { CollapsibleMessage } from './collapsible-message'
+import { UserMessage } from './user-message'
+import { BotMessage } from './message'
+import { Section } from './section'
+import SearchRelated from './search-related'
+import { FollowupPanel } from './followup-panel'
+import { SearchSection } from './search-section'
+import RetrieveSection from './retrieve-section'
+import { VideoSearchSection } from './video-search-section'
+import { MapQueryHandler } from './map/map-query-handler'
+import { CopilotDisplay } from './copilot-display'
 
 interface ChatMessagesProps {
-  messages: UIState
+  messages: Message[]
 }
 
 export function ChatMessages({ messages }: ChatMessagesProps) {
@@ -13,58 +22,98 @@ export function ChatMessages({ messages }: ChatMessagesProps) {
     return null
   }
 
-  // Group messages based on ID, and if there are multiple messages with the same ID, combine them into one message
-  const groupedMessages = messages.reduce(
-    (acc: { [key: string]: any }, message) => {
-      if (!acc[message.id]) {
-        acc[message.id] = {
-          id: message.id,
-          components: [],
-          isCollapsed: message.isCollapsed
-        }
-      }
-      acc[message.id].components.push(message.component)
-      return acc
-    },
-    {}
-  )
-
-  // Convert grouped messages into an array with explicit type
-  const groupedMessagesArray = Object.values(groupedMessages).map(group => ({
-    ...group,
-    components: group.components as React.ReactNode[]
-  })) as {
-    id: string
-    components: React.ReactNode[]
-    isCollapsed?: StreamableValue<boolean>
-  }[]
-
   return (
     <>
-      {groupedMessagesArray.map(
-        (
-          groupedMessage: {
-            id: string
-            components: React.ReactNode[]
-            isCollapsed?: StreamableValue<boolean>
-          },
-          index
-        ) => (
-          <CollapsibleMessage
-            key={`${groupedMessage.id}`}
-            message={{
-              id: groupedMessage.id,
-              component: groupedMessage.components.map((component, i) => (
-                <div key={`${groupedMessage.id}-${i}`}>{component}</div>
-              )),
-              isCollapsed: groupedMessage.isCollapsed
-            }}
-            isLastMessage={
-              groupedMessage.id === messages[messages.length - 1].id
-            }
-          />
-        )
-      )}
+      {messages.map((message, index) => {
+        const { role, content, id, toolInvocations, data } = message
+
+        if (role === 'user') {
+          return (
+            <CollapsibleMessage
+              key={id}
+              message={{
+                id,
+                component: (
+                  <UserMessage
+                    content={content}
+                    showShare={index === 0}
+                  />
+                )
+              }}
+              isLastMessage={index === messages.length - 1}
+            />
+          )
+        }
+
+        if (role === 'assistant') {
+          const extraData = Array.isArray(data) ? data : []
+
+          return (
+            <CollapsibleMessage
+              key={id}
+              message={{
+                id,
+                component: (
+                  <div className="flex flex-col gap-4">
+                    {content && (
+                      <Section title="response">
+                        <BotMessage content={content} />
+                      </Section>
+                    )}
+
+                    {toolInvocations?.map((toolInvocation) => {
+                      const { toolName, toolCallId, state } = toolInvocation
+
+                      if (state === 'result') {
+                        const { result } = toolInvocation
+
+                        switch (toolName) {
+                          case 'search':
+                            return <SearchSection key={toolCallId} result={JSON.stringify(result)} />
+                          case 'retrieve':
+                            return <RetrieveSection key={toolCallId} data={result} />
+                          case 'videoSearch':
+                            return <VideoSearchSection key={toolCallId} result={JSON.stringify(result)} />
+                          case 'geospatialQueryTool':
+                            if (result.type === 'MAP_QUERY_TRIGGER') {
+                              return <MapQueryHandler key={toolCallId} toolOutput={result} />
+                            }
+                            return null
+                          default:
+                            return null
+                        }
+                      }
+                      return null
+                    })}
+
+                    {extraData.map((d: any, i) => {
+                      if (d.type === 'related') {
+                        return (
+                          <Section key={i} title="Related" separator={true}>
+                            <SearchRelated relatedQueries={d.object} />
+                          </Section>
+                        )
+                      }
+                      if (d.type === 'inquiry') {
+                         return <CopilotDisplay key={i} content={d.object.question} />
+                      }
+                      return null
+                    })}
+
+                    {index === messages.length - 1 && role === 'assistant' && (
+                       <Section title="Follow-up" className="pb-8">
+                         <FollowupPanel />
+                       </Section>
+                    )}
+                  </div>
+                )
+              }}
+              isLastMessage={index === messages.length - 1}
+            />
+          )
+        }
+        return null
+      })}
     </>
   )
 }

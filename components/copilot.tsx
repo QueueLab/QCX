@@ -6,33 +6,20 @@ import { Input } from './ui/input'
 import { Checkbox } from './ui/checkbox'
 import { Button } from './ui/button'
 import { Card } from './ui/card'
-import { ArrowRight, Check, FastForward, Sparkles } from 'lucide-react'
-import { useActions, useStreamableValue, useUIState } from 'ai/rsc'
-// Removed import of useGeospatialToolMcp as it's no longer used/available
-import type { AI } from '@/app/actions'
-import {
-
-  
- } from './ui/icons'
-import { cn } from '@/lib/utils'
+import { ArrowRight, Check, FastForward } from 'lucide-react'
 
 export type CopilotProps = {
-  inquiry: { value: PartialInquiry };
+  inquiry: PartialInquiry;
 }
 
 export const Copilot: React.FC<CopilotProps> = ({ inquiry }: CopilotProps) => {
-  const { value } = inquiry;
   const [completed, setCompleted] = useState(false)
   const [query, setQuery] = useState('')
   const [skipped, setSkipped] = useState(false)
-  const [data, error, pending] = useStreamableValue<PartialInquiry>()
   const [checkedOptions, setCheckedOptions] = useState<{
     [key: string]: boolean
   }>({})
   const [isButtonDisabled, setIsButtonDisabled] = useState(true)
-  const [, setMessages] = useUIState<typeof AI>()
-  const { submit } = useActions()
-  // Removed mcp instance as it's no longer passed to submit
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setQuery(event.target.value)
@@ -64,7 +51,6 @@ export const Copilot: React.FC<CopilotProps> = ({ inquiry }: CopilotProps) => {
 
   useEffect(() => {
     checkIfButtonShouldBeEnabled()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query])
 
   const onFormSubmit = async (
@@ -74,36 +60,10 @@ export const Copilot: React.FC<CopilotProps> = ({ inquiry }: CopilotProps) => {
     e.preventDefault()
     setCompleted(true)
     setSkipped(skip || false)
-
-    const formData = skip
-      ? undefined
-      : new FormData(e.target as HTMLFormElement)
-
-    if (formData) {
-      formData.set('input', updatedQuery())
-      formData.delete('additional_query')
-    }
-
-    // Removed mcp argument from submit call
-    const response = await submit(formData, skip)
-    setMessages(currentMessages => [...currentMessages, response])
   }
 
   const handleSkip = (e: React.MouseEvent<HTMLButtonElement>) => {
     onFormSubmit(e as unknown as React.FormEvent<HTMLFormElement>, true)
-  }
-
-  if (error) {
-    return (
-      <Card className="p-4 w-full flex justify-between items-center">
-        <div className="flex items-center space-x-2">
-          <Sparkles className="w-4 h-4" />
-          <h5 className="text-muted-foreground text-xs truncate">
-            {`error: ${error}`}
-          </h5>
-        </div>
-      </Card>
-    )
   }
 
   if (skipped) {
@@ -126,14 +86,12 @@ export const Copilot: React.FC<CopilotProps> = ({ inquiry }: CopilotProps) => {
       <Card className="p-4 rounded-lg w-full mx-auto">
         <div className="mb-4">
           <p className="text-lg text-foreground text-semibold ml-2">
-            {data?.question || value.question}
-            
-            
+            {inquiry.question}
           </p>
         </div>
         <form onSubmit={onFormSubmit}>
           <div className="flex flex-wrap justify-start mb-4">
-            {value.options?.map((option, index) => (
+            {inquiry.options?.map((option, index) => (
               <div
                 key={`option-${index}`}
                 className="flex items-center space-x-1.5 mb-2"
@@ -154,17 +112,17 @@ export const Copilot: React.FC<CopilotProps> = ({ inquiry }: CopilotProps) => {
               </div>
             ))}
           </div>
-          {data?.allowsInput && (
+          {inquiry.allowsInput && (
             <div className="mb-6 flex flex-col space-y-2 text-sm">
               <label className="text-muted-foreground" htmlFor="query">
-                {data?.inputLabel || value.inputLabel}
+                {inquiry.inputLabel}
               </label>
               <Input
                 type="text"
                 name="additional_query"
                 className="w-full"
                 id="query"
-                placeholder={data?.inputPlaceholder || value.inputPlaceholder}
+                placeholder={inquiry.inputPlaceholder}
                 value={query}
                 onChange={handleInputChange}
               />
@@ -175,12 +133,11 @@ export const Copilot: React.FC<CopilotProps> = ({ inquiry }: CopilotProps) => {
               type="button"
               variant="outline"
               onClick={handleSkip}
-              disabled={pending}
             >
               <FastForward size={16} className="mr-1" />
               Skip
             </Button>
-            <Button type="submit" disabled={isButtonDisabled || pending}>
+            <Button type="submit" disabled={isButtonDisabled}>
               <ArrowRight size={16} className="mr-1" />
               Send
             </Button>

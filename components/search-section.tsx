@@ -6,18 +6,16 @@ import { SearchResultsImageSection } from './search-results-image'
 import { Section } from './section'
 import { ToolBadge } from './tool-badge'
 import type { SearchResults as TypeSearchResults } from '@/lib/types'
-import { StreamableValue, useStreamableValue } from 'ai/rsc'
 
 export type SearchSectionProps = {
-  result?: StreamableValue<string>
+  result?: string
 }
 
 export function SearchSection({ result }: SearchSectionProps) {
-  const [data, error, pending] = useStreamableValue(result)
-  const searchResults: TypeSearchResults = data ? JSON.parse(data) : undefined
+  const searchResults: TypeSearchResults = result ? JSON.parse(result) : undefined
   return (
     <div>
-      {!pending && data ? (
+      {result ? (
         <>
           <Section size="sm" className="pt-2 pb-0">
             <ToolBadge tool="search">{`${searchResults.query}`}</ToolBadge>
