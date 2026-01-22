@@ -12,7 +12,8 @@ import {
   TentTree,
   Paperclip,
   ArrowRight,
-  Plus
+  Plus,
+  Sprout
 } from 'lucide-react'
 import { History } from '@/components/history'
 import { MapToggle } from './map-toggle'
@@ -61,7 +62,11 @@ export const MobileIconsBar: React.FC<MobileIconsBarProps> = ({ onAttachmentClic
       <Button variant="ghost" size="icon" data-testid="mobile-submit-button" onClick={onSubmitClick}>
         <ArrowRight className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>
-      <History location="header" />
+      <History location="sidebar">
+        <Button variant="ghost" size="icon" className="rounded-full text-foreground/30">
+          <Sprout size={16} />
+        </Button>
+      </History>
       <ModeToggle />
     </div>
   )

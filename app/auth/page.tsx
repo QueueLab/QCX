@@ -9,7 +9,7 @@ import { useAuth } from "@/lib/auth/v0"
 function Logo() {
   return (
     <div className="flex items-center gap-2 text-xl font-semibold">
-      <Image src="/images/logo.png" alt="QCX Logo" width={32} height={32} />
+      <Image src="/images/logo-green.png" alt="QCX Logo" width={32} height={32} />
       QCX
     </div>
   )
@@ -18,7 +18,7 @@ function Logo() {
 function ArtPanel() {
   return (
     <div className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-3xl">
-      <Image src="/images/satellite-collage.png" alt="Abstract art" fill className="object-cover" priority />
+      <Image src="/images/abstract-art.png" alt="Abstract art" fill className="object-cover" priority />
     </div>
   )
 }

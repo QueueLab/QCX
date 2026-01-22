@@ -4,23 +4,21 @@ import * as React from 'react';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useCurrentUser } from '@/lib/auth/use-current-user';
 import { Check, Loader2 } from 'lucide-react';
-import { TIER_CONFIGS, TIERS, TierConfig } from '@/lib/utils/subscription';
-import { cn } from '@/lib/utils';
+import { TIER_CONFIGS, TIERS } from '@/lib/utils/subscription';
 import { Badge } from '@/components/ui/badge';
+import { useCredits } from './credits-provider';
+import { toast } from 'sonner';
 
 const COOLDOWN_DAYS = 7;
 const STORAGE_KEY = 'purchase_credits_popup_shown_date';
 
 export function PurchaseCreditsPopup() {
   const { user } = useCurrentUser();
+  const { refreshCredits } = useCredits();
   const [isOpen, setIsOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
 
@@ -35,11 +33,35 @@ export function PurchaseCreditsPopup() {
     return () => clearTimeout(timer);
   }, [user]);
 
-  const handleUpgrade = (tier: string) => {
-      // Redirect to Stripe checkout
-      const stripeUrl = 'https://buy.stripe.com/3cIaEX3tRcur9EM7ss';
-      window.open(stripeUrl, '_blank');
+  const handleUpgrade = async (tier: string) => {
+    setLoading(true);
+    try {
+      // Call backend to process Stripe payment and add credits
+      const response = await fetch('/api/user/upgrade', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ tier }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upgrade tier');
+      }
+
+      const data = await response.json();
+      
+      // Refresh credits after successful purchase
+      await refreshCredits();
+      
+      toast.success(`Credits added: ${data.creditsAdded} credits`);
       setIsOpen(false);
+    } catch (error) {
+      console.error('Upgrade error:', error);
+      toast.error('Failed to process upgrade. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   const standardTier = TIER_CONFIGS[TIERS.STANDARD];
@@ -105,8 +127,19 @@ export function PurchaseCreditsPopup() {
                         </li>
                     </ul>
                 </div>
-                 <Button className="w-full" onClick={() => handleUpgrade(TIERS.STANDARD)}>
-                    Upgrade to Standard
+                 <Button 
+                    className="w-full" 
+                    onClick={() => handleUpgrade(TIERS.STANDARD)}
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      'Upgrade to Standard'
+                    )}
                 </Button>
             </div>
         </div>

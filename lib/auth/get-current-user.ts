@@ -55,7 +55,10 @@ export async function getSupabaseUserAndSessionOnServer(): Promise<{
   } = await supabase.auth.getUser();
 
   if (error) {
-    console.error('[Auth] Error getting Supabase user on server:', error.message);
+    // Only log non-auth errors; "Auth session missing" is expected for unauthenticated users
+    if (error.message !== 'Auth session missing!') {
+      console.error('[Auth] Error getting Supabase user on server:', error.message);
+    }
     return { user: null, session: null, error };
   }
 
