@@ -34,7 +34,8 @@ export function Chat({ id, initialMessages = [] }: ChatProps) {
     id: chatId,
     initialMessages,
     body: {
-      chatId
+      chatId,
+      mapProvider: 'mapbox' // Default map provider
     },
     onFinish: (message) => {
       if (!path.includes('search')) {
@@ -54,14 +55,15 @@ export function Chat({ id, initialMessages = [] }: ChatProps) {
       }, {
         body: {
           action: 'resolution_search',
-          file: file
+          file: file,
+          chatId
         }
       });
     };
 
     window.addEventListener('resolution-search', handleResolutionSearch);
     return () => window.removeEventListener('resolution-search', handleResolutionSearch);
-  }, [append]);
+  }, [append, chatId]);
 
   const [isMobile, setIsMobile] = useState(false)
   const { activeView } = useProfileToggle();
@@ -102,10 +104,14 @@ export function Chat({ id, initialMessages = [] }: ChatProps) {
 
   useEffect(() => {
     if (isSubmitting) {
-      chatPanelRef.current?.submitForm()
+      append({
+        role: 'user',
+        content: input
+      })
+      setInput('')
       setIsSubmitting(false)
     }
-  }, [isSubmitting])
+  }, [isSubmitting, append, input, setInput])
 
   useEffect(() => {
     if (chatId && mapData.drawnFeatures && mapData.cameraState) {

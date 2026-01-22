@@ -15,13 +15,13 @@ import { saveChat, getSystemPrompt } from '@/lib/actions/chat'
 import { Chat, AIMessage } from '@/lib/types'
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
 
-export async function submit(messages: CoreMessage[], formData?: FormData) {
+export async function submit(messages: CoreMessage[], formData?: any) {
   const userId = await getCurrentUserIdOnServer() || 'anonymous'
-  const chatId = (formData?.get('chatId') as string) || nanoid()
+  const chatId = (formData?.chatId as string) || nanoid()
 
   return createDataStreamResponse({
     execute: async (dataStream) => {
-      const action = formData?.get('action') as string;
+      const action = formData?.action as string;
 
       const saveMessages = async (assistantContent: string, data: any[] = []) => {
         if (userId === 'anonymous') return;
@@ -56,7 +56,7 @@ export async function submit(messages: CoreMessage[], formData?: FormData) {
       };
 
       if (action === 'resolution_search') {
-        const file = formData?.get('file') as File;
+        const file = formData?.file as File;
         if (file) {
           const buffer = await file.arrayBuffer();
           const dataUrl = `data:${file.type};base64,${Buffer.from(buffer).toString('base64')}`;
@@ -100,7 +100,7 @@ export async function submit(messages: CoreMessage[], formData?: FormData) {
       }
 
       const currentSystemPrompt = (await getSystemPrompt(userId)) || ''
-      const mapProvider = (formData?.get('mapProvider') as 'mapbox' | 'google') || 'mapbox'
+      const mapProvider = (formData?.mapProvider as 'mapbox' | 'google') || 'mapbox'
 
       // Task Manager
       const taskManagerResult = await taskManager(messages)

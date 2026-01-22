@@ -12,6 +12,7 @@ import RetrieveSection from './retrieve-section'
 import { VideoSearchSection } from './video-search-section'
 import { MapQueryHandler } from './map/map-query-handler'
 import { CopilotDisplay } from './copilot-display'
+import { ResolutionSearchSection } from './resolution-search-section'
 
 interface ChatMessagesProps {
   messages: Message[]
@@ -95,7 +96,10 @@ export function ChatMessages({ messages }: ChatMessagesProps) {
                         )
                       }
                       if (d.type === 'inquiry') {
-                         return <CopilotDisplay key={i} content={d.object.question} />
+                        return <CopilotDisplay key={i} content={d.object.question} />
+                      }
+                      if (d.type === 'resolution_search_result') {
+                        return <ResolutionSearchSection key={i} result={d.object} />
                       }
                       return null
                     })}
