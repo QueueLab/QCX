@@ -49,6 +49,8 @@ export function Chat({ id, initialMessages = [] }: ChatProps) {
     const handleResolutionSearch = (event: any) => {
       const { file } = event.detail;
       chatPanelRef.current?.setSelectedFile(file);
+      
+      // Use a FormData-like object for the body
       append({
         role: 'user',
         content: 'Analyze this map view.'
@@ -104,14 +106,10 @@ export function Chat({ id, initialMessages = [] }: ChatProps) {
 
   useEffect(() => {
     if (isSubmitting) {
-      append({
-        role: 'user',
-        content: input
-      })
-      setInput('')
+      handleSubmit();
       setIsSubmitting(false)
     }
-  }, [isSubmitting, append, input, setInput])
+  }, [isSubmitting, handleSubmit])
 
   useEffect(() => {
     if (chatId && mapData.drawnFeatures && mapData.cameraState) {
