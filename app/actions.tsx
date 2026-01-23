@@ -19,7 +19,7 @@ export async function submit(messages: CoreMessage[], formData?: any) {
   const userId = await getCurrentUserIdOnServer() || 'anonymous'
   const chatId = (formData?.chatId as string) || nanoid()
 
-  return createDataStreamResponse({
+  const dataStreamResponse = createDataStreamResponse({
     execute: async (dataStream) => {
       const action = formData?.action as string;
 
@@ -149,6 +149,8 @@ export async function submit(messages: CoreMessage[], formData?: any) {
       return 'An error occurred.'
     }
   })
+
+  return dataStreamResponse
 }
 
 export async function clearChat() {

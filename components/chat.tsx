@@ -12,6 +12,7 @@ import { useCalendarToggle } from './calendar-toggle-context'
 import { CalendarNotepad } from './calendar-notepad'
 import { MapProvider } from './map/map-provider'
 import { useChat } from 'ai/react'
+import { submit } from '@/app/actions'
 import MobileIconsBar from './mobile-icons-bar'
 import { useProfileToggle } from "@/components/profile-toggle-context"
 import SettingsView from "@/components/settings/settings-view"
@@ -33,6 +34,9 @@ export function Chat({ id, initialMessages = [] }: ChatProps) {
   const { messages, append, reload, stop, isLoading, input, setInput, handleSubmit } = useChat({
     id: chatId,
     initialMessages,
+    api: async (messages, { body }) => {
+      return await submit(messages, body)
+    },
     body: {
       chatId,
       mapProvider: 'mapbox' // Default map provider
