@@ -34,8 +34,10 @@ export function Chat({ id, initialMessages = [] }: ChatProps) {
   const { messages, append, reload, stop, isLoading, input, setInput, handleSubmit } = useChat({
     id: chatId,
     initialMessages,
-    api: async (messages, { body }) => {
-      return await submit(messages, body)
+    fetch: async (input, init) => {
+      const body = JSON.parse(init?.body as string);
+      const response = await submit(body.messages, body);
+      return response;
     },
     body: {
       chatId,
