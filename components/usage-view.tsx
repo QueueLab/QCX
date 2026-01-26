@@ -67,7 +67,7 @@ export function UsageView() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <LayoutPanelLeft size={18} />
-              <span className="font-medium">Website usage & billing</span>
+              <span className="font-medium">Computer Usage</span>
             </div>
           </div>
 
