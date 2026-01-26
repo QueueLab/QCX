@@ -5,6 +5,7 @@ import { createContext, useContext, useState, ReactNode } from "react"
 interface UsageToggleContextType {
   isUsageOpen: boolean
   toggleUsage: () => void
+  closeUsage: () => void
 }
 
 const UsageToggleContext = createContext<UsageToggleContextType | undefined>(undefined)
@@ -13,9 +14,10 @@ export const UsageToggleProvider: React.FC<{ children: ReactNode }> = ({ childre
   const [isUsageOpen, setIsUsageOpen] = useState(false)
 
   const toggleUsage = () => setIsUsageOpen(prev => !prev)
+  const closeUsage = () => setIsUsageOpen(false)
 
   return (
-    <UsageToggleContext.Provider value={{ isUsageOpen, toggleUsage }}>
+    <UsageToggleContext.Provider value={{ isUsageOpen, toggleUsage, closeUsage }}>
       {children}
     </UsageToggleContext.Provider>
   )
