@@ -17,12 +17,22 @@ import { MapToggle } from './map-toggle'
 import { ProfileToggle } from './profile-toggle'
 import { PurchaseCreditsPopup } from './purchase-credits-popup'
 import { useUsageToggle } from './usage-toggle-context'
+import { useProfileToggle } from './profile-toggle-context'
 import { useState, useEffect } from 'react'
 
 export const Header = () => {
   const { toggleCalendar } = useCalendarToggle()
   const [isPurchaseOpen, setIsPurchaseOpen] = useState(false)
-  const { toggleUsage } = useUsageToggle()
+  const { toggleUsage, isUsageOpen } = useUsageToggle()
+  const { activeView, closeProfileView } = useProfileToggle()
+
+  const handleUsageToggle = () => {
+    // If we're about to open usage and profile is open, close profile first
+    if (!isUsageOpen && activeView) {
+      closeProfileView()
+    }
+    toggleUsage()
+  }
 
   useEffect(() => {
     // Open payment popup as soon as application opens
@@ -66,7 +76,7 @@ export const Header = () => {
         
         <div id="header-search-portal" />
         
-        <Button variant="ghost" size="icon" onClick={toggleUsage}>
+        <Button variant="ghost" size="icon" onClick={handleUsageToggle}>
           <TentTree className="h-[1.2rem] w-[1.2rem]" />
         </Button>
         
@@ -78,7 +88,7 @@ export const Header = () => {
       {/* Mobile menu buttons */}
       <div className="flex md:hidden gap-2">
         
-        <Button variant="ghost" size="icon" onClick={toggleUsage}>
+        <Button variant="ghost" size="icon" onClick={handleUsageToggle}>
           <TentTree className="h-[1.2rem] w-[1.2rem]" />
         </Button>
         <ProfileToggle/>

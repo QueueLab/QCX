@@ -13,6 +13,7 @@ export enum ProfileToggleEnum {
 interface ProfileToggleContextType {
   activeView: ProfileToggleEnum | null
   toggleProfileSection: (section: ProfileToggleEnum) => void
+  closeProfileView: () => void
 }
 
 const ProfileToggleContext = createContext<ProfileToggleContextType | undefined>(undefined)
@@ -28,8 +29,12 @@ export const ProfileToggleProvider: React.FC<ProfileToggleProviderProps> = ({ ch
     setActiveView(prevView => (prevView === section ? null : section))
   }
 
+  const closeProfileView = () => {
+    setActiveView(null)
+  }
+
   return (
-    <ProfileToggleContext.Provider value={{ activeView, toggleProfileSection }}>
+    <ProfileToggleContext.Provider value={{ activeView, toggleProfileSection, closeProfileView }}>
       {children}
     </ProfileToggleContext.Provider>
   )
