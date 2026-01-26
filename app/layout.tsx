@@ -12,6 +12,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Toaster } from '@/components/ui/sonner'
 import { MapToggleProvider } from '@/components/map-toggle-context'
 import { ProfileToggleProvider } from '@/components/profile-toggle-context'
+import { UsageToggleProvider } from '@/components/usage-toggle-context'
 import { CalendarToggleProvider } from '@/components/calendar-toggle-context'
 import { MapLoadingProvider } from '@/components/map-loading-context';
 import ConditionalLottie from '@/components/conditional-lottie';
@@ -72,24 +73,26 @@ export default function RootLayout({
         <CalendarToggleProvider>
           <MapToggleProvider>
             <ProfileToggleProvider>
-              <ThemeProvider
-                attribute="class"
-              defaultTheme="earth"
-              enableSystem
-              disableTransitionOnChange
-              themes={['light', 'dark', 'earth']}
-            >
-              <MapContextProvider>
-                <MapLoadingProvider>
-                  <Header />
-                  <ConditionalLottie />
-                  {children}
-                  <Sidebar />
-                  <Footer />
-                  <Toaster />
-                </MapLoadingProvider>
-              </MapContextProvider>
-            </ThemeProvider>
+              <UsageToggleProvider>
+                <ThemeProvider
+                  attribute="class"
+                defaultTheme="earth"
+                enableSystem
+                disableTransitionOnChange
+                themes={['light', 'dark', 'earth']}
+              >
+                <MapContextProvider>
+                  <MapLoadingProvider>
+                    <Header />
+                    <ConditionalLottie />
+                    {children}
+                    <Sidebar />
+                    <Footer />
+                    <Toaster />
+                  </MapLoadingProvider>
+                </MapContextProvider>
+              </ThemeProvider>
+            </UsageToggleProvider>
           </ProfileToggleProvider>
         </MapToggleProvider>
         </CalendarToggleProvider>

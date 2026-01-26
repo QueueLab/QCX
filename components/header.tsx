@@ -16,13 +16,13 @@ import {
 import { MapToggle } from './map-toggle'
 import { ProfileToggle } from './profile-toggle'
 import { PurchaseCreditsPopup } from './purchase-credits-popup'
-import { UsageSidebar } from './usage-sidebar'
+import { useUsageToggle } from './usage-toggle-context'
 import { useState, useEffect } from 'react'
 
 export const Header = () => {
   const { toggleCalendar } = useCalendarToggle()
   const [isPurchaseOpen, setIsPurchaseOpen] = useState(false)
-  const [isUsageOpen, setIsUsageOpen] = useState(false)
+  const { toggleUsage } = useUsageToggle()
 
   useEffect(() => {
     // Open payment popup as soon as application opens
@@ -32,7 +32,6 @@ export const Header = () => {
   return (
     <>
       <PurchaseCreditsPopup isOpen={isPurchaseOpen} onClose={() => setIsPurchaseOpen(false)} />
-      <UsageSidebar isOpen={isUsageOpen} onClose={() => setIsUsageOpen(false)} />
     <header className="fixed w-full p-1 md:p-2 flex justify-between items-center z-20 backdrop-blur bg-background/95 border-b border-border/40">
       <div>
         <a href="/">
@@ -67,7 +66,7 @@ export const Header = () => {
         
         <div id="header-search-portal" />
         
-        <Button variant="ghost" size="icon" onClick={() => setIsUsageOpen(true)}>
+        <Button variant="ghost" size="icon" onClick={toggleUsage}>
           <TentTree className="h-[1.2rem] w-[1.2rem]" />
         </Button>
         
@@ -79,7 +78,7 @@ export const Header = () => {
       {/* Mobile menu buttons */}
       <div className="flex md:hidden gap-2">
         
-        <Button variant="ghost" size="icon" onClick={() => setIsUsageOpen(true)}>
+        <Button variant="ghost" size="icon" onClick={toggleUsage}>
           <TentTree className="h-[1.2rem] w-[1.2rem]" />
         </Button>
         <ProfileToggle/>
