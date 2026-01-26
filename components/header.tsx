@@ -18,6 +18,7 @@ import { ProfileToggle } from './profile-toggle'
 import { PurchaseCreditsPopup } from './purchase-credits-popup'
 import { useUsageToggle } from './usage-toggle-context'
 import { useProfileToggle } from './profile-toggle-context'
+import { useHistoryToggle } from './history-toggle-context'
 import { useState, useEffect } from 'react'
 
 export const Header = () => {
@@ -25,6 +26,7 @@ export const Header = () => {
   const [isPurchaseOpen, setIsPurchaseOpen] = useState(false)
   const { toggleUsage, isUsageOpen } = useUsageToggle()
   const { activeView, closeProfileView } = useProfileToggle()
+  const { toggleHistory } = useHistoryToggle()
 
   const handleUsageToggle = () => {
     // If we're about to open usage and profile is open, close profile first
@@ -42,7 +44,7 @@ export const Header = () => {
   return (
     <>
       <PurchaseCreditsPopup isOpen={isPurchaseOpen} onClose={() => setIsPurchaseOpen(false)} />
-    <header className="fixed w-full p-1 md:p-2 flex justify-between items-center z-20 backdrop-blur bg-background/95 border-b border-border/40">
+    <header className="fixed w-full p-1 md:p-2 flex justify-between items-center z-[60] backdrop-blur bg-background/95 border-b border-border/40">
       <div>
         <a href="/">
           <span className="sr-only">Chat</span>
@@ -50,7 +52,7 @@ export const Header = () => {
       </div>
       
       <div className="absolute left-1 flex items-center">
-        <Button variant="ghost" size="icon">
+        <Button variant="ghost" size="icon" onClick={toggleHistory} data-testid="logo-history-toggle">
           <Image
             src="/images/logo.svg"
             alt="Logo"
