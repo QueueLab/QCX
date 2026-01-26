@@ -19,12 +19,13 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Initial message content is required' }, { status: 400 });
     }
 
+    const chatId = uuidv4();
     const newChat: Chat = {
-      id: uuidv4(),
+      id: chatId,
       userId: userId,
       title: title || 'New Chat',
       createdAt: new Date(),
-      path: '',
+      path: `/search/${chatId}`,
       messages: [
         {
           id: uuidv4(),

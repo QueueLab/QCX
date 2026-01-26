@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */  
-const nextConfig = {  
+const nextConfig = {
+  // Enable standalone output for optimized Docker builds
+  output: 'standalone',
+  
   experimental: {
     serverActions: {
       allowedOrigins: process.env.SERVER_ACTIONS_ALLOWED_ORIGINS 
@@ -8,7 +11,7 @@ const nextConfig = {
       bodySizeLimit: '200mb',
     },
   },
-  transpilePackages: ['QCX', 'mapbox_mcp'], // Added to transpile local packages
+  transpilePackages: ['mapbox_mcp'], // Added to transpile local packages
 };  
 
 export default nextConfig

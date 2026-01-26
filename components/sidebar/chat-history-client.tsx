@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useEffect, useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -16,15 +18,21 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { Spinner } from '@/components/ui/spinner';
-import HistoryItem from '@/components/history-item';
-import { type Chat } from '@/lib/types';
+import { Zap, ChevronDown, ChevronUp } from 'lucide-react';
+import HistoryItem from '@/components/history-item'; // Adjust path if HistoryItem is moved or renamed
+import type { Chat as DrizzleChat } from '@/lib/types';
 
-export function ChatHistoryClient() {
-  const [chats, setChats] = useState<Chat[]>([]);
+interface ChatHistoryClientProps {
+  // userId is no longer passed as prop; API route will use authenticated user
+}
+
+export function ChatHistoryClient({}: ChatHistoryClientProps) {
+  const [chats, setChats] = useState<DrizzleChat[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isClearPending, startClearTransition] = useTransition();
   const [isAlertDialogOpen, setIsAlertDialogOpen] = useState(false);
+  const [isCreditsVisible, setIsCreditsVisible] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -32,12 +40,13 @@ export function ChatHistoryClient() {
       setIsLoading(true);
       setError(null);
       try {
-        const response = await fetch('/api/chats');
+        // API route /api/chats uses getCurrentUserId internally
+        const response = await fetch('/api/chats?limit=50&offset=0'); // Example limit/offset
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(errorData.error || `Failed to fetch chats: ${response.statusText}`);
         }
-        const data: { chats: Chat[] } = await response.json();
+        const data: { chats: DrizzleChat[], nextOffset: number | null } = await response.json();
         setChats(data.chats);
       } catch (err) {
         if (err instanceof Error) {
@@ -57,7 +66,10 @@ export function ChatHistoryClient() {
   const handleClearHistory = async () => {
     startClearTransition(async () => {
       try {
-        const response = await fetch('/api/chats/all', {
+        // We need a new API endpoint for clearing history
+        // Example: DELETE /api/chats (or POST /api/clear-history)
+        // This endpoint will call clearHistory(userId) from chat-db.ts
+        const response = await fetch('/api/chats/all', { // Placeholder for the actual clear endpoint
           method: 'DELETE',
         });
 
@@ -67,9 +79,11 @@ export function ChatHistoryClient() {
         }
 
         toast.success('History cleared');
-        setChats([]);
+        setChats([]); // Clear chats from UI
         setIsAlertDialogOpen(false);
-        router.refresh();
+        router.refresh(); // Refresh to reflect changes, potentially redirect if on a chat page
+        // Consider redirecting to '/' if current page is a chat that got deleted.
+        // The old clearChats action did redirect('/');
       } catch (err) {
         if (err instanceof Error) {
           toast.error(err.message);
@@ -91,6 +105,7 @@ export function ChatHistoryClient() {
   }
 
   if (error) {
+    // Optionally provide a retry button
     return (
       <div className="flex flex-col flex-1 space-y-3 h-full items-center justify-center text-destructive">
         <p>Error loading chat history: {error}</p>
@@ -107,6 +122,8 @@ export function ChatHistoryClient() {
           </div>
         ) : (
           chats.map((chat) => (
+            // Assuming HistoryItem is adapted for DrizzleChat and expects chat.id and chat.title
+            // Also, chat.path will need to be constructed, e.g., `/search/${chat.id}`
             <HistoryItem key={chat.id} chat={{...chat, path: `/search/${chat.id}`}} />
           ))
         )}
@@ -114,7 +131,7 @@ export function ChatHistoryClient() {
       <div className="mt-auto">
         <AlertDialog open={isAlertDialogOpen} onOpenChange={setIsAlertDialogOpen}>
           <AlertDialogTrigger asChild>
-            <Button variant="outline" className="w-full" disabled={!chats?.length || isClearPending}>
+            <Button variant="outline" className="w-full" disabled={!chats?.length || isClearPending} data-testid="clear-history-button">
               {isClearPending ? <Spinner /> : 'Clear History'}
             </Button>
           </AlertDialogTrigger>
@@ -127,13 +144,14 @@ export function ChatHistoryClient() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={isClearPending} onClick={() => setIsAlertDialogOpen(false)}>Cancel</AlertDialogCancel>
+              <AlertDialogCancel disabled={isClearPending} onClick={() => setIsAlertDialogOpen(false)} data-testid="clear-history-cancel">Cancel</AlertDialogCancel>
               <AlertDialogAction
                 disabled={isClearPending}
                 onClick={(event) => {
                   event.preventDefault();
                   handleClearHistory();
                 }}
+                data-testid="clear-history-confirm"
               >
                 {isClearPending ? <Spinner /> : 'Clear'}
               </AlertDialogAction>

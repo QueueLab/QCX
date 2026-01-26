@@ -1,1 +1,44 @@
+# Dependency directories
+node_modules/
+.bun/
+
+# Build outputs
+.next/
+dist/
+build/
+out/
+
+# Environment variables
+.env
 .env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+
+# IDE/Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Lock files
+bun.lockb
+
+# Testing
+playwright-report/
+test-results/
+coverage/
+
+# Supabase local CLI state
+supabase/.temp/
+
+# Misc
+.vercel/
+*.tsbuildinfo

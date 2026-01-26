@@ -93,13 +93,17 @@ export async function saveNote(noteData: NewCalendarNote | CalendarNote): Promis
                 const calendarContextMessage = {
                     chat_id: newNote.chatId,
                     user_id: userId,
-                    role: 'data' as any,
+                    role: 'data' as const,
                     content: JSON.stringify({
                         type: 'calendar_note',
                         note: newNote,
                     }),
                 };
-                await createMessage(calendarContextMessage as any);
+                try {
+                  await createMessage(calendarContextMessage);
+                } catch (msgError) {
+                  console.error('Failed to create calendar context message:', msgError);
+                }
             }
 
             return newNote;

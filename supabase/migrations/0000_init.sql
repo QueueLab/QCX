@@ -3,6 +3,7 @@
 -- =============================================
 
 -- Enable required extensions
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "postgis";
 CREATE EXTENSION IF NOT EXISTS "vector";
@@ -77,7 +78,7 @@ CREATE TRIGGER trigger_handle_new_chat
 CREATE TABLE public.messages (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     chat_id UUID NOT NULL REFERENCES public.chats(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     role TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'system', 'tool')),
     content TEXT NOT NULL,
     embedding VECTOR(1536),
@@ -147,6 +148,13 @@ CREATE POLICY "Participants can manage locations in their chats"
             WHERE cp.chat_id = locations.chat_id
               AND cp.user_id = auth.uid()
         )
+    )
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.chat_participants cp
+            WHERE cp.chat_id = locations.chat_id
+              AND cp.user_id = auth.uid()
+        )
     );
 
 CREATE INDEX locations_geometry_idx ON public.locations USING GIST (geometry);
@@ -190,6 +198,13 @@ CREATE POLICY "Participants can manage visualizations"
             WHERE cp.chat_id = visualizations.chat_id
               AND cp.user_id = auth.uid()
         )
+    )
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.chat_participants cp
+            WHERE cp.chat_id = visualizations.chat_id
+              AND cp.user_id = auth.uid()
+        )
     );
 
 CREATE INDEX visualizations_geometry_idx ON public.visualizations USING GIST (geometry) WHERE geometry IS NOT NULL;
@@ -203,7 +218,7 @@ CREATE OR REPLACE FUNCTION generate_embedding(input TEXT)
 RETURNS VECTOR(1536) AS $$
 BEGIN
     -- In production: use http extension + your embeddings endpoint
-    RETURN NULL::VECTOR;  -- or zero vector for testing
+    RETURN array_fill(0, ARRAY[1536])::vector;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -211,7 +226,9 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION hybrid_search(
     query_emb VECTOR(1536),
     geo_filter TEXT DEFAULT NULL,
-    chat_id_filter UUID DEFAULT NULL
+    chat_id_filter UUID DEFAULT NULL,
+    similarity_threshold FLOAT DEFAULT 0.8,
+    geo_distance_meters FLOAT DEFAULT 1000
 )
 RETURNS TABLE (
     message_id UUID,
@@ -230,8 +247,8 @@ BEGIN
     FROM public.messages m
     LEFT JOIN public.locations l ON m.location_id = l.id
     WHERE (chat_id_filter IS NULL OR m.chat_id = chat_id_filter)
-      AND (query_emb IS NULL OR m.embedding <=> query_emb < 0.8)
-      AND (geo_filter IS NULL OR (l.geometry IS NOT NULL AND ST_DWithin(l.geometry, ST_GeomFromText(geo_filter, 4326), 1000)))
+      AND (query_emb IS NULL OR m.embedding <=> query_emb < similarity_threshold)
+      AND (geo_filter IS NULL OR (l.geometry IS NOT NULL AND ST_DWithin(l.geometry, ST_GeomFromText(geo_filter, 4326), geo_distance_meters)))
     ORDER BY (m.embedding <=> query_emb)
     LIMIT 10;
 END;

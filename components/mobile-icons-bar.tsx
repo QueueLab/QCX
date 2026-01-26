@@ -12,21 +12,27 @@ import {
   TentTree,
   Paperclip,
   ArrowRight,
-  Plus
+  Plus,
+  Sprout
 } from 'lucide-react'
 import { History } from '@/components/history'
 import { MapToggle } from './map-toggle'
 import { ModeToggle } from './mode-toggle'
+import { ProfileToggle } from './profile-toggle'
 import { useCalendarToggle } from './calendar-toggle-context'
+import { UsageSidebar } from './usage-sidebar'
+import { useState } from 'react'
 
 interface MobileIconsBarProps {
   onAttachmentClick: () => void;
+  onSubmitClick: () => void;
 }
 
-export const MobileIconsBar: React.FC<MobileIconsBarProps> = ({ onAttachmentClick }) => {
+export const MobileIconsBar: React.FC<MobileIconsBarProps> = ({ onAttachmentClick, onSubmitClick }) => {
   const [, setMessages] = useUIState<typeof AI>()
   const { clearChat } = useActions()
   const { toggleCalendar } = useCalendarToggle()
+  const [isUsageOpen, setIsUsageOpen] = useState(false)
 
   const handleNewChat = async () => {
     setMessages([])
@@ -35,31 +41,32 @@ export const MobileIconsBar: React.FC<MobileIconsBarProps> = ({ onAttachmentClic
 
   return (
     <div className="mobile-icons-bar-content">
-      <Button variant="ghost" size="icon" onClick={handleNewChat}>
+      <Button variant="ghost" size="icon" onClick={handleNewChat} data-testid="mobile-new-chat-button">
         <Plus className="h-[1.2rem] w-[1.2rem]" />
       </Button>
-      <Button variant="ghost" size="icon">
-        <CircleUserRound className="h-[1.2rem] w-[1.2rem]" />
-      </Button>
+      <ProfileToggle />
       <MapToggle />
-      <Button variant="ghost" size="icon" onClick={toggleCalendar} title="Open Calendar">
+      <Button variant="ghost" size="icon" onClick={toggleCalendar} title="Open Calendar" data-testid="mobile-calendar-button">
         <CalendarDays className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>
-      <Button variant="ghost" size="icon">
+      <Button variant="ghost" size="icon" data-testid="mobile-search-button">
         <Search className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>
-      <a href="https://buy.stripe.com/3cIaEX3tRcur9EM7tbasg00" target="_blank" rel="noopener noreferrer">
-        <Button variant="ghost" size="icon">
-          <TentTree className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
-        </Button>
-      </a>
-      <Button variant="ghost" size="icon" onClick={onAttachmentClick}>
+      <Button variant="ghost" size="icon" onClick={() => setIsUsageOpen(true)}>
+        <TentTree className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
+      </Button>
+      <UsageSidebar isOpen={isUsageOpen} onClose={() => setIsUsageOpen(false)} />
+      <Button variant="ghost" size="icon" onClick={onAttachmentClick} data-testid="mobile-attachment-button">
         <Paperclip className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>
-      <Button variant="ghost" size="icon">
+      <Button variant="ghost" size="icon" data-testid="mobile-submit-button" onClick={onSubmitClick}>
         <ArrowRight className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>
-      <History location="header" />
+      <History location="sidebar">
+        <Button variant="ghost" size="icon" className="rounded-full text-foreground/30">
+          <Sprout size={16} />
+        </Button>
+      </History>
       <ModeToggle />
     </div>
   )

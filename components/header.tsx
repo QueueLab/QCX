@@ -4,8 +4,8 @@ import Image from 'next/image'
 import { useCalendarToggle } from './calendar-toggle-context'
 import { ModeToggle } from './mode-toggle'
 import { cn } from '@/lib/utils'
-import HistoryContainer from './history-container'
 import { Button } from '@/components/ui/button'
+import { History } from './history'
 import {
   Search,
   CircleUserRound,
@@ -15,21 +15,40 @@ import {
 } from 'lucide-react'
 import { MapToggle } from './map-toggle'
 import { ProfileToggle } from './profile-toggle'
+import { UsageSidebar } from './usage-sidebar'
+import { useState } from 'react'
 
 export const Header = () => {
   const { toggleCalendar } = useCalendarToggle()
+  const [isUsageOpen, setIsUsageOpen] = useState(false)
+
   return (
-    <header className="fixed w-full p-1 md:p-2 flex justify-between items-center z-10 backdrop-blur md:backdrop-blur-none bg-background/80 md:bg-transparent">
+    <>
+      <UsageSidebar isOpen={isUsageOpen} onClose={() => setIsUsageOpen(false)} />
+    <header className="fixed w-full p-1 md:p-2 flex justify-between items-center z-20 backdrop-blur bg-background/95 border-b border-border/40">
       <div>
         <a href="/">
           <span className="sr-only">Chat</span>
         </a>
       </div>
       
-      <div className="absolute left-1">
-        <Button variant="ghost" size="icon">
-          <Image src="/images/logo.svg" alt="Logo" width={24} height={24} className="h-6 w-auto" />
-        </Button>
+      <div className="absolute left-1 flex items-center">
+        <History location="header">
+          <button className="flex items-center cursor-pointer group outline-none">
+            <div className="p-2 group-hover:bg-accent rounded-md transition-colors">
+              <Image
+                src="/images/logo.svg"
+                alt="Logo"
+                width={20}
+                height={20}
+                className="h-5 w-auto"
+              />
+            </div>
+            <h1 className="text-2xl font-poppins font-semibold text-primary group-hover:text-primary/80 transition-colors ml-1">
+              QCX
+            </h1>
+          </button>
+        </History>
       </div>
       
       <div className="w-1/2 gap-20 hidden md:flex justify-between px-10 items-center z-10">
@@ -38,35 +57,29 @@ export const Header = () => {
         
         <MapToggle />
         
-        <Button variant="ghost" size="icon" onClick={toggleCalendar} title="Open Calendar">
+        <Button variant="ghost" size="icon" onClick={toggleCalendar} title="Open Calendar" data-testid="calendar-toggle">
           <CalendarDays className="h-[1.2rem] w-[1.2rem]" />
         </Button>
         
         <div id="header-search-portal" />
         
-        <a href="https://buy.stripe.com/3cIaEX3tRcur9EM7tbasg00" target="_blank" rel="noopener noreferrer">
-          <Button variant="ghost" size="icon">
-            <TentTree className="h-[1.2rem] w-[1.2rem]" />
-          </Button>
-        </a>
+        <Button variant="ghost" size="icon" onClick={() => setIsUsageOpen(true)}>
+          <TentTree className="h-[1.2rem] w-[1.2rem]" />
+        </Button>
         
         <ModeToggle />
-        
-        <HistoryContainer location="header" />
       </div>
 
       {/* Mobile menu buttons */}
       <div className="flex md:hidden gap-2">
-        <div id="mobile-header-search-portal" />
         
-        <a href="https://buy.stripe.com/3cIaEX3tRcur9EM7tbasg00" target="_blank" rel="noopener noreferrer">
-          <Button variant="ghost" size="icon">
-            <TentTree className="h-[1.2rem] w-[1.2rem]" />
-          </Button>
-        </a>
+        <Button variant="ghost" size="icon" onClick={() => setIsUsageOpen(true)}>
+          <TentTree className="h-[1.2rem] w-[1.2rem]" />
+        </Button>
         <ProfileToggle/>
       </div>
     </header>
+    </>
   )
 }
 

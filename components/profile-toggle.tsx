@@ -8,10 +8,13 @@ import { ProfileToggleEnum, useProfileToggle } from "./profile-toggle-context"
 export function ProfileToggle() {
   const { toggleProfileSection } = useProfileToggle()
   const [alignValue, setAlignValue] = useState<'start' | 'end'>("end")
+  const [isMobile, setIsMobile] = useState(false)
   
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth < 768) {
+      const mobile = window.innerWidth < 768
+      setIsMobile(mobile)
+      if (mobile) {
         setAlignValue("start") // Right align on mobile too
       } else {
         setAlignValue("start") // Right align on desktop
@@ -32,29 +35,38 @@ export function ProfileToggle() {
   const handleSectionChange = (section: ProfileToggleEnum) => {
     toggleProfileSection(section)
   }
+
+  if (isMobile) {
+    return (
+      <Button variant="ghost" size="icon" className="relative" data-testid="profile-toggle" disabled>
+        <CircleUserRound className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
+        <span className="sr-only">Open profile menu</span>
+      </Button>
+    )
+  }
   
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
+        <Button variant="ghost" size="icon" className="relative" data-testid="profile-toggle">
           <CircleUserRound className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
           <span className="sr-only">Open profile menu</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align={alignValue} forceMount>
-        <DropdownMenuItem onClick={() => handleSectionChange(ProfileToggleEnum.Account)}>
+        <DropdownMenuItem onClick={() => handleSectionChange(ProfileToggleEnum.Account)} data-testid="profile-account">
           <User className="mr-2 h-4 w-4" />
           <span>Account</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleSectionChange(ProfileToggleEnum.Settings)}>
+        <DropdownMenuItem onClick={() => handleSectionChange(ProfileToggleEnum.Settings)} data-testid="profile-settings">
           <Settings className="mr-2 h-4 w-4" />
           <span>Settings</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleSectionChange(ProfileToggleEnum.Appearance)}>
+        <DropdownMenuItem onClick={() => handleSectionChange(ProfileToggleEnum.Appearance)} data-testid="profile-appearance">
           <Paintbrush className="mr-2 h-4 w-4" />
           <span>Appearance</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleSectionChange(ProfileToggleEnum.Security)}>
+        <DropdownMenuItem onClick={() => handleSectionChange(ProfileToggleEnum.Security)} data-testid="profile-security">
           <Shield className="mr-2 h-4 w-4" />
           <span>Security</span>
         </DropdownMenuItem>

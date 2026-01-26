@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter as FontSans } from 'next/font/google'
+import { Inter as FontSans, Poppins } from 'next/font/google'
 import './globals.css'
 import 'katex/dist/katex.min.css';
 import { cn } from '@/lib/utils'
@@ -16,10 +16,22 @@ import { CalendarToggleProvider } from '@/components/calendar-toggle-context'
 import { MapLoadingProvider } from '@/components/map-loading-context';
 import ConditionalLottie from '@/components/conditional-lottie';
 import { MapProvider } from '@/components/map/map-context'
+import { getSupabaseUserAndSessionOnServer } from '@/lib/auth/get-current-user'
+import { PurchaseCreditsPopup } from '@/components/credits/purchase-credits-popup';
+import { CreditsProvider } from '@/components/credits/credits-provider';
+
+// Force dynamic rendering since we check auth with cookies
+export const dynamic = 'force-dynamic'
 
 const fontSans = FontSans({
   subsets: ['latin'],
   variable: '--font-sans'
+})
+
+const fontPoppins = Poppins({
+  subsets: ['latin'],
+  variable: '--font-poppins',
+  weight: ['400', '500', '600', '700']
 })
 
 const title = ''
@@ -49,38 +61,54 @@ export const viewport: Viewport = {
   maximumScale: 1
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  // Check authentication and conditionally render the layout
+  const { user } = await getSupabaseUserAndSessionOnServer();
+
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={cn('font-sans antialiased', fontSans.variable)}>
-        <CalendarToggleProvider>
-          <MapToggleProvider>
-            <ProfileToggleProvider>
-              <ThemeProvider
-                attribute="class"
-              defaultTheme="earth"
-              enableSystem
-              disableTransitionOnChange
-              themes={['light', 'dark', 'earth']}
-            >
-              <MapProvider>
-                <MapLoadingProvider>
-                  <Header />
-                  <ConditionalLottie />
-                  {children}
-                  <Sidebar />
-                  <Footer />
-                  <Toaster />
-                </MapLoadingProvider>
-              </MapProvider>
-            </ThemeProvider>
-          </ProfileToggleProvider>
-        </MapToggleProvider>
-        </CalendarToggleProvider>
+      <body
+        className={cn(
+          'font-sans antialiased',
+          fontSans.variable,
+          fontPoppins.variable
+        )}
+      >
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="earth"
+          enableSystem
+          disableTransitionOnChange
+          themes={['light', 'dark', 'earth']}
+        >
+          {user ? (
+            <CalendarToggleProvider>
+              <MapToggleProvider>
+                <ProfileToggleProvider>
+                  <MapProvider>
+                    <MapLoadingProvider>
+                      <CreditsProvider>
+                      <Header />
+                      <ConditionalLottie />
+                      {children}
+                      <Sidebar />
+                      <PurchaseCreditsPopup />
+                      </CreditsProvider>
+                      <Footer />
+                      <Toaster />
+                    </MapLoadingProvider>
+                  </MapProvider>
+                </ProfileToggleProvider>
+              </MapToggleProvider>
+            </CalendarToggleProvider>
+          ) : (
+            children
+          )}
+        </ThemeProvider>
         <Analytics />
         <SpeedInsights />
       </body>

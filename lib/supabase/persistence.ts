@@ -5,7 +5,7 @@ import { type Chat, type AIMessage } from '@/lib/types'
 import { PostgrestError } from '@supabase/supabase-js'
 
 export async function saveChat(chat: Chat, userId: string): Promise<{ data: string | null; error: PostgrestError | null }> {
-  const supabase = getSupabaseServiceClient()
+  const supabase = getSupabaseServerClient()
   
   // First, upsert the chat
   const { data: chatData, error: chatError } = await supabase
@@ -35,7 +35,7 @@ export async function saveChat(chat: Chat, userId: string): Promise<{ data: stri
     const messagesToInsert = chat.messages.map(message => ({
       id: message.id,
       chat_id: chat.id,
-      user_id: userId,
+      user_id: message.role === 'user' ? userId : null,
       role: message.role,
       content: typeof message.content === 'string' ? message.content : JSON.stringify(message.content),
       created_at: message.createdAt ? new Date(message.createdAt).toISOString() : new Date().toISOString(),
@@ -130,7 +130,7 @@ export async function saveDrawing(
 export async function createMessage(messageData: {
     chat_id: string,
     user_id: string,
-    role: 'user' | 'assistant' | 'system' | 'tool',
+    role: AIMessage['role'],
     content: string,
     location_id?: string
 }): Promise<{ data: AIMessage | null; error: PostgrestError | null }> {
