@@ -35,6 +35,10 @@ test.describe('Map functionality', () => {
       return;
     }
 
+    // Switch to drawing mode to make zoom controls visible
+    await page.click('[data-testid="map-toggle"]');
+    await page.click('[data-testid="map-mode-draw"]');
+
     const hasMap = await page.evaluate(() => Boolean((window as any).map));
     if (!hasMap) test.skip(true, 'Map instance not available on window for E2E');
 
