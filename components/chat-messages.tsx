@@ -1,11 +1,22 @@
 'use client'
 
-import { StreamableValue, useUIState } from 'ai/rsc'
+import { StreamableValue, useUIState, useStreamableValue } from 'ai/rsc'
 import type { AI, UIState } from '@/app/ai'
 import { CollapsibleMessage } from './collapsible-message'
+import { Spinner } from './ui/spinner'
 
 interface ChatMessagesProps {
   messages: UIState
+}
+
+function MessageSpinner({ isGenerating }: { isGenerating: StreamableValue<boolean> }) {
+  const [generating] = useStreamableValue(isGenerating)
+  if (!generating) return null
+  return (
+    <div className="flex justify-start px-4 py-2">
+      <Spinner />
+    </div>
+  )
 }
 
 export function ChatMessages({ messages }: ChatMessagesProps) {
@@ -20,7 +31,8 @@ export function ChatMessages({ messages }: ChatMessagesProps) {
         acc[message.id] = {
           id: message.id,
           components: [],
-          isCollapsed: message.isCollapsed
+          isCollapsed: message.isCollapsed,
+          isGenerating: message.isGenerating
         }
       }
       acc[message.id].components.push(message.component)
@@ -37,34 +49,35 @@ export function ChatMessages({ messages }: ChatMessagesProps) {
     id: string
     components: React.ReactNode[]
     isCollapsed?: StreamableValue<boolean>
+    isGenerating?: StreamableValue<boolean>
   }[]
 
   return (
-    <>
+    <div className="flex flex-col gap-4">
       {groupedMessagesArray.map(
         (
-          groupedMessage: {
-            id: string
-            components: React.ReactNode[]
-            isCollapsed?: StreamableValue<boolean>
-          },
+          groupedMessage,
           index
         ) => (
-          <CollapsibleMessage
-            key={`${groupedMessage.id}`}
-            message={{
-              id: groupedMessage.id,
-              component: groupedMessage.components.map((component, i) => (
-                <div key={`${groupedMessage.id}-${i}`}>{component}</div>
-              )),
-              isCollapsed: groupedMessage.isCollapsed
-            }}
-            isLastMessage={
-              groupedMessage.id === messages[messages.length - 1].id
-            }
-          />
+          <div key={`${groupedMessage.id}`}>
+            <CollapsibleMessage
+              message={{
+                id: groupedMessage.id,
+                component: groupedMessage.components.map((component, i) => (
+                  <div key={`${groupedMessage.id}-${i}`}>{component}</div>
+                )),
+                isCollapsed: groupedMessage.isCollapsed
+              }}
+              isLastMessage={
+                groupedMessage.id === messages[messages.length - 1].id
+              }
+            />
+            {groupedMessage.isGenerating && (
+              <MessageSpinner isGenerating={groupedMessage.isGenerating} />
+            )}
+          </div>
         )
       )}
-    </>
+    </div>
   )
 }

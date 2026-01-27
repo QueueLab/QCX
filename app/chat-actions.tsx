@@ -10,6 +10,7 @@ import {
 import { CoreMessage, ToolResultPart } from 'ai'
 import { nanoid } from 'nanoid'
 import type { FeatureCollection } from 'geojson'
+import { Spinner } from '@/components/ui/spinner'
 import { Section } from '@/components/section'
 import { FollowupPanel } from '@/components/followup-panel'
 import { inquire, researcher, taskManager, querySuggestor, resolutionSearch } from '@/lib/agents'
@@ -469,12 +470,6 @@ export async function submit(formData?: FormData, skip?: boolean) {
       uiStream.done();
     }
   }
-
-  uiStream.update(
-    <Section title="response">
-      <BotMessage content={streamText.value} />
-    </Section>
-  )
 
   processEvents()
 

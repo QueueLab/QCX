@@ -112,17 +112,18 @@ export async function researcher(
     tools: getTools({ uiStream, fullResponse, mapProvider }),
   })
 
-  uiStream.update(null) // remove spinner
-
   const toolCalls: ToolCallPart[] = []
   const toolResponses: ToolResultPart[] = []
+
+  let answerSectionAppended = false
 
   for await (const delta of result.fullStream) {
     switch (delta.type) {
       case 'text-delta':
         if (delta.textDelta) {
-          if (fullResponse.length === 0 && delta.textDelta.length > 0) {
-            uiStream.update(answerSection)
+          if (!answerSectionAppended && delta.textDelta.length > 0) {
+            uiStream.append(answerSection)
+            answerSectionAppended = true
           }
           fullResponse += delta.textDelta
           streamText.update(fullResponse)
@@ -134,8 +135,9 @@ export async function researcher(
         break
 
       case 'tool-result':
-        if (!useSpecificModel && toolResponses.length === 0 && delta.result) {
+        if (!useSpecificModel && !answerSectionAppended && delta.result) {
           uiStream.append(answerSection)
+          answerSectionAppended = true
         }
         if (!delta.result) hasError = true
         toolResponses.push(delta)
