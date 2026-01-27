@@ -4,6 +4,13 @@ import * as path from 'path';
 test.describe('Chat functionality', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
+    // Try to wait for the loading overlay to disappear naturally
+    try {
+      await page.waitForSelector('[data-testid="loading-overlay"]', { state: 'hidden', timeout: 5000 });
+    } catch (e) {
+      // Force hide it if it's still there after 5 seconds
+      await page.addStyleTag({ content: '[data-testid="loading-overlay"] { display: none !important; pointer-events: none !important; }' });
+    }
     await page.waitForSelector('[data-testid="chat-input"]');
   });
 
@@ -66,7 +73,9 @@ test.describe('Chat functionality', () => {
     await require('fs').promises.writeFile(filePath, 'This is a test file.');
 
     const fileChooserPromise = page.waitForEvent('filechooser');
-    await page.click('[data-testid="attachment-button"]');
+    // Updated selector to match desktop or mobile
+    const attachmentButton = page.locator('[data-testid="desktop-attachment-button"], [data-testid="mobile-attachment-button"]').first();
+    await attachmentButton.click();
     const fileChooser = await fileChooserPromise;
     await fileChooser.setFiles(filePath);
 

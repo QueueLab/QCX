@@ -66,7 +66,9 @@ export const Header = () => {
 
       {/* Mobile menu buttons */}
       <div className="flex md:hidden gap-2">
-        
+        <Button variant="ghost" size="icon" onClick={toggleCalendar} title="Open Calendar" data-testid="calendar-toggle-mobile">
+          <CalendarDays className="h-[1.2rem] w-[1.2rem]" />
+        </Button>
         <a href="https://buy.stripe.com/3cIaEX3tRcur9EM7tbasg00" target="_blank" rel="noopener noreferrer">
           <Button variant="ghost" size="icon">
             <TentTree className="h-[1.2rem] w-[1.2rem]" />

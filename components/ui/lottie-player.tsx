@@ -13,7 +13,10 @@ const LottiePlayer: React.FC<LottiePlayerProps> = ({ isVisible }) => {
   }
 
   return (
-    <div className="fixed top-0 left-0 w-screen h-screen flex justify-center items-center bg-background/80 backdrop-blur-lg md:backdrop-blur-sm z-[9999]">
+    <div
+      className="fixed top-0 left-0 w-screen h-screen flex justify-center items-center bg-background/80 backdrop-blur-lg md:backdrop-blur-sm z-[9999]"
+      data-testid="loading-overlay"
+    >
       <Lottie animationData={animationData} style={{ width: 300, height: 300 }} loop={true} />
     </div>
   );

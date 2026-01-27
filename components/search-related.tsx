@@ -10,17 +10,19 @@ import {
   readStreamableValue,
   StreamableValue
 } from 'ai/rsc'
-import { AI } from '@/app/actions'
+import { AI } from '@/app/ai'
 // Removed import of useGeospatialToolMcp as it's no longer used/available
 import { UserMessage } from './user-message'
 import { PartialRelated } from '@/lib/schema/related'
 
 export interface SearchRelatedProps {
   relatedQueries: StreamableValue<PartialRelated, any>
+  threadId?: string
 }
 
 export const SearchRelated: React.FC<SearchRelatedProps> = ({
-  relatedQueries
+  relatedQueries,
+  threadId
 }) => {
   const { submit } = useActions()
   // Removed mcp instance as it's no longer passed to submit
@@ -43,7 +45,12 @@ export const SearchRelated: React.FC<SearchRelatedProps> = ({
 
     const userMessage = {
       id: Date.now(),
+      threadId,
       component: <UserMessage content={query} />
+    }
+
+    if (threadId) {
+      formData.append('threadId', threadId)
     }
 
     // Removed mcp argument from submit call
@@ -51,7 +58,7 @@ export const SearchRelated: React.FC<SearchRelatedProps> = ({
     setMessages(currentMessages => [
       ...currentMessages,
       userMessage,
-      responseMessage
+      { ...responseMessage as any, threadId }
     ])
   }
 

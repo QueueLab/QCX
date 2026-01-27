@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { useUIState, useActions } from 'ai/rsc'
-import { AI } from '@/app/actions'
+import { AI } from '@/app/ai'
 import { Button } from '@/components/ui/button'
 import {
   Search,
@@ -23,21 +23,15 @@ import { useCalendarToggle } from './calendar-toggle-context'
 interface MobileIconsBarProps {
   onAttachmentClick: () => void;
   onSubmitClick: () => void;
+  onNewChat?: () => void;
 }
 
-export const MobileIconsBar: React.FC<MobileIconsBarProps> = ({ onAttachmentClick, onSubmitClick }) => {
-  const [, setMessages] = useUIState<typeof AI>()
-  const { clearChat } = useActions()
+export const MobileIconsBar: React.FC<MobileIconsBarProps> = ({ onAttachmentClick, onSubmitClick, onNewChat }) => {
   const { toggleCalendar } = useCalendarToggle()
-
-  const handleNewChat = async () => {
-    setMessages([])
-    await clearChat()
-  }
 
   return (
     <div className="mobile-icons-bar-content">
-      <Button variant="ghost" size="icon" onClick={handleNewChat} data-testid="mobile-new-chat-button">
+      <Button variant="ghost" size="icon" onClick={onNewChat} data-testid="mobile-new-chat-button">
         <Plus className="h-[1.2rem] w-[1.2rem]" />
       </Button>
       <ProfileToggle />

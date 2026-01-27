@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef, ChangeEvent, forwardRef, useImperativeHandle, useCallback } from 'react'
-import type { AI, UIState } from '@/app/actions'
+import type { AI, UIState } from '@/app/ai'
 import { useUIState, useActions, readStreamableValue } from 'ai/rsc'
 // Removed import of useGeospatialToolMcp as it's no longer used/available
 import { cn } from '@/lib/utils'
@@ -21,6 +21,8 @@ interface ChatPanelProps {
   input: string
   setInput: (value: string) => void
   onSuggestionsChange?: (suggestions: PartialRelated | null) => void
+  threadId?: string
+  onNewChat?: () => void
 }
 
 export interface ChatPanelRef {
@@ -28,9 +30,9 @@ export interface ChatPanelRef {
   submitForm: () => void
 }
 
-export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, input, setInput, onSuggestionsChange }, ref) => {
+export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, input, setInput, onSuggestionsChange, threadId, onNewChat }, ref) => {
   const [, setMessages] = useUIState<typeof AI>()
-  const { submit, clearChat } = useActions()
+  const { submit } = useActions()
   // Removed mcp instance as it's no longer passed to submit
   const { mapProvider } = useSettingsStore()
   const [isMobile, setIsMobile] = useState(false)
@@ -108,11 +110,15 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
       ...currentMessages,
       {
         id: nanoid(),
+        threadId,
         component: <UserMessage content={content} />
       }
     ])
 
     const formData = new FormData(e.currentTarget)
+    if (threadId) {
+      formData.append('threadId', threadId)
+    }
     if (selectedFile) {
       formData.append('file', selectedFile)
     }
@@ -121,13 +127,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     clearAttachment()
 
     const responseMessage = await submit(formData)
-    setMessages(currentMessages => [...currentMessages, responseMessage as any])
-  }
-
-  const handleClear = async () => {
-    setMessages([])
-    clearAttachment()
-    await clearChat()
+    setMessages(currentMessages => [...currentMessages, { ...responseMessage as any, threadId }])
   }
 
   const debouncedGetSuggestions = useCallback(
@@ -160,31 +160,6 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     inputRef.current?.focus()
   }, [])
 
-  // New chat button (appears when there are messages)
-  if (messages.length > 0 && !isMobile) {
-    return (
-      <div
-        className={cn(
-          'fixed bottom-2 left-2 flex justify-start items-center pointer-events-none',
-          isMobile ? 'w-full px-2' : 'md:bottom-8'
-        )}
-      >
-        <Button
-          type="button"
-          variant={'secondary'}
-          className="rounded-full bg-secondary/80 group transition-all hover:scale-105 pointer-events-auto"
-          onClick={() => handleClear()}
-          data-testid="new-chat-button"
-        >
-          <span className="text-sm mr-2 group-hover:block hidden animate-in fade-in duration-300">
-            New
-          </span>
-          <Plus size={18} className="group-hover:rotate-90 transition-all" />
-        </Button>
-      </div>
-    )
-  }
-
   return (
     <div
       className={cn(
@@ -209,6 +184,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
           )}
         >
           <input type="hidden" name="mapProvider" value={mapProvider} />
+          <input type="hidden" name="threadId" value={threadId} />
           <input
             type="file"
             ref={fileInputRef}
@@ -230,6 +206,21 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
               <Paperclip size={isMobile ? 18 : 20} />
             </Button>
           )}
+          <div className="absolute left-12 top-1/2 transform -translate-y-1/2 flex items-center">
+             {!isMobile && messages.length > 0 && (
+               <Button
+                 type="button"
+                 variant="ghost"
+                 size="icon"
+                 className="h-8 w-8 rounded-full"
+                 onClick={onNewChat}
+                 data-testid="new-chat-button"
+                 title="New Chat"
+               >
+                 <Plus size={18} />
+               </Button>
+             )}
+          </div>
           <Textarea
             ref={inputRef}
             name="input"
@@ -241,10 +232,11 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
             value={input}
             data-testid="chat-input"
             className={cn(
-              'resize-none w-full min-h-12 rounded-fill border border-input pl-14 pr-12 pt-3 pb-1 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+              'resize-none w-full min-h-12 rounded-fill border border-input pr-12 pt-3 pb-1 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
               isMobile
                 ? 'mobile-chat-input input bg-background'
-                : 'bg-muted'
+                : 'bg-muted',
+              !isMobile ? 'pl-24' : 'pl-14'
             )}
             onChange={e => {
               setInput(e.target.value)

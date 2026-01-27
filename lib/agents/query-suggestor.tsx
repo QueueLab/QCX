@@ -7,12 +7,13 @@ import { getModel } from '../utils'
 
 export async function querySuggestor(
   uiStream: ReturnType<typeof createStreamableUI>,
-  messages: CoreMessage[]
+  messages: CoreMessage[],
+  threadId?: string
 ) {
   const objectStream = createStreamableValue<PartialRelated>()
   uiStream.append(
     <Section title="Related" separator={true}>
-      <SearchRelated relatedQueries={objectStream.value} />
+      <SearchRelated relatedQueries={objectStream.value} threadId={threadId} />
     </Section>
   )
 
