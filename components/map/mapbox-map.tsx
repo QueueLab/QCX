@@ -1,10 +1,16 @@
 'use client'
 
-import { useEffect, useRef, useCallback, useState } from 'react' // Removed useState
+import { useEffect, useRef, useCallback, useState } from 'react'
 import mapboxgl from 'mapbox-gl'
-import Compare from 'mapbox-gl-compare'
 import 'mapbox-gl-compare/dist/mapbox-gl-compare.css'
+import type CompareClass from 'mapbox-gl-compare'
 import MapboxDraw from '@mapbox/mapbox-gl-draw'
+
+// Late-import mapbox-gl-compare to avoid SSR issues
+let Compare: any = null;
+if (typeof window !== 'undefined') {
+  Compare = require('mapbox-gl-compare');
+}
 import * as turf from '@turf/turf'
 import { toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
@@ -22,7 +28,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   const afterMapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const afterMap = useRef<mapboxgl.Map | null>(null)
-  const compareRef = useRef<Compare | null>(null)
+  const compareRef = useRef<CompareClass | null>(null)
   const afterMapMarkersRef = useRef<mapboxgl.Marker[]>([])
   const { setMap } = useMap()
   const drawRef = useRef<MapboxDraw | null>(null)
@@ -820,7 +826,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     <div className="relative h-full w-full overflow-hidden rounded-l-lg" id="comparison-container">
       <div
         ref={mapContainer}
-        className="absolute top-0 bottom-0 w-full"
+        className="absolute inset-0"
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
@@ -828,7 +834,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
       {mapType === MapToggleEnum.DrawingMode && (
         <div
           ref={afterMapContainer}
-          className="absolute top-0 bottom-0 w-full pointer-events-none"
+          className="absolute inset-0 pointer-events-none"
         />
       )}
     </div>
