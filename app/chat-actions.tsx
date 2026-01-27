@@ -20,9 +20,10 @@ import { BotMessage } from '@/components/message'
 import React from 'react'
 import { AIState } from '@/lib/chat/types'
 import { getUIStateFromAIState } from '@/lib/chat/ui-mapper'
+import type { AI } from './ai'
 
 export async function submit(formData?: FormData, skip?: boolean) {
-  const aiState = getMutableAIState<any>()
+  const aiState = getMutableAIState<typeof AI>()
   const threadId = formData?.get('threadId') as string
   const uiStream = createStreamableUI()
   const isGenerating = createStreamableValue(true)
@@ -325,6 +326,8 @@ export async function submit(formData?: FormData, skip?: boolean) {
   const currentSystemPrompt = (await getSystemPrompt(userId)) || ''
   const mapProvider = formData?.get('mapProvider') as 'mapbox' | 'google'
 
+  const streamText = createStreamableValue<string>()
+
   async function processEvents() {
     try {
       let action: any = { object: { next: 'proceed' } }
@@ -359,13 +362,6 @@ export async function submit(formData?: FormData, skip?: boolean) {
       let answer = ''
       let toolOutputs: ToolResultPart[] = []
       let errorOccurred = false
-      const streamText = createStreamableValue<string>()
-
-      uiStream.update(
-        <Section title="response">
-          <BotMessage content={streamText.value} />
-        </Section>
-      )
 
       while (
         useSpecificAPI
@@ -474,6 +470,12 @@ export async function submit(formData?: FormData, skip?: boolean) {
     }
   }
 
+  uiStream.update(
+    <Section title="response">
+      <BotMessage content={streamText.value} />
+    </Section>
+  )
+
   processEvents()
 
   return {
@@ -485,7 +487,7 @@ export async function submit(formData?: FormData, skip?: boolean) {
 }
 
 export async function clearChat() {
-  const aiState = getMutableAIState<any>()
+  const aiState = getMutableAIState<typeof AI>()
 
   aiState.done({
     chatId: nanoid(),

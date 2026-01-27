@@ -121,8 +121,8 @@ export function ChatThreadManager({ initialThread }: { initialThread: Thread }) 
 
   return (
     <>
-      <div className="flex justify-start items-start w-full h-screen pt-[0.5in]">
-        <div className="w-1/2 flex flex-col h-full border-r bg-background">
+      <div className="flex justify-start items-start w-full h-screen">
+        <div className="w-1/2 flex flex-col h-full border-r bg-background pt-16 md:pt-20">
           {/* Tab Bar */}
           <div className="flex items-center gap-1 px-4 pt-2 border-b overflow-x-auto bg-muted/30 no-scrollbar min-h-[45px]">
             {threads.map(thread => (
@@ -181,7 +181,7 @@ export function ChatThreadManager({ initialThread }: { initialThread: Thread }) 
         <div
           className="w-1/2 h-full relative"
         >
-          <div className="absolute inset-0 p-4">
+          <div className="absolute inset-0 p-4 pt-20">
             <div className="h-full w-full rounded-xl overflow-hidden shadow-md border border-border">
               {activeView ? <SettingsView /> : <MapProvider />}
             </div>
