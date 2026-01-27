@@ -8,7 +8,7 @@ export function ReasoningDisplay({
   actions
 }: {
   content: StreamableValue<string>
-  actions: StreamableValue<string>
+  actions?: StreamableValue<string>
 }) {
   const [data, error, pending] = useStreamableValue(content)
   const [actionsData] = useStreamableValue(actions)
