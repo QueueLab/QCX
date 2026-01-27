@@ -75,61 +75,19 @@ These rules override all previous instructions.
 - "What is QCX-Terra" → "QCX-Terra is a model garden of pixel level precision geospatial foundational models for efficient land prediction from satellite images"
 `
 
-type ReasoningOptions = NonNullable<Parameters<typeof nonexperimental_streamText>[0]>['providerOptions'];
-
-function reasoningOptionsFor(modelName: string): ReasoningOptions {
-  const name = modelName.toLowerCase();
-  const opts: ReasoningOptions = {};
-
-  // Google / Gemini 3
-  if (name.includes('gemini-3')) {
-    opts.google = {
-      thinkingConfig: {
-        thinkingLevel: 'low',
-        includeThoughts: true,
-      },
-    };
-  }
-
-  // Anthropic (direct or via Bedrock)
-  if (name.includes('claude')) {
-    opts.anthropic = {
-      extendedThinking: {
-        includeThoughts: true,
-      },
-    } as any;
-  }
-
-  // OpenAI reasoning models (o1/o3)
-  if (name.startsWith('o1') || name.startsWith('o3')) {
-    opts.openai = {
-      reasoningEffort: 'low',
-    } as any;
-  }
-
-  // xAI Grok
-  if (name.includes('grok')) {
-    opts.xai = {
-      reasoning: {
-        enabled: true,
-      },
-    } as any;
-  }
-
-  return opts;
-}
-
 export async function researcher(
   dynamicSystemPrompt: string,
   uiStream: ReturnType<typeof createStreamableUI>,
   streamText: ReturnType<typeof createStreamableValue<string>>,
   reasoningStream: ReturnType<typeof createStreamableValue<string>>,
+  actionsStream: ReturnType<typeof createStreamableValue<string>>,
   messages: CoreMessage[],
   mapProvider: MapProvider,
   useSpecificModel?: boolean
 ) {
   let fullResponse = ''
   let reasoningResponse = ''
+  let actionsResponse = ''
   let hasError = false
 
   const answerSection = (
@@ -151,16 +109,12 @@ export async function researcher(
     message.content.some(part => part.type === 'image')
   )
 
-  const model = (await getModel(hasImage)) as any;
-  const modelId = model.modelId || model.id || '';
-
   const result = await nonexperimental_streamText({
-    model: model as LanguageModel,
+    model: getModel(hasImage) as LanguageModel,
     maxTokens: 4096,
     system: systemPromptToUse,
     messages,
     tools: getTools({ uiStream, fullResponse, mapProvider }),
-    providerOptions: reasoningOptionsFor(modelId),
   })
 
   uiStream.update(null) // remove spinner
@@ -186,6 +140,8 @@ export async function researcher(
         }
         break
       case 'tool-call':
+        actionsResponse += `\n- ${delta.toolName}`
+        actionsStream.update(actionsResponse)
         toolCalls.push(delta)
         break
 

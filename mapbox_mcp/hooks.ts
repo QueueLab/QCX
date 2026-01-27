@@ -128,7 +128,7 @@ export const useMCPMapClient = () => {
     setError(null);
     try {
       const response = await generateText({
-        model: await getModel(),
+        model: getModel(),
         tools: toolsRef.current,
         system: `You are an expert location data processing engine. Your role is to accurately use the available tools to answer location-based queries and provide structured data.
 

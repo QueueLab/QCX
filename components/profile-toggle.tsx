@@ -8,13 +8,10 @@ import { ProfileToggleEnum, useProfileToggle } from "./profile-toggle-context"
 export function ProfileToggle() {
   const { toggleProfileSection } = useProfileToggle()
   const [alignValue, setAlignValue] = useState<'start' | 'end'>("end")
-  const [isMobile, setIsMobile] = useState(false)
   
   useEffect(() => {
     const handleResize = () => {
-      const mobile = window.innerWidth < 768
-      setIsMobile(mobile)
-      if (mobile) {
+      if (window.innerWidth < 768) {
         setAlignValue("start") // Right align on mobile too
       } else {
         setAlignValue("start") // Right align on desktop
@@ -34,15 +31,6 @@ export function ProfileToggle() {
   
   const handleSectionChange = (section: ProfileToggleEnum) => {
     toggleProfileSection(section)
-  }
-
-  if (isMobile) {
-    return (
-      <Button variant="ghost" size="icon" className="relative" data-testid="profile-toggle" disabled>
-        <CircleUserRound className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
-        <span className="sr-only">Open profile menu</span>
-      </Button>
-    )
   }
   
   return (

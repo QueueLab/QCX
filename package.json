@@ -46,7 +46,6 @@
     "@supabase/ssr": "^0.3.0",
     "@supabase/supabase-js": "^2.0.0",
     "@tailwindcss/typography": "^0.5.16",
-    "@tavily/core": "^0.6.4",
     "@turf/turf": "^7.2.0",
     "@types/mapbox__mapbox-gl-draw": "^1.4.8",
     "@types/pg": "^8.15.4",

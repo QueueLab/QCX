@@ -93,58 +93,17 @@ async function submit(formData?: FormData, skip?: boolean) {
       <BotMessage content={summaryStream.value} />
     );
 
-    messages.push({ role: 'assistant', content: analysisResult.summary || 'Analysis complete.' });
-
-    const sanitizedMessages: CoreMessage[] = messages.map(m => {
-      if (Array.isArray(m.content)) {
-        return {
-          ...m,
-          content: m.content.filter(part => part.type !== 'image')
-        } as CoreMessage
-      }
-      return m
-    })
-
-    const relatedQueries = await querySuggestor(uiStream, sanitizedMessages);
-    uiStream.append(
-        <Section title="Follow-up">
-            <FollowupPanel />
-        </Section>
-    );
-
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    const groupeId = nanoid();
-
     aiState.done({
-        ...aiState.get(),
-        messages: [
-            ...aiState.get().messages,
-            {
-                id: groupeId,
-                role: 'assistant',
-                content: analysisResult.summary || 'Analysis complete.',
-                type: 'response'
-            },
-            {
-                id: groupeId,
-                role: 'assistant',
-                content: JSON.stringify(analysisResult),
-                type: 'resolution_search_result'
-            },
-            {
-                id: groupeId,
-                role: 'assistant',
-                content: JSON.stringify(relatedQueries),
-                type: 'related'
-            },
-            {
-                id: groupeId,
-                role: 'assistant',
-                content: 'followup',
-                type: 'followup'
-            }
-        ]
+      ...aiState.get(),
+      messages: [
+        ...aiState.get().messages,
+        {
+          id: nanoid(),
+          role: 'assistant',
+          content: JSON.stringify(analysisResult),
+          type: 'resolution_search_result'
+        }
+      ]
     });
 
     isGenerating.done(false);
@@ -363,11 +322,15 @@ async function submit(formData?: FormData, skip?: boolean) {
     let errorOccurred = false
     const streamText = createStreamableValue<string>()
     const reasoningStream = createStreamableValue<string>()
+    const actionsStream = createStreamableValue<string>()
+    console.log('Updating uiStream with Thinking section');
     uiStream.update(
-      <>
-        <ReasoningDisplay content={reasoningStream.value} />
-        <Spinner />
-      </>
+      <Section title="Thinking">
+        <ReasoningDisplay
+          content={reasoningStream.value}
+          actions={actionsStream.value}
+        />
+      </Section>
     )
 
     while (
@@ -381,6 +344,7 @@ async function submit(formData?: FormData, skip?: boolean) {
           uiStream,
           streamText,
           reasoningStream,
+          actionsStream,
           messages,
           mapProvider,
           useSpecificAPI
@@ -389,6 +353,7 @@ async function submit(formData?: FormData, skip?: boolean) {
       toolOutputs = toolResponses
       errorOccurred = hasError
       if (reasoningResponse) {
+        console.log('Reasoning response received, marking reasoningStream as done');
         reasoningStream.done(reasoningResponse)
       }
 
@@ -651,7 +616,11 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
             case 'reasoning':
               return {
                 id,
-                component: <ReasoningDisplay content={answer.value} />
+                component: (
+                  <Section title="Thinking">
+                    <ReasoningDisplay content={answer.value} />
+                  </Section>
+                )
               }
             case 'response':
               return {
@@ -684,12 +653,17 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
               }
             case 'resolution_search_result': {
               const analysisResult = JSON.parse(content as string);
+              const summaryValue = createStreamableValue();
+              summaryValue.done(analysisResult.summary);
               const geoJson = analysisResult.geoJson as FeatureCollection;
 
               return {
                 id,
                 component: (
                   <>
+                    <Section title="Map Analysis">
+                      <BotMessage content={summaryValue.value} />
+                    </Section>
                     {geoJson && (
                       <GeoJsonLayer id={id} data={geoJson} />
                     )}

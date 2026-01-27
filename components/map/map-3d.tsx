@@ -12,7 +12,6 @@ import {useCallbackRef} from '@/lib/hooks/use-callback-ref';
 import {useMap3DCameraEvents} from '@/lib/hooks/use-map-3d-camera-events';
 import {useDeepCompareEffect} from '@/lib/hooks/use-deep-compare-effect';
 import type {Map3DProps} from './map-3d-types';
-import { useMapData } from './map-data-context';
 
 export const Map3D = forwardRef(
   (
@@ -20,25 +19,11 @@ export const Map3D = forwardRef(
     forwardedRef: ForwardedRef<google.maps.maps3d.Map3DElement | null>
   ) => {
     useMapsLibrary('maps3d');
-    const { setMapData } = useMapData();
 
     const [map3DElement, map3dRef] =
       useCallbackRef<google.maps.maps3d.Map3DElement>();
 
     useMap3DCameraEvents(map3DElement, p => {
-      const { center, range, heading, tilt } = p.detail;
-      const lat = center.lat();
-      const lng = center.lng();
-      setMapData(prevData => ({
-        ...prevData,
-        cameraState: {
-          ...prevData.cameraState,
-          center: { lat, lng },
-          range,
-          heading,
-          tilt
-        }
-      }));
       if (!props.onCameraChange) return;
 
       props.onCameraChange(p);

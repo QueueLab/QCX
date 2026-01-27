@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState, useRef, ChangeEvent, forwardRef, useImperativeHandle, useCallback } from 'react'
+import { useEffect, useState, useRef, ChangeEvent, forwardRef, useImperativeHandle } from 'react'
 import type { AI, UIState } from '@/app/actions'
-import { useUIState, useActions, readStreamableValue } from 'ai/rsc'
+import { useUIState, useActions } from 'ai/rsc'
 // Removed import of useGeospatialToolMcp as it's no longer used/available
 import { cn } from '@/lib/utils'
 import { UserMessage } from './user-message'
@@ -11,37 +11,24 @@ import { ArrowRight, Plus, Paperclip, X } from 'lucide-react'
 import Textarea from 'react-textarea-autosize'
 import { nanoid } from 'nanoid'
 import { useSettingsStore } from '@/lib/store/settings'
-import { PartialRelated } from '@/lib/schema/related'
-import { getSuggestions } from '@/lib/actions/suggest'
-import { useMapData } from './map/map-data-context'
-import SuggestionsDropdown from './suggestions-dropdown'
 
 interface ChatPanelProps {
   messages: UIState
   input: string
   setInput: (value: string) => void
-  onSuggestionsChange?: (suggestions: PartialRelated | null) => void
 }
 
 export interface ChatPanelRef {
-  handleAttachmentClick: () => void
-  submitForm: () => void
+  handleAttachmentClick: () => void;
 }
 
-export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, input, setInput, onSuggestionsChange }, ref) => {
+export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, input, setInput }, ref) => {
   const [, setMessages] = useUIState<typeof AI>()
   const { submit, clearChat } = useActions()
   // Removed mcp instance as it's no longer passed to submit
   const { mapProvider } = useSettingsStore()
   const [isMobile, setIsMobile] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [suggestions, setSuggestionsState] = useState<PartialRelated | null>(null)
-  const setSuggestions = useCallback((s: PartialRelated | null) => {
-    setSuggestionsState(s)
-    onSuggestionsChange?.(s)
-  }, [onSuggestionsChange, setSuggestionsState])
-  const { mapData } = useMapData()
-  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -49,9 +36,6 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
   useImperativeHandle(ref, () => ({
     handleAttachmentClick() {
       fileInputRef.current?.click()
-    },
-    submitForm() {
-      formRef.current?.requestSubmit()
     }
   }));
 
@@ -89,7 +73,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (!input.trim() && !selectedFile) {
+    if (!input && !selectedFile) {
       return
     }
 
@@ -130,32 +114,6 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     await clearChat()
   }
 
-  const debouncedGetSuggestions = useCallback(
-    (value: string) => {
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current)
-      }
-
-      const wordCount = value.trim().split(/\s+/).filter(Boolean).length
-      if (wordCount < 2) {
-        setSuggestions(null)
-        return
-      }
-
-      debounceTimeoutRef.current = setTimeout(async () => {
-        const suggestionsStream = await getSuggestions(value, mapData)
-        for await (const partialSuggestions of readStreamableValue(
-          suggestionsStream
-        )) {
-          if (partialSuggestions) {
-            setSuggestions(partialSuggestions as PartialRelated)
-          }
-        }
-      }, 500) // 500ms debounce delay
-    },
-    [mapData]
-  )
-
   useEffect(() => {
     inputRef.current?.focus()
   }, [])
@@ -194,6 +152,18 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
           : 'sticky bottom-0 bg-background z-10 w-full border-t border-border px-2 py-3 md:px-4'
       )}
     >
+      {selectedFile && (
+        <div className="w-full px-4 pb-2">
+          <div className="flex items-center justify-between p-2 bg-muted rounded-lg">
+            <span className="text-sm text-muted-foreground truncate max-w-xs">
+              {selectedFile.name}
+            </span>
+            <Button variant="ghost" size="icon" onClick={clearAttachment} data-testid="clear-attachment-button">
+              <X size={16} />
+            </Button>
+          </div>
+        </div>
+      )}
       <form
         ref={formRef}
         onSubmit={handleSubmit}
@@ -225,7 +195,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
                 'absolute top-1/2 transform -translate-y-1/2 left-3'
               )}
               onClick={handleAttachmentClick}
-              data-testid="desktop-attachment-button"
+              data-testid="attachment-button"
             >
               <Paperclip size={isMobile ? 18 : 20} />
             </Button>
@@ -248,7 +218,6 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
             )}
             onChange={e => {
               setInput(e.target.value)
-              debouncedGetSuggestions(e.target.value)
             }}
             onKeyDown={e => {
               if (
@@ -288,21 +257,8 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
           >
             <ArrowRight size={isMobile ? 18 : 20} />
           </Button>
-          {/* Suggestions are now handled by the parent component (chat.tsx) as an overlay */}
         </div>
       </form>
-      {selectedFile && (
-        <div className="w-full px-4 pb-2 mb-2">
-          <div className="flex items-center justify-between p-2 bg-muted rounded-lg">
-            <span className="text-sm text-muted-foreground truncate max-w-xs">
-              {selectedFile.name}
-            </span>
-            <Button variant="ghost" size="icon" onClick={clearAttachment} data-testid="clear-attachment-button">
-              <X size={16} />
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   )
 })

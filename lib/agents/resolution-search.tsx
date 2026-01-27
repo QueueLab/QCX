@@ -47,7 +47,7 @@ Analyze the user's prompt and the image to provide a holistic understanding of t
 
   // Use generateObject to get the full object at once.
   const { object } = await generateObject({
-    model: await getModel(hasImage),
+    model: getModel(hasImage) as any,
     system: systemPrompt,
     messages: filteredMessages,
     schema: resolutionSearchSchema,

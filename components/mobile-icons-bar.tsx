@@ -22,10 +22,9 @@ import { useCalendarToggle } from './calendar-toggle-context'
 
 interface MobileIconsBarProps {
   onAttachmentClick: () => void;
-  onSubmitClick: () => void;
 }
 
-export const MobileIconsBar: React.FC<MobileIconsBarProps> = ({ onAttachmentClick, onSubmitClick }) => {
+export const MobileIconsBar: React.FC<MobileIconsBarProps> = ({ onAttachmentClick }) => {
   const [, setMessages] = useUIState<typeof AI>()
   const { clearChat } = useActions()
   const { toggleCalendar } = useCalendarToggle()
@@ -53,10 +52,10 @@ export const MobileIconsBar: React.FC<MobileIconsBarProps> = ({ onAttachmentClic
           <TentTree className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
         </Button>
       </a>
-      <Button variant="ghost" size="icon" onClick={onAttachmentClick} data-testid="mobile-attachment-button">
+      <Button variant="ghost" size="icon" onClick={onAttachmentClick}>
         <Paperclip className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>
-      <Button variant="ghost" size="icon" data-testid="mobile-submit-button" onClick={onSubmitClick}>
+      <Button variant="ghost" size="icon" data-testid="mobile-submit-button" disabled aria-disabled="true">
         <ArrowRight className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>
       <History location="header" />

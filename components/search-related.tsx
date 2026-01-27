@@ -60,7 +60,7 @@ export const SearchRelated: React.FC<SearchRelatedProps> = ({
       {data?.items
         ?.filter(item => item?.query !== '')
         .map((item, index) => (
-          <div className="flex items-start w-full animate-in fade-in slide-in-from-bottom-2 duration-300" key={index}>
+          <div className="flex items-start w-full" key={index}>
             <ArrowRight className="h-4 w-4 mr-2 mt-1 flex-shrink-0 text-accent-foreground/50" />
             <Button
               variant="link"
