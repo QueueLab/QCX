@@ -11,12 +11,11 @@ export async function writer(
   messages: CoreMessage[]
 ) {
   let fullResponse = ''
-  const answerSection = (
+  uiStream.append(
     <Section title="response">
       <BotMessage content={streamText.value} />
     </Section>
   )
-  uiStream.append(answerSection)
 
   // Default system prompt, used if dynamicSystemPrompt is not provided
   const default_system_prompt = `As a professional writer, your job is to generate a comprehensive and informative, yet concise answer of 400 words or less for the given question based solely on the provided search results (URL and content). You must only use information from the provided search results. Use an unbiased and journalistic tone. Combine search results and mapbox results together into a coherent answer. Do not repeat text. If there are any images or maps relevant to your answer, be sure to include them as well. Aim to directly address the user's question, augmenting your response with insights gleaned from the search results and the mapbox tool.
@@ -45,7 +44,7 @@ export async function writer(
     }
   }
 
-  streamText.done()
+  streamText.done(fullResponse)
 
   return fullResponse
 }

@@ -1,6 +1,7 @@
 import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import { getSelectedModel } from '@/lib/actions/users'
+import { AIMessage } from '../types'
 import { openai } from '@ai-sdk/openai'
 import { createOpenAI } from '@ai-sdk/openai'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
@@ -15,6 +16,31 @@ export function cn(...inputs: ClassValue[]) {
 
 export function generateUUID(): string {
   return uuidv4();
+}
+
+export function getChatTitle(messages: AIMessage[]) {
+  let title = 'Untitled Chat'
+  if (messages.length > 0) {
+    const firstMessage = messages.find(m => m.role === 'user')
+    const firstMessageContent = firstMessage?.content || messages[0].content
+    if (typeof firstMessageContent === 'string') {
+      try {
+        const parsedContent = JSON.parse(firstMessageContent)
+        title = parsedContent.input?.substring(0, 100) || 'Untitled Chat'
+      } catch (e) {
+        title = firstMessageContent.substring(0, 100)
+      }
+    } else if (Array.isArray(firstMessageContent)) {
+      const textPart = (
+        firstMessageContent as { type: string; text?: string }[]
+      ).find(p => p.type === 'text')
+      title =
+        textPart && textPart.text
+          ? textPart.text.substring(0, 100)
+          : 'Image Message'
+    }
+  }
+  return title
 }
 
 export async function getModel(requireVision: boolean = false) {

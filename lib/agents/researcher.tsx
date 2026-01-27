@@ -85,12 +85,6 @@ export async function researcher(
   let fullResponse = ''
   let hasError = false
 
-  const answerSection = (
-    <Section title="response">
-      <BotMessage content={streamText.value} />
-    </Section>
-  )
-
   const currentDate = new Date().toLocaleString()
 
   const systemPromptToUse =
@@ -122,7 +116,11 @@ export async function researcher(
       case 'text-delta':
         if (delta.textDelta) {
           if (!answerSectionAppended && delta.textDelta.length > 0) {
-            uiStream.append(answerSection)
+            uiStream.append(
+              <Section title="response">
+                <BotMessage content={streamText.value} />
+              </Section>
+            )
             answerSectionAppended = true
           }
           fullResponse += delta.textDelta
@@ -136,7 +134,11 @@ export async function researcher(
 
       case 'tool-result':
         if (!useSpecificModel && !answerSectionAppended && delta.result) {
-          uiStream.append(answerSection)
+          uiStream.append(
+            <Section title="response">
+              <BotMessage content={streamText.value} />
+            </Section>
+          )
           answerSectionAppended = true
         }
         if (!delta.result) hasError = true

@@ -91,12 +91,9 @@ export const ChatView = forwardRef<ChatViewRef, ChatViewProps>(({ id, isActive =
     }
   }, [id, mapData.drawnFeatures, mapData.cameraState, isActive]);
 
-  if (isCalendarOpen) {
-    return <CalendarNotepad chatId={id} />
-  }
-
   return (
     <div className="flex flex-col space-y-3 md:space-y-4 h-full overflow-y-auto">
+      {isCalendarOpen && <CalendarNotepad chatId={id} />}
       <ChatPanel
         messages={messages}
         input={input}

@@ -17,6 +17,7 @@ import { inquire, researcher, taskManager, querySuggestor, resolutionSearch } fr
 import { writer } from '@/lib/agents/writer'
 import { saveChat, getSystemPrompt } from '@/lib/actions/chat'
 import { Chat, AIMessage } from '@/lib/types'
+import { getChatTitle } from '@/lib/utils'
 import { BotMessage } from '@/components/message'
 import React from 'react'
 import { AIState } from '@/lib/chat/types'
@@ -65,7 +66,7 @@ export async function submit(formData?: FormData, skip?: boolean) {
     });
     messages.push({ role: 'user', content });
 
-    const summaryStream = createStreamableValue<string>();
+    const summaryStream = createStreamableValue<string>('');
 
     async function processResolutionSearch() {
       try {
@@ -194,7 +195,7 @@ export async function submit(formData?: FormData, skip?: boolean) {
       ],
     });
 
-    const definitionStream = createStreamableValue();
+    const definitionStream = createStreamableValue('');
     definitionStream.done(definition);
 
     const answerSection = (
@@ -327,7 +328,7 @@ export async function submit(formData?: FormData, skip?: boolean) {
   const currentSystemPrompt = (await getSystemPrompt(userId)) || ''
   const mapProvider = formData?.get('mapProvider') as 'mapbox' | 'google'
 
-  const streamText = createStreamableValue<string>()
+  const streamText = createStreamableValue<string>('')
 
   async function processEvents() {
     try {
@@ -342,7 +343,7 @@ export async function submit(formData?: FormData, skip?: boolean) {
       if (action.object.next === 'inquire') {
         const inquiry = await inquire(uiStream, messages)
         uiStream.done()
-        isGenerating.done()
+        isGenerating.done(false)
         isCollapsed.done(false)
         aiState.done({
           ...aiState.get(),
@@ -422,7 +423,7 @@ export async function submit(formData?: FormData, skip?: boolean) {
           latestMessages
         )
       } else {
-        streamText.done()
+        streamText.done(answer)
       }
 
       if (!errorOccurred) {
@@ -527,28 +528,7 @@ export async function onSetAIState({ state }: { state: AIState }) {
 
     const createdAt = new Date()
     const path = `/search/${tid}`
-
-    let title = 'Untitled Chat'
-    if (messages.length > 0) {
-      const firstMessage = messages.find(m => m.role === 'user');
-      const firstMessageContent = firstMessage?.content || messages[0].content
-      if (typeof firstMessageContent === 'string') {
-        try {
-          const parsedContent = JSON.parse(firstMessageContent)
-          title = parsedContent.input?.substring(0, 100) || 'Untitled Chat'
-        } catch (e) {
-          title = firstMessageContent.substring(0, 100)
-        }
-      } else if (Array.isArray(firstMessageContent)) {
-        const textPart = (
-          firstMessageContent as { type: string; text?: string }[]
-        ).find(p => p.type === 'text')
-        title =
-          textPart && textPart.text
-            ? textPart.text.substring(0, 100)
-            : 'Image Message'
-      }
-    }
+    const title = getChatTitle(messages)
 
     const updatedMessages: AIMessage[] = [
       ...messages,
