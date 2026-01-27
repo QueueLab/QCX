@@ -1,10 +1,10 @@
 import {
-  StreamableValue,
   createAI,
   createStreamableUI,
   createStreamableValue,
   getAIState,
-  getMutableAIState
+  getMutableAIState,
+  StreamableValue
 } from 'ai/rsc'
 import { CoreMessage, ToolResultPart } from 'ai'
 import { nanoid } from 'nanoid'
@@ -13,10 +13,8 @@ import { Spinner } from '@/components/ui/spinner'
 import { Section } from '@/components/section'
 import { FollowupPanel } from '@/components/followup-panel'
 import { inquire, researcher, taskManager, querySuggestor, resolutionSearch } from '@/lib/agents'
-// Removed import of useGeospatialToolMcp as it no longer exists and was incorrectly used here.
-// The geospatialTool (if used by agents like researcher) now manages its own MCP client.
 import { writer } from '@/lib/agents/writer'
-import { saveChat, getSystemPrompt } from '@/lib/actions/chat' // Added getSystemPrompt
+import { saveChat, getSystemPrompt } from '@/lib/actions/chat'
 import { Chat, AIMessage } from '@/lib/types'
 import { UserMessage } from '@/components/user-message'
 import { BotMessage } from '@/components/message'
@@ -26,14 +24,14 @@ import { GeoJsonLayer } from '@/components/map/geojson-layer'
 import { CopilotDisplay } from '@/components/copilot-display'
 import RetrieveSection from '@/components/retrieve-section'
 import { VideoSearchSection } from '@/components/video-search-section'
-import { MapQueryHandler } from '@/components/map/map-query-handler' // Add this import
+import { MapQueryHandler } from '@/components/map/map-query-handler'
+import React from 'react'
 
 // Define the type for related queries
 type RelatedQueries = {
   items: { query: string }[]
 }
 
-// Removed mcp parameter from submit, as geospatialTool now handles its client.
 async function submit(formData?: FormData, skip?: boolean) {
   'use server'
 
@@ -52,7 +50,6 @@ async function submit(formData?: FormData, skip?: boolean) {
     const buffer = await file.arrayBuffer();
     const dataUrl = `data:${file.type};base64,${Buffer.from(buffer).toString('base64')}`;
 
-    // Get the current messages, excluding tool-related ones.
     const messages: CoreMessage[] = [...(aiState.get().messages as any[])].filter(
       message =>
         message.role !== 'tool' &&
@@ -62,16 +59,12 @@ async function submit(formData?: FormData, skip?: boolean) {
         message.type !== 'resolution_search_result'
     );
 
-    // The user's prompt for this action is static.
     const userInput = 'Analyze this map view.';
-
-    // Construct the multimodal content for the user message.
     const content: CoreMessage['content'] = [
       { type: 'text', text: userInput },
       { type: 'image', image: dataUrl, mimeType: file.type }
     ];
 
-    // Add the new user message to the AI state.
     aiState.update({
       ...aiState.get(),
       messages: [
@@ -81,17 +74,12 @@ async function submit(formData?: FormData, skip?: boolean) {
     });
     messages.push({ role: 'user', content });
 
-    // Create a streamable value for the summary.
     const summaryStream = createStreamableValue<string>();
 
     async function processResolutionSearch() {
       try {
-        // Call the simplified agent, which now returns data directly.
         const analysisResult = await resolutionSearch(messages) as any;
-
-        // Mark the summary stream as done with the result.
         summaryStream.done(analysisResult.summary || 'Analysis complete.');
-
         messages.push({ role: 'assistant', content: analysisResult.summary || 'Analysis complete.' });
 
         const sanitizedMessages: CoreMessage[] = messages.map(m => {
@@ -112,7 +100,6 @@ async function submit(formData?: FormData, skip?: boolean) {
         );
 
         await new Promise(resolve => setTimeout(resolve, 500));
-
         const groupeId = nanoid();
 
         aiState.done({
@@ -154,10 +141,8 @@ async function submit(formData?: FormData, skip?: boolean) {
       }
     }
 
-    // Start the background process without awaiting it.
     processResolutionSearch();
 
-    // Immediately update the UI stream with the BotMessage component.
     uiStream.update(
       <Section title="response">
         <BotMessage content={summaryStream.value} />
@@ -191,10 +176,9 @@ async function submit(formData?: FormData, skip?: boolean) {
     : ((formData?.get('related_query') as string) ||
       (formData?.get('input') as string))
 
-  if (userInput.toLowerCase().trim() === 'what is a planet computer?' || userInput.toLowerCase().trim() === 'what is qcx-terra?') {
+  if (userInput && (userInput.toLowerCase().trim() === 'what is a planet computer?' || userInput.toLowerCase().trim() === 'what is qcx-terra?')) {
     const definition = userInput.toLowerCase().trim() === 'what is a planet computer?'
       ? `A planet computer is a proprietary environment aware system that interoperates weather forecasting, mapping and scheduling using cutting edge multi-agents to streamline automation and exploration on a planet. Available for our Pro and Enterprise customers. [QCX Pricing](https://www.queue.cx/#pricing)`
-
       : `QCX-Terra is a model garden of pixel level precision geospatial foundational models for efficient land feature predictions from satellite imagery. Available for our Pro and Enterprise customers. [QCX Pricing] (https://www.queue.cx/#pricing)`;
 
     const content = JSON.stringify(Object.fromEntries(formData!));
@@ -224,7 +208,6 @@ async function submit(formData?: FormData, skip?: boolean) {
 
     uiStream.append(answerSection);
 
-    const groupeId = nanoid();
     const relatedQueries = { items: [] };
 
     aiState.done({
@@ -308,7 +291,6 @@ async function submit(formData?: FormData, skip?: boolean) {
   }
 
   const hasImage = messageParts.some(part => part.type === 'image')
-  // Properly type the content based on whether it contains images
   const content: CoreMessage['content'] = hasImage
     ? messageParts as CoreMessage['content']
     : messageParts.map(part => part.text).join('\n')
@@ -342,142 +324,150 @@ async function submit(formData?: FormData, skip?: boolean) {
 
   const userId = 'anonymous'
   const currentSystemPrompt = (await getSystemPrompt(userId)) || ''
-
   const mapProvider = formData?.get('mapProvider') as 'mapbox' | 'google'
 
   async function processEvents() {
-    let action: any = { object: { next: 'proceed' } }
-    if (!skip) {
-      const taskManagerResult = await taskManager(messages)
-      if (taskManagerResult) {
-        action.object = taskManagerResult.object
+    try {
+      let action: any = { object: { next: 'proceed' } }
+      if (!skip) {
+        const taskManagerResult = await taskManager(messages)
+        if (taskManagerResult) {
+          action.object = taskManagerResult.object
+        }
       }
-    }
 
-    if (action.object.next === 'inquire') {
-      const inquiry = await inquire(uiStream, messages)
-      uiStream.done()
-      isGenerating.done()
-      isCollapsed.done(false)
-      aiState.done({
-        ...aiState.get(),
-        messages: [
-          ...aiState.get().messages,
-          {
-            id: nanoid(),
-            role: 'assistant',
-            content: `inquiry: ${inquiry?.question}`
-          }
-        ]
-      })
-      return
-    }
-
-    isCollapsed.done(true)
-    let answer = ''
-    let toolOutputs: ToolResultPart[] = []
-    let errorOccurred = false
-    const streamText = createStreamableValue<string>()
-    uiStream.update(<Spinner />)
-
-    while (
-      useSpecificAPI
-        ? answer.length === 0
-        : answer.length === 0 && !errorOccurred
-    ) {
-      const { fullResponse, hasError, toolResponses } = await researcher(
-        currentSystemPrompt,
-        uiStream,
-        streamText,
-        messages,
-        mapProvider,
-        useSpecificAPI
-      )
-      answer = fullResponse
-      toolOutputs = toolResponses
-      errorOccurred = hasError
-
-      if (toolOutputs.length > 0) {
-        toolOutputs.map(output => {
-          aiState.update({
-            ...aiState.get(),
-            messages: [
-              ...aiState.get().messages,
-              {
-                id: groupeId,
-                role: 'tool',
-                content: JSON.stringify(output.result),
-                name: output.toolName,
-                type: 'tool'
-              }
-            ]
-          })
+      if (action.object.next === 'inquire') {
+        const inquiry = await inquire(uiStream, messages)
+        uiStream.done()
+        isGenerating.done()
+        isCollapsed.done(false)
+        aiState.done({
+          ...aiState.get(),
+          messages: [
+            ...aiState.get().messages,
+            {
+              id: nanoid(),
+              role: 'assistant',
+              content: `inquiry: ${inquiry?.question}`
+            }
+          ]
         })
+        return
       }
-    }
 
-    if (useSpecificAPI && answer.length === 0) {
-      const modifiedMessages = aiState
-        .get()
-        .messages.map(msg =>
-          msg.role === 'tool'
-            ? {
-                ...msg,
-                role: 'assistant',
-                content: JSON.stringify(msg.content),
-                type: 'tool'
-              }
-            : msg
-        ) as CoreMessage[]
-      const latestMessages = modifiedMessages.slice(maxMessages * -1)
-      answer = await writer(
-        currentSystemPrompt,
-        uiStream,
-        streamText,
-        latestMessages
-      )
-    } else {
-      streamText.done()
-    }
+      isCollapsed.done(true)
+      let answer = ''
+      let toolOutputs: ToolResultPart[] = []
+      let errorOccurred = false
+      const streamText = createStreamableValue<string>()
 
-    if (!errorOccurred) {
-      const relatedQueries = await querySuggestor(uiStream, messages)
-      uiStream.append(
-        <Section title="Follow-up">
-          <FollowupPanel />
+      uiStream.update(
+        <Section title="response">
+          <BotMessage content={streamText.value} />
         </Section>
       )
 
-      await new Promise(resolve => setTimeout(resolve, 500))
+      while (
+        useSpecificAPI
+          ? answer.length === 0
+          : answer.length === 0 && !errorOccurred
+      ) {
+        const { fullResponse, hasError, toolResponses } = await researcher(
+          currentSystemPrompt,
+          uiStream,
+          streamText,
+          messages,
+          mapProvider,
+          useSpecificAPI
+        )
+        answer = fullResponse
+        toolOutputs = toolResponses
+        errorOccurred = hasError
 
-      aiState.done({
-        ...aiState.get(),
-        messages: [
-          ...aiState.get().messages,
-          {
-            id: groupeId,
-            role: 'assistant',
-            content: answer,
-            type: 'response'
-          },
-          {
-            id: groupeId,
-            role: 'assistant',
-            content: JSON.stringify(relatedQueries),
-            type: 'related'
-          },
-          {
-            id: groupeId,
-            role: 'assistant',
-            content: 'followup',
-            type: 'followup'
-          }
-        ]
-      })
+        if (toolOutputs.length > 0) {
+          toolOutputs.map(output => {
+            aiState.update({
+              ...aiState.get(),
+              messages: [
+                ...aiState.get().messages,
+                {
+                  id: groupeId,
+                  role: 'tool',
+                  content: JSON.stringify(output.result),
+                  name: output.toolName,
+                  type: 'tool'
+                }
+              ]
+            })
+          })
+        }
+      }
+
+      if (useSpecificAPI && answer.length === 0) {
+        const modifiedMessages = aiState
+          .get()
+          .messages.map(msg =>
+            msg.role === 'tool'
+              ? {
+                  ...msg,
+                  role: 'assistant',
+                  content: JSON.stringify(msg.content),
+                  type: 'tool'
+                }
+              : msg
+          ) as CoreMessage[]
+        const latestMessages = modifiedMessages.slice(maxMessages * -1)
+        answer = await writer(
+          currentSystemPrompt,
+          uiStream,
+          streamText,
+          latestMessages
+        )
+      } else {
+        streamText.done()
+      }
+
+      if (!errorOccurred) {
+        const relatedQueries = await querySuggestor(uiStream, messages)
+        uiStream.append(
+          <Section title="Follow-up">
+            <FollowupPanel />
+          </Section>
+        )
+
+        await new Promise(resolve => setTimeout(resolve, 500))
+
+        aiState.done({
+          ...aiState.get(),
+          messages: [
+            ...aiState.get().messages,
+            {
+              id: groupeId,
+              role: 'assistant',
+              content: answer,
+              type: 'response'
+            },
+            {
+              id: groupeId,
+              role: 'assistant',
+              content: JSON.stringify(relatedQueries),
+              type: 'related'
+            },
+            {
+              id: groupeId,
+              role: 'assistant',
+              content: 'followup',
+              type: 'followup'
+            }
+          ]
+        })
+      }
+    } catch (error) {
+      console.error('Error in processEvents:', error)
+    } finally {
+      isGenerating.done(false);
+      uiStream.done();
     }
-
-    isGenerating.done(false)
-    uiStream.done()
   }
 
   processEvents()
@@ -598,7 +588,10 @@ export const AI = createAI<AIState, UIState>({
       title,
       messages: updatedMessages
     }
-    await saveChat(chat, actualUserId)
+    // Background save
+    saveChat(chat, actualUserId).catch(err => {
+        console.error('Failed to save chat in onSetAIState:', err)
+    })
   }
 })
 

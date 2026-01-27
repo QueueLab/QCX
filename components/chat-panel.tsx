@@ -160,31 +160,6 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     inputRef.current?.focus()
   }, [])
 
-  // New chat button (appears when there are messages)
-  if (messages.length > 0 && !isMobile) {
-    return (
-      <div
-        className={cn(
-          'fixed bottom-2 left-2 flex justify-start items-center pointer-events-none',
-          isMobile ? 'w-full px-2' : 'md:bottom-8'
-        )}
-      >
-        <Button
-          type="button"
-          variant={'secondary'}
-          className="rounded-full bg-secondary/80 group transition-all hover:scale-105 pointer-events-auto"
-          onClick={() => handleClear()}
-          data-testid="new-chat-button"
-        >
-          <span className="text-sm mr-2 group-hover:block hidden animate-in fade-in duration-300">
-            New
-          </span>
-          <Plus size={18} className="group-hover:rotate-90 transition-all" />
-        </Button>
-      </div>
-    )
-  }
-
   return (
     <div
       className={cn(
@@ -230,6 +205,21 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
               <Paperclip size={isMobile ? 18 : 20} />
             </Button>
           )}
+          <div className="absolute left-12 top-1/2 transform -translate-y-1/2 flex items-center">
+             {!isMobile && messages.length > 0 && (
+               <Button
+                 type="button"
+                 variant="ghost"
+                 size="icon"
+                 className="h-8 w-8 rounded-full"
+                 onClick={() => handleClear()}
+                 data-testid="new-chat-button"
+                 title="New Chat"
+               >
+                 <Plus size={18} />
+               </Button>
+             )}
+          </div>
           <Textarea
             ref={inputRef}
             name="input"
@@ -241,10 +231,11 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
             value={input}
             data-testid="chat-input"
             className={cn(
-              'resize-none w-full min-h-12 rounded-fill border border-input pl-14 pr-12 pt-3 pb-1 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+              'resize-none w-full min-h-12 rounded-fill border border-input pr-12 pt-3 pb-1 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
               isMobile
                 ? 'mobile-chat-input input bg-background'
-                : 'bg-muted'
+                : 'bg-muted',
+              !isMobile ? 'pl-24' : 'pl-14'
             )}
             onChange={e => {
               setInput(e.target.value)
