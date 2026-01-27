@@ -1,5 +1,6 @@
+'use server'
+
 import {
-  createAI,
   createStreamableUI,
   createStreamableValue,
   getAIState,
@@ -9,33 +10,20 @@ import {
 import { CoreMessage, ToolResultPart } from 'ai'
 import { nanoid } from 'nanoid'
 import type { FeatureCollection } from 'geojson'
-import { Spinner } from '@/components/ui/spinner'
 import { Section } from '@/components/section'
 import { FollowupPanel } from '@/components/followup-panel'
 import { inquire, researcher, taskManager, querySuggestor, resolutionSearch } from '@/lib/agents'
 import { writer } from '@/lib/agents/writer'
 import { saveChat, getSystemPrompt } from '@/lib/actions/chat'
 import { Chat, AIMessage } from '@/lib/types'
-import { UserMessage } from '@/components/user-message'
 import { BotMessage } from '@/components/message'
-import { SearchSection } from '@/components/search-section'
-import SearchRelated from '@/components/search-related'
-import { GeoJsonLayer } from '@/components/map/geojson-layer'
-import { CopilotDisplay } from '@/components/copilot-display'
-import RetrieveSection from '@/components/retrieve-section'
-import { VideoSearchSection } from '@/components/video-search-section'
-import { MapQueryHandler } from '@/components/map/map-query-handler'
 import React from 'react'
+import { AIState } from '@/lib/chat/types'
+import { getUIStateFromAIState } from '@/lib/chat/ui-mapper'
 
-// Define the type for related queries
-type RelatedQueries = {
-  items: { query: string }[]
-}
-
-async function submit(formData?: FormData, skip?: boolean) {
-  'use server'
-
-  const aiState = getMutableAIState<typeof AI>()
+export async function submit(formData?: FormData, skip?: boolean) {
+  const aiState = getMutableAIState<any>()
+  const threadId = formData?.get('threadId') as string
   const uiStream = createStreamableUI()
   const isGenerating = createStreamableValue(true)
   const isCollapsed = createStreamableValue(false)
@@ -52,6 +40,7 @@ async function submit(formData?: FormData, skip?: boolean) {
 
     const messages: CoreMessage[] = [...(aiState.get().messages as any[])].filter(
       message =>
+        (!threadId || message.threadId === threadId) &&
         message.role !== 'tool' &&
         message.type !== 'followup' &&
         message.type !== 'related' &&
@@ -69,7 +58,7 @@ async function submit(formData?: FormData, skip?: boolean) {
       ...aiState.get(),
       messages: [
         ...aiState.get().messages,
-        { id: nanoid(), role: 'user', content, type: 'input' }
+        { id: nanoid(), role: 'user', content, type: 'input', threadId }
       ]
     });
     messages.push({ role: 'user', content });
@@ -92,10 +81,10 @@ async function submit(formData?: FormData, skip?: boolean) {
           return m
         })
 
-        const relatedQueries = await querySuggestor(uiStream, sanitizedMessages);
+        const relatedQueries = await querySuggestor(uiStream, sanitizedMessages, threadId);
         uiStream.append(
           <Section title="Follow-up">
-            <FollowupPanel />
+            <FollowupPanel threadId={threadId} />
           </Section>
         );
 
@@ -110,25 +99,29 @@ async function submit(formData?: FormData, skip?: boolean) {
               id: groupeId,
               role: 'assistant',
               content: analysisResult.summary || 'Analysis complete.',
-              type: 'response'
+              type: 'response',
+              threadId
             },
             {
               id: groupeId,
               role: 'assistant',
               content: JSON.stringify(analysisResult),
-              type: 'resolution_search_result'
+              type: 'resolution_search_result',
+              threadId
             },
             {
               id: groupeId,
               role: 'assistant',
               content: JSON.stringify(relatedQueries),
-              type: 'related'
+              type: 'related',
+              threadId
             },
             {
               id: groupeId,
               role: 'assistant',
               content: 'followup',
-              type: 'followup'
+              type: 'followup',
+              threadId
             }
           ]
         });
@@ -159,6 +152,7 @@ async function submit(formData?: FormData, skip?: boolean) {
 
   const messages: CoreMessage[] = [...(aiState.get().messages as any[])].filter(
     message =>
+      (!threadId || message.threadId === threadId) &&
       message.role !== 'tool' &&
       message.type !== 'followup' &&
       message.type !== 'related' &&
@@ -181,7 +175,7 @@ async function submit(formData?: FormData, skip?: boolean) {
       ? `A planet computer is a proprietary environment aware system that interoperates weather forecasting, mapping and scheduling using cutting edge multi-agents to streamline automation and exploration on a planet. Available for our Pro and Enterprise customers. [QCX Pricing](https://www.queue.cx/#pricing)`
       : `QCX-Terra is a model garden of pixel level precision geospatial foundational models for efficient land feature predictions from satellite imagery. Available for our Pro and Enterprise customers. [QCX Pricing] (https://www.queue.cx/#pricing)`;
 
-    const content = JSON.stringify(Object.fromEntries(formData!));
+    const content = formData ? JSON.stringify(Object.fromEntries(formData)) : userInput;
     const type = 'input';
 
     aiState.update({
@@ -193,6 +187,7 @@ async function submit(formData?: FormData, skip?: boolean) {
           role: 'user',
           content,
           type,
+          threadId
         },
       ],
     });
@@ -219,18 +214,21 @@ async function submit(formData?: FormData, skip?: boolean) {
           role: 'assistant',
           content: definition,
           type: 'response',
+          threadId
         },
         {
           id: groupeId,
           role: 'assistant',
           content: JSON.stringify(relatedQueries),
           type: 'related',
+          threadId
         },
         {
           id: groupeId,
           role: 'assistant',
           content: 'followup',
           type: 'followup',
+          threadId
         },
       ],
     });
@@ -312,7 +310,8 @@ async function submit(formData?: FormData, skip?: boolean) {
           id: nanoid(),
           role: 'user',
           content,
-          type
+          type,
+          threadId
         }
       ]
     })
@@ -348,7 +347,8 @@ async function submit(formData?: FormData, skip?: boolean) {
             {
               id: nanoid(),
               role: 'assistant',
-              content: `inquiry: ${inquiry?.question}`
+              content: `inquiry: ${inquiry?.question}`,
+              threadId
             }
           ]
         })
@@ -395,7 +395,8 @@ async function submit(formData?: FormData, skip?: boolean) {
                   role: 'tool',
                   content: JSON.stringify(output.result),
                   name: output.toolName,
-                  type: 'tool'
+                  type: 'tool',
+                  threadId
                 }
               ]
             })
@@ -406,7 +407,7 @@ async function submit(formData?: FormData, skip?: boolean) {
       if (useSpecificAPI && answer.length === 0) {
         const modifiedMessages = aiState
           .get()
-          .messages.map(msg =>
+          .messages.map((msg: any) =>
             msg.role === 'tool'
               ? {
                   ...msg,
@@ -428,10 +429,10 @@ async function submit(formData?: FormData, skip?: boolean) {
       }
 
       if (!errorOccurred) {
-        const relatedQueries = await querySuggestor(uiStream, messages)
+        const relatedQueries = await querySuggestor(uiStream, messages, threadId)
         uiStream.append(
           <Section title="Follow-up">
-            <FollowupPanel />
+            <FollowupPanel threadId={threadId} />
           </Section>
         )
 
@@ -445,19 +446,22 @@ async function submit(formData?: FormData, skip?: boolean) {
               id: groupeId,
               role: 'assistant',
               content: answer,
-              type: 'response'
+              type: 'response',
+              threadId
             },
             {
               id: groupeId,
               role: 'assistant',
               content: JSON.stringify(relatedQueries),
-              type: 'related'
+              type: 'related',
+              threadId
             },
             {
               id: groupeId,
               role: 'assistant',
               content: 'followup',
-              type: 'followup'
+              type: 'followup',
+              threadId
             }
           ]
         })
@@ -480,10 +484,8 @@ async function submit(formData?: FormData, skip?: boolean) {
   }
 }
 
-async function clearChat() {
-  'use server'
-
-  const aiState = getMutableAIState<typeof AI>()
+export async function clearChat() {
+  const aiState = getMutableAIState<any>()
 
   aiState.done({
     chatId: nanoid(),
@@ -491,57 +493,48 @@ async function clearChat() {
   })
 }
 
-export type AIState = {
-  messages: AIMessage[]
-  chatId: string
-  isSharePage?: boolean
+export async function onGetUIState() {
+  const aiState = getAIState() as AIState
+  if (aiState) {
+    const uiState = getUIStateFromAIState(aiState)
+    return uiState
+  }
+  return []
 }
 
-export type UIState = {
-  id: string
-  component: React.ReactNode
-  isGenerating?: StreamableValue<boolean>
-  isCollapsed?: StreamableValue<boolean>
-}[]
+export async function onSetAIState({ state }: { state: AIState }) {
+  const { messages: allMessages } = state
 
-const initialAIState: AIState = {
-  chatId: nanoid(),
-  messages: []
-}
+  // Group messages by threadId. Default to state.chatId if no threadId.
+  const messagesByThread = allMessages.reduce((acc, msg) => {
+    const tid = msg.threadId || state.chatId
+    if (!acc[tid]) acc[tid] = []
+    acc[tid].push(msg)
+    return acc
+  }, {} as Record<string, AIMessage[]>)
 
-const initialUIState: UIState = []
+  const { getCurrentUserIdOnServer } = await import(
+    '@/lib/auth/get-current-user'
+  )
+  const actualUserId = await getCurrentUserIdOnServer()
 
-export const AI = createAI<AIState, UIState>({
-  actions: {
-    submit,
-    clearChat
-  },
-  initialUIState,
-  initialAIState,
-  onGetUIState: async () => {
-    'use server'
+  if (!actualUserId) {
+    console.error('onSetAIState: User not authenticated. Chat not saved.')
+    return
+  }
 
-    const aiState = getAIState() as AIState
-    if (aiState) {
-      const uiState = getUIStateFromAIState(aiState)
-      return uiState
-    }
-    return initialUIState
-  },
-  onSetAIState: async ({ state }) => {
-    'use server'
-
-    if (!state.messages.some(e => e.type === 'response')) {
-      return
+  for (const [tid, messages] of Object.entries(messagesByThread)) {
+    if (!messages.some(e => e.type === 'response')) {
+      continue
     }
 
-    const { chatId, messages } = state
     const createdAt = new Date()
-    const path = `/search/${chatId}`
+    const path = `/search/${tid}`
 
     let title = 'Untitled Chat'
     if (messages.length > 0) {
-      const firstMessageContent = messages[0].content
+      const firstMessage = messages.find(m => m.role === 'user');
+      const firstMessageContent = firstMessage?.content || messages[0].content
       if (typeof firstMessageContent === 'string') {
         try {
           const parsedContent = JSON.parse(firstMessageContent)
@@ -566,195 +559,23 @@ export const AI = createAI<AIState, UIState>({
         id: nanoid(),
         role: 'assistant',
         content: `end`,
-        type: 'end'
+        type: 'end',
+        threadId: tid
       }
     ]
 
-    const { getCurrentUserIdOnServer } = await import(
-      '@/lib/auth/get-current-user'
-    )
-    const actualUserId = await getCurrentUserIdOnServer()
-
-    if (!actualUserId) {
-      console.error('onSetAIState: User not authenticated. Chat not saved.')
-      return
-    }
-
     const chat: Chat = {
-      id: chatId,
+      id: tid,
       createdAt,
       userId: actualUserId,
       path,
       title,
       messages: updatedMessages
     }
+
     // Background save
     saveChat(chat, actualUserId).catch(err => {
-        console.error('Failed to save chat in onSetAIState:', err)
+        console.error(`Failed to save chat ${tid} in onSetAIState:`, err)
     })
   }
-})
-
-export const getUIStateFromAIState = (aiState: AIState): UIState => {
-  const chatId = aiState.chatId
-  const isSharePage = aiState.isSharePage
-  return aiState.messages
-    .map((message, index) => {
-      const { role, content, id, type, name } = message
-
-      if (
-        !type ||
-        type === 'end' ||
-        (isSharePage && type === 'related') ||
-        (isSharePage && type === 'followup')
-      )
-        return null
-
-      switch (role) {
-        case 'user':
-          switch (type) {
-            case 'input':
-            case 'input_related':
-              let messageContent: string | any[]
-              try {
-                // For backward compatibility with old messages that stored a JSON string
-                const json = JSON.parse(content as string)
-                messageContent =
-                  type === 'input' ? json.input : json.related_query
-              } catch (e) {
-                // New messages will store the content array or string directly
-                messageContent = content
-              }
-              return {
-                id,
-                component: (
-                  <UserMessage
-                    content={messageContent}
-                    chatId={chatId}
-                    showShare={index === 0 && !isSharePage}
-                  />
-                )
-              }
-            case 'inquiry':
-              return {
-                id,
-                component: <CopilotDisplay content={content as string} />
-              }
-          }
-          break
-        case 'assistant':
-          const answer = createStreamableValue()
-          answer.done(content)
-          switch (type) {
-            case 'response':
-              return {
-                id,
-                component: (
-                  <Section title="response">
-                    <BotMessage content={answer.value} />
-                  </Section>
-                )
-              }
-            case 'related':
-              const relatedQueries = createStreamableValue<RelatedQueries>()
-              relatedQueries.done(JSON.parse(content as string))
-              return {
-                id,
-                component: (
-                  <Section title="Related" separator={true}>
-                    <SearchRelated relatedQueries={relatedQueries.value} />
-                  </Section>
-                )
-              }
-            case 'followup':
-              return {
-                id,
-                component: (
-                  <Section title="Follow-up" className="pb-8">
-                    <FollowupPanel />
-                  </Section>
-                )
-              }
-            case 'resolution_search_result': {
-              const analysisResult = JSON.parse(content as string);
-              const geoJson = analysisResult.geoJson as FeatureCollection;
-
-              return {
-                id,
-                component: (
-                  <>
-                    {geoJson && (
-                      <GeoJsonLayer id={id} data={geoJson} />
-                    )}
-                  </>
-                )
-              }
-            }
-          }
-          break
-        case 'tool':
-          try {
-            const toolOutput = JSON.parse(content as string)
-            const isCollapsed = createStreamableValue()
-            isCollapsed.done(true)
-
-            if (
-              toolOutput.type === 'MAP_QUERY_TRIGGER' &&
-              name === 'geospatialQueryTool'
-            ) {
-              return {
-                id,
-                component: <MapQueryHandler toolOutput={toolOutput} />,
-                isCollapsed: false
-              }
-            }
-
-            const searchResults = createStreamableValue()
-            searchResults.done(JSON.stringify(toolOutput))
-            switch (name) {
-              case 'search':
-                return {
-                  id,
-                  component: <SearchSection result={searchResults.value} />,
-                  isCollapsed: isCollapsed.value
-                }
-              case 'retrieve':
-                return {
-                  id,
-                  component: <RetrieveSection data={toolOutput} />,
-                  isCollapsed: isCollapsed.value
-                }
-              case 'videoSearch':
-                return {
-                  id,
-                  component: (
-                    <VideoSearchSection result={searchResults.value} />
-                  ),
-                  isCollapsed: isCollapsed.value
-                }
-              default:
-                console.warn(
-                  `Unhandled tool result in getUIStateFromAIState: ${name}`
-                )
-                return { id, component: null }
-            }
-          } catch (error) {
-            console.error(
-              'Error parsing tool content in getUIStateFromAIState:',
-              error
-            )
-            return {
-              id,
-              component: null
-            }
-          }
-          break
-        default:
-          return {
-            id,
-            component: null
-          }
-      }
-    })
-    .filter(message => message !== null) as UIState
 }

@@ -5,11 +5,11 @@ import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { useActions, useUIState } from 'ai/rsc'
 // Removed import of useGeospatialToolMcp as it's no longer used/available
-import type { AI } from '@/app/actions'
+import type { AI } from '@/app/ai'
 import { UserMessage } from './user-message'
 import { ArrowRight } from 'lucide-react'
 
-export function FollowupPanel() {
+export function FollowupPanel({ threadId }: { threadId?: string }) {
   const [input, setInput] = useState('')
   const { submit } = useActions()
   // Removed mcp instance as it's no longer passed to submit
@@ -21,8 +21,13 @@ export function FollowupPanel() {
 
     const userMessage = {
       id: Date.now(),
+      threadId,
       isGenerating: false,
       component: <UserMessage content={input} />
+    }
+
+    if (threadId) {
+      formData.append('threadId', threadId)
     }
 
     // Removed mcp argument from submit call
@@ -30,7 +35,7 @@ export function FollowupPanel() {
     setMessages(currentMessages => [
       ...currentMessages,
       userMessage,
-      responseMessage
+      { ...responseMessage as any, threadId }
     ])
 
     setInput('')

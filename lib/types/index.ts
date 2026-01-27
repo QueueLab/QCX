@@ -62,6 +62,7 @@ export type AIMessage = {
   id: string
   name?: string
   createdAt?: Date // Added optional createdAt timestamp
+  threadId?: string
   type?:
     | 'response'
     | 'related'

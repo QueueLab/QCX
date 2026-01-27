@@ -9,7 +9,7 @@ import { Card } from './ui/card'
 import { ArrowRight, Check, FastForward, Sparkles } from 'lucide-react'
 import { useActions, useStreamableValue, useUIState } from 'ai/rsc'
 // Removed import of useGeospatialToolMcp as it's no longer used/available
-import type { AI } from '@/app/actions'
+import type { AI } from '@/app/ai'
 import {
 
   

@@ -1,7 +1,7 @@
 'use client'
 
 import { StreamableValue, useUIState } from 'ai/rsc'
-import type { AI, UIState } from '@/app/actions'
+import type { AI, UIState } from '@/app/ai'
 import { CollapsibleMessage } from './collapsible-message'
 
 interface ChatMessagesProps {

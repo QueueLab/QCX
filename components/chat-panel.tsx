@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef, ChangeEvent, forwardRef, useImperativeHandle, useCallback } from 'react'
-import type { AI, UIState } from '@/app/actions'
+import type { AI, UIState } from '@/app/ai'
 import { useUIState, useActions, readStreamableValue } from 'ai/rsc'
 // Removed import of useGeospatialToolMcp as it's no longer used/available
 import { cn } from '@/lib/utils'
@@ -21,6 +21,8 @@ interface ChatPanelProps {
   input: string
   setInput: (value: string) => void
   onSuggestionsChange?: (suggestions: PartialRelated | null) => void
+  threadId?: string
+  onNewChat?: () => void
 }
 
 export interface ChatPanelRef {
@@ -28,9 +30,9 @@ export interface ChatPanelRef {
   submitForm: () => void
 }
 
-export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, input, setInput, onSuggestionsChange }, ref) => {
+export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, input, setInput, onSuggestionsChange, threadId, onNewChat }, ref) => {
   const [, setMessages] = useUIState<typeof AI>()
-  const { submit, clearChat } = useActions()
+  const { submit } = useActions()
   // Removed mcp instance as it's no longer passed to submit
   const { mapProvider } = useSettingsStore()
   const [isMobile, setIsMobile] = useState(false)
@@ -108,11 +110,15 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
       ...currentMessages,
       {
         id: nanoid(),
+        threadId,
         component: <UserMessage content={content} />
       }
     ])
 
     const formData = new FormData(e.currentTarget)
+    if (threadId) {
+      formData.append('threadId', threadId)
+    }
     if (selectedFile) {
       formData.append('file', selectedFile)
     }
@@ -121,13 +127,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     clearAttachment()
 
     const responseMessage = await submit(formData)
-    setMessages(currentMessages => [...currentMessages, responseMessage as any])
-  }
-
-  const handleClear = async () => {
-    setMessages([])
-    clearAttachment()
-    await clearChat()
+    setMessages(currentMessages => [...currentMessages, { ...responseMessage as any, threadId }])
   }
 
   const debouncedGetSuggestions = useCallback(
@@ -184,6 +184,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
           )}
         >
           <input type="hidden" name="mapProvider" value={mapProvider} />
+          <input type="hidden" name="threadId" value={threadId} />
           <input
             type="file"
             ref={fileInputRef}
@@ -212,7 +213,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
                  variant="ghost"
                  size="icon"
                  className="h-8 w-8 rounded-full"
-                 onClick={() => handleClear()}
+                 onClick={onNewChat}
                  data-testid="new-chat-button"
                  title="New Chat"
                >

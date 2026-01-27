@@ -1,17 +1,16 @@
-import { Chat } from '@/components/chat'
-import {nanoid } from 'nanoid'
-import { AI } from './actions'
+import { nanoid } from 'nanoid'
+import { ChatThreadManager } from '@/components/chat-thread-manager'
+import { MapDataProvider } from '@/components/map/map-data-context'
+import { AI } from './ai'
 
 export const maxDuration = 60
-
-import { MapDataProvider } from '@/components/map/map-data-context'
 
 export default function Page() {
   const id = nanoid()
   return (
     <AI initialAIState={{ chatId: id, messages: [] }}>
       <MapDataProvider>
-        <Chat id={id} />
+        <ChatThreadManager initialThread={{ id, initialMessages: [] }} />
       </MapDataProvider>
     </AI>
   )

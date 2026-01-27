@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Search } from 'lucide-react'
 import { useMap } from './map/map-context'
 import { useActions, useUIState } from 'ai/rsc'
-import { AI } from '@/app/actions'
+import { AI } from '@/app/ai'
 import { nanoid } from 'nanoid'
 import { UserMessage } from './user-message'
 import { toast } from 'react-toastify'
@@ -18,7 +18,7 @@ interface HeaderActions {
   submit: (formData: FormData) => Promise<any>;
 }
 
-export function HeaderSearchButton() {
+export function HeaderSearchButton({ threadId }: { threadId?: string }) {
   const { map } = useMap()
   const { mapProvider } = useSettingsStore()
   const { mapData } = useMapData()
@@ -52,6 +52,7 @@ export function HeaderSearchButton() {
         ...currentMessages,
         {
           id: nanoid(),
+          threadId,
           component: <UserMessage content={[{ type: 'text', text: 'Analyze this map view.' }]} />
         }
       ])
@@ -89,9 +90,12 @@ export function HeaderSearchButton() {
       const formData = new FormData()
       formData.append('file', blob, 'map_capture.png')
       formData.append('action', 'resolution_search')
+      if (threadId) {
+        formData.append('threadId', threadId)
+      }
 
       const responseMessage = await actions.submit(formData)
-      setMessages(currentMessages => [...currentMessages, responseMessage as any])
+      setMessages(currentMessages => [...currentMessages, { ...responseMessage as any, threadId }])
     } catch (error) {
       console.error('Failed to perform resolution search:', error)
       toast.error('An error occurred while analyzing the map.')
