@@ -3,6 +3,7 @@
 import { cn } from '@/lib/utils'
 import {
   BookCheck,
+  Bot,
   Film,
   Image,
   MessageCircleMore,
@@ -48,6 +49,9 @@ export const Section: React.FC<SectionProps> = ({
       break
     case 'Follow-up':
       icon = <MessageCircleMore size={18} className="mr-2" />
+      break
+    case 'Thinking':
+      icon = <Bot size={18} className="mr-2" />
       break
     default:
       icon = <Search size={18} className="mr-2" />
