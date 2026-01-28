@@ -92,6 +92,13 @@ async function submit(formData?: FormData, skip?: boolean) {
         // Mark the summary stream as done with the result.
         summaryStream.done(analysisResult.summary || 'Analysis complete.');
 
+        // Append the GeoJSON layer to the UI stream so it appears on the map immediately.
+        if (analysisResult.geoJson) {
+          uiStream.append(
+            <GeoJsonLayer id={nanoid()} data={analysisResult.geoJson} />
+          );
+        }
+
         messages.push({ role: 'assistant', content: analysisResult.summary || 'Analysis complete.' });
 
         const sanitizedMessages: CoreMessage[] = messages.map(m => {
