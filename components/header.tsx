@@ -36,10 +36,10 @@ export const Header = () => {
     toggleUsage()
   }
 
-  useEffect(() => {
-    // Open payment popup as soon as application opens
-    setIsPurchaseOpen(true)
-  }, [])
+  // Auto-opening popup disabled to improve initial platform load experience
+  // useEffect(() => {
+  //   setIsPurchaseOpen(true)
+  // }, [])
 
   return (
     <>

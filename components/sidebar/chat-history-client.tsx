@@ -19,6 +19,7 @@ import {
 import { toast } from 'sonner';
 import { Spinner } from '@/components/ui/spinner';
 import { Zap, ChevronDown, ChevronUp } from 'lucide-react';
+import { useHistoryToggle } from '../history-toggle-context';
 import HistoryItem from '@/components/history-item'; // Adjust path if HistoryItem is moved or renamed
 import type { Chat as DrizzleChat } from '@/lib/actions/chat-db'; // Use the Drizzle-based Chat type
 
@@ -33,6 +34,7 @@ export function ChatHistoryClient({}: ChatHistoryClientProps) {
   const [isClearPending, startClearTransition] = useTransition();
   const [isAlertDialogOpen, setIsAlertDialogOpen] = useState(false);
   const [isCreditsVisible, setIsCreditsVisible] = useState(false);
+  const { isHistoryOpen } = useHistoryToggle();
   const router = useRouter();
 
   useEffect(() => {
@@ -60,8 +62,11 @@ export function ChatHistoryClient({}: ChatHistoryClientProps) {
         setIsLoading(false);
       }
     }
-    fetchChats();
-  }, []);
+
+    if (isHistoryOpen) {
+      fetchChats();
+    }
+  }, [isHistoryOpen]);
 
   const handleClearHistory = async () => {
     startClearTransition(async () => {

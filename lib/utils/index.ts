@@ -32,6 +32,10 @@ export async function getModel(requireVision: boolean = false) {
     switch (selectedModel) {
       case 'Grok 4.2':
         if (xaiApiKey) {
+          if (requireVision) {
+            console.warn('Selected model "Grok 4.2" might not support vision, falling back to GPT-4o for vision task.');
+            break; // Fall through to default behavior or next case
+          }
           const xai = createXai({
             apiKey: xaiApiKey,
             baseURL: 'https://api.x.ai/v1',
@@ -75,7 +79,8 @@ export async function getModel(requireVision: boolean = false) {
   }
 
   // Default behavior: Grok -> Gemini -> Bedrock -> OpenAI
-  if (xaiApiKey) {
+  // If vision is required, we skip models that might not support it well in this context
+  if (xaiApiKey && !requireVision) {
     const xai = createXai({
       apiKey: xaiApiKey,
       baseURL: 'https://api.x.ai/v1',
