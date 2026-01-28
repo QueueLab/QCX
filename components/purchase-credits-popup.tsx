@@ -10,7 +10,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { CreditCard, Zap } from 'lucide-react';
+import { CreditCard, Zap, Check } from 'lucide-react';
 
 interface PurchaseCreditsPopupProps {
   isOpen: boolean;
@@ -22,6 +22,15 @@ export function PurchaseCreditsPopup({ isOpen, onClose }: PurchaseCreditsPopupPr
     window.open('https://buy.stripe.com/3cIaEX3tRcur9EM7tbasg00', '_blank');
     onClose();
   };
+
+  const features = [
+    'Internet Search',
+    'Upload and analyze unlimited files',
+    'Mapping tools',
+    'Location Intelligence',
+    'Community Support',
+    'Exclusive Updates',
+  ];
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -36,12 +45,19 @@ export function PurchaseCreditsPopup({ isOpen, onClose }: PurchaseCreditsPopupPr
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
-          <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
-            <div>
+          <div className="p-4 border rounded-lg bg-muted/50">
+            <div className="flex items-center justify-between mb-4">
               <p className="font-medium">Standard Tier</p>
-              <p className="text-sm text-muted-foreground">Unlimited searches & more</p>
+              <p className="font-bold">$500/year</p>
             </div>
-            <p className="font-bold">$20/mo</p>
+            <ul className="space-y-2">
+              {features.map((feature, index) => (
+                <li key={index} className="flex items-start gap-2 text-sm text-muted-foreground">
+                  <Check size={14} className="text-green-500 mt-1 shrink-0" />
+                  <span>{feature}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
         <DialogFooter>
