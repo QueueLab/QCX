@@ -82,7 +82,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     messages.push({ role: 'user', content });
 
     // Create a streamable value for the summary.
-    const summaryStream = createStreamableValue<string>();
+    const summaryStream = createStreamableValue<string>('');
 
     async function processResolutionSearch() {
       try {
@@ -213,7 +213,7 @@ async function submit(formData?: FormData, skip?: boolean) {
       ],
     });
 
-    const definitionStream = createStreamableValue();
+    const definitionStream = createStreamableValue('');
     definitionStream.done(definition);
 
     const answerSection = (
@@ -377,7 +377,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     let answer = ''
     let toolOutputs: ToolResultPart[] = []
     let errorOccurred = false
-    const streamText = createStreamableValue<string>()
+    const streamText = createStreamableValue<string>('')
     uiStream.update(<Spinner />)
 
     while (
