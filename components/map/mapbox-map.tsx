@@ -4,6 +4,7 @@ import { useEffect, useRef, useCallback } from 'react' // Removed useState
 import mapboxgl from 'mapbox-gl'
 import MapboxDraw from '@mapbox/mapbox-gl-draw'
 import * as turf from '@turf/turf'
+import tzlookup from 'tz-lookup'
 import { toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import 'mapbox-gl/dist/mapbox-gl.css'
@@ -323,8 +324,11 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
       const bearing = map.current.getBearing();
       currentMapCenterRef.current = { center: [center.lng, center.lat], zoom, pitch };
 
+      const timezone = tzlookup(center.lat, center.lng);
+
       setMapData(prevData => ({
         ...prevData,
+        currentTimezone: timezone,
         cameraState: {
           center: { lat: center.lat, lng: center.lng },
           zoom,
