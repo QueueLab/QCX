@@ -448,29 +448,33 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
       map.current.on('drag', handleUserInteraction)
       map.current.on('zoom', handleUserInteraction)
 
-      map.current.on('load', () => {
+      map.current.on('style.load', () => {
         if (!map.current) return
         setMap(map.current) // Set map instance in context
 
         // Add terrain and sky
-        map.current.addSource('mapbox-dem', {
-          type: 'raster-dem',
-          url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
-          tileSize: 512,
-          maxzoom: 14,
-        })
+        if (!map.current.getSource('mapbox-dem')) {
+          map.current.addSource('mapbox-dem', {
+            type: 'raster-dem',
+            url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
+            tileSize: 512,
+            maxzoom: 14,
+          })
+        }
 
         map.current.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 })
 
-        map.current.addLayer({
-          id: 'sky',
-          type: 'sky',
-          paint: {
-            'sky-type': 'atmosphere',
-            'sky-atmosphere-sun': [0.0, 0.0],
-            'sky-atmosphere-sun-intensity': 15,
-          },
-        })
+        if (!map.current.getLayer('sky')) {
+          map.current.addLayer({
+            id: 'sky',
+            type: 'sky',
+            paint: {
+              'sky-type': 'atmosphere',
+              'sky-atmosphere-sun': [0.0, 0.0],
+              'sky-atmosphere-sun-intensity': 15,
+            },
+          })
+        }
 
         // Initialize drawing tools based on initial mode
         if (mapType === MapToggleEnum.DrawingMode) {
@@ -483,7 +487,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         }
 
         initializedRef.current = true
-        setIsMapLoaded(true) // Set map loaded state to true
+        setIsMapLoaded(true) // Set map loaded state to true earlier on style.load
         setupGeolocationWatcher()
       })
     }

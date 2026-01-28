@@ -53,13 +53,14 @@ async function submit(formData?: FormData, skip?: boolean) {
     const dataUrl = `data:${file.type};base64,${Buffer.from(buffer).toString('base64')}`;
 
     // Get the current messages, excluding tool-related ones.
-    const messages: CoreMessage[] = [...(aiState.get().messages as any[])].filter(
+    const messages: CoreMessage[] = (aiState.get().messages as AIMessage[]).filter(
       message =>
         message.role !== 'tool' &&
         message.type !== 'followup' &&
         message.type !== 'related' &&
-        message.type !== 'end'
-    );
+        message.type !== 'end' &&
+        message.type !== 'resolution_search_result'
+    ) as unknown as CoreMessage[];
 
     // The user's prompt for this action is static.
     const userInput = 'Analyze this map view.';
@@ -75,79 +76,103 @@ async function submit(formData?: FormData, skip?: boolean) {
       ...aiState.get(),
       messages: [
         ...aiState.get().messages,
-        { id: nanoid(), role: 'user', content }
+        { id: nanoid(), role: 'user', content, type: 'input' }
       ]
     });
     messages.push({ role: 'user', content });
 
-    // Call the simplified agent, which now returns data directly.
-    const analysisResult = await resolutionSearch(messages) as any;
+    // Create a streamable value for the summary.
+    const summaryStream = createStreamableValue<string>('');
 
-    // Create a streamable value for the summary and mark it as done.
-    const summaryStream = createStreamableValue<string>();
-    summaryStream.done(analysisResult.summary || 'Analysis complete.');
+    async function processResolutionSearch() {
+      try {
+        // Call the simplified agent, which now returns data directly.
+        const analysisResult = await resolutionSearch(messages);
 
-    // Update the UI stream with the BotMessage component.
-    uiStream.update(
-      <BotMessage content={summaryStream.value} />
-    );
+        // Mark the summary stream as done with the result.
+        summaryStream.done(analysisResult.summary || 'Analysis complete.');
 
-    messages.push({ role: 'assistant', content: analysisResult.summary || 'Analysis complete.' });
+        // Append the GeoJSON layer to the UI stream so it appears on the map immediately.
+        if (analysisResult.geoJson) {
+          uiStream.append(
+            <GeoJsonLayer id={nanoid()} data={analysisResult.geoJson} />
+          );
+        }
 
-    const sanitizedMessages: CoreMessage[] = messages.map(m => {
-      if (Array.isArray(m.content)) {
-        return {
-          ...m,
-          content: m.content.filter(part => part.type !== 'image')
-        } as CoreMessage
-      }
-      return m
-    })
+        messages.push({ role: 'assistant', content: analysisResult.summary || 'Analysis complete.' });
 
-    const relatedQueries = await querySuggestor(uiStream, sanitizedMessages);
-    uiStream.append(
-        <Section title="Follow-up">
+        const sanitizedMessages: CoreMessage[] = messages.map(m => {
+          if (Array.isArray(m.content)) {
+            return {
+              ...m,
+              content: m.content.filter(part => part.type !== 'image')
+            } as CoreMessage
+          }
+          return m
+        })
+
+        const relatedQueries = await querySuggestor(uiStream, sanitizedMessages);
+        uiStream.append(
+          <Section title="Follow-up">
             <FollowupPanel />
-        </Section>
-    );
+          </Section>
+        );
 
-    await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 500));
 
-    const groupeId = nanoid();
+        const groupeId = nanoid();
 
-    aiState.done({
-        ...aiState.get(),
-        messages: [
+        aiState.done({
+          ...aiState.get(),
+          messages: [
             ...aiState.get().messages,
             {
-                id: groupeId,
-                role: 'assistant',
-                content: analysisResult.summary || 'Analysis complete.',
-                type: 'response'
+              id: groupeId,
+              role: 'assistant',
+              content: analysisResult.summary || 'Analysis complete.',
+              type: 'response'
             },
             {
-                id: groupeId,
-                role: 'assistant',
-                content: JSON.stringify(analysisResult),
-                type: 'resolution_search_result'
+              id: groupeId,
+              role: 'assistant',
+              content: JSON.stringify(analysisResult),
+              type: 'resolution_search_result'
             },
             {
-                id: groupeId,
-                role: 'assistant',
-                content: JSON.stringify(relatedQueries),
-                type: 'related'
+              id: groupeId,
+              role: 'assistant',
+              content: JSON.stringify(relatedQueries),
+              type: 'related'
             },
             {
-                id: groupeId,
-                role: 'assistant',
-                content: 'followup',
-                type: 'followup'
+              id: groupeId,
+              role: 'assistant',
+              content: 'followup',
+              type: 'followup'
             }
-        ]
-    });
+          ]
+        });
+      } catch (error) {
+        console.error('Error in resolution search:', error);
+        summaryStream.error(error);
+      } finally {
+        isGenerating.done(false);
+        uiStream.done();
+      }
+    }
 
-    isGenerating.done(false);
-    uiStream.done();
+    // Start the background process without awaiting it to allow the UI to
+    // stream the response section and summary immediately while the
+    // analysis runs in the background.
+    processResolutionSearch();
+
+    // Immediately update the UI stream with the BotMessage component.
+    uiStream.update(
+      <Section title="response">
+        <BotMessage content={summaryStream.value} />
+      </Section>
+    );
+
     return {
       id: nanoid(),
       isGenerating: isGenerating.value,
@@ -156,13 +181,14 @@ async function submit(formData?: FormData, skip?: boolean) {
     };
   }
 
-  const messages: CoreMessage[] = [...(aiState.get().messages as any[])].filter(
+  const messages: CoreMessage[] = (aiState.get().messages as AIMessage[]).filter(
     message =>
       message.role !== 'tool' &&
       message.type !== 'followup' &&
       message.type !== 'related' &&
-      message.type !== 'end'
-  )
+      message.type !== 'end' &&
+      message.type !== 'resolution_search_result'
+  ) as unknown as CoreMessage[];
 
   const groupeId = nanoid()
   const useSpecificAPI = process.env.USE_SPECIFIC_API_FOR_WRITER === 'true'
@@ -196,7 +222,7 @@ async function submit(formData?: FormData, skip?: boolean) {
       ],
     });
 
-    const definitionStream = createStreamableValue();
+    const definitionStream = createStreamableValue('');
     definitionStream.done(definition);
 
     const answerSection = (
@@ -293,7 +319,7 @@ async function submit(formData?: FormData, skip?: boolean) {
   const hasImage = messageParts.some(part => part.type === 'image')
   // Properly type the content based on whether it contains images
   const content: CoreMessage['content'] = hasImage
-    ? messageParts as CoreMessage['content']
+    ? (messageParts as CoreMessage['content'])
     : messageParts.map(part => part.text).join('\n')
 
   const type = skip
@@ -312,7 +338,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         {
           id: nanoid(),
           role: 'user',
-          content,
+          content: content as string, // content can be string or array, but AIMessage expects string | any
           type
         }
       ]
@@ -329,7 +355,7 @@ async function submit(formData?: FormData, skip?: boolean) {
   const mapProvider = formData?.get('mapProvider') as 'mapbox' | 'google'
 
   async function processEvents() {
-    let action: any = { object: { next: 'proceed' } }
+    let action: { object: { next: string } } = { object: { next: 'proceed' } }
     if (!skip) {
       const taskManagerResult = await taskManager(messages)
       if (taskManagerResult) {
@@ -360,7 +386,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     let answer = ''
     let toolOutputs: ToolResultPart[] = []
     let errorOccurred = false
-    const streamText = createStreamableValue<string>()
+    const streamText = createStreamableValue<string>('')
     uiStream.update(<Spinner />)
 
     while (
