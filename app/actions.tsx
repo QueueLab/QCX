@@ -45,6 +45,7 @@ async function submit(formData?: FormData, skip?: boolean) {
   const action = formData?.get('action') as string;
   if (action === 'resolution_search') {
     const file = formData?.get('file') as File;
+    const timezone = (formData?.get('timezone') as string) || 'UTC';
     if (!file) {
       throw new Error('No file provided for resolution search.');
     }
@@ -82,12 +83,12 @@ async function submit(formData?: FormData, skip?: boolean) {
     messages.push({ role: 'user', content });
 
     // Create a streamable value for the summary.
-    const summaryStream = createStreamableValue<string>();
+    const summaryStream = createStreamableValue<string>('');
 
     async function processResolutionSearch() {
       try {
         // Call the simplified agent, which now returns data directly.
-        const analysisResult = await resolutionSearch(messages) as any;
+        const analysisResult = await resolutionSearch(messages, timezone) as any;
 
         // Mark the summary stream as done with the result.
         summaryStream.done(analysisResult.summary || 'Analysis complete.');

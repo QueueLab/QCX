@@ -23,9 +23,21 @@ const resolutionSearchSchema = z.object({
   }).describe('A GeoJSON object containing points of interest and classified land features to be overlaid on the map.'),
 })
 
-export async function resolutionSearch(messages: CoreMessage[]) {
+export async function resolutionSearch(messages: CoreMessage[], timezone: string = 'UTC') {
+  const localTime = new Date().toLocaleString('en-US', {
+    timeZone: timezone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+
   const systemPrompt = `
 As a geospatial analyst, your task is to analyze the provided satellite image of a geographic location.
+The current local time at this location is ${localTime}.
 Your analysis should be comprehensive and include the following components:
 
 1.  **Land Feature Classification:** Identify and describe the different types of land cover visible in the image (e.g., urban areas, forests, water bodies, agricultural fields).
