@@ -3,14 +3,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl-compare/dist/mapbox-gl-compare.css'
-import type CompareClass from 'mapbox-gl-compare'
 import MapboxDraw from '@mapbox/mapbox-gl-draw'
-
-// Late-import mapbox-gl-compare to avoid SSR issues
-let Compare: any = null;
-if (typeof window !== 'undefined') {
-  Compare = require('mapbox-gl-compare');
-}
 import * as turf from '@turf/turf'
 import { toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
@@ -28,7 +21,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   const afterMapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
   const afterMap = useRef<mapboxgl.Map | null>(null)
-  const compareRef = useRef<CompareClass | null>(null)
+  const compareRef = useRef<any>(null)
   const afterMapMarkersRef = useRef<mapboxgl.Marker[]>([])
   const { setMap } = useMap()
   const drawRef = useRef<MapboxDraw | null>(null)
@@ -470,19 +463,27 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
       afterMap.current.on('load', () => {
         if (!map.current || !afterMap.current || !afterMapContainer.current?.parentElement) return;
 
-        // Create the compare control
-        compareRef.current = new Compare(
-          map.current,
-          afterMap.current,
-          afterMapContainer.current.parentElement,
-          {
-            orientation: 'vertical',
-            mousemove: false
-          }
-        );
+        try {
+          // Late-import mapbox-gl-compare to avoid SSR issues
+          const CompareModule = require('mapbox-gl-compare');
+          const CompareConstructor = CompareModule.default || CompareModule;
 
-        // Setup layers on afterMap
-        setupAfterMapLayers();
+          // Create the compare control
+          compareRef.current = new CompareConstructor(
+            map.current,
+            afterMap.current,
+            afterMapContainer.current.parentElement,
+            {
+              orientation: 'vertical',
+              mousemove: false
+            }
+          );
+
+          // Setup layers on afterMap
+          setupAfterMapLayers();
+        } catch (error) {
+          console.error('Error initializing mapbox-gl-compare:', error);
+        }
       });
     }
 
@@ -826,7 +827,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     <div className="relative h-full w-full overflow-hidden rounded-l-lg" id="comparison-container">
       <div
         ref={mapContainer}
-        className="absolute inset-0"
+        className={mapType === MapToggleEnum.DrawingMode ? "absolute inset-0" : "h-full w-full"}
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
