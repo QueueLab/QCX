@@ -493,6 +493,10 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     }
 
     return () => {
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
       if (map.current) {
         map.current.off('moveend', captureMapCenter)
         
@@ -583,57 +587,6 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     }
   }, []);
 
-  // Cleanup for the main useEffect
-  useEffect(() => {
-    // ... existing useEffect logic ...
-    return () => {
-      // ... existing cleanup logic ...
-      if (longPressTimerRef.current) { // Cleanup timer on component unmount
-        clearTimeout(longPressTimerRef.current);
-        longPressTimerRef.current = null;
-      }
-      // ... existing cleanup logic for map and geolocation ...
-      if (map.current) {
-        map.current.off('moveend', captureMapCenter)
-
-        if (drawRef.current) {
-          try {
-            map.current.off('draw.create', updateMeasurementLabels)
-            map.current.off('draw.delete', updateMeasurementLabels)
-            map.current.off('draw.update', updateMeasurementLabels)
-            map.current.removeControl(drawRef.current)
-          } catch (e) {
-            console.log('Draw control already removed')
-          }
-        }
-
-        Object.values(polygonLabelsRef.current).forEach(marker => marker.remove())
-        Object.values(lineLabelsRef.current).forEach(marker => marker.remove())
-
-        stopRotation()
-        setIsMapLoaded(false)
-        setMap(null)
-        map.current.remove()
-        map.current = null
-      }
-
-      if (geolocationWatchIdRef.current !== null) {
-        navigator.geolocation.clearWatch(geolocationWatchIdRef.current)
-        geolocationWatchIdRef.current = null
-      }
-    };
-  }, [
-    handleUserInteraction,
-    startRotation,
-    stopRotation,
-    mapType, // mapType is already here, good.
-    updateMeasurementLabels,
-    setupGeolocationWatcher,
-    captureMapCenter,
-    setupDrawingTools,
-    setIsMapLoaded,
-    setMap
-  ]);
 
 
   return (
