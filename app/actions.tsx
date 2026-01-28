@@ -95,7 +95,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         // Append the GeoJSON layer to the UI stream so it appears on the map immediately.
         if (analysisResult.geoJson) {
           uiStream.append(
-            <GeoJsonLayer id={nanoid()} data={analysisResult.geoJson} />
+            <GeoJsonLayer id={nanoid()} data={analysisResult.geoJson as FeatureCollection} />
           );
         }
 
