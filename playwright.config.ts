@@ -11,13 +11,12 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
-    storageState: undefined,
   },
   projects: [
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
-      testMatch: /.*\.spec\.ts/,
+      testIgnore: /mobile\.spec\.ts/,
     },
     {
       name: 'firefox',
