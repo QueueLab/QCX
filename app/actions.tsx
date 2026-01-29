@@ -45,6 +45,7 @@ async function submit(formData?: FormData, skip?: boolean) {
   const action = formData?.get('action') as string;
   if (action === 'resolution_search') {
     const file = formData?.get('file') as File;
+    const timezone = (formData?.get('timezone') as string) || 'UTC';
     if (!file) {
       throw new Error('No file provided for resolution search.');
     }
@@ -87,7 +88,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     async function processResolutionSearch() {
       try {
         // Call the simplified agent, which now returns a stream result.
-        const streamResult = await resolutionSearch(messages);
+        const streamResult = await resolutionSearch(messages, timezone);
 
         for await (const partialObject of streamResult.partialObjectStream) {
           if (partialObject.summary) {
@@ -230,7 +231,7 @@ async function submit(formData?: FormData, skip?: boolean) {
       ],
     });
 
-    const definitionStream = createStreamableValue('');
+    const definitionStream = createStreamableValue();
     definitionStream.done(definition);
 
     const answerSection = (
@@ -394,7 +395,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     let answer = ''
     let toolOutputs: ToolResultPart[] = []
     let errorOccurred = false
-    const streamText = createStreamableValue<string>('')
+    const streamText = createStreamableValue<string>()
     uiStream.update(<Spinner />)
 
     while (

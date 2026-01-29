@@ -89,6 +89,7 @@ export function HeaderSearchButton() {
       const formData = new FormData()
       formData.append('file', blob, 'map_capture.png')
       formData.append('action', 'resolution_search')
+      formData.append('timezone', mapData.currentTimezone || 'UTC')
 
       const responseMessage = await actions.submit(formData)
       setMessages(currentMessages => [...currentMessages, responseMessage as any])

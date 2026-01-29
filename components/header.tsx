@@ -82,6 +82,8 @@ export const Header = () => {
           <TentTree className="h-[1.2rem] w-[1.2rem]" />
         </Button>
         
+        <div id="timezone-clock-portal" />
+
         <ModeToggle />
         
         <HistoryContainer location="header" />

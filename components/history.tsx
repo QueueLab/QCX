@@ -1,5 +1,4 @@
 'use client'
-
 import { Button } from '@/components/ui/button'
 import { ChevronLeft, Menu } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -11,7 +10,6 @@ type HistoryProps = {
 
 export function History({ location }: HistoryProps) {
   const { toggleHistory } = useHistoryToggle()
-
   return (
     <Button
       variant="ghost"
