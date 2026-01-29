@@ -231,7 +231,7 @@ async function submit(formData?: FormData, skip?: boolean) {
       ],
     });
 
-    const definitionStream = createStreamableValue();
+    const definitionStream = createStreamableValue('');
     definitionStream.done(definition);
 
     const answerSection = (
@@ -347,7 +347,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         {
           id: nanoid(),
           role: 'user',
-          content: content as string, // content can be string or array, but AIMessage expects string | any
+          content: content as any,
           type
         }
       ]
@@ -395,7 +395,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     let answer = ''
     let toolOutputs: ToolResultPart[] = []
     let errorOccurred = false
-    const streamText = createStreamableValue<string>()
+    const streamText = createStreamableValue<string>('')
     uiStream.update(<Spinner />)
 
     while (
@@ -668,7 +668,7 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
           }
           break
         case 'assistant':
-          const answer = createStreamableValue()
+          const answer = createStreamableValue(content)
           answer.done(content)
           switch (type) {
             case 'response':
@@ -720,7 +720,7 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
         case 'tool':
           try {
             const toolOutput = JSON.parse(content as string)
-            const isCollapsed = createStreamableValue()
+            const isCollapsed = createStreamableValue(true)
             isCollapsed.done(true)
 
             if (
@@ -734,7 +734,7 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
               }
             }
 
-            const searchResults = createStreamableValue()
+            const searchResults = createStreamableValue(JSON.stringify(toolOutput))
             searchResults.done(JSON.stringify(toolOutput))
             switch (name) {
               case 'search':

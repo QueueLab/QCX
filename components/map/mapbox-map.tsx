@@ -441,6 +441,11 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
       }
       if (map.current) {
         map.current.off('moveend', captureMapCenter)
+        map.current.off('mousedown', handleUserInteraction)
+        map.current.off('touchstart', handleUserInteraction)
+        map.current.off('wheel', handleUserInteraction)
+        map.current.off('drag', handleUserInteraction)
+        map.current.off('zoom', handleUserInteraction)
         
         // Clean up any existing labels
         Object.values(polygonLabelsRef.current).forEach(marker => marker.remove())
