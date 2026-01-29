@@ -19,6 +19,7 @@ import { MapDataProvider, useMapData } from './map/map-data-context'; // Add thi
 import { updateDrawingContext } from '@/lib/actions/chat'; // Import the server action
 import dynamic from 'next/dynamic'
 import { HeaderSearchButton } from './header-search-button'
+import { debounce } from 'lodash'
 
 type ChatProps = {
   id?: string // This is the chatId
@@ -89,17 +90,24 @@ export function Chat({ id }: ChatProps) {
     }
   }, [isSubmitting])
 
+  // Debounced version of updateDrawingContext
+  const debouncedUpdateDrawingContext = useRef(
+    debounce((chatId: string, contextData: any) => {
+      console.log('Chat.tsx: calling debounced updateDrawingContext');
+      updateDrawingContext(chatId, contextData);
+    }, 2000)
+  ).current;
+
   // useEffect to call the server action when map data changes
   useEffect(() => {
     if (id && (mapData.drawnFeatures || mapData.imageOverlays) && mapData.cameraState) {
-      console.log('Chat.tsx: map data changed, calling updateDrawingContext');
-      updateDrawingContext(id, {
+      debouncedUpdateDrawingContext(id, {
         drawnFeatures: mapData.drawnFeatures || [],
         imageOverlays: mapData.imageOverlays || [],
         cameraState: mapData.cameraState,
       });
     }
-  }, [id, mapData.drawnFeatures, mapData.imageOverlays, mapData.cameraState]);
+  }, [id, mapData.drawnFeatures, mapData.imageOverlays, mapData.cameraState, debouncedUpdateDrawingContext]);
 
   // Mobile layout
   if (isMobile) {

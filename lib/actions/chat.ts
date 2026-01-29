@@ -163,7 +163,6 @@ export async function saveChat(chat: OldChatType, userId: string): Promise<strin
 // }
 
 export async function updateDrawingContext(chatId: string, contextData: { drawnFeatures?: any[], imageOverlays?: any[], cameraState: any }) {
-  'use server';
   console.log('[Action] updateDrawingContext called for chatId:', chatId);
 
   const userId = await getCurrentUserIdOnServer(); // Essential for creating a user-associated message
@@ -208,11 +207,22 @@ export async function updateDrawingContext(chatId: string, contextData: { drawnF
 // if their functionality is still required and intended to use the new DB.
 // For now, they are left as is, but will likely fail if Redis config is removed.
 // @ts-ignore - Ignoring Redis import error for now as it might be removed or replaced
-import { Redis } from '@upstash/redis'; // This will cause issues if REDIS_URL is not configured.
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL?.trim() || '',
-  token: process.env.UPSTASH_REDIS_REST_TOKEN || ''
-});
+import { Redis } from '@upstash/redis';
+
+// Lazy initialization of Redis to avoid crashes if env vars are missing
+let redis: Redis | null = null;
+function getRedisClient() {
+  if (redis) return redis;
+
+  const url = process.env.UPSTASH_REDIS_REST_URL?.trim();
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+  if (url && token) {
+    redis = new Redis({ url, token });
+    return redis;
+  }
+  return null;
+}
 
 
 export async function saveSystemPrompt(
@@ -227,8 +237,14 @@ export async function saveSystemPrompt(
     return { error: 'Prompt is required' }
   }
 
+  const client = getRedisClient();
+  if (!client) {
+    console.warn('Redis not configured, skipping saveSystemPrompt');
+    return { error: 'Redis not configured' };
+  }
+
   try {
-    await redis.set(`system_prompt:${userId}`, prompt)
+    await client.set(`system_prompt:${userId}`, prompt)
     return { success: true }
   } catch (error) {
     console.error('saveSystemPrompt: Error saving system prompt:', error)
@@ -244,8 +260,14 @@ export async function getSystemPrompt(
     return null
   }
 
+  const client = getRedisClient();
+  if (!client) {
+    console.warn('Redis not configured, skipping getSystemPrompt');
+    return null;
+  }
+
   try {
-    const prompt = await redis.get<string>(`system_prompt:${userId}`)
+    const prompt = await client.get<string>(`system_prompt:${userId}`)
     return prompt
   } catch (error) {
     console.error('getSystemPrompt: Error retrieving system prompt:', error)
