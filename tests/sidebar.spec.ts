@@ -1,18 +1,14 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
-test.describe('Sidebar and Chat History', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    await page.waitForSelector('[data-testid="chat-input"]');
-  });
+test.describe('Sidebar and Chat History @smoke', () => {
 
-  test('should open the history panel', async ({ page }) => {
+  test('should open the history panel', async ({ authenticatedPage: page }) => {
     await page.click('[data-testid="history-button"]');
     const historyPanel = page.locator('[data-testid="history-panel"]');
     await expect(historyPanel).toBeVisible();
   });
 
-  test('should clear the chat history', async ({ page }) => {
+  test('should clear the chat history', async ({ authenticatedPage: page }) => {
     // First, send a message to create a history item
     await page.fill('[data-testid="chat-input"]', 'Create history');
     await page.click('[data-testid="chat-submit"]');
@@ -27,4 +23,5 @@ test.describe('Sidebar and Chat History', () => {
     const historyItem = page.locator('[data-testid^="history-item-"]');
     await expect(historyItem).not.toBeVisible();
   });
+
 });

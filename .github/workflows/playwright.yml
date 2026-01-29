@@ -10,6 +10,11 @@ jobs:
   test:
     timeout-minutes: 60
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shardIndex: [1, 2, 3, 4]
+        shardTotal: [4]
     
     steps:
     - name: Checkout code
@@ -26,29 +31,21 @@ jobs:
     - name: Install Playwright Browsers
       run: bunx playwright install --with-deps
 
-    - name: Build application
-      run: bun run build
-      env:
-        # Add any required environment variables for build
-        NODE_ENV: production
-
-    - name: Start application
-      run: |
-        bun run start &
-        sleep 10
-        # Wait for the server to be ready
-        npx wait-on http://localhost:3000 --timeout 60000
-
     - name: Run Playwright tests
-      run: bun run test:e2e
+      run: bun run test:e2e:shard
       env:
         CI: true
+        NODE_ENV: production
+        SHARD_INDEX: ${{ matrix.shardIndex }}
+        SHARD_TOTAL: ${{ matrix.shardTotal }}
+        # Add other necessary env vars here (e.g., Supabase, etc.)
+        AUTH_DISABLED_FOR_DEV: true
 
     - name: Upload test results
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: playwright-report
+        name: playwright-report-${{ matrix.shardIndex }}
         path: playwright-report/
         retention-days: 30
 
@@ -56,6 +53,6 @@ jobs:
       uses: actions/upload-artifact@v4
       if: failure()
       with:
-        name: playwright-screenshots
+        name: playwright-screenshots-${{ matrix.shardIndex }}
         path: test-results/
         retention-days: 7
