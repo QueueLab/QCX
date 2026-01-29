@@ -31,7 +31,7 @@ jobs:
     - name: Install Playwright Browsers
       run: bunx playwright install --with-deps
 
-    - name: Run Playwright tests
+    - name: Run Playwright tests (Shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }})
       run: bun run test:e2e:shard
       env:
         CI: true
