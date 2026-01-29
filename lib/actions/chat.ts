@@ -162,7 +162,7 @@ export async function saveChat(chat: OldChatType, userId: string): Promise<strin
 //   return null;
 // }
 
-export async function updateDrawingContext(chatId: string, contextData: { drawnFeatures: any[], cameraState: any }) {
+export async function updateDrawingContext(chatId: string, contextData: { drawnFeatures?: any[], imageOverlays?: any[], cameraState: any }) {
   'use server';
   console.log('[Action] updateDrawingContext called for chatId:', chatId);
 

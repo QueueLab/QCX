@@ -89,21 +89,22 @@ export function Chat({ id }: ChatProps) {
     }
   }, [isSubmitting])
 
-  // useEffect to call the server action when drawnFeatures changes
+  // useEffect to call the server action when map data changes
   useEffect(() => {
-    if (id && mapData.drawnFeatures && mapData.cameraState) {
-      console.log('Chat.tsx: drawnFeatures changed, calling updateDrawingContext', mapData.drawnFeatures);
+    if (id && (mapData.drawnFeatures || mapData.imageOverlays) && mapData.cameraState) {
+      console.log('Chat.tsx: map data changed, calling updateDrawingContext');
       updateDrawingContext(id, {
-        drawnFeatures: mapData.drawnFeatures,
+        drawnFeatures: mapData.drawnFeatures || [],
+        imageOverlays: mapData.imageOverlays || [],
         cameraState: mapData.cameraState,
       });
     }
-  }, [id, mapData.drawnFeatures, mapData.cameraState]);
+  }, [id, mapData.drawnFeatures, mapData.imageOverlays, mapData.cameraState]);
 
   // Mobile layout
   if (isMobile) {
     return (
-      <MapDataProvider> {/* Add Provider */}
+      <>
         <HeaderSearchButton />
         <div className="mobile-layout-container">
           <div className="mobile-map-section">
@@ -157,13 +158,13 @@ export function Chat({ id }: ChatProps) {
           )}
         </div>
         </div>
-      </MapDataProvider>
+      </>
     );
   }
 
   // Desktop layout
   return (
-    <MapDataProvider> {/* Add Provider */}
+    <>
       <HeaderSearchButton />
       <div className="flex justify-start items-start">
         {/* This is the new div for scrolling */}
@@ -221,6 +222,6 @@ export function Chat({ id }: ChatProps) {
           {activeView ? <SettingsView /> : <MapProvider />}
         </div>
       </div>
-    </MapDataProvider>
+    </>
   );
 }
