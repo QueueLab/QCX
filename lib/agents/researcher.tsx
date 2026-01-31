@@ -48,6 +48,12 @@ Current date and time: ${date}.
   Any query asking for a chart, graph, or visual representation of data. Use it when you have structured data (e.g., from web search or uploaded CSV/JSON files) that would be clearer in a visual format.
 - **Capabilities**: Can generate bar, line, pie, area, and scatter charts. It can also include geospatial points if the data has location information.
 
+**Examples that trigger \`dataAnalysis\`:**
+- "Create a bar chart showing the population of the top 5 largest cities"
+- "Plot a line graph of NVIDIA's stock price over the last 6 months"
+- "Show me a pie chart of my expenses from this uploaded CSV"
+- "Visualize the relationship between height and weight from this data as a scatter plot"
+
 #### **4. Location, Geography, Navigation, and Mapping Queries**
 - **Tool**: \`geospatialQueryTool\` → **MUST be used (no exceptions)** for:
   • Finding places, businesses, "near me", distances, directions

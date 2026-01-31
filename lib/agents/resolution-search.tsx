@@ -1,4 +1,4 @@
-import { CoreMessage, streamObject } from 'ai'
+import { CoreMessage, generateObject } from 'ai'
 import { getModel } from '@/lib/utils'
 import { z } from 'zod'
 
@@ -23,14 +23,7 @@ const resolutionSearchSchema = z.object({
   }).describe('A GeoJSON object containing points of interest and classified land features to be overlaid on the map.'),
 })
 
-export interface DrawnFeature {
-  id: string;
-  type: 'Polygon' | 'LineString';
-  measurement: string;
-  geometry: any;
-}
-
-export async function resolutionSearch(messages: CoreMessage[], timezone: string = 'UTC', drawnFeatures?: DrawnFeature[]) {
+export async function resolutionSearch(messages: CoreMessage[], timezone: string = 'UTC') {
   const localTime = new Date().toLocaleString('en-US', {
     timeZone: timezone,
     hour: '2-digit',
@@ -45,11 +38,6 @@ export async function resolutionSearch(messages: CoreMessage[], timezone: string
   const systemPrompt = `
 As a geospatial analyst, your task is to analyze the provided satellite image of a geographic location.
 The current local time at this location is ${localTime}.
-
-${drawnFeatures && drawnFeatures.length > 0 ? `The user has drawn the following features on the map for your reference:
-${drawnFeatures.map(f => `- ${f.type} with measurement ${f.measurement}`).join('\n')}
-Use these user-drawn areas/lines as primary areas of interest for your analysis.` : ''}
-
 Your analysis should be comprehensive and include the following components:
 
 1.  **Land Feature Classification:** Identify and describe the different types of land cover visible in the image (e.g., urban areas, forests, water bodies, agricultural fields).
@@ -69,11 +57,14 @@ Analyze the user's prompt and the image to provide a holistic understanding of t
     message.content.some(part => part.type === 'image')
   )
 
-  // Use streamObject to get partial results.
-  return streamObject({
+  // Use generateObject to get the full object at once.
+  const { object } = await generateObject({
     model: await getModel(hasImage),
     system: systemPrompt,
     messages: filteredMessages,
     schema: resolutionSearchSchema,
   })
+
+  // Return the complete, validated object.
+  return object
 }
