@@ -33,20 +33,27 @@ interface GraphSectionProps {
 }
 
 export function GraphSection({ result }: GraphSectionProps) {
-  // Check if result is a streamable value (has a value property or internal structure)
-  // We use a heuristic or just try-catch if needed, but useStreamableValue must be called at the top level.
-  // Actually, we can check if it looks like a streamable value.
-  const isStreamable = result && typeof result === 'object' && ('value' in result || 'done' in result || (result as any)._isStreamable);
+  if (!result) return null;
 
-  const [streamData, error, pending] = useStreamableValue(isStreamable ? (result as any) : undefined)
+  // Check if result is a static DataAnalysisResult object
+  // A StreamableValue is an opaque object and shouldn't have these properties
+  const isStatic = typeof result === 'object' && result !== null &&
+    ('chartType' in (result as any) || 'title' in (result as any) || 'data' in (result as any));
+  const isString = typeof result === 'string';
 
-  const data = isStreamable ? streamData : result;
+  if (isStatic || isString) {
+    return <GraphCard data={result as any} />;
+  }
 
-  const chartData: DataAnalysisResult | undefined = typeof data === 'string'
-    ? JSON.parse(data)
-    : data as DataAnalysisResult
+  // Handle case where it might be a streamable value or something else
+  // We use a safe wrapper to avoid crashing if useStreamableValue throws
+  return <StreamedGraphSection result={result as any} />;
+}
 
-  if (pending && !chartData) {
+function StreamedGraphSection({ result }: { result: StreamableValue<any> }) {
+  const [data, error, pending] = useStreamableValue(result);
+
+  if (pending && !data) {
     return (
       <Section className="py-2">
         <div className="animate-pulse flex space-y-4 flex-col">
@@ -54,110 +61,141 @@ export function GraphSection({ result }: GraphSectionProps) {
           <div className="h-64 bg-muted rounded"></div>
         </div>
       </Section>
-    )
+    );
   }
 
-  if (!chartData) return null
+  return <GraphCard data={data} />;
+}
 
-  const { title, description, chartType, data: plotData, config } = chartData
+function GraphCard({ data, pending }: { data: any, pending?: boolean }) {
+  const chartData: DataAnalysisResult | undefined = React.useMemo(() => {
+    if (!data) return undefined;
+    if (typeof data === 'string') {
+      try {
+        return JSON.parse(data);
+      } catch (e) {
+        console.error('Error parsing graph data:', e);
+        return undefined;
+      }
+    }
+    return data as DataAnalysisResult;
+  }, [data]);
+
+  if (!chartData) return null;
+
+  const { title, description, chartType, data: plotData, config } = chartData;
 
   const renderChart = () => {
+    if (!plotData || !config) return <div className="flex items-center justify-center h-full text-muted-foreground italic">Missing chart data or configuration</div>;
+
     switch (chartType) {
       case 'bar':
         return (
-          <BarChart data={plotData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey={config.xAxisKey} />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            {config.series.map((s, i) => (
-              <Bar key={s.key} dataKey={s.key} name={s.name} fill={s.color || COLORS[i % COLORS.length]} />
-            ))}
-          </BarChart>
-        )
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={plotData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey={config.xAxisKey} />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              {config.series?.map((s, i) => (
+                <Bar key={s.key} dataKey={s.key} name={s.name} fill={s.color || COLORS[i % COLORS.length]} />
+              ))}
+            </BarChart>
+          </ResponsiveContainer>
+        );
       case 'line':
         return (
-          <LineChart data={plotData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey={config.xAxisKey} />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            {config.series.map((s, i) => (
-              <Line key={s.key} type="monotone" dataKey={s.key} name={s.name} stroke={s.color || COLORS[i % COLORS.length]} />
-            ))}
-          </LineChart>
-        )
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={plotData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey={config.xAxisKey} />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              {config.series?.map((s, i) => (
+                <Line key={s.key} type="monotone" dataKey={s.key} name={s.name} stroke={s.color || COLORS[i % COLORS.length]} />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        );
       case 'area':
         return (
-          <AreaChart data={plotData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey={config.xAxisKey} />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            {config.series.map((s, i) => (
-              <Area key={s.key} type="monotone" dataKey={s.key} name={s.name} stroke={s.color || COLORS[i % COLORS.length]} fill={s.color || COLORS[i % COLORS.length]} />
-            ))}
-          </AreaChart>
-        )
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={plotData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey={config.xAxisKey} />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              {config.series?.map((s, i) => (
+                <Area key={s.key} type="monotone" dataKey={s.key} name={s.name} stroke={s.color || COLORS[i % COLORS.length]} fill={s.color || COLORS[i % COLORS.length]} />
+              ))}
+            </AreaChart>
+          </ResponsiveContainer>
+        );
       case 'pie':
         return (
-          <PieChart>
-            <Pie
-              data={plotData}
-              dataKey={config.series[0].key}
-              nameKey={config.xAxisKey}
-              cx="50%"
-              cy="50%"
-              outerRadius={80}
-              label
-            >
-              {plotData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-              ))}
-            </Pie>
-            <Tooltip />
-            <Legend />
-          </PieChart>
-        )
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={plotData}
+                dataKey={config.series?.[0]?.key}
+                nameKey={config.xAxisKey}
+                cx="50%"
+                cy="50%"
+                outerRadius={80}
+                label
+              >
+                {plotData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        );
       case 'scatter':
         return (
-          <ScatterChart>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis type="number" dataKey={config.xAxisKey} name={config.xAxisKey} />
-            <YAxis type="number" dataKey={config.yAxisKey} name={config.yAxisKey} />
-            <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-            <Legend />
-            {config.series.map((s, i) => (
-              <Scatter key={s.key} name={s.name} data={plotData} fill={s.color || COLORS[i % COLORS.length]} />
-            ))}
-          </ScatterChart>
-        )
+          <ResponsiveContainer width="100%" height="100%">
+            <ScatterChart>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis type="number" dataKey={config.xAxisKey} name={config.xAxisKey} />
+              <YAxis type="number" dataKey={config.yAxisKey} name={config.yAxisKey} />
+              <Tooltip cursor={{ strokeDasharray: '3 3' }} />
+              <Legend />
+              {config.series?.map((s, i) => (
+                <Scatter key={s.key} name={s.name} data={plotData} fill={s.color || COLORS[i % COLORS.length]} />
+              ))}
+            </ScatterChart>
+          </ResponsiveContainer>
+        );
       default:
-        return <div>Unsupported chart type: {chartType}</div>
+        return (
+          <div className="flex items-center justify-center h-full text-muted-foreground">
+            Unsupported chart type: {chartType || 'None'}
+          </div>
+        );
     }
-  }
+  };
 
   return (
     <Section className="py-2">
       <div className="mb-2">
-        <ToolBadge tool="dataAnalysis">Graph: {title}</ToolBadge>
+        <ToolBadge tool="dataAnalysis">Graph: {title || 'Untitled'}</ToolBadge>
       </div>
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg font-medium">{title}</CardTitle>
+          <CardTitle className="text-lg font-medium">{title || 'Data Analysis'}</CardTitle>
           {description && <CardDescription>{description}</CardDescription>}
         </CardHeader>
         <CardContent>
           <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              {renderChart()}
-            </ResponsiveContainer>
+            {renderChart()}
           </div>
         </CardContent>
       </Card>
     </Section>
-  )
+  );
 }
