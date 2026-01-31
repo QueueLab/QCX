@@ -36,10 +36,13 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
   const [isMobile, setIsMobile] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [suggestions, setSuggestionsState] = useState<PartialRelated | null>(null)
-  const setSuggestions = useCallback((s: PartialRelated | null) => {
-    setSuggestionsState(s)
-    onSuggestionsChange?.(s)
-  }, [onSuggestionsChange, setSuggestionsState])
+  const setSuggestions = useCallback(
+    (s: PartialRelated | null) => {
+      setSuggestionsState(s)
+      onSuggestionsChange?.(s)
+    },
+    [onSuggestionsChange, setSuggestionsState]
+  )
   const { mapData } = useMapData()
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -155,7 +158,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
         }
       }, 500) // 500ms debounce delay
     },
-    [mapData]
+    [mapData, setSuggestions]
   )
 
   useEffect(() => {
