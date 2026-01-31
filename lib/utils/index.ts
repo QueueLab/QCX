@@ -17,8 +17,8 @@ export function generateUUID(): string {
   return uuidv4();
 }
 
-export async function getModel(requireVision: boolean = false) {
-  const selectedModel = await getSelectedModel();
+export async function getModel(useSpecificAPI: boolean = false, requireVision: boolean = false) {
+  const selectedModel = useSpecificAPI ? (process.env.SPECIFIC_API_MODEL || 'Gemini 3') : await getSelectedModel();
 
   const xaiApiKey = process.env.XAI_API_KEY;
   const gemini3ProApiKey = process.env.GEMINI_3_PRO_API_KEY;

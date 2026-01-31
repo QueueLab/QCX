@@ -135,7 +135,7 @@ export const UserMessage: React.FC<UserMessageProps> = ({
             </div>
           ) : (
             textPart && (
-              <div className="text-xl break-words p-3 bg-muted rounded-2xl rounded-tl-none inline-block">
+              <div className="text-xl break-words p-3 bg-background border border-border rounded-2xl rounded-tl-none inline-block shadow-sm">
                 {textPart}
               </div>
             )
@@ -145,7 +145,7 @@ export const UserMessage: React.FC<UserMessageProps> = ({
       </div>
 
       {!isEditing && id && (
-        <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity self-end mt-1 mr-2">
+        <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity mt-1 ml-1">
           <Button variant="ghost" size="icon" onClick={handleEdit} className="h-8 w-8">
             <Pencil className="h-4 w-4 text-muted-foreground" />
           </Button>

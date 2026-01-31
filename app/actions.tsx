@@ -86,13 +86,14 @@ async function submit(formData?: FormData, skip?: boolean) {
       { type: 'image', image: dataUrl, mimeType: file.type }
     ];
 
+    const messageId = (formData?.get('id') as string) || nanoid();
     // Add the new user message to the AI state.
     aiState.update({
       ...aiState.get(),
       messages: [
         ...aiState.get().messages,
         {
-          id: nanoid(),
+          id: messageId,
           role: 'user',
           content,
           type: 'input',
@@ -360,13 +361,15 @@ async function submit(formData?: FormData, skip?: boolean) {
     ? 'input_related'
     : 'inquiry'
 
+  const messageId = (formData?.get('id') as string) || nanoid()
+
   if (content) {
     aiState.update({
       ...aiState.get(),
       messages: [
         ...aiState.get().messages,
         {
-          id: nanoid(),
+          id: messageId,
           role: 'user',
           content,
           type,
@@ -446,7 +449,7 @@ async function processChatWorkflow({
   if (action.object.next === 'inquire') {
     const inquiry = await inquire(uiStream, messages)
     uiStream.done()
-    isGenerating.done()
+    isGenerating.done(false)
     isCollapsed.done(false)
     aiState.done({
       ...aiState.get(),
@@ -501,6 +504,8 @@ async function processChatWorkflow({
           ]
         })
       })
+    } else if (answer.length === 0) {
+      break
     }
   }
 

@@ -104,15 +104,17 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
       })
     }
 
+    const id = nanoid()
     setMessages(currentMessages => [
       ...currentMessages,
       {
-        id: nanoid(),
-        component: <UserMessage content={content} />
+        id,
+        component: <UserMessage id={id} content={content} />
       }
     ])
 
     const formData = new FormData(e.currentTarget)
+    formData.append('id', id)
     if (selectedFile) {
       formData.append('file', selectedFile)
     }
