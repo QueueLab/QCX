@@ -91,7 +91,13 @@ async function submit(formData?: FormData, skip?: boolean) {
       ...aiState.get(),
       messages: [
         ...aiState.get().messages,
-        { id: nanoid(), role: 'user', content, type: 'input' }
+        {
+          id: nanoid(),
+          role: 'user',
+          content,
+          type: 'input',
+          createdAt: new Date()
+        }
       ]
     });
     messages.push({ role: 'user', content });
@@ -148,25 +154,29 @@ async function submit(formData?: FormData, skip?: boolean) {
               id: groupeId,
               role: 'assistant',
               content: analysisResult.summary || 'Analysis complete.',
-              type: 'response'
+              type: 'response',
+              createdAt: new Date()
             },
             {
               id: groupeId,
               role: 'assistant',
               content: JSON.stringify(analysisResult),
-              type: 'resolution_search_result'
+              type: 'resolution_search_result',
+              createdAt: new Date()
             },
             {
               id: groupeId,
               role: 'assistant',
               content: JSON.stringify(relatedQueries),
-              type: 'related'
+              type: 'related',
+              createdAt: new Date()
             },
             {
               id: groupeId,
               role: 'assistant',
               content: 'followup',
-              type: 'followup'
+              type: 'followup',
+              createdAt: new Date()
             }
           ]
         });
@@ -234,23 +244,24 @@ async function submit(formData?: FormData, skip?: boolean) {
           role: 'user',
           content,
           type,
-        },
-      ],
-    });
+          createdAt: new Date()
+        }
+      ]
+    })
 
-    const definitionStream = createStreamableValue();
-    definitionStream.done(definition);
+    const definitionStream = createStreamableValue()
+    definitionStream.done(definition)
 
     const answerSection = (
       <Section title="response">
         <BotMessage content={definitionStream.value} />
       </Section>
-    );
+    )
 
-    uiStream.append(answerSection);
+    uiStream.append(answerSection)
 
-    const groupeId = nanoid();
-    const relatedQueries = { items: [] };
+    const groupeId = nanoid()
+    const relatedQueries = { items: [] }
 
     aiState.done({
       ...aiState.get(),
@@ -261,21 +272,24 @@ async function submit(formData?: FormData, skip?: boolean) {
           role: 'assistant',
           content: definition,
           type: 'response',
+          createdAt: new Date()
         },
         {
           id: groupeId,
           role: 'assistant',
           content: JSON.stringify(relatedQueries),
           type: 'related',
+          createdAt: new Date()
         },
         {
           id: groupeId,
           role: 'assistant',
           content: 'followup',
           type: 'followup',
-        },
-      ],
-    });
+          createdAt: new Date()
+        }
+      ]
+    })
 
     isGenerating.done(false);
     uiStream.done();
@@ -355,7 +369,8 @@ async function submit(formData?: FormData, skip?: boolean) {
           id: nanoid(),
           role: 'user',
           content,
-          type
+          type,
+          createdAt: new Date()
         }
       ]
     })
@@ -440,7 +455,8 @@ async function processChatWorkflow({
         {
           id: nanoid(),
           role: 'assistant',
-          content: `inquiry: ${inquiry?.question}`
+            content: `inquiry: ${inquiry?.question}`,
+            createdAt: new Date()
         }
       ]
     })
@@ -529,19 +545,22 @@ async function processChatWorkflow({
           id: groupeId,
           role: 'assistant',
           content: answer,
-          type: 'response'
+          type: 'response',
+          createdAt: new Date()
         },
         {
           id: groupeId,
           role: 'assistant',
           content: JSON.stringify(relatedQueries),
-          type: 'related'
+          type: 'related',
+          createdAt: new Date()
         },
         {
           id: groupeId,
           role: 'assistant',
           content: 'followup',
-          type: 'followup'
+          type: 'followup',
+          createdAt: new Date()
         }
       ]
     })
@@ -583,10 +602,26 @@ async function resubmit(
   if (editedMessage.createdAt) {
     await deleteTrailingMessages(chatId, new Date(editedMessage.createdAt))
   }
-  await updateMessage(messageId, content)
-
   const truncatedMessages = messages.slice(0, index + 1)
-  truncatedMessages[index].content = content
+  const editedMessageInState = truncatedMessages[index]
+
+  if (Array.isArray(editedMessageInState.content)) {
+    const textPart = editedMessageInState.content.find(p => p.type === 'text') as
+      | { type: 'text'; text: string }
+      | undefined
+    if (textPart) {
+      textPart.text = content
+    }
+  } else {
+    editedMessageInState.content = content
+  }
+
+  await updateMessage(
+    messageId,
+    typeof editedMessageInState.content === 'object'
+      ? JSON.stringify(editedMessageInState.content)
+      : editedMessageInState.content
+  )
 
   aiState.update({
     ...aiState.get(),

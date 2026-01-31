@@ -7,7 +7,8 @@ import { useActions, useUIState } from 'ai/rsc'
 import { AI } from '@/app/actions'
 import { useSettingsStore } from '@/lib/store/settings'
 import { Button } from './ui/button'
-import { Edit3, Trash2, Check, X } from 'lucide-react'
+import { Pencil, Copy, Trash2, Check, X } from 'lucide-react'
+import { toast } from 'sonner'
 import Textarea from 'react-textarea-autosize'
 import {
   AlertDialog,
@@ -62,6 +63,13 @@ export const UserMessage: React.FC<UserMessageProps> = ({
     setIsEditing(true)
   }
 
+  const copyToClipboard = () => {
+    if (textPart) {
+      navigator.clipboard.writeText(textPart)
+      toast.success('Copied to clipboard')
+    }
+  }
+
   const { mapProvider } = useSettingsStore()
 
   const handleSave = async () => {
@@ -92,75 +100,86 @@ export const UserMessage: React.FC<UserMessageProps> = ({
   }
 
   return (
-    <div className="group flex items-start w-full space-x-3 mt-2">
-      <div className="flex-1 space-y-2">
-        {imagePart && (
-          <div className="p-2 border rounded-lg bg-muted w-fit">
-            <Image
-              src={imagePart}
-              alt="attachment"
-              width={300}
-              height={300}
-              className="max-w-xs max-h-64 rounded-md object-contain"
-            />
-          </div>
-        )}
-        {isEditing ? (
-          <div className="space-y-2">
-            <Textarea
-              className="w-full p-2 text-xl break-words bg-background border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-              value={editContent}
-              onChange={e => setEditContent(e.target.value)}
-              autoFocus
-            />
-            <div className="flex space-x-2">
-              <Button size="sm" onClick={handleSave}>
-                <Check className="h-4 w-4 mr-1" />
-                Save
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => setIsEditing(false)}>
-                <X className="h-4 w-4 mr-1" />
-                Cancel
-              </Button>
+    <div className="group flex flex-col items-start w-full mt-2">
+      <div className="flex items-start w-full space-x-3">
+        <div className="flex-1 space-y-2">
+          {imagePart && (
+            <div className="p-2 border rounded-lg bg-muted w-fit">
+              <Image
+                src={imagePart}
+                alt="attachment"
+                width={300}
+                height={300}
+                className="max-w-xs max-h-64 rounded-md object-contain"
+              />
             </div>
-          </div>
-        ) : (
-          textPart && <div className="text-xl break-words">{textPart}</div>
-        )}
-      </div>
-
-      <div className="flex items-center space-x-1">
-        {!isEditing && id && (
-          <div className="flex opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button variant="ghost" size="icon" onClick={handleEdit}>
-              <Edit3 className="h-4 w-4" />
-            </Button>
-
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <Trash2 className="h-4 w-4 text-destructive" />
+          )}
+          {isEditing ? (
+            <div className="space-y-2">
+              <Textarea
+                className="w-full p-2 text-xl break-words bg-background border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+                value={editContent}
+                onChange={e => setEditContent(e.target.value)}
+                autoFocus
+              />
+              <div className="flex space-x-2">
+                <Button size="sm" onClick={handleSave}>
+                  <Check className="h-4 w-4 mr-1" />
+                  Save
                 </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete message?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will delete this message and all subsequent messages in this chat.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                    Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        )}
+                <Button size="sm" variant="ghost" onClick={() => setIsEditing(false)}>
+                  <X className="h-4 w-4 mr-1" />
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : (
+            textPart && (
+              <div className="text-xl break-words p-3 bg-muted rounded-2xl rounded-tl-none inline-block">
+                {textPart}
+              </div>
+            )
+          )}
+        </div>
         {enableShare && showShare && chatId && <ChatShare chatId={chatId} />}
       </div>
+
+      {!isEditing && id && (
+        <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity self-end mt-1 mr-2">
+          <Button variant="ghost" size="icon" onClick={handleEdit} className="h-8 w-8">
+            <Pencil className="h-4 w-4 text-muted-foreground" />
+          </Button>
+
+          <Button variant="ghost" size="icon" onClick={copyToClipboard} className="h-8 w-8">
+            <Copy className="h-4 w-4 text-muted-foreground" />
+          </Button>
+
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete message?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will delete this message and all subsequent messages in this chat.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDelete}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      )}
     </div>
   )
 }
