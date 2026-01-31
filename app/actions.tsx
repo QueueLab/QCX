@@ -23,6 +23,7 @@ import { BotMessage } from '@/components/message'
 import { SearchSection } from '@/components/search-section'
 import SearchRelated from '@/components/search-related'
 import { GeoJsonLayer } from '@/components/map/geojson-layer'
+import { ResolutionImage } from '@/components/resolution-image'
 import { CopilotDisplay } from '@/components/copilot-display'
 import RetrieveSection from '@/components/retrieve-section'
 import { VideoSearchSection } from '@/components/video-search-section'
@@ -92,6 +93,7 @@ async function submit(formData?: FormData, skip?: boolean) {
 
     // Create a streamable value for the summary.
     const summaryStream = createStreamableValue<string>('');
+    const groupeId = nanoid();
 
     async function processResolutionSearch() {
       try {
@@ -110,6 +112,15 @@ async function submit(formData?: FormData, skip?: boolean) {
 
         // Mark the summary stream as done with the result.
         summaryStream.done(analysisResult.summary || 'Analysis complete.');
+
+        if (analysisResult.geoJson) {
+          uiStream.append(
+            <GeoJsonLayer
+              id={groupeId}
+              data={analysisResult.geoJson as FeatureCollection}
+            />
+          );
+        }
 
         messages.push({ role: 'assistant', content: analysisResult.summary || 'Analysis complete.' });
 
@@ -132,8 +143,6 @@ async function submit(formData?: FormData, skip?: boolean) {
 
         await new Promise(resolve => setTimeout(resolve, 500));
 
-        const groupeId = nanoid();
-
         aiState.done({
           ...aiState.get(),
           messages: [
@@ -147,7 +156,10 @@ async function submit(formData?: FormData, skip?: boolean) {
             {
               id: groupeId,
               role: 'assistant',
-              content: JSON.stringify(analysisResult),
+              content: JSON.stringify({
+                ...analysisResult,
+                image: dataUrl
+              }),
               type: 'resolution_search_result'
             },
             {
@@ -179,6 +191,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     // Immediately update the UI stream with the BotMessage component.
     uiStream.update(
       <Section title="response">
+        <ResolutionImage src={dataUrl} />
         <BotMessage content={summaryStream.value} />
       </Section>
     );
@@ -704,11 +717,13 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
             case 'resolution_search_result': {
               const analysisResult = JSON.parse(content as string);
               const geoJson = analysisResult.geoJson as FeatureCollection;
+              const image = analysisResult.image as string;
 
               return {
                 id,
                 component: (
                   <>
+                    {image && <ResolutionImage src={image} />}
                     {geoJson && (
                       <GeoJsonLayer id={id} data={geoJson} />
                     )}
