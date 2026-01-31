@@ -1,4 +1,4 @@
-import { CoreMessage, generateObject } from 'ai'
+import { CoreMessage, streamObject } from 'ai'
 import { getModel } from '@/lib/utils'
 import { z } from 'zod'
 
@@ -69,14 +69,11 @@ Analyze the user's prompt and the image to provide a holistic understanding of t
     message.content.some(part => part.type === 'image')
   )
 
-  // Use generateObject to get the full object at once.
-  const { object } = await generateObject({
+  // Use streamObject to get partial results.
+  return streamObject({
     model: await getModel(hasImage),
     system: systemPrompt,
     messages: filteredMessages,
     schema: resolutionSearchSchema,
   })
-
-  // Return the complete, validated object.
-  return object
 }
