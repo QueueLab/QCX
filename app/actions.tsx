@@ -12,7 +12,7 @@ import type { FeatureCollection } from 'geojson'
 import { Spinner } from '@/components/ui/spinner'
 import { Section } from '@/components/section'
 import { FollowupPanel } from '@/components/followup-panel'
-import { inquire, researcher, taskManager, querySuggestor, resolutionSearch } from '@/lib/agents'
+import { inquire, researcher, taskManager, querySuggestor, resolutionSearch, type DrawnFeature } from '@/lib/agents'
 // Removed import of useGeospatialToolMcp as it no longer exists and was incorrectly used here.
 // The geospatialTool (if used by agents like researcher) now manages its own MCP client.
 import { writer } from '@/lib/agents/writer'
@@ -47,7 +47,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     const file = formData?.get('file') as File;
     const timezone = (formData?.get('timezone') as string) || 'UTC';
     const drawnFeaturesString = formData?.get('drawnFeatures') as string;
-    let drawnFeatures = [];
+    let drawnFeatures: DrawnFeature[] = [];
     try {
       drawnFeatures = drawnFeaturesString ? JSON.parse(drawnFeaturesString) : [];
     } catch (e) {
