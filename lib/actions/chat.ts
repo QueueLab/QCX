@@ -10,6 +10,9 @@ import {
   saveChat as dbSaveChat,
   createMessage as dbCreateMessage,
   getMessagesByChatId as dbGetMessagesByChatId, // Added
+  updateMessage as dbUpdateMessage,
+  deleteMessage as dbDeleteMessage,
+  deleteTrailingMessages as dbDeleteTrailingMessages,
   type Chat as DrizzleChat,
   type Message as DrizzleMessage, // Added
   type NewChat as DbNewChat,
@@ -161,6 +164,32 @@ export async function saveChat(chat: OldChatType, userId: string): Promise<strin
 //   console.warn("shareChat is deprecated and needs reimplementation with new DB structure.");
 //   return null;
 // }
+
+export async function updateMessage(messageId: string, content: string): Promise<DrizzleMessage | null> {
+  try {
+    return await dbUpdateMessage(messageId, { content });
+  } catch (error) {
+    console.error(`Error updating message ${messageId}:`, error);
+    return null;
+  }
+}
+
+export async function deleteMessage(messageId: string): Promise<boolean> {
+  try {
+    return await dbDeleteMessage(messageId);
+  } catch (error) {
+    console.error(`Error deleting message ${messageId}:`, error);
+    return false;
+  }
+}
+
+export async function deleteTrailingMessages(chatId: string, createdAt: Date): Promise<void> {
+  try {
+    await dbDeleteTrailingMessages(chatId, createdAt);
+  } catch (error) {
+    console.error(`Error deleting trailing messages for chat ${chatId}:`, error);
+  }
+}
 
 export async function updateDrawingContext(chatId: string, contextData: { drawnFeatures: any[], cameraState: any }) {
   'use server';

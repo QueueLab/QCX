@@ -16,7 +16,13 @@ import { inquire, researcher, taskManager, querySuggestor, resolutionSearch, typ
 // Removed import of useGeospatialToolMcp as it no longer exists and was incorrectly used here.
 // The geospatialTool (if used by agents like researcher) now manages its own MCP client.
 import { writer } from '@/lib/agents/writer'
-import { saveChat, getSystemPrompt } from '@/lib/actions/chat' // Added getSystemPrompt
+import {
+  saveChat,
+  getSystemPrompt,
+  updateMessage,
+  deleteMessage,
+  deleteTrailingMessages
+} from '@/lib/actions/chat' // Added getSystemPrompt
 import { Chat, AIMessage } from '@/lib/types'
 import { UserMessage } from '@/components/user-message'
 import { BotMessage } from '@/components/message'
@@ -359,153 +365,304 @@ async function submit(formData?: FormData, skip?: boolean) {
     } as CoreMessage)
   }
 
-  const userId = 'anonymous'
+  const { getCurrentUserIdOnServer } = await import(
+    '@/lib/auth/get-current-user'
+  )
+  const userId = (await getCurrentUserIdOnServer()) || 'anonymous'
   const currentSystemPrompt = (await getSystemPrompt(userId)) || ''
 
   const mapProvider = formData?.get('mapProvider') as 'mapbox' | 'google'
 
-  async function processEvents() {
-    let action: any = { object: { next: 'proceed' } }
-    if (!skip) {
-      const taskManagerResult = await taskManager(messages)
-      if (taskManagerResult) {
-        action.object = taskManagerResult.object
-      }
-    }
-
-    if (action.object.next === 'inquire') {
-      const inquiry = await inquire(uiStream, messages)
-      uiStream.done()
-      isGenerating.done()
-      isCollapsed.done(false)
-      aiState.done({
-        ...aiState.get(),
-        messages: [
-          ...aiState.get().messages,
-          {
-            id: nanoid(),
-            role: 'assistant',
-            content: `inquiry: ${inquiry?.question}`
-          }
-        ]
-      })
-      return
-    }
-
-    isCollapsed.done(true)
-    let answer = ''
-    let toolOutputs: ToolResultPart[] = []
-    let errorOccurred = false
-    const streamText = createStreamableValue<string>()
-    uiStream.update(<Spinner />)
-
-    while (
-      useSpecificAPI
-        ? answer.length === 0
-        : answer.length === 0 && !errorOccurred
-    ) {
-      const { fullResponse, hasError, toolResponses } = await researcher(
-        currentSystemPrompt,
-        uiStream,
-        streamText,
-        messages,
-        mapProvider,
-        useSpecificAPI
-      )
-      answer = fullResponse
-      toolOutputs = toolResponses
-      errorOccurred = hasError
-
-      if (toolOutputs.length > 0) {
-        toolOutputs.map(output => {
-          aiState.update({
-            ...aiState.get(),
-            messages: [
-              ...aiState.get().messages,
-              {
-                id: groupeId,
-                role: 'tool',
-                content: JSON.stringify(output.result),
-                name: output.toolName,
-                type: 'tool'
-              }
-            ]
-          })
-        })
-      }
-    }
-
-    if (useSpecificAPI && answer.length === 0) {
-      const modifiedMessages = aiState
-        .get()
-        .messages.map(msg =>
-          msg.role === 'tool'
-            ? {
-                ...msg,
-                role: 'assistant',
-                content: JSON.stringify(msg.content),
-                type: 'tool'
-              }
-            : msg
-        ) as CoreMessage[]
-      const latestMessages = modifiedMessages.slice(maxMessages * -1)
-      answer = await writer(
-        currentSystemPrompt,
-        uiStream,
-        streamText,
-        latestMessages
-      )
-    } else {
-      streamText.done()
-    }
-
-    if (!errorOccurred) {
-      const relatedQueries = await querySuggestor(uiStream, messages)
-      uiStream.append(
-        <Section title="Follow-up">
-          <FollowupPanel />
-        </Section>
-      )
-
-      await new Promise(resolve => setTimeout(resolve, 500))
-
-      aiState.done({
-        ...aiState.get(),
-        messages: [
-          ...aiState.get().messages,
-          {
-            id: groupeId,
-            role: 'assistant',
-            content: answer,
-            type: 'response'
-          },
-          {
-            id: groupeId,
-            role: 'assistant',
-            content: JSON.stringify(relatedQueries),
-            type: 'related'
-          },
-          {
-            id: groupeId,
-            role: 'assistant',
-            content: 'followup',
-            type: 'followup'
-          }
-        ]
-      })
-    }
-
-    isGenerating.done(false)
-    uiStream.done()
-  }
-
-  processEvents()
+  processChatWorkflow({
+    aiState,
+    uiStream,
+    isGenerating,
+    isCollapsed,
+    messages,
+    groupeId,
+    currentSystemPrompt,
+    mapProvider,
+    useSpecificAPI,
+    maxMessages,
+    skipTaskManager: skip
+  })
 
   return {
     id: nanoid(),
     isGenerating: isGenerating.value,
     component: uiStream.value,
     isCollapsed: isCollapsed.value
+  }
+}
+
+async function processChatWorkflow({
+  aiState,
+  uiStream,
+  isGenerating,
+  isCollapsed,
+  messages,
+  groupeId,
+  currentSystemPrompt,
+  mapProvider,
+  useSpecificAPI,
+  maxMessages,
+  skipTaskManager = false
+}: {
+  aiState: any
+  uiStream: any
+  isGenerating: any
+  isCollapsed: any
+  messages: CoreMessage[]
+  groupeId: string
+  currentSystemPrompt: string
+  mapProvider: any
+  useSpecificAPI: boolean
+  maxMessages: number
+  skipTaskManager?: boolean
+}) {
+  let action: any = { object: { next: 'proceed' } }
+  if (!skipTaskManager) {
+    const taskManagerResult = await taskManager(messages)
+    if (taskManagerResult) {
+      action.object = taskManagerResult.object
+    }
+  }
+
+  if (action.object.next === 'inquire') {
+    const inquiry = await inquire(uiStream, messages)
+    uiStream.done()
+    isGenerating.done()
+    isCollapsed.done(false)
+    aiState.done({
+      ...aiState.get(),
+      messages: [
+        ...aiState.get().messages,
+        {
+          id: nanoid(),
+          role: 'assistant',
+          content: `inquiry: ${inquiry?.question}`
+        }
+      ]
+    })
+    return
+  }
+
+  isCollapsed.done(true)
+  let answer = ''
+  let toolOutputs: ToolResultPart[] = []
+  let errorOccurred = false
+  const streamText = createStreamableValue<string>()
+  uiStream.update(<Spinner />)
+
+  while (
+    useSpecificAPI ? answer.length === 0 : answer.length === 0 && !errorOccurred
+  ) {
+    const { fullResponse, hasError, toolResponses } = await researcher(
+      currentSystemPrompt,
+      uiStream,
+      streamText,
+      messages,
+      mapProvider,
+      useSpecificAPI
+    )
+    answer = fullResponse
+    toolOutputs = toolResponses
+    errorOccurred = hasError
+
+    if (toolOutputs.length > 0) {
+      toolOutputs.map(output => {
+        aiState.update({
+          ...aiState.get(),
+          messages: [
+            ...aiState.get().messages,
+            {
+              id: groupeId,
+              role: 'tool',
+              content: JSON.stringify(output.result),
+              name: output.toolName,
+              type: 'tool'
+            }
+          ]
+        })
+      })
+    }
+  }
+
+  if (useSpecificAPI && answer.length === 0) {
+    const modifiedMessages = (aiState.get().messages as AIMessage[]).map(
+      (msg: AIMessage) =>
+        msg.role === 'tool'
+          ? ({
+              ...msg,
+              role: 'assistant',
+              content: JSON.stringify(msg.content),
+              type: 'tool'
+            } as AIMessage)
+          : msg
+    ) as CoreMessage[]
+    const latestMessages = modifiedMessages.slice(maxMessages * -1)
+    answer = await writer(
+      currentSystemPrompt,
+      uiStream,
+      streamText,
+      latestMessages
+    )
+  } else {
+    streamText.done()
+  }
+
+  if (!errorOccurred) {
+    const relatedQueries = await querySuggestor(uiStream, messages)
+    uiStream.append(
+      <Section title="Follow-up">
+        <FollowupPanel />
+      </Section>
+    )
+
+    await new Promise(resolve => setTimeout(resolve, 500))
+
+    aiState.done({
+      ...aiState.get(),
+      messages: [
+        ...aiState.get().messages,
+        {
+          id: groupeId,
+          role: 'assistant',
+          content: answer,
+          type: 'response'
+        },
+        {
+          id: groupeId,
+          role: 'assistant',
+          content: JSON.stringify(relatedQueries),
+          type: 'related'
+        },
+        {
+          id: groupeId,
+          role: 'assistant',
+          content: 'followup',
+          type: 'followup'
+        }
+      ]
+    })
+  }
+
+  isGenerating.done(false)
+  uiStream.done()
+}
+
+async function resubmit(
+  messageId: string,
+  content: string,
+  mapProvider: 'mapbox' | 'google' = 'mapbox'
+) {
+  'use server'
+
+  const aiState = getMutableAIState<typeof AI>()
+  const uiStream = createStreamableUI()
+  const isGenerating = createStreamableValue(true)
+  const isCollapsed = createStreamableValue(false)
+
+  const messages = aiState.get().messages
+  const index = messages.findIndex(m => m.id === messageId)
+
+  if (index === -1) {
+    isGenerating.done(false)
+    uiStream.done()
+    return {
+      id: nanoid(),
+      isGenerating: isGenerating.value,
+      component: null,
+      isCollapsed: isCollapsed.value
+    }
+  }
+
+  const editedMessage = messages[index]
+  const chatId = aiState.get().chatId
+
+  if (editedMessage.createdAt) {
+    await deleteTrailingMessages(chatId, new Date(editedMessage.createdAt))
+  }
+  await updateMessage(messageId, content)
+
+  const truncatedMessages = messages.slice(0, index + 1)
+  truncatedMessages[index].content = content
+
+  aiState.update({
+    ...aiState.get(),
+    messages: truncatedMessages
+  })
+
+  const coreMessages: CoreMessage[] = truncatedMessages
+    .filter(
+      message =>
+        message.role !== 'tool' &&
+        message.type !== 'followup' &&
+        message.type !== 'related' &&
+        message.type !== 'end' &&
+        message.type !== 'resolution_search_result'
+    )
+    .map(m => {
+      return {
+        role: m.role as 'user' | 'assistant' | 'system' | 'tool',
+        content: m.content
+      } as CoreMessage
+    })
+
+  const groupeId = nanoid()
+  const useSpecificAPI = process.env.USE_SPECIFIC_API_FOR_WRITER === 'true'
+  const maxMessages = useSpecificAPI ? 5 : 10
+  coreMessages.splice(0, Math.max(coreMessages.length - maxMessages, 0))
+
+  const { getCurrentUserIdOnServer } = await import(
+    '@/lib/auth/get-current-user'
+  )
+  const userId = (await getCurrentUserIdOnServer()) || 'anonymous'
+  const currentSystemPrompt = (await getSystemPrompt(userId)) || ''
+
+  processChatWorkflow({
+    aiState,
+    uiStream,
+    isGenerating,
+    isCollapsed,
+    messages: coreMessages,
+    groupeId,
+    currentSystemPrompt,
+    mapProvider,
+    useSpecificAPI,
+    maxMessages,
+    skipTaskManager: true // Usually we want to skip task manager on resubmit
+  })
+
+  return {
+    id: nanoid(),
+    isGenerating: isGenerating.value,
+    component: uiStream.value,
+    isCollapsed: isCollapsed.value
+  }
+}
+
+async function deleteMessageAction(messageId: string) {
+  'use server'
+
+  const aiState = getMutableAIState<typeof AI>()
+  const messages = aiState.get().messages
+  const index = messages.findIndex(m => m.id === messageId)
+
+  if (index !== -1) {
+    const messageToDelete = messages[index]
+    const chatId = aiState.get().chatId
+
+    if (messageToDelete.createdAt) {
+      await deleteTrailingMessages(chatId, new Date(messageToDelete.createdAt))
+    }
+    await deleteMessage(messageId)
+
+    const truncatedMessages = messages.slice(0, index)
+    aiState.done({
+      ...aiState.get(),
+      messages: truncatedMessages
+    })
   }
 }
 
@@ -543,6 +700,8 @@ const initialUIState: UIState = []
 export const AI = createAI<AIState, UIState>({
   actions: {
     submit,
+    resubmit,
+    deleteMessageAction,
     clearChat
   },
   initialUIState,
@@ -655,6 +814,7 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                 id,
                 component: (
                   <UserMessage
+                    id={id}
                     content={messageContent}
                     chatId={chatId}
                     showShare={index === 0 && !isSharePage}
