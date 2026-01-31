@@ -27,6 +27,7 @@ import { CopilotDisplay } from '@/components/copilot-display'
 import RetrieveSection from '@/components/retrieve-section'
 import { VideoSearchSection } from '@/components/video-search-section'
 import { MapQueryHandler } from '@/components/map/map-query-handler' // Add this import
+import { GraphSection } from '@/components/graph-section'
 
 // Define the type for related queries
 type RelatedQueries = {
@@ -297,7 +298,11 @@ async function submit(formData?: FormData, skip?: boolean) {
         image: dataUrl,
         mimeType: file.type
       })
-    } else if (file.type === 'text/plain') {
+    } else if (
+      file.type === 'text/plain' ||
+      file.type === 'text/csv' ||
+      file.type === 'application/json'
+    ) {
       const textContent = Buffer.from(buffer).toString('utf-8')
       const existingTextPart = messageParts.find(p => p.type === 'text')
       if (existingTextPart) {
@@ -737,6 +742,32 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                   id,
                   component: (
                     <VideoSearchSection result={searchResults.value} />
+                  ),
+                  isCollapsed: isCollapsed.value
+                }
+              case 'dataAnalysis':
+                return {
+                  id,
+                  component: (
+                    <>
+                      <GraphSection result={searchResults.value} />
+                      {toolOutput.geospatial && toolOutput.geospatial.length > 0 && (
+                        <MapQueryHandler
+                          toolOutput={{
+                            type: 'MAP_QUERY_TRIGGER',
+                            originalUserInput: JSON.stringify(toolOutput.geospatial[0]),
+                            timestamp: new Date().toISOString(),
+                            mcp_response: {
+                              location: {
+                                latitude: toolOutput.geospatial[0].latitude,
+                                longitude: toolOutput.geospatial[0].longitude,
+                                place_name: toolOutput.geospatial[0].label
+                              }
+                            }
+                          }}
+                        />
+                      )}
+                    </>
                   ),
                   isCollapsed: isCollapsed.value
                 }
