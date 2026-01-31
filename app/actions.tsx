@@ -45,7 +45,9 @@ async function submit(formData?: FormData, skip?: boolean) {
 
   const action = formData?.get('action') as string;
   if (action === 'resolution_search') {
-    const file = formData?.get('file') as File;
+    const mapboxFile = formData?.get('mapboxFile') as File;
+    const googleFile = formData?.get('googleFile') as File;
+    const legacyFile = formData?.get('file') as File;
     const timezone = (formData?.get('timezone') as string) || 'UTC';
     const drawnFeaturesString = formData?.get('drawnFeatures') as string;
     let drawnFeatures: DrawnFeature[] = [];
@@ -55,12 +57,27 @@ async function submit(formData?: FormData, skip?: boolean) {
       console.error('Failed to parse drawnFeatures:', e);
     }
 
-    if (!file) {
-      throw new Error('No file provided for resolution search.');
+    let mapboxDataUrl = '';
+    let googleDataUrl = '';
+
+    if (mapboxFile) {
+      const buffer = await mapboxFile.arrayBuffer();
+      mapboxDataUrl = `data:${mapboxFile.type};base64,${Buffer.from(buffer).toString('base64')}`;
+    }
+    if (googleFile) {
+      const buffer = await googleFile.arrayBuffer();
+      googleDataUrl = `data:${googleFile.type};base64,${Buffer.from(buffer).toString('base64')}`;
     }
 
-    const buffer = await file.arrayBuffer();
-    const dataUrl = `data:${file.type};base64,${Buffer.from(buffer).toString('base64')}`;
+    // Fallback if only 'file' was provided (backward compatibility)
+    if (!mapboxDataUrl && !googleDataUrl && legacyFile) {
+      const buffer = await legacyFile.arrayBuffer();
+      mapboxDataUrl = `data:${legacyFile.type};base64,${Buffer.from(buffer).toString('base64')}`;
+    }
+
+    if (!mapboxDataUrl && !googleDataUrl) {
+      throw new Error('No files provided for resolution search.');
+    }
 
     // Get the current messages, excluding tool-related ones.
     const messages: CoreMessage[] = [...(aiState.get().messages as any[])].filter(
@@ -76,10 +93,26 @@ async function submit(formData?: FormData, skip?: boolean) {
     const userInput = 'Analyze this map view.';
 
     // Construct the multimodal content for the user message.
-    const content: CoreMessage['content'] = [
-      { type: 'text', text: userInput },
-      { type: 'image', image: dataUrl, mimeType: file.type }
-    ];
+    const contentParts: any[] = [
+      { type: 'text', text: userInput }
+    ]
+
+    if (mapboxDataUrl) {
+      contentParts.push({
+        type: 'image',
+        image: mapboxDataUrl,
+        mimeType: 'image/png'
+      })
+    }
+    if (googleDataUrl) {
+      contentParts.push({
+        type: 'image',
+        image: googleDataUrl,
+        mimeType: 'image/png'
+      })
+    }
+
+    const content = contentParts as any
 
     // Add the new user message to the AI state.
     aiState.update({
@@ -158,7 +191,7 @@ async function submit(formData?: FormData, skip?: boolean) {
               role: 'assistant',
               content: JSON.stringify({
                 ...analysisResult,
-                image: dataUrl
+                image: JSON.stringify({ mapbox: mapboxDataUrl, google: googleDataUrl })
               }),
               type: 'resolution_search_result'
             },
@@ -191,7 +224,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     // Immediately update the UI stream with the BotMessage component.
     uiStream.update(
       <Section title="response">
-        <ResolutionImage src={dataUrl} />
+        <ResolutionImage mapboxSrc={mapboxDataUrl} googleSrc={googleDataUrl} />
         <BotMessage content={summaryStream.value} />
       </Section>
     );
@@ -717,13 +750,28 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
             case 'resolution_search_result': {
               const analysisResult = JSON.parse(content as string);
               const geoJson = analysisResult.geoJson as FeatureCollection;
-              const image = analysisResult.image as string;
+              const imageData = analysisResult.image as string;
+              let mapboxSrc = '';
+              let googleSrc = '';
+
+              if (imageData) {
+                try {
+                  const parsed = JSON.parse(imageData);
+                  mapboxSrc = parsed.mapbox || '';
+                  googleSrc = parsed.google || '';
+                } catch (e) {
+                  // Fallback for older image format which was just a single string
+                  mapboxSrc = imageData;
+                }
+              }
 
               return {
                 id,
                 component: (
                   <>
-                    {image && <ResolutionImage src={image} />}
+                    {(mapboxSrc || googleSrc) && (
+                      <ResolutionImage mapboxSrc={mapboxSrc} googleSrc={googleSrc} />
+                    )}
                     {geoJson && (
                       <GeoJsonLayer id={id} data={geoJson} />
                     )}

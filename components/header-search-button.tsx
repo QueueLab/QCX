@@ -56,41 +56,51 @@ export function HeaderSearchButton() {
         }
       ])
 
-      let blob: Blob | null = null;
+      let mapboxBlob: Blob | null = null;
+      let googleBlob: Blob | null = null;
 
-      if (mapProvider === 'mapbox') {
-        const canvas = map!.getCanvas()
-        blob = await new Promise<Blob | null>(resolve => {
-          canvas.toBlob(resolve, 'image/png')
-        })
-      } else if (mapProvider === 'google') {
-        const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
-        if (!apiKey || !mapData.cameraState) {
-          toast.error('Google Maps API key or camera state is not available.')
-          setIsAnalyzing(false)
-          return
-        }
-        const { center, range } = mapData.cameraState
-        const zoom = Math.round(Math.log2(40000000 / (range || 1)));
+      const { center, range, zoom: cameraZoom } = mapData.cameraState || {};
+      const zoom = cameraZoom ?? (range ? Math.round(Math.log2(40000000 / range)) : 2);
 
-        let staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${center.lat},${center.lng}&zoom=${zoom}&size=640x480&scale=2&maptype=satellite&key=${apiKey}`;
-
-        const response = await fetch(staticMapUrl);
-        if (!response.ok) {
-          throw new Error('Failed to fetch static map image.');
-        }
-        blob = await response.blob();
+      // Capture Mapbox Preview
+      if (map) {
+        const canvas = map.getCanvas();
+        mapboxBlob = await new Promise<Blob | null>(resolve => {
+          canvas.toBlob(resolve, 'image/png');
+        });
       }
 
-      if (!blob) {
-        throw new Error('Failed to capture map image.')
+      // Capture Google Preview
+      if (center) {
+        const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+        if (apiKey) {
+          let staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${center.lat},${center.lng}&zoom=${Math.round(zoom)}&size=640x480&scale=2&maptype=satellite&key=${apiKey}`;
+          try {
+            const response = await fetch(staticMapUrl);
+            if (response.ok) {
+              googleBlob = await response.blob();
+            }
+          } catch (e) {
+            console.error('Failed to fetch google static map:', e);
+          }
+        }
+      }
+
+      if (!mapboxBlob && !googleBlob) {
+        throw new Error('Failed to capture any map images.')
       }
 
       const formData = new FormData()
-      formData.append('file', blob, 'map_capture.png')
+      if (mapboxBlob) formData.append('mapboxFile', mapboxBlob, 'mapbox_capture.png')
+      if (googleBlob) formData.append('googleFile', googleBlob, 'google_capture.png')
+
+      // Keep 'file' for backward compatibility in case it's used elsewhere
+      formData.append('file', (mapboxBlob || googleBlob)!, 'map_capture.png')
+
       formData.append('action', 'resolution_search')
       formData.append('timezone', mapData.currentTimezone || 'UTC')
       formData.append('drawnFeatures', JSON.stringify(mapData.drawnFeatures || []))
+      formData.append('mapProvider', mapProvider)
 
       const responseMessage = await actions.submit(formData)
       setMessages(currentMessages => [...currentMessages, responseMessage as any])
