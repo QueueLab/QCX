@@ -777,7 +777,7 @@ export const AI = createAI<AIState, UIState>({
 
     const aiState = getAIState() as AIState
     if (aiState) {
-      const uiState = getUIStateFromAIState(aiState)
+      const uiState = await getUIStateFromAIState(aiState)
       return uiState
     }
     return initialUIState
@@ -846,7 +846,9 @@ export const AI = createAI<AIState, UIState>({
   }
 })
 
-export const getUIStateFromAIState = (aiState: AIState): UIState => {
+export const getUIStateFromAIState = async (
+  aiState: AIState
+): Promise<UIState> => {
   const chatId = aiState.chatId
   const isSharePage = aiState.isSharePage
   return aiState.messages
