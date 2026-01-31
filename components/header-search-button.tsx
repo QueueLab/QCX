@@ -90,6 +90,7 @@ export function HeaderSearchButton() {
       formData.append('file', blob, 'map_capture.png')
       formData.append('action', 'resolution_search')
       formData.append('timezone', mapData.currentTimezone || 'UTC')
+      formData.append('drawnFeatures', JSON.stringify(mapData.drawnFeatures || []))
 
       const responseMessage = await actions.submit(formData)
       setMessages(currentMessages => [...currentMessages, responseMessage as any])
