@@ -19,10 +19,11 @@ export function FollowupPanel() {
     event.preventDefault()
     const formData = new FormData(event.currentTarget as HTMLFormElement)
 
+    const id = Date.now().toString()
     const userMessage = {
-      id: Date.now(),
+      id,
       isGenerating: false,
-      component: <UserMessage content={input} />
+      component: <UserMessage id={id} content={input} />
     }
 
     // Removed mcp argument from submit call

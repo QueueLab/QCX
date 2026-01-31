@@ -145,7 +145,7 @@ export const UserMessage: React.FC<UserMessageProps> = ({
       </div>
 
       {!isEditing && id && (
-        <div className="flex items-center space-x-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity mt-1 ml-1">
+        <div className="flex items-center space-x-0.5 opacity-40 hover:opacity-100 group-hover:opacity-100 focus-within:opacity-100 transition-opacity mt-1 ml-1">
           <Button
             variant="ghost"
             size="icon"

@@ -48,11 +48,12 @@ export function HeaderSearchButton() {
     setIsAnalyzing(true)
 
     try {
+      const id = nanoid()
       setMessages(currentMessages => [
         ...currentMessages,
         {
-          id: nanoid(),
-          component: <UserMessage content={[{ type: 'text', text: 'Analyze this map view.' }]} />
+          id,
+          component: <UserMessage id={id} content={[{ type: 'text', text: 'Analyze this map view.' }]} />
         }
       ])
 

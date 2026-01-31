@@ -112,8 +112,6 @@ export async function researcher(
     tools: getTools({ uiStream, fullResponse, mapProvider }),
   })
 
-  uiStream.update(null) // remove spinner
-
   const toolCalls: ToolCallPart[] = []
   const toolResponses: ToolResultPart[] = []
 

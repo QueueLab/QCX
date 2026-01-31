@@ -1,3 +1,5 @@
+'use server'
+
 import {
   StreamableValue,
   createAI,
@@ -472,7 +474,14 @@ async function processChatWorkflow({
     let toolOutputs: ToolResultPart[] = []
     let errorOccurred = false
     const streamText = createStreamableValue('')
-    uiStream.update(<Spinner />)
+
+    const answerSection = (
+      <Section title="response">
+        <BotMessage content={streamText.value} />
+      </Section>
+    )
+
+    uiStream.update(answerSection)
 
     while (
       useSpecificAPI
