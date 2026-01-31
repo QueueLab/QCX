@@ -46,6 +46,14 @@ async function submit(formData?: FormData, skip?: boolean) {
   if (action === 'resolution_search') {
     const file = formData?.get('file') as File;
     const timezone = (formData?.get('timezone') as string) || 'UTC';
+    const drawnFeaturesString = formData?.get('drawnFeatures') as string;
+    let drawnFeatures = [];
+    try {
+      drawnFeatures = drawnFeaturesString ? JSON.parse(drawnFeaturesString) : [];
+    } catch (e) {
+      console.error('Failed to parse drawnFeatures:', e);
+    }
+
     if (!file) {
       throw new Error('No file provided for resolution search.');
     }
@@ -88,7 +96,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     async function processResolutionSearch() {
       try {
         // Call the simplified agent, which now returns data directly.
-        const analysisResult = await resolutionSearch(messages, timezone) as any;
+        const analysisResult = await resolutionSearch(messages, timezone, drawnFeatures) as any;
 
         // Mark the summary stream as done with the result.
         summaryStream.done(analysisResult.summary || 'Analysis complete.');
