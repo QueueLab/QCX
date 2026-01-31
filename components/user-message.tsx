@@ -145,19 +145,33 @@ export const UserMessage: React.FC<UserMessageProps> = ({
       </div>
 
       {!isEditing && id && (
-        <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity mt-1 ml-1">
-          <Button variant="ghost" size="icon" onClick={handleEdit} className="h-8 w-8">
-            <Pencil className="h-4 w-4 text-muted-foreground" />
+        <div className="flex items-center space-x-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity mt-1 ml-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleEdit}
+            className="h-7 w-7 hover:bg-muted"
+          >
+            <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
           </Button>
 
-          <Button variant="ghost" size="icon" onClick={copyToClipboard} className="h-8 w-8">
-            <Copy className="h-4 w-4 text-muted-foreground" />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={copyToClipboard}
+            className="h-7 w-7 hover:bg-muted"
+          >
+            <Copy className="h-3.5 w-3.5 text-muted-foreground" />
           </Button>
 
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <Trash2 className="h-4 w-4 text-destructive" />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 hover:bg-destructive/10"
+              >
+                <Trash2 className="h-3.5 w-3.5 text-destructive/80 hover:text-destructive" />
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>

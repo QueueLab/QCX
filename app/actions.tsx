@@ -438,141 +438,158 @@ async function processChatWorkflow({
   maxMessages: number
   skipTaskManager?: boolean
 }) {
-  let action: any = { object: { next: 'proceed' } }
-  if (!skipTaskManager) {
-    const taskManagerResult = await taskManager(messages)
-    if (taskManagerResult) {
-      action.object = taskManagerResult.object
+  try {
+    let action: any = { object: { next: 'proceed' } }
+    if (!skipTaskManager) {
+      const taskManagerResult = await taskManager(messages)
+      if (taskManagerResult) {
+        action.object = taskManagerResult.object
+      }
     }
-  }
 
-  if (action.object.next === 'inquire') {
-    const inquiry = await inquire(uiStream, messages)
-    uiStream.done()
-    isGenerating.done(false)
-    isCollapsed.done(false)
-    aiState.done({
-      ...aiState.get(),
-      messages: [
-        ...aiState.get().messages,
-        {
-          id: nanoid(),
-          role: 'assistant',
+    if (action.object.next === 'inquire') {
+      const inquiry = await inquire(uiStream, messages)
+      aiState.done({
+        ...aiState.get(),
+        messages: [
+          ...aiState.get().messages,
+          {
+            id: nanoid(),
+            role: 'assistant',
             content: `inquiry: ${inquiry?.question}`,
             createdAt: new Date()
-        }
-      ]
-    })
-    return
-  }
-
-  isCollapsed.done(true)
-  let answer = ''
-  let toolOutputs: ToolResultPart[] = []
-  let errorOccurred = false
-  const streamText = createStreamableValue<string>()
-  uiStream.update(<Spinner />)
-
-  while (
-    useSpecificAPI ? answer.length === 0 : answer.length === 0 && !errorOccurred
-  ) {
-    const { fullResponse, hasError, toolResponses } = await researcher(
-      currentSystemPrompt,
-      uiStream,
-      streamText,
-      messages,
-      mapProvider,
-      useSpecificAPI
-    )
-    answer = fullResponse
-    toolOutputs = toolResponses
-    errorOccurred = hasError
-
-    if (toolOutputs.length > 0) {
-      toolOutputs.map(output => {
-        aiState.update({
-          ...aiState.get(),
-          messages: [
-            ...aiState.get().messages,
-            {
-              id: groupeId,
-              role: 'tool',
-              content: JSON.stringify(output.result),
-              name: output.toolName,
-              type: 'tool'
-            }
-          ]
-        })
+          }
+        ]
       })
-    } else if (answer.length === 0) {
-      break
+      isGenerating.done(false)
+      isCollapsed.done(false)
+      uiStream.done()
+      return
     }
-  }
 
-  if (useSpecificAPI && answer.length === 0) {
-    const modifiedMessages = (aiState.get().messages as AIMessage[]).map(
-      (msg: AIMessage) =>
-        msg.role === 'tool'
-          ? ({
-              ...msg,
-              role: 'assistant',
-              content: JSON.stringify(msg.content),
-              type: 'tool'
-            } as AIMessage)
-          : msg
-    ) as CoreMessage[]
-    const latestMessages = modifiedMessages.slice(maxMessages * -1)
-    answer = await writer(
-      currentSystemPrompt,
-      uiStream,
-      streamText,
-      latestMessages
-    )
-  } else {
-    streamText.done()
-  }
+    isCollapsed.done(true)
+    let answer = ''
+    let toolOutputs: ToolResultPart[] = []
+    let errorOccurred = false
+    const streamText = createStreamableValue('')
+    uiStream.update(<Spinner />)
 
-  if (!errorOccurred) {
-    const relatedQueries = await querySuggestor(uiStream, messages)
+    while (
+      useSpecificAPI
+        ? answer.length === 0
+        : answer.length === 0 && !errorOccurred
+    ) {
+      const {
+        fullResponse,
+        hasError,
+        toolResponses
+      } = await researcher(
+        currentSystemPrompt,
+        uiStream,
+        streamText,
+        messages,
+        mapProvider,
+        useSpecificAPI
+      )
+      answer = fullResponse
+      toolOutputs = toolResponses
+      errorOccurred = hasError
+
+      if (toolOutputs.length > 0) {
+        toolOutputs.map(output => {
+          aiState.update({
+            ...aiState.get(),
+            messages: [
+              ...aiState.get().messages,
+              {
+                id: groupeId,
+                role: 'tool',
+                content: JSON.stringify(output.result),
+                name: output.toolName,
+                type: 'tool'
+              }
+            ]
+          })
+        })
+      } else {
+        // If no tool calls and researcher finished, break to possibly call writer or end
+        break
+      }
+    }
+
+    if (useSpecificAPI && answer.length === 0) {
+      const modifiedMessages = (aiState.get().messages as AIMessage[]).map(
+        (msg: AIMessage) =>
+          msg.role === 'tool'
+            ? ({
+                ...msg,
+                role: 'assistant',
+                content: JSON.stringify(msg.content),
+                type: 'tool'
+              } as AIMessage)
+            : msg
+      ) as CoreMessage[]
+      const latestMessages = modifiedMessages.slice(maxMessages * -1)
+      answer = await writer(
+        currentSystemPrompt,
+        uiStream,
+        streamText,
+        latestMessages
+      )
+    } else {
+      streamText.done()
+    }
+
+    if (!errorOccurred || answer.length > 0) {
+      const relatedQueries = await querySuggestor(uiStream, messages)
+      uiStream.append(
+        <Section title="Follow-up">
+          <FollowupPanel />
+        </Section>
+      )
+
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      aiState.done({
+        ...aiState.get(),
+        messages: [
+          ...aiState.get().messages,
+          {
+            id: groupeId,
+            role: 'assistant',
+            content: answer,
+            type: 'response',
+            createdAt: new Date()
+          },
+          {
+            id: groupeId,
+            role: 'assistant',
+            content: JSON.stringify(relatedQueries),
+            type: 'related',
+            createdAt: new Date()
+          },
+          {
+            id: groupeId,
+            role: 'assistant',
+            content: 'followup',
+            type: 'followup',
+            createdAt: new Date()
+          }
+        ]
+      })
+    }
+  } catch (error) {
+    console.error('Error in processChatWorkflow:', error)
     uiStream.append(
-      <Section title="Follow-up">
-        <FollowupPanel />
-      </Section>
+      <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
+        An error occurred while generating the response. Please try again.
+      </div>
     )
-
-    await new Promise(resolve => setTimeout(resolve, 500))
-
-    aiState.done({
-      ...aiState.get(),
-      messages: [
-        ...aiState.get().messages,
-        {
-          id: groupeId,
-          role: 'assistant',
-          content: answer,
-          type: 'response',
-          createdAt: new Date()
-        },
-        {
-          id: groupeId,
-          role: 'assistant',
-          content: JSON.stringify(relatedQueries),
-          type: 'related',
-          createdAt: new Date()
-        },
-        {
-          id: groupeId,
-          role: 'assistant',
-          content: 'followup',
-          type: 'followup',
-          createdAt: new Date()
-        }
-      ]
-    })
+    aiState.done(aiState.get())
+  } finally {
+    isGenerating.done(false)
+    uiStream.done()
   }
-
-  isGenerating.done(false)
-  uiStream.done()
 }
 
 async function resubmit(
