@@ -743,9 +743,23 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
               toolOutput.type === 'MAP_QUERY_TRIGGER' &&
               name === 'geospatialQueryTool'
             ) {
+              const mapUrl = toolOutput.mcp_response?.mapUrl;
+              const placeName = toolOutput.mcp_response?.location?.place_name;
+
               return {
                 id,
-                component: <MapQueryHandler toolOutput={toolOutput} />,
+                component: (
+                  <>
+                    {mapUrl && (
+                      <ResolutionImage
+                        src={mapUrl}
+                        className="mb-0"
+                        alt={placeName ? `Map of ${placeName}` : 'Map Preview'}
+                      />
+                    )}
+                    <MapQueryHandler toolOutput={toolOutput} />
+                  </>
+                ),
                 isCollapsed: false
               }
             }

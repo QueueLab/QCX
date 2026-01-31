@@ -16,9 +16,10 @@ import { cn } from '@/lib/utils'
 interface ResolutionImageProps {
   src: string
   className?: string
+  alt?: string
 }
 
-export function ResolutionImage({ src, className }: ResolutionImageProps) {
+export function ResolutionImage({ src, className, alt = 'Map Imagery' }: ResolutionImageProps) {
   if (!src) return null
 
   return (
@@ -34,7 +35,7 @@ export function ResolutionImage({ src, className }: ResolutionImageProps) {
               <CardContent className="p-2">
                 <img
                   src={src}
-                  alt="Satellite Analysis Map"
+                  alt={alt}
                   className="max-w-xs max-h-64 rounded-md object-contain"
                 />
               </CardContent>
@@ -43,12 +44,12 @@ export function ResolutionImage({ src, className }: ResolutionImageProps) {
         </DialogTrigger>
         <DialogContent className="sm:max-w-5xl max-h-[90vh] p-1 glassmorphic border-none">
           <DialogHeader className="sr-only">
-            <DialogTitle>Satellite Imagery</DialogTitle>
+            <DialogTitle>{alt}</DialogTitle>
           </DialogHeader>
           <div className="flex items-center justify-center h-full">
             <img
               src={src}
-              alt="Satellite Analysis Map Full"
+              alt={`${alt} Full`}
               className="h-auto w-full object-contain max-h-[85vh] rounded-md"
             />
           </div>
