@@ -25,6 +25,7 @@ interface Location {
 interface McpResponse {
   location: Location;
   mapUrl?: string;
+  geoJson?: any;
 }
 
 interface MapboxConfig {
@@ -381,11 +382,35 @@ Uses the Mapbox Search Box Text Search API endpoint to power searching for and g
         const parsedData = content as any;
         if (parsedData.results?.length > 0) {
           const firstResult = parsedData.results[0];
-          mcpData = { location: { latitude: firstResult.coordinates?.latitude, longitude: firstResult.coordinates?.longitude, place_name: firstResult.name || firstResult.place_name, address: firstResult.full_address || firstResult.address }, mapUrl: parsedData.mapUrl };
+          mcpData = {
+            location: {
+              latitude: firstResult.coordinates?.latitude,
+              longitude: firstResult.coordinates?.longitude,
+              place_name: firstResult.name || firstResult.place_name,
+              address: firstResult.full_address || firstResult.address
+            },
+            mapUrl: parsedData.mapUrl,
+            geoJson: parsedData.geoJson || parsedData.geojson || firstResult.geoJson || firstResult.geojson
+          };
         } else if (parsedData.location) {
-          mcpData = { location: { latitude: parsedData.location.latitude, longitude: parsedData.location.longitude, place_name: parsedData.location.place_name || parsedData.location.name, address: parsedData.location.address || parsedData.location.formatted_address }, mapUrl: parsedData.mapUrl || parsedData.map_url };
+          mcpData = {
+            location: {
+              latitude: parsedData.location.latitude,
+              longitude: parsedData.location.longitude,
+              place_name: parsedData.location.place_name || parsedData.location.name,
+              address: parsedData.location.address || parsedData.location.formatted_address
+            },
+            mapUrl: parsedData.mapUrl || parsedData.map_url,
+            geoJson: parsedData.geoJson || parsedData.geojson || parsedData.location.geoJson || parsedData.location.geojson
+          };
+        } else if (parsedData.type === 'FeatureCollection' || parsedData.type === 'Feature') {
+          // Direct GeoJSON response
+          mcpData = {
+            location: {}, // Will be derived from bbox if needed, or left empty
+            geoJson: parsedData
+          };
         } else {
-          throw new Error("Response missing required 'location' or 'results' field");
+          throw new Error("Response missing required 'location', 'results', or 'geoJson' field");
         }
       } else throw new Error('Unexpected response format from mapping service');
 

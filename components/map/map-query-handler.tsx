@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 // Removed useMCPMapClient as we'll use data passed via props
 import { useMapData } from './map-data-context'; 
+import { MapDataUpdater } from './map-data-updater';
 
 // Define the expected structure of the mcp_response from geospatialTool
 interface McpResponseData {
@@ -13,6 +14,7 @@ interface McpResponseData {
     address?: string;
   };
   mapUrl?: string;
+  geoJson?: any;
 }
 
 interface GeospatialToolOutput {
@@ -76,7 +78,17 @@ export const MapQueryHandler: React.FC<MapQueryHandlerProps> = ({ toolOutput }) 
   // Its purpose is to trigger map data updates based on AI tool results.
   // If it were to use the old useMCPMapClient, mcpLoading and mcpError would be relevant.
   // It could return a small status indicator or debug info if needed for development.
-  return null;
+  return (
+    <>
+      {toolOutput?.mcp_response?.geoJson && (
+        <MapDataUpdater
+          id={toolOutput.timestamp}
+          data={toolOutput.mcp_response.geoJson}
+          filename={toolOutput.mcp_response.location?.place_name || 'Tool Result'}
+        />
+      )}
+    </>
+  );
   // Example for debugging with previous client:
   // return <div data-map-query-processed={originalUserInput} data-mcp-loading={mcpLoading} data-mcp-error={mcpError} style={{display: 'none'}} />;
 };

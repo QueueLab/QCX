@@ -89,16 +89,17 @@ export function Chat({ id }: ChatProps) {
     }
   }, [isSubmitting])
 
-  // useEffect to call the server action when drawnFeatures changes
+  // useEffect to call the server action when drawnFeatures or uploadedGeoJson changes
   useEffect(() => {
-    if (id && mapData.drawnFeatures && mapData.cameraState) {
-      console.log('Chat.tsx: drawnFeatures changed, calling updateDrawingContext', mapData.drawnFeatures);
+    if (id && (mapData.drawnFeatures || mapData.uploadedGeoJson) && mapData.cameraState) {
+      console.log('Chat.tsx: map data changed, calling updateDrawingContext');
       updateDrawingContext(id, {
-        drawnFeatures: mapData.drawnFeatures,
+        drawnFeatures: mapData.drawnFeatures || [],
         cameraState: mapData.cameraState,
+        uploadedGeoJson: mapData.uploadedGeoJson || []
       });
     }
-  }, [id, mapData.drawnFeatures, mapData.cameraState]);
+  }, [id, mapData.drawnFeatures, mapData.cameraState, mapData.uploadedGeoJson]);
 
   // Mobile layout
   if (isMobile) {

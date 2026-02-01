@@ -213,7 +213,8 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
             ref={fileInputRef}
             onChange={handleFileChange}
             className="hidden"
-            accept="text/plain,image/png,image/jpeg,image/webp"
+            accept="text/plain,image/png,image/jpeg,image/webp,.geojson,application/geo+json"
+            data-testid="file-upload-input"
           />
           {!isMobile && (
             <Button

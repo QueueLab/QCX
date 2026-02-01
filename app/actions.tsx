@@ -23,6 +23,7 @@ import { BotMessage } from '@/components/message'
 import { SearchSection } from '@/components/search-section'
 import SearchRelated from '@/components/search-related'
 import { GeoJsonLayer } from '@/components/map/geojson-layer'
+import { MapDataUpdater } from '@/components/map/map-data-updater'
 import { CopilotDisplay } from '@/components/copilot-display'
 import RetrieveSection from '@/components/retrieve-section'
 import { VideoSearchSection } from '@/components/video-search-section'
@@ -315,8 +316,39 @@ async function submit(formData?: FormData, skip?: boolean) {
         image: dataUrl,
         mimeType: file.type
       })
-    } else if (file.type === 'text/plain') {
+    } else if (file.type === 'text/plain' || file.name.endsWith('.geojson') || file.type === 'application/geo+json') {
       const textContent = Buffer.from(buffer).toString('utf-8')
+      const isGeoJson = file.name.endsWith('.geojson') || file.type === 'application/geo+json'
+
+      if (isGeoJson) {
+        try {
+          const geoJson = JSON.parse(textContent)
+          if (geoJson.type === 'FeatureCollection' || geoJson.type === 'Feature') {
+            const geoJsonId = nanoid()
+            // Add a special message to track the GeoJSON upload
+            aiState.update({
+              ...aiState.get(),
+              messages: [
+                ...aiState.get().messages,
+                {
+                  id: geoJsonId,
+                  role: 'assistant',
+                  content: JSON.stringify({ data: geoJson, filename: file.name }),
+                  type: 'geojson_upload'
+                }
+              ]
+            })
+
+            // Immediately append the updater to the UI stream
+            uiStream.append(
+              <MapDataUpdater id={geoJsonId} data={geoJson} filename={file.name} />
+            )
+          }
+        } catch (e) {
+          console.error('Failed to parse GeoJSON:', e)
+        }
+      }
+
       const existingTextPart = messageParts.find(p => p.type === 'text')
       if (existingTextPart) {
         existingTextPart.text = `${textContent}\n\n${existingTextPart.text}`
@@ -716,6 +748,13 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                 )
               }
             }
+            case 'geojson_upload': {
+              const { data, filename } = JSON.parse(content as string)
+              return {
+                id,
+                component: <MapDataUpdater id={id} data={data} filename={filename} />
+              }
+            }
           }
           break
         case 'tool':
@@ -775,6 +814,26 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
             }
           }
           break
+        case 'data':
+          try {
+            const contextData = JSON.parse(content as string)
+            if (contextData.uploadedGeoJson && Array.isArray(contextData.uploadedGeoJson)) {
+              return {
+                id,
+                component: (
+                  <>
+                    {contextData.uploadedGeoJson.map((item: any) => (
+                      <MapDataUpdater key={item.id} id={item.id} data={item.data} filename={item.filename} />
+                    ))}
+                  </>
+                )
+              }
+            }
+            return { id, component: null }
+          } catch (e) {
+            console.error('Error parsing data message:', e)
+            return { id, component: null }
+          }
         default:
           return {
             id,

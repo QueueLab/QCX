@@ -81,6 +81,9 @@ export function GoogleMapComponent() {
         mode="SATELLITE"
       />
       <GoogleGeoJsonLayer data={featureCollection} />
+      {mapData.uploadedGeoJson?.map(item => (
+        item.visible && <GoogleGeoJsonLayer key={item.id} data={item.data} />
+      ))}
     </APIProvider>
   )
 }
