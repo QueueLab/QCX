@@ -292,11 +292,11 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
       </form>
       {selectedFile && (
         <div className="w-full px-4 pb-2 mb-2">
-          <div className="flex items-center justify-between p-2 bg-muted rounded-lg">
-            <span className="text-sm text-muted-foreground truncate max-w-xs">
+          <div className="flex items-start justify-between p-2 bg-muted rounded-lg">
+            <span className="text-sm text-muted-foreground break-all mr-2">
               {selectedFile.name}
             </span>
-            <Button variant="ghost" size="icon" onClick={clearAttachment} data-testid="clear-attachment-button">
+            <Button variant="ghost" size="icon" className="shrink-0" onClick={clearAttachment} data-testid="clear-attachment-button">
               <X size={16} />
             </Button>
           </div>
