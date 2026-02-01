@@ -547,6 +547,11 @@ async function processChatWorkflow({
       streamText.done()
     }
 
+    if (answer.length === 0 && !errorOccurred) {
+      answer = "I'm sorry, I couldn't generate a response. Please try again."
+      streamText.done(answer)
+    }
+
     if (!errorOccurred || answer.length > 0) {
       const relatedQueries = await querySuggestor(uiStream, messages)
       uiStream.append(
@@ -761,90 +766,7 @@ const initialAIState: AIState = {
 
 const initialUIState: UIState = []
 
-export const AI = createAI<AIState, UIState>({
-  actions: {
-    submit,
-    resubmit,
-    deleteMessageAction,
-    clearChat
-  },
-  initialUIState,
-  initialAIState,
-  onGetUIState: async () => {
-    'use server'
-
-    const aiState = getAIState() as AIState
-    if (aiState) {
-      const uiState = getUIStateFromAIState(aiState)
-      return uiState
-    }
-    return initialUIState
-  },
-  onSetAIState: async ({ state }) => {
-    'use server'
-
-    if (!state.messages.some(e => e.type === 'response')) {
-      return
-    }
-
-    const { chatId, messages } = state
-    const createdAt = new Date()
-    const path = `/search/${chatId}`
-
-    let title = 'Untitled Chat'
-    if (messages.length > 0) {
-      const firstMessageContent = messages[0].content
-      if (typeof firstMessageContent === 'string') {
-        try {
-          const parsedContent = JSON.parse(firstMessageContent)
-          title = parsedContent.input?.substring(0, 100) || 'Untitled Chat'
-        } catch (e) {
-          title = firstMessageContent.substring(0, 100)
-        }
-      } else if (Array.isArray(firstMessageContent)) {
-        const textPart = (
-          firstMessageContent as { type: string; text?: string }[]
-        ).find(p => p.type === 'text')
-        title =
-          textPart && textPart.text
-            ? textPart.text.substring(0, 100)
-            : 'Image Message'
-      }
-    }
-
-    const updatedMessages: AIMessage[] = [
-      ...messages,
-      {
-        id: nanoid(),
-        role: 'assistant',
-        content: `end`,
-        type: 'end'
-      }
-    ]
-
-    const { getCurrentUserIdOnServer } = await import(
-      '@/lib/auth/get-current-user'
-    )
-    const actualUserId = await getCurrentUserIdOnServer()
-
-    if (!actualUserId) {
-      console.error('onSetAIState: User not authenticated. Chat not saved.')
-      return
-    }
-
-    const chat: Chat = {
-      id: chatId,
-      createdAt,
-      userId: actualUserId,
-      path,
-      title,
-      messages: updatedMessages
-    }
-    await saveChat(chat, actualUserId)
-  }
-})
-
-export const getUIStateFromAIState = (aiState: AIState): UIState => {
+const getUIStateFromAIState = (aiState: AIState): UIState => {
   const chatId = aiState.chatId
   const isSharePage = aiState.isSharePage
   return aiState.messages
@@ -1008,3 +930,86 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
     })
     .filter(message => message !== null) as UIState
 }
+
+export const AI = createAI<AIState, UIState>({
+  actions: {
+    submit,
+    resubmit,
+    deleteMessageAction,
+    clearChat
+  },
+  initialUIState,
+  initialAIState,
+  onGetUIState: async () => {
+    'use server'
+
+    const aiState = getAIState() as AIState
+    if (aiState) {
+      const uiState = getUIStateFromAIState(aiState)
+      return uiState
+    }
+    return initialUIState
+  },
+  onSetAIState: async ({ state }) => {
+    'use server'
+
+    if (!state.messages.some(e => e.type === 'response')) {
+      return
+    }
+
+    const { chatId, messages } = state
+    const createdAt = new Date()
+    const path = `/search/${chatId}`
+
+    let title = 'Untitled Chat'
+    if (messages.length > 0) {
+      const firstMessageContent = messages[0].content
+      if (typeof firstMessageContent === 'string') {
+        try {
+          const parsedContent = JSON.parse(firstMessageContent)
+          title = parsedContent.input?.substring(0, 100) || 'Untitled Chat'
+        } catch (e) {
+          title = firstMessageContent.substring(0, 100)
+        }
+      } else if (Array.isArray(firstMessageContent)) {
+        const textPart = (
+          firstMessageContent as { type: string; text?: string }[]
+        ).find(p => p.type === 'text')
+        title =
+          textPart && textPart.text
+            ? textPart.text.substring(0, 100)
+            : 'Image Message'
+      }
+    }
+
+    const updatedMessages: AIMessage[] = [
+      ...messages,
+      {
+        id: nanoid(),
+        role: 'assistant',
+        content: `end`,
+        type: 'end'
+      }
+    ]
+
+    const { getCurrentUserIdOnServer } = await import(
+      '@/lib/auth/get-current-user'
+    )
+    const actualUserId = await getCurrentUserIdOnServer()
+
+    if (!actualUserId) {
+      console.error('onSetAIState: User not authenticated. Chat not saved.')
+      return
+    }
+
+    const chat: Chat = {
+      id: chatId,
+      createdAt,
+      userId: actualUserId,
+      path,
+      title,
+      messages: updatedMessages
+    }
+    await saveChat(chat, actualUserId)
+  }
+})

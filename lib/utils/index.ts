@@ -52,7 +52,7 @@ export async function getModel(useSpecificAPI: boolean = false, requireVision: b
             apiKey: gemini3ProApiKey,
           });
           try {
-            return google(requireVision ? 'gemini-1.5-pro' : 'gemini-3-pro-preview');
+            return google(requireVision ? 'gemini-1.5-pro' : 'gemini-1.5-pro');
           } catch (error) {
             console.error('Selected model "Gemini 3" is configured but failed to initialize.', error);
             throw new Error('Failed to initialize selected model.');
@@ -92,7 +92,7 @@ export async function getModel(useSpecificAPI: boolean = false, requireVision: b
       apiKey: gemini3ProApiKey,
     });
     try {
-      return google(requireVision ? 'gemini-1.5-pro' : 'gemini-3-pro-preview');
+      return google(requireVision ? 'gemini-1.5-pro' : 'gemini-1.5-pro');
     } catch (error) {
       console.warn('Gemini 3 Pro API unavailable, falling back to next provider:', error);
     }
