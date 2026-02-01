@@ -81,6 +81,7 @@ export function Chat({ id }: ChatProps) {
 
   // Get mapData to access drawnFeatures
   const { mapData } = useMapData();
+  const lastSyncedDataRef = useRef<string>('');
 
   useEffect(() => {
     if (isSubmitting) {
@@ -92,12 +93,21 @@ export function Chat({ id }: ChatProps) {
   // useEffect to call the server action when drawnFeatures or uploadedGeoJson changes
   useEffect(() => {
     if (id && (mapData.drawnFeatures || mapData.uploadedGeoJson) && mapData.cameraState) {
-      console.log('Chat.tsx: map data changed, calling updateDrawingContext');
-      updateDrawingContext(id, {
+      const currentData = JSON.stringify({
         drawnFeatures: mapData.drawnFeatures || [],
         cameraState: mapData.cameraState,
-        uploadedGeoJson: mapData.uploadedGeoJson || []
+        uploadedGeoJson: (mapData.uploadedGeoJson || []).map(item => ({ id: item.id, visible: item.visible }))
       });
+
+      if (currentData !== lastSyncedDataRef.current) {
+        console.log('Chat.tsx: map data changed, calling updateDrawingContext');
+        lastSyncedDataRef.current = currentData;
+        updateDrawingContext(id, {
+          drawnFeatures: mapData.drawnFeatures || [],
+          cameraState: mapData.cameraState,
+          uploadedGeoJson: mapData.uploadedGeoJson || []
+        });
+      }
     }
   }, [id, mapData.drawnFeatures, mapData.cameraState, mapData.uploadedGeoJson]);
 
