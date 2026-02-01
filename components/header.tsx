@@ -53,7 +53,7 @@ export const Header = () => {
         
         <div id="header-search-portal" />
         
-        <a href="https://buy.stripe.com/3cIaEX3tRcur9EM7tbasg00" target="_blank" rel="noopener noreferrer">
+        <a href="https://buy.stripe.com/14A3cv7K72TR3go14Nasg02" target="_blank" rel="noopener noreferrer">
           <Button variant="ghost" size="icon">
             <TentTree className="h-[1.2rem] w-[1.2rem]" />
           </Button>
@@ -67,7 +67,7 @@ export const Header = () => {
       {/* Mobile menu buttons */}
       <div className="flex md:hidden gap-2">
         
-        <a href="https://buy.stripe.com/3cIaEX3tRcur9EM7tbasg00" target="_blank" rel="noopener noreferrer">
+        <a href="https://buy.stripe.com/14A3cv7K72TR3go14Nasg02" target="_blank" rel="noopener noreferrer">
           <Button variant="ghost" size="icon">
             <TentTree className="h-[1.2rem] w-[1.2rem]" />
           </Button>
