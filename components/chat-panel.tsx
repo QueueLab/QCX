@@ -79,7 +79,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
 
   const handlePaste = (e: React.ClipboardEvent) => {
     const pastedText = e.clipboardData.getData('text')
-    if (pastedText.length > 1000) {
+    if (pastedText.length > 500) {
       e.preventDefault()
       if (pastedText.length > 10 * 1024 * 1024) {
         toast.error('Pasted text exceeds 10MB limit')

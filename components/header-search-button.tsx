@@ -9,7 +9,7 @@ import { useActions, useUIState } from 'ai/rsc'
 import { AI } from '@/app/actions'
 import { nanoid } from 'nanoid'
 import { UserMessage } from './user-message'
-import { toast } from 'react-toastify'
+import { toast } from 'sonner'
 import { useSettingsStore } from '@/lib/store/settings'
 import { useMapData } from './map/map-data-context'
 
