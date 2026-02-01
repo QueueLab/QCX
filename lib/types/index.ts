@@ -74,6 +74,7 @@ export type AIMessage = {
     | 'end'
     | 'drawing_context' // Added custom type for drawing context messages
     | 'resolution_search_result'
+    | 'geojson_upload' // Added custom type for GeoJSON upload messages
 }
 
 export type CalendarNote = {
