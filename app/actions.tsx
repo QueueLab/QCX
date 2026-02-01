@@ -211,12 +211,14 @@ async function submit(formData?: FormData, skip?: boolean) {
     : ((formData?.get('related_query') as string) ||
       (formData?.get('input') as string))
 
+  let isGeoJsonInput = false
   if (userInput) {
     try {
       const trimmedInput = userInput.trim()
       if ((trimmedInput.startsWith('{') && trimmedInput.endsWith('}')) || (trimmedInput.startsWith('[') && trimmedInput.endsWith(']'))) {
         const geoJson = JSON.parse(trimmedInput)
         if (geoJson.type === 'FeatureCollection' || geoJson.type === 'Feature') {
+          isGeoJsonInput = true
           const geoJsonId = nanoid()
           aiState.update({
             ...aiState.get(),
@@ -331,6 +333,8 @@ async function submit(formData?: FormData, skip?: boolean) {
   }[] = []
 
   if (userInput) {
+    // If it's a GeoJSON input, we still want to keep it in the message history for the AI to see,
+    // but we might want to truncate it if it's huge. For now, just pass it.
     messageParts.push({ type: 'text', text: userInput })
   }
 
@@ -685,9 +689,18 @@ export const AI = createAI<AIState, UIState>({
 export const getUIStateFromAIState = (aiState: AIState): UIState => {
   const chatId = aiState.chatId
   const isSharePage = aiState.isSharePage
+
+  // Filter messages to only include the last 'data' message if multiple exist
+  const lastDataMessageIndex = [...aiState.messages].reverse().findIndex(m => m.role === 'data')
+  const actualLastDataIndex = lastDataMessageIndex === -1 ? -1 : aiState.messages.length - 1 - lastDataMessageIndex
+
   return aiState.messages
     .map((message, index) => {
       const { role, content, id, type, name } = message
+
+      if (role === 'data' && index !== actualLastDataIndex) {
+        return null
+      }
 
       if (
         !type ||

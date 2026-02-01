@@ -73,8 +73,10 @@ export function Chat({ id }: ChatProps) {
   }, [id, path, messages])
 
   useEffect(() => {
-    if (aiState.messages[aiState.messages.length - 1]?.type === 'response') {
+    const lastMessage = aiState.messages[aiState.messages.length - 1];
+    if (lastMessage?.type === 'response' && lastMessage.id !== lastRefreshedMessageIdRef.current) {
       // Refresh the page to chat history updates
+      lastRefreshedMessageIdRef.current = lastMessage.id;
       router.refresh()
     }
   }, [aiState, router])
@@ -82,6 +84,7 @@ export function Chat({ id }: ChatProps) {
   // Get mapData to access drawnFeatures
   const { mapData } = useMapData();
   const lastSyncedDataRef = useRef<string>('');
+  const lastRefreshedMessageIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (isSubmitting) {
@@ -114,7 +117,7 @@ export function Chat({ id }: ChatProps) {
   // Mobile layout
   if (isMobile) {
     return (
-      <MapDataProvider> {/* Add Provider */}
+      <>
         <HeaderSearchButton />
         <div className="mobile-layout-container">
           <div className="mobile-map-section">
@@ -168,13 +171,13 @@ export function Chat({ id }: ChatProps) {
           )}
         </div>
         </div>
-      </MapDataProvider>
+      </>
     );
   }
 
   // Desktop layout
   return (
-    <MapDataProvider> {/* Add Provider */}
+    <>
       <HeaderSearchButton />
       <div className="flex justify-start items-start">
         {/* This is the new div for scrolling */}
@@ -232,6 +235,6 @@ export function Chat({ id }: ChatProps) {
           {activeView ? <SettingsView /> : <MapProvider />}
         </div>
       </div>
-    </MapDataProvider>
+    </>
   );
 }

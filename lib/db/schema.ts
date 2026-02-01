@@ -30,10 +30,10 @@ export const messages = pgTable('messages', {
   role: varchar('role', { length: 50 }).notNull(), // e.g., 'user', 'assistant', 'system', 'tool'
   content: text('content').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  // attachments: jsonb('attachments'), // As per PR commit: "feat: remove updatedAt and add attachments field to messages"
-  // toolName: varchar('tool_name', { length: 100 }), // If messages can be from tools
-  // toolCallId: varchar('tool_call_id', {length: 100}), // if tracking specific tool calls
-  // type: varchar('type', { length: 50 }) // As per app/actions.tsx AIMessage type
+  attachments: jsonb('attachments'),
+  toolName: varchar('tool_name', { length: 100 }),
+  toolCallId: varchar('tool_call_id', {length: 100}),
+  type: varchar('type', { length: 50 })
 });
 
 // Calendar Notes Table

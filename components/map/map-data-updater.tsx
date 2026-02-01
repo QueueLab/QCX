@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useMapData } from './map-data-context';
 import { useMap } from './map-context';
 import type { FeatureCollection } from 'geojson';
@@ -15,6 +15,7 @@ interface MapDataUpdaterProps {
 export function MapDataUpdater({ id, data, filename }: MapDataUpdaterProps) {
   const { setMapData } = useMapData();
   const { map } = useMap();
+  const hasZoomedRef = useRef(false);
 
   useEffect(() => {
     if (!data) return;
@@ -45,7 +46,8 @@ export function MapDataUpdater({ id, data, filename }: MapDataUpdaterProps) {
     });
 
     // Fly to the extent of the GeoJSON
-    if (map && featureCollection.features.length > 0) {
+    if (map && featureCollection.features.length > 0 && !hasZoomedRef.current) {
+      hasZoomedRef.current = true;
       try {
         const bbox = turf.bbox(featureCollection);
         map.fitBounds(bbox as [number, number, number, number], {
