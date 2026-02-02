@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, varchar, jsonb, boolean } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, uuid, varchar, jsonb, boolean, integer } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 // Users Table (assuming Supabase Auth uses its own users table,
@@ -11,6 +11,8 @@ export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(), // Assuming Supabase user IDs are UUIDs
   // email: text('email'), // Supabase handles this in auth.users
   // Other profile fields if necessary
+  credits: integer('credits').default(0).notNull(),
+  tier: varchar('tier', { length: 50 }).default('free').notNull(),
 });
 
 export const chats = pgTable('chats', {

@@ -18,7 +18,13 @@ import { HistoryToggleProvider } from '@/components/history-toggle-context'
 import { HistorySidebar } from '@/components/history-sidebar'
 import { MapLoadingProvider } from '@/components/map-loading-context';
 import ConditionalLottie from '@/components/conditional-lottie';
-import { MapProvider as MapContextProvider } from '@/components/map/map-context'
+import { MapProvider } from '@/components/map/map-context'
+import { getSupabaseUserAndSessionOnServer } from '@/lib/auth/get-current-user'
+import { PurchaseCreditsPopup } from '@/components/credits/purchase-credits-popup';
+import { CreditsProvider } from '@/components/credits/credits-provider';
+
+// Force dynamic rendering since we check auth with cookies
+export const dynamic = 'force-dynamic'
 
 const fontSans = FontSans({
   subsets: ['latin'],
@@ -58,11 +64,14 @@ export const viewport: Viewport = {
   maximumScale: 1
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  // Check authentication and conditionally render the layout
+  const { user } = await getSupabaseUserAndSessionOnServer();
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body
@@ -72,35 +81,37 @@ export default function RootLayout({
           fontPoppins.variable
         )}
       >
-        <CalendarToggleProvider>
-          <HistoryToggleProvider>
-            <MapToggleProvider>
-              <ProfileToggleProvider>
-                <UsageToggleProvider>
-                  <ThemeProvider
-                    attribute="class"
-                    defaultTheme="earth"
-                    enableSystem
-                    disableTransitionOnChange
-                    themes={['light', 'dark', 'earth']}
-                  >
-                    <MapContextProvider>
-                      <MapLoadingProvider>
-                        <Header />
-                        <ConditionalLottie />
-                        {children}
-                        <Sidebar />
-                        <HistorySidebar />
-                        <Footer />
-                        <Toaster />
-                      </MapLoadingProvider>
-                    </MapContextProvider>
-                  </ThemeProvider>
-                </UsageToggleProvider>
-              </ProfileToggleProvider>
-            </MapToggleProvider>
-          </HistoryToggleProvider>
-        </CalendarToggleProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="earth"
+          enableSystem
+          disableTransitionOnChange
+          themes={['light', 'dark', 'earth']}
+        >
+          {user ? (
+            <CalendarToggleProvider>
+              <MapToggleProvider>
+                <ProfileToggleProvider>
+                  <MapProvider>
+                    <MapLoadingProvider>
+                      <CreditsProvider>
+                      <Header />
+                      <ConditionalLottie />
+                      {children}
+                      <Sidebar />
+                      <PurchaseCreditsPopup />
+                      </CreditsProvider>
+                      <Footer />
+                      <Toaster />
+                    </MapLoadingProvider>
+                  </MapProvider>
+                </ProfileToggleProvider>
+              </MapToggleProvider>
+            </CalendarToggleProvider>
+          ) : (
+            children
+          )}
+        </ThemeProvider>
         <Analytics />
         <SpeedInsights />
       </body>
