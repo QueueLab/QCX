@@ -474,6 +474,8 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     position?.longitude
   ])
 
+
+
   // Handle map mode changes
   useEffect(() => {
     // Store previous map type to detect changes

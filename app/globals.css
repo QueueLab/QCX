@@ -189,7 +189,7 @@
 
   .mobile-chat-input-area {
     height: auto;
-    padding: 10px;
+    padding: 4px 10px;
     background-color: hsl(var(--background));
     /* border-top: 1px solid hsl(var(--border)); */ /* Removed for cleaner separation */
     border-bottom: 1px solid hsl(var(--border)); /* Added for separation from messages area below */
@@ -199,61 +199,6 @@
     align-items: center;
   }
 
-  .mobile-chat-input {
-    /* position: relative; */ /* No longer fixed to bottom */
-    /* bottom: 0; */
-    /* left: 0; */ /* Handled by parent flex */
-    /* right: 0; */ /* Handled by parent flex */
-    width: 100%; /* Ensure it takes full width of its container */
-    padding: 10px;
-    background-color: hsl(var(--background));
-    /* border-top: 1px solid hsl(var(--border)); */ /* Removed to avoid double border */
-    /* z-index: 30; */ /* No longer needed */
-  }
-
-  .mobile-chat-input input {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid hsl(var(--input));
-    border-radius: var(--radius);
-    background-color: hsl(var(--input));
-    color: hsl(var(--foreground));
-    box-sizing: border-box;
-  }
-
-  .mobile-icons-bar-content .icon-button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background-color: hsl(var(--secondary));
-    color: hsl(var(--secondary-foreground));
-    cursor: pointer;
-  }
-
-  .mobile-icons-bar-content .icon-button:hover {
-    background-color: hsl(var(--secondary-foreground));
-    color: hsl(var(--secondary));
-  }
-
-  .mobile-chat-input .icon-button {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    background-color: transparent;
-    border: none;
-    cursor: pointer;
-  }
-
-  .mobile-chat-input .icon-button.paperclip {
-    right: 40px;
-  }
-
-  .mobile-chat-input .icon-button.arrow-right {
-    right: 10px;
-  }
 }
 
 /* Added for MapboxDraw controls */
