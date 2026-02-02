@@ -14,7 +14,9 @@ import { MapProvider } from './map/map-provider'
 import { useUIState, useAIState } from 'ai/rsc'
 import MobileIconsBar from './mobile-icons-bar'
 import { useProfileToggle, ProfileToggleEnum } from "@/components/profile-toggle-context";
+import { useUsageToggle } from "@/components/usage-toggle-context";
 import SettingsView from "@/components/settings/settings-view";
+import { UsageView } from "@/components/usage-view";
 import { MapDataProvider, useMapData } from './map/map-data-context'; // Add this and useMapData
 import { updateDrawingContext } from '@/lib/actions/chat'; // Import the server action
 import dynamic from 'next/dynamic'
@@ -31,6 +33,7 @@ export function Chat({ id }: ChatProps) {
   const [aiState] = useAIState()
   const [isMobile, setIsMobile] = useState(false)
   const { activeView } = useProfileToggle();
+  const { isUsageOpen } = useUsageToggle();
   const { isCalendarOpen } = useCalendarToggle()
   const [input, setInput] = useState('')
   const [showEmptyScreen, setShowEmptyScreen] = useState(false)
@@ -107,7 +110,7 @@ export function Chat({ id }: ChatProps) {
         <HeaderSearchButton />
         <div className="mobile-layout-container">
           <div className="mobile-map-section">
-          {activeView ? <SettingsView /> : <MapProvider />}
+          {activeView ? <SettingsView /> : isUsageOpen ? <UsageView /> : <MapProvider />}
         </div>
         <div className="mobile-icons-bar">
           <MobileIconsBar onAttachmentClick={handleAttachment} onSubmitClick={handleMobileSubmit} />
@@ -218,7 +221,7 @@ export function Chat({ id }: ChatProps) {
           className="w-1/2 p-4 fixed h-[calc(100vh-0.5in)] top-0 right-0 mt-[0.5in]"
           style={{ zIndex: 10 }} // Added z-index
         >
-          {activeView ? <SettingsView /> : <MapProvider />}
+          {activeView ? <SettingsView /> : isUsageOpen ? <UsageView /> : <MapProvider />}
         </div>
       </div>
     </MapDataProvider>
