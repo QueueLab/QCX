@@ -31,34 +31,16 @@ export interface DrawnFeature {
 }
 
 export async function resolutionSearch(messages: CoreMessage[], timezone: string = 'UTC', drawnFeatures?: DrawnFeature[]) {
-  // Ensure timezone is valid or fallback to UTC
-  const safeTimezone = timezone && timezone.trim() !== '' ? timezone : 'UTC';
-
-  let localTime = 'Unknown';
-  try {
-    localTime = new Date().toLocaleString('en-US', {
-      timeZone: safeTimezone,
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  } catch (e) {
-    console.warn(`Invalid timezone provided: ${safeTimezone}. Falling back to UTC.`);
-    localTime = new Date().toLocaleString('en-US', {
-      timeZone: 'UTC',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  }
+  const localTime = new Date().toLocaleString('en-US', {
+    timeZone: timezone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
 
   const systemPrompt = `
 As a geospatial analyst, your task is to analyze the provided satellite image of a geographic location.
@@ -87,7 +69,7 @@ Analyze the user's prompt and the image to provide a holistic understanding of t
     message.content.some(part => part.type === 'image')
   )
 
-  // Use streamObject to get partial results for better perceived performance.
+  // Use streamObject to get partial results.
   return streamObject({
     model: await getModel(hasImage),
     system: systemPrompt,

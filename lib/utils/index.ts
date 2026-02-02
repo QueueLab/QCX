@@ -37,16 +37,9 @@ export async function getModel(requireVision: boolean = false) {
             baseURL: 'https://api.x.ai/v1',
           });
           try {
-            if (requireVision) {
-              return xai('grok-vision-beta');
-            }
-            return xai('grok-beta');
+            return xai('grok-4-fast-non-reasoning');
           } catch (error) {
             console.error('Selected model "Grok 4.2" is configured but failed to initialize.', error);
-            if (requireVision) {
-              console.warn('Falling back to GPT-4o for vision task.');
-              break;
-            }
             throw new Error('Failed to initialize selected model.');
           }
         } else {
@@ -59,7 +52,7 @@ export async function getModel(requireVision: boolean = false) {
             apiKey: gemini3ProApiKey,
           });
           try {
-            return google('gemini-1.5-pro');
+            return google('gemini-3-pro-preview');
           } catch (error) {
             console.error('Selected model "Gemini 3" is configured but failed to initialize.', error);
             throw new Error('Failed to initialize selected model.');
@@ -82,19 +75,15 @@ export async function getModel(requireVision: boolean = false) {
   }
 
   // Default behavior: Grok -> Gemini -> Bedrock -> OpenAI
-  // If vision is required, we skip models that might not support it well in this context
   if (xaiApiKey) {
     const xai = createXai({
       apiKey: xaiApiKey,
       baseURL: 'https://api.x.ai/v1',
     });
     try {
-      if (requireVision) {
-        return xai('grok-vision-beta');
-      }
-      return xai('grok-beta');
+      return xai('grok-4-fast-non-reasoning');
     } catch (error) {
-      console.warn('xAI API unavailable, falling back to next provider:', error);
+      console.warn('xAI API unavailable, falling back to next provider:');
     }
   }
 
@@ -103,7 +92,7 @@ export async function getModel(requireVision: boolean = false) {
       apiKey: gemini3ProApiKey,
     });
     try {
-      return google('gemini-1.5-pro');
+      return google('gemini-3-pro-preview');
     } catch (error) {
       console.warn('Gemini 3 Pro API unavailable, falling back to next provider:', error);
     }
