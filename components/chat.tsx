@@ -29,7 +29,7 @@ type ChatProps = {
 export function Chat({ id }: ChatProps) {
   const router = useRouter()
   const path = usePathname()
-  const [messages] = useUIState()
+  const [messages, setMessages] = useUIState()
   const [aiState] = useAIState()
   const [isMobile, setIsMobile] = useState(false)
   const { activeView } = useProfileToggle();
@@ -40,6 +40,8 @@ export function Chat({ id }: ChatProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [suggestions, setSuggestions] = useState<PartialRelated | null>(null)
   const chatPanelRef = useRef<ChatPanelRef>(null);
+  const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
+  const [chatData, setChatData] = useState<ChatType | null>(null);
 
   const handleAttachment = () => {
     chatPanelRef.current?.handleAttachmentClick();
@@ -50,22 +52,25 @@ export function Chat({ id }: ChatProps) {
   };
   
   useEffect(() => {
+    async function fetchChatData() {
+        if (id) {
+            const chat = await getChat(id);
+            setChatData(chat);
+        }
+    }
+    fetchChatData();
+  }, [id]);
+
+  useEffect(() => {
     setShowEmptyScreen(messages.length === 0)
   }, [messages])
 
   useEffect(() => {
-    // Check if device is mobile
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768)
     }
-    
-    // Initial check
     checkMobile()
-    
-    // Add event listener for window resize
     window.addEventListener('resize', checkMobile)
-    
-    // Cleanup
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
@@ -77,12 +82,10 @@ export function Chat({ id }: ChatProps) {
 
   useEffect(() => {
     if (aiState.messages[aiState.messages.length - 1]?.type === 'response') {
-      // Refresh the page to chat history updates
       router.refresh()
     }
   }, [aiState, router])
 
-  // Get mapData to access drawnFeatures
   const { mapData } = useMapData();
 
   useEffect(() => {
@@ -94,7 +97,7 @@ export function Chat({ id }: ChatProps) {
 
   // useEffect to call the server action when drawnFeatures changes
   useEffect(() => {
-    if (id && mapData.drawnFeatures && mapData.cameraState) {
+    if (id && mapData.drawnFeatures && mapData.drawnFeatures.length > 0) {
       console.log('Chat.tsx: drawnFeatures changed, calling updateDrawingContext', mapData.drawnFeatures);
       updateDrawingContext(id, {
         drawnFeatures: mapData.drawnFeatures,
@@ -103,10 +106,43 @@ export function Chat({ id }: ChatProps) {
     }
   }, [id, mapData.drawnFeatures, mapData.cameraState]);
 
-  // Mobile layout
+  useEffect(() => {
+    if (!id) return;
+
+    const supabase = getSupabaseBrowserClient();
+    const channel = supabase.channel(`chat-${id}`);
+
+    const subscription = channel
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `chat_id=eq.${id}` },
+      (payload) => {
+        const newMessage = payload.new as AIMessage;
+        setMessages((prevMessages: AIMessage[]) => {
+          if (prevMessages.some((m: AIMessage) => m.id === newMessage.id)) {
+            return prevMessages;
+          }
+          return [...prevMessages, newMessage];
+        });
+      })
+      .on('presence', { event: 'sync' }, () => {
+        const newState = channel.presenceState();
+        const users = Object.keys(newState).map(key => (newState[key][0] as any).user_id);
+        setOnlineUsers(users);
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await channel.track({ user_id: 'user-placeholder', online_at: new Date().toISOString() });
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id, messages, setMessages]);
+
+
   if (isMobile) {
     return (
-      <MapDataProvider> {/* Add Provider */}
+      <MapDataProvider>
         <HeaderSearchButton />
         <div className="mobile-layout-container">
           <div className="mobile-map-section">
@@ -120,7 +156,9 @@ export function Chat({ id }: ChatProps) {
             ref={chatPanelRef} 
             messages={messages} 
             input={input} 
-            setInput={setInput}
+            setInput={setInput} 
+            chatId={id || ''} 
+            shareableLink={chatData?.sharePath || ''} 
             onSuggestionsChange={setSuggestions}
           />
         </div>
@@ -164,9 +202,8 @@ export function Chat({ id }: ChatProps) {
     );
   }
 
-  // Desktop layout
   return (
-    <MapDataProvider> {/* Add Provider */}
+    <MapDataProvider>
       <HeaderSearchButton />
       <div className="flex justify-start items-start">
         {/* This is the new div for scrolling */}
@@ -176,9 +213,12 @@ export function Chat({ id }: ChatProps) {
         ) : (
           <>
             <ChatPanel 
+              ref={chatPanelRef}
               messages={messages} 
               input={input} 
               setInput={setInput} 
+              chatId={id || ''} 
+              shareableLink={chatData?.sharePath || ''} 
               onSuggestionsChange={setSuggestions}
             />
             <div className="relative">
@@ -219,7 +259,7 @@ export function Chat({ id }: ChatProps) {
       </div>
         <div
           className="w-1/2 p-4 fixed h-[calc(100vh-0.5in)] top-0 right-0 mt-[0.5in]"
-          style={{ zIndex: 10 }} // Added z-index
+          style={{ zIndex: 10 }}
         >
           {isUsageOpen ? <UsageView /> : activeView ? <SettingsView /> : <MapProvider />}
         </div>

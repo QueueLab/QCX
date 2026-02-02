@@ -5,11 +5,13 @@ const nextConfig = {
   
   experimental: {
     serverActions: {
-      allowedOrigins: ["http://localhost:3000", "https://planet.queue.cx"],
+      allowedOrigins: process.env.SERVER_ACTIONS_ALLOWED_ORIGINS 
+        ? process.env.SERVER_ACTIONS_ALLOWED_ORIGINS.split(',')
+        : ["http://localhost:3000", "https://planet.queue.cx"],
       bodySizeLimit: '200mb',
     },
   },
-  transpilePackages: ['QCX', 'mapbox_mcp'], // Added to transpile local packages
+  transpilePackages: ['mapbox_mcp'], // Added to transpile local packages
 };  
 
 export default nextConfig

@@ -3,7 +3,6 @@
 import { useEffect, useState, useRef, ChangeEvent, forwardRef, useImperativeHandle, useCallback } from 'react'
 import type { AI, UIState } from '@/app/actions'
 import { useUIState, useActions, readStreamableValue } from 'ai/rsc'
-// Removed import of useGeospatialToolMcp as it's no longer used/available
 import { cn } from '@/lib/utils'
 import { UserMessage } from './user-message'
 import { Button } from './ui/button'
@@ -20,6 +19,8 @@ interface ChatPanelProps {
   messages: UIState
   input: string
   setInput: (value: string) => void
+  chatId: string
+  shareableLink: string
   onSuggestionsChange?: (suggestions: PartialRelated | null) => void
 }
 
@@ -28,10 +29,9 @@ export interface ChatPanelRef {
   submitForm: () => void
 }
 
-export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, input, setInput, onSuggestionsChange }, ref) => {
+export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, input, setInput, chatId, shareableLink, onSuggestionsChange }, ref) => {
   const [, setMessages] = useUIState<typeof AI>()
   const { submit, clearChat } = useActions()
-  // Removed mcp instance as it's no longer passed to submit
   const { mapProvider } = useSettingsStore()
   const [isMobile, setIsMobile] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -55,7 +55,6 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     }
   }));
 
-  // Detect mobile layout
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth <= 1024)
@@ -160,7 +159,6 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     inputRef.current?.focus()
   }, [])
 
-  // New chat button (appears when there are messages)
   if (messages.length > 0 && !isMobile) {
     return (
       <div
@@ -205,7 +203,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
         <div
           className={cn(
             'relative flex items-start w-full',
-            isMobile && 'mobile-chat-input' // Apply mobile chat input styling
+            isMobile && 'mobile-chat-input'
           )}
         >
           <input type="hidden" name="mapProvider" value={mapProvider} />
