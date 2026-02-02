@@ -10,7 +10,7 @@ export function UsageView() {
   const [usage] = useState([
     { details: 'QCX-TERRA Crop yield Analysis', date: 'upcoming', change: 7 },
     { details: 'QCX-TERRA Flood predictions', date: 'upcoming', change: 5 },
-    { details: 'Plnaet computer weather synchronization', date: 'upcoming', change: 3 },
+    { details: 'Planet computer weather synchronization', date: 'upcoming', change: 3 },
   ])
   const [credits] = useState(0)
   const { toggleUsage } = useUsageToggle()
