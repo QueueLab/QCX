@@ -8,9 +8,9 @@ import { useUsageToggle } from './usage-toggle-context'
 
 export function UsageView() {
   const [usage] = useState([
-    { details: 'Efficiently Fix Pull Request ...', date: '2026-01-17 08:05', change: -418 },
-    { details: 'Fix Build and Add Parallel S...', date: '2026-01-16 06:10', change: -482 },
-    { details: 'How to Add a Feature to a ...', date: '2026-01-14 10:42', change: -300 },
+    { details: 'QCX-TERRA Crop yield Analysis', date: 'upcoming', change: 7 },
+    { details: 'QCX-TERRA Flood predictions', date: 'upcoming', change: 5 },
+    { details: 'Plnaet computer weather synchronization', date: 'upcoming', change: 3 },
   ])
   const [credits] = useState(0)
   const { toggleUsage } = useUsageToggle()
@@ -55,11 +55,11 @@ export function UsageView() {
             <div className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-2">
                 <RefreshCw size={16} className="text-muted-foreground" />
-                <span>Daily refresh credits</span>
+                <span>Yearly refresh credits</span>
               </div>
-              <span className="font-bold">300</span>
+              <span className="font-bold">500</span>
             </div>
-            <p className="text-[10px] text-muted-foreground pl-6">Refresh to 300 at 00:00 every day</p>
+            <p className="text-[10px] text-muted-foreground pl-6">Refresh to 500 every year.</p>
           </div>
         </div>
 
