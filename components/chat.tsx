@@ -14,6 +14,7 @@ import { MapProvider } from './map/map-provider'
 import { useUIState, useAIState } from 'ai/rsc'
 import MobileIconsBar from './mobile-icons-bar'
 import { useProfileToggle, ProfileToggleEnum } from "@/components/profile-toggle-context";
+import { useUsageToggle } from "@/components/usage-toggle-context";
 import SettingsView from "@/components/settings/settings-view";
 import { MapDataProvider, useMapData } from './map/map-data-context';
 import { updateDrawingContext, getChat } from '@/lib/actions/chat';
@@ -33,6 +34,7 @@ export function Chat({ id }: ChatProps) {
   const [aiState] = useAIState()
   const [isMobile, setIsMobile] = useState(false)
   const { activeView } = useProfileToggle();
+  const { isUsageOpen } = useUsageToggle();
   const { isCalendarOpen } = useCalendarToggle()
   const [input, setInput] = useState('')
   const [showEmptyScreen, setShowEmptyScreen] = useState(false)

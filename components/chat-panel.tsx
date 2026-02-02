@@ -152,7 +152,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
         }
       }, 500) // 500ms debounce delay
     },
-    [mapData]
+    [mapData, setSuggestions]
   )
 
   useEffect(() => {

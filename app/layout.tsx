@@ -12,7 +12,10 @@ import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Toaster } from '@/components/ui/sonner'
 import { MapToggleProvider } from '@/components/map-toggle-context'
 import { ProfileToggleProvider } from '@/components/profile-toggle-context'
+import { UsageToggleProvider } from '@/components/usage-toggle-context'
 import { CalendarToggleProvider } from '@/components/calendar-toggle-context'
+import { HistoryToggleProvider } from '@/components/history-toggle-context'
+import { HistorySidebar } from '@/components/history-sidebar'
 import { MapLoadingProvider } from '@/components/map-loading-context';
 import ConditionalLottie from '@/components/conditional-lottie';
 import { MapProvider } from '@/components/map/map-context'

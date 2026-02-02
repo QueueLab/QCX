@@ -21,6 +21,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Zap, ChevronDown, ChevronUp } from 'lucide-react';
 import HistoryItem from '@/components/history-item'; // Adjust path if HistoryItem is moved or renamed
 import type { Chat as DrizzleChat } from '@/lib/types';
+import { useHistoryToggle } from '@/components/history-toggle-context';
 
 interface ChatHistoryClientProps {
   // userId is no longer passed as prop; API route will use authenticated user
@@ -33,6 +34,7 @@ export function ChatHistoryClient({}: ChatHistoryClientProps) {
   const [isClearPending, startClearTransition] = useTransition();
   const [isAlertDialogOpen, setIsAlertDialogOpen] = useState(false);
   const [isCreditsVisible, setIsCreditsVisible] = useState(false);
+  const { isHistoryOpen } = useHistoryToggle();
   const router = useRouter();
 
   useEffect(() => {
@@ -60,8 +62,11 @@ export function ChatHistoryClient({}: ChatHistoryClientProps) {
         setIsLoading(false);
       }
     }
-    fetchChats();
-  }, []);
+
+    if (isHistoryOpen) {
+      fetchChats();
+    }
+  }, [isHistoryOpen]);
 
   const handleClearHistory = async () => {
     startClearTransition(async () => {
@@ -115,6 +120,34 @@ export function ChatHistoryClient({}: ChatHistoryClientProps) {
 
   return (
     <div className="flex flex-col flex-1 space-y-3 h-full">
+      <div className="px-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full flex items-center justify-between text-muted-foreground hover:text-foreground"
+          onClick={() => setIsCreditsVisible(!isCreditsVisible)}
+        >
+          <div className="flex items-center gap-2">
+            <Zap size={14} className="text-yellow-500" />
+            <span className="text-xs font-medium">Credits Preview</span>
+          </div>
+          {isCreditsVisible ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+        </Button>
+        
+        {isCreditsVisible && (
+          <div className="mt-2 p-3 rounded-lg bg-muted/50 border border-border/50 space-y-2">
+            <div className="flex justify-between items-center text-xs">
+              <span>Available Credits</span>
+              <span className="font-bold">0</span>
+            </div>
+            <div className="w-full bg-secondary h-1.5 rounded-full overflow-hidden">
+              <div className="bg-yellow-500 h-full w-[0%]" />
+            </div>
+            <p className="text-[10px] text-muted-foreground">Upgrade to get more credits</p>
+          </div>
+        )}
+      </div>
+
       <div className="flex flex-col gap-2 flex-1 overflow-y-auto">
         {!chats?.length ? (
           <div className="text-foreground/30 text-sm text-center py-4">
