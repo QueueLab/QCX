@@ -99,14 +99,14 @@ export const SuggestionsDropdown: React.FC<SuggestionsDropdownProps> = ({
               key={index}
               variant="ghost"
               className={cn(
-                'w-full justify-start items-start px-2 py-1 h-auto font-normal text-accent-foreground whitespace-normal text-left',
+                'w-full justify-start px-2 py-1 h-fit font-normal text-accent-foreground whitespace-normal text-left',
                 selectedIndex === index && 'bg-accent'
               )}
               onClick={() => onSelect(item.query!)}
               onMouseEnter={() => setSelectedIndex(index)}
             >
-              <ArrowRight className="h-4 w-4 mr-2 mt-1 flex-shrink-0" />
-              <span className="flex-1">{item.query}</span>
+              <ArrowRight className="h-4 w-4 mr-2 flex-shrink-0" />
+              {item.query}
             </Button>
           )
         })}
