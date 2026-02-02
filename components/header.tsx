@@ -4,8 +4,8 @@ import Image from 'next/image'
 import { useCalendarToggle } from './calendar-toggle-context'
 import { ModeToggle } from './mode-toggle'
 import { cn } from '@/lib/utils'
-import HistoryContainer from './history-container'
 import { Button } from '@/components/ui/button'
+import { History } from './history'
 import {
   Search,
   CircleUserRound,
@@ -83,8 +83,6 @@ export const Header = () => {
         </Button>
         
         <ModeToggle />
-        
-        <HistoryContainer location="header" />
       </div>
 
       {/* Mobile menu buttons */}

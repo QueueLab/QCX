@@ -1,12 +1,13 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import { ChevronLeft, Menu } from 'lucide-react'
+import { Sprout, Menu } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useHistoryToggle } from './history-toggle-context'
 
 type HistoryProps = {
   location: 'sidebar' | 'header'
+  children?: React.ReactNode
 }
 
 export function History({ location }: HistoryProps) {

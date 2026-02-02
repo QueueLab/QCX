@@ -1,0 +1,16 @@
+{
+  "tiers": {
+    "free": {
+      "name": "Free",
+      "credits": 0,
+      "price": 0
+    },
+    "standard": {
+      "name": "Standard",
+      "credits": 8000,
+      "price": 41,
+      "billing_cycle": "yearly",
+      "price_id_env": "STANDARD_TIER_PRICE_ID"
+    }
+  }
+}

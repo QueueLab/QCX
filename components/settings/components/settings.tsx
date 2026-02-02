@@ -11,7 +11,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { FormProvider, UseFormReturn } from "react-hook-form"; import React from "react";
 import { Loader2, Save, RotateCcw } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
-// Or, if the file does not exist, create it as shown below.
 import { SystemPromptForm } from "./system-prompt-form"
 import { ModelSelectionForm } from "./model-selection-form"
 import { UserManagementForm } from './user-management-form';
@@ -23,7 +22,6 @@ import { useToast } from "@/components/ui/hooks/use-toast"
 import { getSystemPrompt, saveSystemPrompt } from "../../../lib/actions/chat"
 import { getSelectedModel, saveSelectedModel } from "../../../lib/actions/users"
 
-// Define the form schema
 const settingsFormSchema = z.object({
   systemPrompt: z
     .string()
@@ -40,31 +38,28 @@ const settingsFormSchema = z.object({
     z.object({
       id: z.string(),
       email: z.string().email(),
-      role: z.enum(["admin", "editor", "viewer"]),
+      role: z.enum(["owner", "collaborator"]),
     }),
   ),
   newUserEmail: z.string().email().optional(),
-  newUserRole: z.enum(["admin", "editor", "viewer"]).optional(),
+  newUserRole: z.enum(["owner", "collaborator"]).optional(),
 })
 
 export type SettingsFormValues = z.infer<typeof settingsFormSchema>
 
-// Default values
 const defaultValues: Partial<SettingsFormValues> = {
   systemPrompt:
     "You are a planetary copilot, an AI assistant designed to help users with information about planets, space exploration, and astronomy. Provide accurate, educational, and engaging responses about our solar system and beyond.",
-  selectedModel: "Grok 4.2",
-  users: [
-    { id: "1", email: "admin@example.com", role: "admin" },
-    { id: "2", email: "user@example.com", role: "editor" },
-  ],
+  selectedModel: "gpt-4o",
+  users: [],
 }
 
 interface SettingsProps {
   initialTab?: string;
+  chatId: string;
 }
 
-export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
+export function Settings({ initialTab = "system-prompt", chatId }: SettingsProps) {
   const { toast } = useToast()
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
@@ -75,7 +70,6 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
     setCurrentTab(initialTab);
   }, [initialTab]);
 
-  // TODO: Replace 'anonymous' with actual user ID from session/auth context
   const userId = 'anonymous';
 
   const form = useForm<SettingsFormValues>({
@@ -104,7 +98,6 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
     setIsLoading(true)
 
     try {
-      // Save the system prompt and selected model
       const [promptSaveResult, modelSaveResult] = await Promise.all([
         saveSystemPrompt(userId, data.systemPrompt),
         saveSelectedModel(data.selectedModel),
@@ -117,18 +110,15 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
         throw new Error(modelSaveResult.error);
       }
 
+      await new Promise((resolve) => setTimeout(resolve, 200))
       console.log("Submitted data:", data)
 
-      // Success notification
       toast({
         title: "Settings updated",
         description: "Your settings have been saved successfully.",
       })
 
-      // Refresh the page to reflect changes
-      // router.refresh(); // Consider if refresh is needed or if optimistic update is enough
     } catch (error: any) {
-      // Error notification
       toast({
         title: "Something went wrong",
         description: error.message || "Your settings could not be saved. Please try again.",
@@ -191,7 +181,7 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
                 </Tabs.Content>
 
                 <Tabs.Content value="user-management" className="mt-6">
-                  <UserManagementForm form={form} />
+                  <UserManagementForm form={form} chatId={chatId} />
                 </Tabs.Content>
                 <Tabs.Content value="map" className="mt-6">
                   <Card>

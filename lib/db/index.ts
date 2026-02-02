@@ -1,25 +1,26 @@
-import { drizzle } from 'drizzle-orm/node-postgres';
-import { Pool, type PoolConfig } from 'pg'; // Uses Pool from pg, import PoolConfig
-import * as dotenv from 'dotenv';
-import * as schema from './schema';
+import { Pool } from 'pg'
+import { drizzle } from 'drizzle-orm/node-postgres'
+import * as schema from './schema'
 
-dotenv.config({ path: '.env.local' });
+// Lazily create a connection pool and Drizzle DB instance for server-side usage.
+// Keeps similarity with lib/db/migrate.ts but exports the db for application code.
+const connectionString = process.env.DATABASE_URL
 
-if (!process.env.DATABASE_URL) {
-  throw new Error('DATABASE_URL environment variable is not set for Drizzle client');
+if (!connectionString) {
+  // In serverless or test environments, this may be intentionally unset.
+  // Throwing here surfaces configuration issues early when server code runs.
+  throw new Error('DATABASE_URL environment variable is not set')
 }
 
-const poolConfig: PoolConfig = {
-  connectionString: process.env.DATABASE_URL,
-};
+const ssl = connectionString.includes('supabase.co')
+  ? { rejectUnauthorized: false }
+  : undefined
 
-// Conditionally apply SSL for Supabase URLs
-if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('supabase.co')) {
-  poolConfig.ssl = {
-    rejectUnauthorized: false,
-  };
-}
+const pool = new Pool({
+  connectionString,
+  ssl,
+})
 
-const pool = new Pool(poolConfig);
+export const db = drizzle(pool, { schema })
 
-export const db = drizzle(pool, { schema, logger: process.env.NODE_ENV === 'development' });
+export default db
