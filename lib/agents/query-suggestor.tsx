@@ -17,14 +17,8 @@ export async function querySuggestor(
   )
 
   let finalRelatedQueries: PartialRelated = {}
-
-  const hasImage = messages.some(message =>
-    Array.isArray(message.content) &&
-    message.content.some(part => part.type === 'image')
-  )
-
   const result = await streamObject({
-    model: (await getModel(hasImage)) as LanguageModel,
+    model: (await getModel()) as LanguageModel,
     system: `As a professional web researcher, your task is to generate a set of three queries that explore the subject matter more deeply, building upon the initial query and the information uncovered in its search results.
 
     For instance, if the original query was "Starship's third test flight key milestones", your output should follow this format:

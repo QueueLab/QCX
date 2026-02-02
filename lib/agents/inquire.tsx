@@ -22,14 +22,8 @@ export async function inquire(
   );
 
   let finalInquiry: PartialInquiry = {};
-
-  const hasImage = messages.some(message =>
-    Array.isArray(message.content) &&
-    message.content.some(part => part.type === 'image')
-  )
-
   const result = await streamObject({
-    model: (await getModel(hasImage)) as LanguageModel,
+    model: (await getModel()) as LanguageModel,
     system: `...`, // Your system prompt remains unchanged
     messages,
     schema: inquirySchema,
