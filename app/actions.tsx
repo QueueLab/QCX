@@ -93,7 +93,14 @@ async function submit(formData?: FormData, skip?: boolean) {
     // Create a streamable value for the summary.
     const summaryStream = createStreamableValue<string>('');
 
-    async function processResolutionSearch() {
+    // Immediately append the BotMessage component to the UI stream.
+    uiStream.append(
+      <Section title="response">
+        <BotMessage content={summaryStream.value} />
+      </Section>
+    );
+
+    (async () => {
       try {
         // Call the simplified agent, which now returns a stream.
         const streamResult = await resolutionSearch(messages, timezone, drawnFeatures);
@@ -171,17 +178,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         isGenerating.done(false);
         uiStream.done();
       }
-    }
-
-    // Start the background process without awaiting it.
-    processResolutionSearch();
-
-    // Immediately update the UI stream with the BotMessage component.
-    uiStream.update(
-      <Section title="response">
-        <BotMessage content={summaryStream.value} />
-      </Section>
-    );
+    })();
 
     return {
       id: nanoid(),
