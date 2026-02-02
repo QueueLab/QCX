@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter as FontSans, Poppins } from 'next/font/google'
 import './globals.css'
-import 'katex/dist/katex.min.css';
+import 'katex/dist/katex.min.css'
 import { cn } from '@/lib/utils'
 import { ThemeProvider } from '@/components/theme-provider'
 import Header from '@/components/header'
@@ -16,14 +16,14 @@ import { UsageToggleProvider } from '@/components/usage-toggle-context'
 import { CalendarToggleProvider } from '@/components/calendar-toggle-context'
 import { HistoryToggleProvider } from '@/components/history-toggle-context'
 import { HistorySidebar } from '@/components/history-sidebar'
-import { MapLoadingProvider } from '@/components/map-loading-context';
-import ConditionalLottie from '@/components/conditional-lottie';
-import { MapProvider } from '@/components/map/map-context'
+import { MapLoadingProvider } from '@/components/map-loading-context'
+import ConditionalLottie from '@/components/conditional-lottie'
+import { MapProvider } from '@/components/map/map-context' // ← imported as MapProvider
 import { getSupabaseUserAndSessionOnServer } from '@/lib/auth/get-current-user'
-import { PurchaseCreditsPopup } from '@/components/credits/purchase-credits-popup';
-import { CreditsProvider } from '@/components/credits/credits-provider';
+import { PurchaseCreditsPopup } from '@/components/credits/purchase-credits-popup'
+import { CreditsProvider } from '@/components/credits/credits-provider'
 
-// Force dynamic rendering since we check auth with cookies
+// Force dynamic rendering because we read cookies for auth
 export const dynamic = 'force-dynamic'
 
 const fontSans = FontSans({
@@ -38,8 +38,7 @@ const fontPoppins = Poppins({
 })
 
 const title = ''
-const description =
-  'language to Maps'
+const description = 'language to Maps'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.qcx.world'),
@@ -69,8 +68,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  // Check authentication and conditionally render the layout
-  const { user } = await getSupabaseUserAndSessionOnServer();
+  const { user } = await getSupabaseUserAndSessionOnServer()
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -93,7 +91,8 @@ export default async function RootLayout({
                     disableTransitionOnChange
                     themes={['light', 'dark', 'earth']}
                   >
-                    <MapContextProvider>
+                    {/* Changed MapContextProvider → MapProvider */}
+                    <MapProvider>
                       <MapLoadingProvider>
                         <Header />
                         <ConditionalLottie />
@@ -103,13 +102,14 @@ export default async function RootLayout({
                         <Footer />
                         <Toaster />
                       </MapLoadingProvider>
-                    </MapContextProvider>
+                    </MapProvider>
                   </ThemeProvider>
                 </UsageToggleProvider>
               </ProfileToggleProvider>
             </MapToggleProvider>
           </HistoryToggleProvider>
         </CalendarToggleProvider>
+
         <Analytics />
         <SpeedInsights />
       </body>
