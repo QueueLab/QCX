@@ -75,7 +75,7 @@ Analyze the user's prompt and the image to provide a holistic understanding of t
     message.content.some(part => part.type === 'image')
   )
 
-  // Use streamObject to get partial results for better perceived performance.
+  // Use streamObject to get partial results.
   return streamObject({
     model: await getModel(hasImage),
     system: systemPrompt,

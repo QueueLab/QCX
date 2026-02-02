@@ -54,14 +54,14 @@ async function submit(formData?: FormData, skip?: boolean) {
     const dataUrl = `data:${file.type};base64,${Buffer.from(buffer).toString('base64')}`;
 
     // Get the current messages, excluding tool-related ones.
-    const messages: CoreMessage[] = (aiState.get().messages as AIMessage[]).filter(
+    const messages: CoreMessage[] = [...(aiState.get().messages as any[])].filter(
       message =>
         message.role !== 'tool' &&
         message.type !== 'followup' &&
         message.type !== 'related' &&
         message.type !== 'end' &&
         message.type !== 'resolution_search_result'
-    ) as unknown as CoreMessage[];
+    );
 
     // The user's prompt for this action is static.
     const userInput = 'Analyze this map view.';
@@ -100,13 +100,6 @@ async function submit(formData?: FormData, skip?: boolean) {
 
         // Mark the summary stream as done with the result.
         summaryStream.done(analysisResult.summary || 'Analysis complete.');
-
-        // Append the GeoJSON layer to the UI stream so it appears on the map immediately.
-        if (analysisResult.geoJson) {
-          uiStream.append(
-            <GeoJsonLayer id={nanoid()} data={analysisResult.geoJson as FeatureCollection} />
-          );
-        }
 
         messages.push({ role: 'assistant', content: analysisResult.summary || 'Analysis complete.' });
 
@@ -170,9 +163,7 @@ async function submit(formData?: FormData, skip?: boolean) {
       }
     }
 
-    // Start the background process without awaiting it to allow the UI to
-    // stream the response section and summary immediately while the
-    // analysis runs in the background.
+    // Start the background process without awaiting it.
     processResolutionSearch();
 
     // Immediately update the UI stream with the BotMessage component.
@@ -190,14 +181,14 @@ async function submit(formData?: FormData, skip?: boolean) {
     };
   }
 
-  const messages: CoreMessage[] = (aiState.get().messages as AIMessage[]).filter(
+  const messages: CoreMessage[] = [...(aiState.get().messages as any[])].filter(
     message =>
       message.role !== 'tool' &&
       message.type !== 'followup' &&
       message.type !== 'related' &&
       message.type !== 'end' &&
       message.type !== 'resolution_search_result'
-  ) as unknown as CoreMessage[];
+  )
 
   const groupeId = nanoid()
   const useSpecificAPI = process.env.USE_SPECIFIC_API_FOR_WRITER === 'true'
@@ -231,7 +222,7 @@ async function submit(formData?: FormData, skip?: boolean) {
       ],
     });
 
-    const definitionStream = createStreamableValue('');
+    const definitionStream = createStreamableValue();
     definitionStream.done(definition);
 
     const answerSection = (
