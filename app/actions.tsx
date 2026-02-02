@@ -91,7 +91,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     messages.push({ role: 'user', content });
 
     // Create a streamable value for the summary.
-    const summaryStream = createStreamableValue<string>();
+    const summaryStream = createStreamableValue<string>('');
 
     async function processResolutionSearch() {
       try {
@@ -100,7 +100,7 @@ async function submit(formData?: FormData, skip?: boolean) {
 
         let fullSummary = '';
         for await (const partialObject of streamResult.partialObjectStream) {
-          if (partialObject && 'summary' in partialObject && partialObject.summary) {
+          if (partialObject.summary) {
             fullSummary = partialObject.summary;
             summaryStream.update(fullSummary);
           }
@@ -109,7 +109,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         const analysisResult = await streamResult.object;
 
         // Mark the summary stream as done with the result.
-        summaryStream.done(analysisResult.summary || 'Analysis complete.');
+        summaryStream.done(analysisResult.summary || fullSummary || 'Analysis complete.');
 
         messages.push({ role: 'assistant', content: analysisResult.summary || 'Analysis complete.' });
 
@@ -172,8 +172,6 @@ async function submit(formData?: FormData, skip?: boolean) {
         uiStream.done();
       }
     }
-
-    uiStream.update(<Spinner />);
 
     // Start the background process without awaiting it.
     processResolutionSearch();

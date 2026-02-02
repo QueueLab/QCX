@@ -28,14 +28,14 @@ export async function getModel(requireVision: boolean = false) {
   const openaiApiKey = process.env.OPENAI_API_KEY;
 
   if (specificModel) {
-    if (specificModel === 'grok-vision-beta' || specificModel === 'grok-4-fast-non-reasoning') {
+    if (specificModel.includes('grok')) {
       const xai = createXai({
         apiKey: xaiApiKey,
         baseURL: 'https://api.x.ai/v1',
       });
       return xai(specificModel);
     }
-    if (specificModel === 'gemini-1.5-pro' || specificModel === 'gemini-3-pro-preview') {
+    if (specificModel.includes('gemini')) {
       const google = createGoogleGenerativeAI({
         apiKey: gemini3ProApiKey,
       });

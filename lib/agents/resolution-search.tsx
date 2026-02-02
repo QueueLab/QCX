@@ -59,6 +59,8 @@ Your analysis should be comprehensive and include the following components:
 Your analysis should be based solely on the visual information in the image and your general knowledge. Do not attempt to access external websites or perform web searches.
 
 Analyze the user's prompt and the image to provide a holistic understanding of the location.
+
+IMPORTANT: Your response must be a single JSON object matching the requested schema. Ensure the 'summary' field is populated with a comprehensive analysis.
 `;
 
   const filteredMessages = messages.filter(msg => msg.role !== 'system');
