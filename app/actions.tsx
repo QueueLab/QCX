@@ -91,7 +91,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     messages.push({ role: 'user', content });
 
     // Create a streamable value for the summary.
-    const summaryStream = createStreamableValue<string>('');
+    const summaryStream = createStreamableValue<string>('Analyzing map view...');
 
     async function processResolutionSearch() {
       try {
@@ -99,9 +99,17 @@ async function submit(formData?: FormData, skip?: boolean) {
         const streamResult = await resolutionSearch(messages, timezone, drawnFeatures);
 
         let fullSummary = '';
+        let hasStarted = false;
+
         for await (const partialObject of streamResult.partialObjectStream) {
           if (partialObject.summary) {
-            fullSummary = partialObject.summary;
+            if (!hasStarted) {
+              hasStarted = true;
+              // Clear the initial "Analyzing..." message
+              fullSummary = partialObject.summary;
+            } else {
+              fullSummary = partialObject.summary;
+            }
             summaryStream.update(fullSummary);
           }
         }
@@ -166,6 +174,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         });
       } catch (error) {
         console.error('Error in resolution search:', error);
+        summaryStream.update('An error occurred during the analysis. Please try again.');
         summaryStream.error(error);
       } finally {
         isGenerating.done(false);

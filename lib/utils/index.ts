@@ -27,6 +27,18 @@ export async function getModel(requireVision: boolean = false) {
   const awsRegion = process.env.AWS_REGION;
   const bedrockModelId = process.env.BEDROCK_MODEL_ID || 'anthropic.claude-3-5-sonnet-20241022-v2:0';
   const openaiApiKey = process.env.OPENAI_API_KEY;
+  const specificModel = process.env.SPECIFIC_API_MODEL;
+
+  // Handle specific model override
+  if (specificModel) {
+    if (specificModel.startsWith('gpt-')) {
+      return createOpenAI({ apiKey: openaiApiKey }) (specificModel);
+    } else if (specificModel.startsWith('gemini-')) {
+      return createGoogleGenerativeAI({ apiKey: gemini3ProApiKey }) (specificModel);
+    } else if (specificModel.startsWith('grok-')) {
+      return createXai({ apiKey: xaiApiKey, baseURL: 'https://api.x.ai/v1' }) (specificModel);
+    }
+  }
 
   if (selectedModel) {
     switch (selectedModel) {
@@ -37,7 +49,8 @@ export async function getModel(requireVision: boolean = false) {
             baseURL: 'https://api.x.ai/v1',
           });
           try {
-            return xai('grok-4-fast-non-reasoning');
+            const modelId = requireVision ? 'grok-vision-beta' : 'grok-beta';
+            return xai(modelId);
           } catch (error) {
             console.error('Selected model "Grok 4.2" is configured but failed to initialize.', error);
             throw new Error('Failed to initialize selected model.');
@@ -52,7 +65,7 @@ export async function getModel(requireVision: boolean = false) {
             apiKey: gemini3ProApiKey,
           });
           try {
-            return google('gemini-3-pro-preview');
+            return google('gemini-1.5-pro');
           } catch (error) {
             console.error('Selected model "Gemini 3" is configured but failed to initialize.', error);
             throw new Error('Failed to initialize selected model.');
@@ -81,7 +94,8 @@ export async function getModel(requireVision: boolean = false) {
       baseURL: 'https://api.x.ai/v1',
     });
     try {
-      return xai('grok-4-fast-non-reasoning');
+      const modelId = requireVision ? 'grok-vision-beta' : 'grok-beta';
+      return xai(modelId);
     } catch (error) {
       console.warn('xAI API unavailable, falling back to next provider:');
     }
@@ -92,7 +106,7 @@ export async function getModel(requireVision: boolean = false) {
       apiKey: gemini3ProApiKey,
     });
     try {
-      return google('gemini-3-pro-preview');
+      return google('gemini-1.5-pro');
     } catch (error) {
       console.warn('Gemini 3 Pro API unavailable, falling back to next provider:', error);
     }

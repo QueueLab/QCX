@@ -9,7 +9,7 @@ import { useActions, useUIState } from 'ai/rsc'
 import { AI } from '@/app/actions'
 import { nanoid } from 'nanoid'
 import { UserMessage } from './user-message'
-import { toast } from 'react-toastify'
+import { toast } from 'sonner'
 import { useSettingsStore } from '@/lib/store/settings'
 import { useMapData } from './map/map-data-context'
 
@@ -90,6 +90,10 @@ export function HeaderSearchButton() {
       formData.append('file', blob, 'map_capture.png')
       formData.append('action', 'resolution_search')
       formData.append('timezone', mapData.currentTimezone || 'UTC')
+
+      if (mapData.drawnFeatures && mapData.drawnFeatures.length > 0) {
+        formData.append('drawnFeatures', JSON.stringify(mapData.drawnFeatures))
+      }
 
       const responseMessage = await actions.submit(formData)
       setMessages(currentMessages => [...currentMessages, responseMessage as any])
