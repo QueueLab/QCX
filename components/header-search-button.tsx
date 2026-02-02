@@ -9,7 +9,7 @@ import { useActions, useUIState } from 'ai/rsc'
 import { AI } from '@/app/actions'
 import { nanoid } from 'nanoid'
 import { UserMessage } from './user-message'
-import { toast } from 'react-toastify'
+import { toast } from 'sonner'
 import { useSettingsStore } from '@/lib/store/settings'
 import { useMapData } from './map/map-data-context'
 
@@ -37,7 +37,11 @@ export function HeaderSearchButton() {
 
   const handleResolutionSearch = async () => {
     if (mapProvider === 'mapbox' && !map) {
-      toast.error('Map is not available yet. Please wait for it to load.')
+      toast.error('Mapbox is not available yet. Please wait for it to load.')
+      return
+    }
+    if (mapProvider === 'google' && !mapData.cameraState) {
+      toast.error('Google Maps state is not available yet.')
       return
     }
     if (!actions) {
@@ -107,7 +111,7 @@ export function HeaderSearchButton() {
       variant="ghost"
       size="icon"
       onClick={handleResolutionSearch}
-      disabled={isAnalyzing || !map || !actions}
+      disabled={isAnalyzing || !actions || (mapProvider === 'mapbox' && !map) || (mapProvider === 'google' && !mapData.cameraState)}
       title="Analyze current map view"
     >
       {isAnalyzing ? (
@@ -119,9 +123,8 @@ export function HeaderSearchButton() {
   )
 
   const mobileButton = (
-    <Button variant="ghost" size="sm" onClick={handleResolutionSearch} disabled={isAnalyzing || !map || !actions}>
-      <Search className="h-4 w-4 mr-2" />
-      Search
+    <Button variant="ghost" size="icon" onClick={handleResolutionSearch} disabled={isAnalyzing || !actions || (mapProvider === 'mapbox' && !map) || (mapProvider === 'google' && !mapData.cameraState)}>
+      <Search className="h-[1.2rem] w-[1.2rem]" />
     </Button>
   )
 
