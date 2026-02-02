@@ -21,6 +21,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Zap, ChevronDown, ChevronUp } from 'lucide-react';
 import HistoryItem from '@/components/history-item'; // Adjust path if HistoryItem is moved or renamed
 import type { Chat as DrizzleChat } from '@/lib/types';
+import { useHistoryToggle } from '@/components/history-toggle-context';
 
 interface ChatHistoryClientProps {
   // userId is no longer passed as prop; API route will use authenticated user
@@ -33,6 +34,7 @@ export function ChatHistoryClient({}: ChatHistoryClientProps) {
   const [isClearPending, startClearTransition] = useTransition();
   const [isAlertDialogOpen, setIsAlertDialogOpen] = useState(false);
   const [isCreditsVisible, setIsCreditsVisible] = useState(false);
+  const { isHistoryOpen } = useHistoryToggle();
   const router = useRouter();
 
   useEffect(() => {
