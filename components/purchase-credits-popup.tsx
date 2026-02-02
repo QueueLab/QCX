@@ -19,7 +19,7 @@ interface PurchaseCreditsPopupProps {
 
 export function PurchaseCreditsPopup({ isOpen, onClose }: PurchaseCreditsPopupProps) {
   const handlePurchase = () => {
-    window.open('https://buy.stripe.com/14A3cv7K72TR3go14Nasg02', '_blank');
+    window.open('https://buy.stripe.com/3cIaEX3tRcur9EM7tbasg00', '_blank');
     onClose();
   };
 

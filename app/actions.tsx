@@ -12,7 +12,7 @@ import type { FeatureCollection } from 'geojson'
 import { Spinner } from '@/components/ui/spinner'
 import { Section } from '@/components/section'
 import { FollowupPanel } from '@/components/followup-panel'
-import { inquire, researcher, taskManager, querySuggestor, resolutionSearch } from '@/lib/agents'
+import { inquire, researcher, taskManager, querySuggestor, resolutionSearch, type DrawnFeature } from '@/lib/agents'
 // Removed import of useGeospatialToolMcp as it no longer exists and was incorrectly used here.
 // The geospatialTool (if used by agents like researcher) now manages its own MCP client.
 import { writer } from '@/lib/agents/writer'
@@ -46,6 +46,14 @@ async function submit(formData?: FormData, skip?: boolean) {
   if (action === 'resolution_search') {
     const file = formData?.get('file') as File;
     const timezone = (formData?.get('timezone') as string) || 'UTC';
+    const drawnFeaturesString = formData?.get('drawnFeatures') as string;
+    let drawnFeatures: DrawnFeature[] = [];
+    try {
+      drawnFeatures = drawnFeaturesString ? JSON.parse(drawnFeaturesString) : [];
+    } catch (e) {
+      console.error('Failed to parse drawnFeatures:', e);
+    }
+
     if (!file) {
       throw new Error('No file provided for resolution search.');
     }
@@ -87,12 +95,14 @@ async function submit(formData?: FormData, skip?: boolean) {
 
     async function processResolutionSearch() {
       try {
-        // Call the simplified agent, which now returns a stream result.
-        const streamResult = await resolutionSearch(messages, timezone);
+        // Call the simplified agent, which now returns a stream.
+        const streamResult = await resolutionSearch(messages, timezone, drawnFeatures);
 
+        let fullSummary = '';
         for await (const partialObject of streamResult.partialObjectStream) {
           if (partialObject.summary) {
-            summaryStream.update(partialObject.summary);
+            fullSummary = partialObject.summary;
+            summaryStream.update(fullSummary);
           }
         }
 
@@ -319,7 +329,7 @@ async function submit(formData?: FormData, skip?: boolean) {
   const hasImage = messageParts.some(part => part.type === 'image')
   // Properly type the content based on whether it contains images
   const content: CoreMessage['content'] = hasImage
-    ? (messageParts as CoreMessage['content'])
+    ? messageParts as CoreMessage['content']
     : messageParts.map(part => part.text).join('\n')
 
   const type = skip
@@ -338,7 +348,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         {
           id: nanoid(),
           role: 'user',
-          content: content as any,
+          content,
           type
         }
       ]
@@ -355,7 +365,7 @@ async function submit(formData?: FormData, skip?: boolean) {
   const mapProvider = formData?.get('mapProvider') as 'mapbox' | 'google'
 
   async function processEvents() {
-    let action: { object: { next: string } } = { object: { next: 'proceed' } }
+    let action: any = { object: { next: 'proceed' } }
     if (!skip) {
       const taskManagerResult = await taskManager(messages)
       if (taskManagerResult) {
@@ -386,7 +396,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     let answer = ''
     let toolOutputs: ToolResultPart[] = []
     let errorOccurred = false
-    const streamText = createStreamableValue<string>('')
+    const streamText = createStreamableValue<string>()
     uiStream.update(<Spinner />)
 
     while (
