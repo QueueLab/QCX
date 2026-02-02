@@ -18,7 +18,7 @@ export function BotMessage({ content }: { content: StreamableValue<string> }) {
   const processedData = preprocessLaTeX(data || '')
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto whitespace-normal break-words">
       <MemoizedReactMarkdown
         rehypePlugins={[[rehypeExternalLinks, { target: '_blank' }], rehypeKatex]}
         remarkPlugins={[remarkGfm, remarkMath]}

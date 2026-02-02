@@ -41,14 +41,14 @@ export function EmptyScreen({
               <Button
                 key={item.message} // Use a unique property as the key.
                 variant="link"
-                className="h-auto p-0 text-base flex items-center"
+                className="h-auto p-0 text-base flex items-start text-left whitespace-normal break-words"
                 name={item.message}
                 onClick={async () => {
                   submitMessage(item.message);
                 }}
               >
-                <Icon size={16} className="mr-2 text-muted-foreground" />
-                {item.heading}
+                <Icon size={16} className="mr-2 mt-1 text-muted-foreground shrink-0" />
+                <span>{item.heading}</span>
               </Button>
             );
           })}

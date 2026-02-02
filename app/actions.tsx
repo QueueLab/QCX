@@ -669,8 +669,8 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
           }
           break
         case 'assistant':
-          const answer = createStreamableValue(content as string)
-          answer.done(content as string)
+          const answer = createStreamableValue()
+          answer.done(content)
           switch (type) {
             case 'response':
               return {
@@ -682,9 +682,7 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                 )
               }
             case 'related':
-              const relatedQueries = createStreamableValue<RelatedQueries>({
-                items: []
-              })
+              const relatedQueries = createStreamableValue<RelatedQueries>()
               relatedQueries.done(JSON.parse(content as string))
               return {
                 id,
@@ -723,7 +721,7 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
         case 'tool':
           try {
             const toolOutput = JSON.parse(content as string)
-            const isCollapsed = createStreamableValue(true)
+            const isCollapsed = createStreamableValue()
             isCollapsed.done(true)
 
             if (
@@ -737,9 +735,7 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
               }
             }
 
-            const searchResults = createStreamableValue(
-              JSON.stringify(toolOutput)
-            )
+            const searchResults = createStreamableValue()
             searchResults.done(JSON.stringify(toolOutput))
             switch (name) {
               case 'search':
