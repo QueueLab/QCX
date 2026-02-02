@@ -58,7 +58,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
   // Detect mobile layout
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 1024)
+      setIsMobile(window.innerWidth < 768)
     }
     checkMobile()
     window.addEventListener('resize', checkMobile)

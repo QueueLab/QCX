@@ -66,7 +66,7 @@ export const Header = () => {
         </h1>
       </div>
       
-      <div className="flex-1 hidden md:flex justify-center gap-10 items-center z-10">
+      <div className="flex-1 hidden md:flex justify-center gap-4 items-center z-10">
         <ProfileToggle/>
         
         <MapToggle />
@@ -82,8 +82,6 @@ export const Header = () => {
         </Button>
         
         <ModeToggle />
-        
-        <HistoryContainer location="header" />
       </div>
 
       {/* Mobile menu buttons */}
