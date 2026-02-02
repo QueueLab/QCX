@@ -66,9 +66,8 @@ export const Header = () => {
         </h1>
       </div>
       
-      <div className="w-1/2 gap-20 hidden md:flex justify-between px-10 items-center z-10">
-        
-          <ProfileToggle/>
+      <div className="flex-1 hidden md:flex justify-center gap-10 items-center z-10">
+        <ProfileToggle/>
         
         <MapToggle />
         
@@ -76,14 +75,12 @@ export const Header = () => {
           <CalendarDays className="h-[1.2rem] w-[1.2rem]" />
         </Button>
         
-        <div id="header-search-portal" />
+        <div id="header-search-portal" className="contents" />
         
         <Button variant="ghost" size="icon" onClick={handleUsageToggle}>
           <TentTree className="h-[1.2rem] w-[1.2rem]" />
         </Button>
         
-        <div id="timezone-clock-portal" />
-
         <ModeToggle />
         
         <HistoryContainer location="header" />
