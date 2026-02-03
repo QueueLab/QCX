@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, ChangeEvent, forwardRef, useImperativeHandle, useCallback } from 'react'
 import type { AI, UIState } from '@/app/actions'
 import { useUIState, useActions, readStreamableValue } from 'ai/rsc'
+import { toast } from 'sonner'
 // Removed import of useGeospatialToolMcp as it's no longer used/available
 import { cn } from '@/lib/utils'
 import { UserMessage } from './user-message'
@@ -69,10 +70,32 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     const file = e.target.files?.[0]
     if (file) {
       if (file.size > 10 * 1024 * 1024) {
-        alert('File size must be less than 10MB')
+        toast.error('File size must be less than 10MB')
         return
       }
       setSelectedFile(file)
+    }
+  }
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const pastedText = e.clipboardData.getData('text')
+    if (pastedText.length > 500) {
+      e.preventDefault()
+      if (pastedText.length > 10 * 1024 * 1024) {
+        toast.error('Pasted text exceeds 10MB limit')
+        return
+      }
+      if (selectedFile) {
+        toast.error(
+          'Please remove the current attachment to convert large paste to file'
+        )
+        return
+      }
+      const file = new File([pastedText], 'pasted-text.txt', {
+        type: 'text/plain'
+      })
+      setSelectedFile(file)
+      setInput('')
     }
   }
 
@@ -250,6 +273,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
               setInput(e.target.value)
               debouncedGetSuggestions(e.target.value)
             }}
+            onPaste={handlePaste}
             onKeyDown={e => {
               if (
                 e.key === 'Enter' &&
