@@ -59,6 +59,17 @@ export default async function SearchPage({ params }: SearchPageProps) {
     };
   });
 
+  // Extract initial map data from the latest 'data' message
+  const latestDataMessage = [...dbMessages].reverse().find(m => m.role === 'data');
+  let initialMapData = undefined;
+  if (latestDataMessage) {
+    try {
+      initialMapData = JSON.parse(latestDataMessage.content);
+    } catch (e) {
+      console.error('Failed to parse initial map data:', e);
+    }
+  }
+
   return (
     <AI
       initialAIState={{
@@ -68,7 +79,7 @@ export default async function SearchPage({ params }: SearchPageProps) {
                              // If needed for styling or other logic, it can be set.
       }}
     >
-      <MapDataProvider>
+      <MapDataProvider initialData={initialMapData}>
         <Chat id={id} />
       </MapDataProvider>
     </AI>

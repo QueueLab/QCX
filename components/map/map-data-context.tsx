@@ -12,6 +12,13 @@ export interface CameraState {
   heading?: number;
 }
 
+export interface ImageOverlay {
+  id: string;
+  url: string;
+  coordinates: [[number, number], [number, number], [number, number], [number, number]]; // [NW, NE, SE, SW]
+  opacity: number;
+}
+
 export interface MapData {
   targetPosition?: { lat: number; lng: number } | null; // For flying to a location
   cameraState?: CameraState; // For saving camera state
@@ -29,6 +36,7 @@ export interface MapData {
     longitude: number;
     title?: string;
   }>;
+  imageOverlays?: ImageOverlay[];
 }
 
 interface MapDataContextType {
@@ -38,8 +46,8 @@ interface MapDataContextType {
 
 const MapDataContext = createContext<MapDataContextType | undefined>(undefined);
 
-export const MapDataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [mapData, setMapData] = useState<MapData>({ drawnFeatures: [], markers: [] });
+export const MapDataProvider: React.FC<{ children: ReactNode; initialData?: MapData }> = ({ children, initialData }) => {
+  const [mapData, setMapData] = useState<MapData>(initialData || { drawnFeatures: [], markers: [], imageOverlays: [] });
 
   return (
     <MapDataContext.Provider value={{ mapData, setMapData }}>
