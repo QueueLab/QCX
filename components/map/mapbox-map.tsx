@@ -22,6 +22,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   const map = useRef<mapboxgl.Map | null>(null)
   const { setMap } = useMap()
   const drawRef = useRef<MapboxDraw | null>(null)
+  const navControlRef = useRef<mapboxgl.NavigationControl | null>(null)
   const rotationFrameRef = useRef<number | null>(null)
   const polygonLabelsRef = useRef<{ [id: string]: mapboxgl.Marker }>({})
   const lineLabelsRef = useRef<{ [id: string]: mapboxgl.Marker }>({})
@@ -258,6 +259,16 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         console.log('Error removing draw control:', e)
       }
     }
+
+    // Remove existing navigation control if present
+    if (navControlRef.current) {
+      try {
+        map.current.removeControl(navControlRef.current)
+        navControlRef.current = null
+      } catch (e) {
+        console.log('Error removing navigation control:', e)
+      }
+    }
     
     // Create new draw control with both polygon and line tools
     drawRef.current = new MapboxDraw({
@@ -273,6 +284,12 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     
     // Add control to map
     map.current.addControl(drawRef.current, 'top-right')
+
+    // Add navigation control only on desktop
+    if (window.innerWidth > 768) {
+      navControlRef.current = new mapboxgl.NavigationControl()
+      map.current.addControl(navControlRef.current, 'top-left')
+    }
     
     // Set up event listeners for measurements
     map.current.on('draw.create', updateMeasurementLabels)
@@ -389,10 +406,6 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         preserveDrawingBuffer: true
       })
 
-      if (window.innerWidth > 768) {
-        map.current.addControl(new mapboxgl.NavigationControl(), 'top-left')
-      }
-
       // Register event listeners
       map.current.on('moveend', captureMapCenter)
       map.current.on('mousedown', handleUserInteraction)
@@ -460,14 +473,15 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   // Handle map mode changes
   useEffect(() => {
     // Store previous map type to detect changes
-    const isMapTypeChanged = previousMapTypeRef.current !== mapType
-    previousMapTypeRef.current = mapType
+    const prevMapType = previousMapTypeRef.current
+    const isMapTypeChanged = prevMapType !== mapType
 
     // Only proceed if map is initialized
     if (!map.current || !isMapReady) return
 
     // If we're switching modes
     if (isMapTypeChanged) {
+      previousMapTypeRef.current = mapType
       captureMapCenter()
 
       // Stop current mode-specific activities
@@ -487,7 +501,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
       }
 
       // Cleanup drawing tools if switching AWAY from drawing mode
-      if (previousMapTypeRef.current === MapToggleEnum.DrawingMode && mapType !== MapToggleEnum.DrawingMode) {
+      if (prevMapType === MapToggleEnum.DrawingMode && mapType !== MapToggleEnum.DrawingMode) {
         if (drawRef.current) {
           // Save current drawings before removing control
           drawingFeatures.current = drawRef.current.getAll()
@@ -506,6 +520,16 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
             lineLabelsRef.current = {}
           } catch (e) {
             console.log('Error removing draw control:', e)
+          }
+        }
+
+        // Also remove navigation control when leaving drawing mode
+        if (navControlRef.current) {
+          try {
+            map.current.removeControl(navControlRef.current)
+            navControlRef.current = null
+          } catch (e) {
+            console.log('Error removing navigation control:', e)
           }
         }
       }

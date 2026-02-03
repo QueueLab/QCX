@@ -199,12 +199,13 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
         onSubmit={handleSubmit}
         className={cn(
           'max-w-full w-full',
-          isMobile ? 'px-2 pb-1 pt-0 h-full flex flex-col justify-center' : ''
+          isMobile ? 'px-2 pb-2 pt-1 h-full flex flex-col justify-center' : ''
         )}
       >
         <div
           className={cn(
-            'relative flex items-start w-full'
+            'relative flex items-start w-full',
+            isMobile && 'mobile-chat-input' // Apply mobile chat input styling
           )}
         >
           <input type="hidden" name="mapProvider" value={mapProvider} />
@@ -241,10 +242,10 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
             value={input}
             data-testid="chat-input"
             className={cn(
-              'resize-none w-full rounded-fill border border-input pr-12 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+              'resize-none w-full min-h-12 rounded-fill border border-input pl-14 pr-12 pt-3 pb-1 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
               isMobile
-                ? 'bg-background min-h-10 pl-4 pt-2 pb-1'
-                : 'bg-muted min-h-12 pl-14 pt-3 pb-1'
+                ? 'mobile-chat-input input bg-background'
+                : 'bg-muted'
             )}
             onChange={e => {
               setInput(e.target.value)
