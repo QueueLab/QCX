@@ -18,7 +18,7 @@ function Logo() {
 function ArtPanel() {
   return (
     <div className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-3xl">
-      <Image src="/images/satellite-collage.png" alt="Abstract art" fill className="object-cover" priority />
+      <Image src="/images/auth-art.png" alt="Abstract art" fill className="object-cover" priority />
     </div>
   )
 }
