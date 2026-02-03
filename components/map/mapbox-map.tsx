@@ -467,7 +467,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         geolocationWatchIdRef.current = null
       }
     }
-  }, [setMap, setIsMapLoaded, captureMapCenter, handleUserInteraction, stopRotation])
+  }, [setMap, setIsMapLoaded, captureMapCenter, handleUserInteraction, stopRotation, position?.latitude, position?.longitude, mapData.cameraState])
 
   // Handle map mode changes
   useEffect(() => {
