@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react'
 import mapboxgl from 'mapbox-gl'
+import 'mapbox-gl-compare/dist/mapbox-gl-compare.css'
 import MapboxDraw from '@mapbox/mapbox-gl-draw'
 import * as turf from '@turf/turf'
 import tzlookup from 'tz-lookup'
@@ -18,7 +19,11 @@ mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN as string;
 
 export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number; } }> = ({ position }) => {
   const mapContainer = useRef<HTMLDivElement>(null)
+  const afterMapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
+  const afterMap = useRef<mapboxgl.Map | null>(null)
+  const compareRef = useRef<any>(null)
+  const afterMapMarkersRef = useRef<mapboxgl.Marker[]>([])
   const { setMap } = useMap()
   const drawRef = useRef<MapboxDraw | null>(null)
   const navControlRef = useRef<mapboxgl.NavigationControl | null>(null)
@@ -64,6 +69,107 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   }, [])
 
   // Create measurement labels for all features
+  const syncDrawingsToAfterMap = useCallback(() => {
+    if (!afterMap.current || !afterMap.current.getSource('draw-mirror')) return;
+
+    const source = afterMap.current.getSource('draw-mirror') as mapboxgl.GeoJSONSource;
+    const features = mapData.drawnFeatures?.map(df => df.geometry) || [];
+
+    source.setData({
+      type: 'FeatureCollection',
+      features: features.map((g, i) => ({
+        type: 'Feature',
+        geometry: g,
+        properties: mapData.drawnFeatures?.[i] || {}
+      }))
+    });
+
+    // Mirror labels
+    afterMapMarkersRef.current.forEach(m => m.remove());
+    afterMapMarkersRef.current = [];
+
+    mapData.drawnFeatures?.forEach(feature => {
+      let coords: [number, number] | null = null;
+      if (feature.type === 'Polygon') {
+        const centroid = turf.centroid(feature.geometry);
+        coords = centroid.geometry.coordinates as [number, number];
+      } else if (feature.type === 'LineString') {
+        const line = feature.geometry.coordinates;
+        const midIndex = Math.floor(line.length / 2) - 1;
+        coords = (midIndex >= 0 ? line[midIndex] : line[0]) as [number, number];
+      }
+
+      if (coords && afterMap.current) {
+        const el = document.createElement('div');
+        el.className = feature.type === 'Polygon' ? 'area-label' : 'distance-label';
+        el.style.background = 'rgba(255, 255, 255, 0.8)'
+        el.style.padding = '4px 8px'
+        el.style.borderRadius = '4px'
+        el.style.fontSize = '12px'
+        el.style.fontWeight = 'bold'
+        el.style.color = '#333333'
+        el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)'
+        el.style.pointerEvents = 'none'
+        el.textContent = feature.measurement;
+
+        const marker = new mapboxgl.Marker({ element: el })
+          .setLngLat(coords)
+          .addTo(afterMap.current);
+        afterMapMarkersRef.current.push(marker);
+      }
+    });
+  }, [mapData.drawnFeatures]);
+
+  const setupAfterMapLayers = useCallback(() => {
+    if (!afterMap.current) return;
+
+    // Add source for mirrored drawings
+    afterMap.current.addSource('draw-mirror', {
+      type: 'geojson',
+      data: {
+        type: 'FeatureCollection',
+        features: []
+      }
+    });
+
+    // Add layers for polygons and lines
+    afterMap.current.addLayer({
+      id: 'draw-mirror-polygons',
+      type: 'fill',
+      source: 'draw-mirror',
+      filter: ['==', '$type', 'Polygon'],
+      paint: {
+        'fill-color': '#fbb03b',
+        'fill-opacity': 0.1
+      }
+    });
+
+    afterMap.current.addLayer({
+      id: 'draw-mirror-polygons-outline',
+      type: 'line',
+      source: 'draw-mirror',
+      filter: ['==', '$type', 'Polygon'],
+      paint: {
+        'line-color': '#fbb03b',
+        'line-width': 2
+      }
+    });
+
+    afterMap.current.addLayer({
+      id: 'draw-mirror-lines',
+      type: 'line',
+      source: 'draw-mirror',
+      filter: ['==', '$type', 'LineString'],
+      paint: {
+        'line-color': '#fbb03b',
+        'line-width': 2
+      }
+    });
+
+    // Initial sync
+    syncDrawingsToAfterMap();
+  }, [syncDrawingsToAfterMap]);
+
   const updateMeasurementLabels = useCallback(() => {
     if (!map.current || !drawRef.current) return
 
@@ -357,6 +463,79 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     }
   }, [setMapData])
 
+  // Handle comparison map initialization
+  useEffect(() => {
+    if (mapType === MapToggleEnum.DrawingMode && map.current && afterMapContainer.current && !afterMap.current) {
+      const center = map.current.getCenter();
+      const zoom = map.current.getZoom();
+      const pitch = map.current.getPitch();
+      const bearing = map.current.getBearing();
+
+      afterMap.current = new mapboxgl.Map({
+        container: afterMapContainer.current,
+        style: 'mapbox://styles/mapbox/streets-v12',
+        center: [center.lng, center.lat],
+        zoom: zoom,
+        pitch: pitch,
+        bearing: bearing,
+        maxZoom: 22,
+        attributionControl: false,
+      });
+
+      afterMap.current.on('load', () => {
+        if (!map.current || !afterMap.current || !afterMapContainer.current?.parentElement) return;
+
+        try {
+          // Late-import mapbox-gl-compare to avoid SSR issues
+          const CompareModule = require('mapbox-gl-compare');
+          const CompareConstructor = CompareModule.default || CompareModule;
+
+          // Create the compare control
+          compareRef.current = new CompareConstructor(
+            map.current,
+            afterMap.current,
+            afterMapContainer.current.parentElement,
+            {
+              orientation: 'vertical',
+              mousemove: false
+            }
+          );
+
+          // Setup layers on afterMap
+          setupAfterMapLayers();
+        } catch (error) {
+          console.error('Error initializing mapbox-gl-compare:', error);
+        }
+      });
+    }
+
+    // Cleanup when leaving DrawingMode
+    if (mapType !== MapToggleEnum.DrawingMode) {
+      if (compareRef.current) {
+        compareRef.current.remove();
+        compareRef.current = null;
+      }
+      if (afterMap.current) {
+        afterMap.current.remove();
+        afterMap.current = null;
+      }
+      afterMapMarkersRef.current.forEach(m => m.remove());
+      afterMapMarkersRef.current = [];
+
+      if (map.current) {
+        const container = map.current.getContainer();
+        if (container) container.style.clip = '';
+      }
+    }
+  }, [mapType, setupAfterMapLayers]);
+
+  // Effect to sync drawings when they change
+  useEffect(() => {
+    if (mapType === MapToggleEnum.DrawingMode) {
+      syncDrawingsToAfterMap();
+    }
+  }, [mapData.drawnFeatures, mapType, syncDrawingsToAfterMap]);
+
   // Set up idle rotation checker
   useEffect(() => {
     const checkIdle = setInterval(() => {
@@ -458,6 +637,18 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         stopRotation()
         setIsMapLoaded(false) // Reset map loaded state on cleanup
         setMap(null) // Clear map instance from context
+
+        if (compareRef.current) {
+          compareRef.current.remove()
+          compareRef.current = null
+        }
+        if (afterMap.current) {
+          afterMap.current.remove()
+          afterMap.current = null
+        }
+        afterMapMarkersRef.current.forEach(m => m.remove());
+        afterMapMarkersRef.current = [];
+
         map.current.remove()
         map.current = null
       }
@@ -585,14 +776,20 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
 
 
   return (
-    <div className="relative h-full w-full">
+    <div className="relative h-full w-full overflow-hidden rounded-l-lg" id="comparison-container">
       <div
         ref={mapContainer}
-        className="h-full w-full overflow-hidden rounded-l-lg"
+        className={mapType === MapToggleEnum.DrawingMode ? "absolute inset-0" : "h-full w-full"}
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp} // Clear timer if mouse leaves container while pressed
+        onMouseLeave={handleMouseUp}
       />
+      {mapType === MapToggleEnum.DrawingMode && (
+        <div
+          ref={afterMapContainer}
+          className="absolute inset-0 pointer-events-none"
+        />
+      )}
     </div>
   )
 }
