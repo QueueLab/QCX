@@ -40,6 +40,7 @@ export function Chat({ id }: ChatProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [suggestions, setSuggestions] = useState<PartialRelated | null>(null)
   const chatPanelRef = useRef<ChatPanelRef>(null);
+  const lastRefreshedMessageIdRef = useRef<string | null>(null)
 
   const handleAttachment = () => {
     chatPanelRef.current?.handleAttachmentClick();
@@ -76,8 +77,14 @@ export function Chat({ id }: ChatProps) {
   }, [id, path, messages])
 
   useEffect(() => {
-    if (aiState.messages[aiState.messages.length - 1]?.type === 'response') {
-      // Refresh the page to chat history updates
+    // Find the last message of type 'response'
+    const responseMessage = [...aiState.messages]
+      .reverse()
+      .find(m => m.type === 'response')
+
+    if (responseMessage && responseMessage.id !== lastRefreshedMessageIdRef.current) {
+      // Refresh the page to update chat history in the sidebar
+      lastRefreshedMessageIdRef.current = responseMessage.id
       router.refresh()
     }
   }, [aiState, router])
@@ -106,7 +113,7 @@ export function Chat({ id }: ChatProps) {
   // Mobile layout
   if (isMobile) {
     return (
-      <MapDataProvider> {/* Add Provider */}
+      <>
         <HeaderSearchButton />
         <div className="mobile-layout-container">
           <div className="mobile-map-section">
@@ -160,13 +167,13 @@ export function Chat({ id }: ChatProps) {
           )}
         </div>
         </div>
-      </MapDataProvider>
+      </>
     );
   }
 
   // Desktop layout
   return (
-    <MapDataProvider> {/* Add Provider */}
+    <>
       <HeaderSearchButton />
       <div className="flex justify-start items-start">
         {/* This is the new div for scrolling */}
@@ -224,6 +231,6 @@ export function Chat({ id }: ChatProps) {
           {activeView ? <SettingsView /> : isUsageOpen ? <UsageView /> : <MapProvider />}
         </div>
       </div>
-    </MapDataProvider>
+    </>
   );
 }
