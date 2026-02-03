@@ -8,19 +8,16 @@ import { useActions, useUIState } from 'ai/rsc'
 import type { AI } from '@/app/actions'
 import { UserMessage } from './user-message'
 import { ArrowRight } from 'lucide-react'
-import { useSettingsStore } from '@/lib/store/settings'
 
 export function FollowupPanel() {
   const [input, setInput] = useState('')
   const { submit } = useActions()
-  const { mapProvider } = useSettingsStore()
   // Removed mcp instance as it's no longer passed to submit
   const [, setMessages] = useUIState<typeof AI>()
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const formData = new FormData(event.currentTarget as HTMLFormElement)
-    formData.append('mapProvider', mapProvider)
 
     const userMessage = {
       id: Date.now(),

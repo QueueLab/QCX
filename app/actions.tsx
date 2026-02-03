@@ -45,9 +45,7 @@ async function submit(formData?: FormData, skip?: boolean) {
 
   const action = formData?.get('action') as string;
   if (action === 'resolution_search') {
-    const mapboxFile = formData?.get('mapboxFile') as File;
-    const googleFile = formData?.get('googleFile') as File;
-    const legacyFile = formData?.get('file') as File;
+    const file = formData?.get('file') as File;
     const timezone = (formData?.get('timezone') as string) || 'UTC';
     const drawnFeaturesString = formData?.get('drawnFeatures') as string;
     let drawnFeatures: DrawnFeature[] = [];
@@ -57,27 +55,12 @@ async function submit(formData?: FormData, skip?: boolean) {
       console.error('Failed to parse drawnFeatures:', e);
     }
 
-    let mapboxDataUrl = '';
-    let googleDataUrl = '';
-
-    if (mapboxFile) {
-      const buffer = await mapboxFile.arrayBuffer();
-      mapboxDataUrl = `data:${mapboxFile.type};base64,${Buffer.from(buffer).toString('base64')}`;
-    }
-    if (googleFile) {
-      const buffer = await googleFile.arrayBuffer();
-      googleDataUrl = `data:${googleFile.type};base64,${Buffer.from(buffer).toString('base64')}`;
+    if (!file) {
+      throw new Error('No file provided for resolution search.');
     }
 
-    // Fallback if only 'file' was provided (backward compatibility)
-    if (!mapboxDataUrl && !googleDataUrl && legacyFile) {
-      const buffer = await legacyFile.arrayBuffer();
-      mapboxDataUrl = `data:${legacyFile.type};base64,${Buffer.from(buffer).toString('base64')}`;
-    }
-
-    if (!mapboxDataUrl && !googleDataUrl) {
-      throw new Error('No files provided for resolution search.');
-    }
+    const buffer = await file.arrayBuffer();
+    const dataUrl = `data:${file.type};base64,${Buffer.from(buffer).toString('base64')}`;
 
     // Get the current messages, excluding tool-related ones.
     const messages: CoreMessage[] = [...(aiState.get().messages as any[])].filter(
@@ -93,26 +76,10 @@ async function submit(formData?: FormData, skip?: boolean) {
     const userInput = 'Analyze this map view.';
 
     // Construct the multimodal content for the user message.
-    const contentParts: any[] = [
-      { type: 'text', text: userInput }
-    ]
-
-    if (mapboxDataUrl) {
-      contentParts.push({
-        type: 'image',
-        image: mapboxDataUrl,
-        mimeType: 'image/png'
-      })
-    }
-    if (googleDataUrl) {
-      contentParts.push({
-        type: 'image',
-        image: googleDataUrl,
-        mimeType: 'image/png'
-      })
-    }
-
-    const content = contentParts as any
+    const content: CoreMessage['content'] = [
+      { type: 'text', text: userInput },
+      { type: 'image', image: dataUrl, mimeType: file.type }
+    ];
 
     // Add the new user message to the AI state.
     aiState.update({
@@ -191,7 +158,7 @@ async function submit(formData?: FormData, skip?: boolean) {
               role: 'assistant',
               content: JSON.stringify({
                 ...analysisResult,
-                image: JSON.stringify({ mapbox: mapboxDataUrl, google: googleDataUrl })
+                image: dataUrl
               }),
               type: 'resolution_search_result'
             },
@@ -224,7 +191,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     // Immediately update the UI stream with the BotMessage component.
     uiStream.update(
       <Section title="response">
-        <ResolutionImage mapboxSrc={mapboxDataUrl} googleSrc={googleDataUrl} />
+        <ResolutionImage src={dataUrl} />
         <BotMessage content={summaryStream.value} />
       </Section>
     );
@@ -715,8 +682,8 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
           }
           break
         case 'assistant':
-          const answer = createStreamableValue()
-          answer.done(content)
+          const answer = createStreamableValue(content as string)
+          answer.done(content as string)
           switch (type) {
             case 'response':
               return {
@@ -728,7 +695,9 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                 )
               }
             case 'related':
-              const relatedQueries = createStreamableValue<RelatedQueries>()
+              const relatedQueries = createStreamableValue<RelatedQueries>({
+                items: []
+              })
               relatedQueries.done(JSON.parse(content as string))
               return {
                 id,
@@ -750,28 +719,13 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
             case 'resolution_search_result': {
               const analysisResult = JSON.parse(content as string);
               const geoJson = analysisResult.geoJson as FeatureCollection;
-              const imageData = analysisResult.image as string;
-              let mapboxSrc = '';
-              let googleSrc = '';
-
-              if (imageData) {
-                try {
-                  const parsed = JSON.parse(imageData);
-                  mapboxSrc = parsed.mapbox || '';
-                  googleSrc = parsed.google || '';
-                } catch (e) {
-                  // Fallback for older image format which was just a single string
-                  mapboxSrc = imageData;
-                }
-              }
+              const image = analysisResult.image as string;
 
               return {
                 id,
                 component: (
                   <>
-                    {(mapboxSrc || googleSrc) && (
-                      <ResolutionImage mapboxSrc={mapboxSrc} googleSrc={googleSrc} />
-                    )}
+                    {image && <ResolutionImage src={image} />}
                     {geoJson && (
                       <GeoJsonLayer id={id} data={geoJson} />
                     )}
@@ -784,7 +738,7 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
         case 'tool':
           try {
             const toolOutput = JSON.parse(content as string)
-            const isCollapsed = createStreamableValue()
+            const isCollapsed = createStreamableValue(true)
             isCollapsed.done(true)
 
             if (
@@ -812,7 +766,9 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
               }
             }
 
-            const searchResults = createStreamableValue()
+            const searchResults = createStreamableValue(
+              JSON.stringify(toolOutput)
+            )
             searchResults.done(JSON.stringify(toolOutput))
             switch (name) {
               case 'search':
