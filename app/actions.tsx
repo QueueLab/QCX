@@ -12,7 +12,7 @@ import type { FeatureCollection } from 'geojson'
 import { Spinner } from '@/components/ui/spinner'
 import { Section } from '@/components/section'
 import { FollowupPanel } from '@/components/followup-panel'
-import { inquire, researcher, taskManager, querySuggestor, resolutionSearch, type DrawnFeature } from '@/lib/agents'
+import { inquire, researcher, taskManager, querySuggestor, resolutionSearch } from '@/lib/agents'
 // Removed import of useGeospatialToolMcp as it no longer exists and was incorrectly used here.
 // The geospatialTool (if used by agents like researcher) now manages its own MCP client.
 import { writer } from '@/lib/agents/writer'
@@ -27,6 +27,7 @@ import { CopilotDisplay } from '@/components/copilot-display'
 import RetrieveSection from '@/components/retrieve-section'
 import { VideoSearchSection } from '@/components/video-search-section'
 import { MapQueryHandler } from '@/components/map/map-query-handler' // Add this import
+import { GraphSection } from '@/components/graph-section'
 
 // Define the type for related queries
 type RelatedQueries = {
@@ -46,14 +47,6 @@ async function submit(formData?: FormData, skip?: boolean) {
   if (action === 'resolution_search') {
     const file = formData?.get('file') as File;
     const timezone = (formData?.get('timezone') as string) || 'UTC';
-    const drawnFeaturesString = formData?.get('drawnFeatures') as string;
-    let drawnFeatures: DrawnFeature[] = [];
-    try {
-      drawnFeatures = drawnFeaturesString ? JSON.parse(drawnFeaturesString) : [];
-    } catch (e) {
-      console.error('Failed to parse drawnFeatures:', e);
-    }
-
     if (!file) {
       throw new Error('No file provided for resolution search.');
     }
@@ -95,18 +88,8 @@ async function submit(formData?: FormData, skip?: boolean) {
 
     async function processResolutionSearch() {
       try {
-        // Call the simplified agent, which now returns a stream.
-        const streamResult = await resolutionSearch(messages, timezone, drawnFeatures);
-
-        let fullSummary = '';
-        for await (const partialObject of streamResult.partialObjectStream) {
-          if (partialObject.summary) {
-            fullSummary = partialObject.summary;
-            summaryStream.update(fullSummary);
-          }
-        }
-
-        const analysisResult = await streamResult.object;
+        // Call the simplified agent, which now returns data directly.
+        const analysisResult = await resolutionSearch(messages, timezone) as any;
 
         // Mark the summary stream as done with the result.
         summaryStream.done(analysisResult.summary || 'Analysis complete.');
@@ -315,7 +298,11 @@ async function submit(formData?: FormData, skip?: boolean) {
         image: dataUrl,
         mimeType: file.type
       })
-    } else if (file.type === 'text/plain') {
+    } else if (
+      file.type === 'text/plain' ||
+      file.type === 'text/csv' ||
+      file.type === 'application/json'
+    ) {
       const textContent = Buffer.from(buffer).toString('utf-8')
       const existingTextPart = messageParts.find(p => p.type === 'text')
       if (existingTextPart) {
@@ -759,6 +746,32 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                   id,
                   component: (
                     <VideoSearchSection result={searchResults.value} />
+                  ),
+                  isCollapsed: isCollapsed.value
+                }
+              case 'dataAnalysis':
+                return {
+                  id,
+                  component: (
+                    <>
+                      <GraphSection result={searchResults.value} />
+                      {toolOutput.geospatial && toolOutput.geospatial.length > 0 && (
+                        <MapQueryHandler
+                          toolOutput={{
+                            type: 'MAP_QUERY_TRIGGER',
+                            originalUserInput: JSON.stringify(toolOutput.geospatial[0]),
+                            timestamp: new Date().toISOString(),
+                            mcp_response: {
+                              location: {
+                                latitude: toolOutput.geospatial[0].latitude,
+                                longitude: toolOutput.geospatial[0].longitude,
+                                place_name: toolOutput.geospatial[0].label
+                              }
+                            }
+                          }}
+                        />
+                      )}
+                    </>
                   ),
                   isCollapsed: isCollapsed.value
                 }
