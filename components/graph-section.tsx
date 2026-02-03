@@ -88,18 +88,46 @@ function GraphCard({ data, pending }: { data: any, pending?: boolean }) {
   const renderChart = () => {
     if (!plotData || !config) return <div className="flex items-center justify-center h-full text-muted-foreground italic">Missing chart data or configuration</div>;
 
+    const themeColors = {
+      text: 'hsl(var(--foreground))',
+      grid: 'hsl(var(--border))',
+      tooltip: {
+        bg: 'hsl(var(--card))',
+        text: 'hsl(var(--card-foreground))',
+        border: 'hsl(var(--border))'
+      }
+    }
+
+    const commonAxisProps = {
+      stroke: themeColors.text,
+      fontSize: 12,
+      tickLine: false,
+      axisLine: false,
+    }
+
     switch (chartType) {
       case 'bar':
         return (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={plotData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey={config.xAxisKey} />
-              <YAxis />
-              <Tooltip />
-              <Legend />
+            <BarChart data={plotData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={themeColors.grid} vertical={false} />
+              <XAxis 
+                dataKey={config.xAxisKey} 
+                {...commonAxisProps}
+                dy={10}
+              />
+              <YAxis {...commonAxisProps} />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: themeColors.tooltip.bg, 
+                  color: themeColors.tooltip.text,
+                  borderColor: themeColors.tooltip.border,
+                  borderRadius: '8px'
+                }} 
+              />
+              <Legend wrapperStyle={{ paddingTop: '20px' }} />
               {config.series?.map((s, i) => (
-                <Bar key={s.key} dataKey={s.key} name={s.name} fill={s.color || COLORS[i % COLORS.length]} />
+                <Bar key={s.key} dataKey={s.key} name={s.name} fill={s.color || COLORS[i % COLORS.length]} radius={[4, 4, 0, 0]} />
               ))}
             </BarChart>
           </ResponsiveContainer>
@@ -107,14 +135,25 @@ function GraphCard({ data, pending }: { data: any, pending?: boolean }) {
       case 'line':
         return (
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={plotData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey={config.xAxisKey} />
-              <YAxis />
-              <Tooltip />
-              <Legend />
+            <LineChart data={plotData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={themeColors.grid} vertical={false} />
+              <XAxis 
+                dataKey={config.xAxisKey} 
+                {...commonAxisProps}
+                dy={10}
+              />
+              <YAxis {...commonAxisProps} />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: themeColors.tooltip.bg, 
+                  color: themeColors.tooltip.text,
+                  borderColor: themeColors.tooltip.border,
+                  borderRadius: '8px'
+                }} 
+              />
+              <Legend wrapperStyle={{ paddingTop: '20px' }} />
               {config.series?.map((s, i) => (
-                <Line key={s.key} type="monotone" dataKey={s.key} name={s.name} stroke={s.color || COLORS[i % COLORS.length]} />
+                <Line key={s.key} type="monotone" dataKey={s.key} name={s.name} stroke={s.color || COLORS[i % COLORS.length]} strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
               ))}
             </LineChart>
           </ResponsiveContainer>
@@ -122,14 +161,25 @@ function GraphCard({ data, pending }: { data: any, pending?: boolean }) {
       case 'area':
         return (
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={plotData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey={config.xAxisKey} />
-              <YAxis />
-              <Tooltip />
-              <Legend />
+            <AreaChart data={plotData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={themeColors.grid} vertical={false} />
+              <XAxis 
+                dataKey={config.xAxisKey} 
+                {...commonAxisProps}
+                dy={10}
+              />
+              <YAxis {...commonAxisProps} />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: themeColors.tooltip.bg, 
+                  color: themeColors.tooltip.text,
+                  borderColor: themeColors.tooltip.border,
+                  borderRadius: '8px'
+                }} 
+              />
+              <Legend wrapperStyle={{ paddingTop: '20px' }} />
               {config.series?.map((s, i) => (
-                <Area key={s.key} type="monotone" dataKey={s.key} name={s.name} stroke={s.color || COLORS[i % COLORS.length]} fill={s.color || COLORS[i % COLORS.length]} />
+                <Area key={s.key} type="monotone" dataKey={s.key} name={s.name} stroke={s.color || COLORS[i % COLORS.length]} fill={s.color || COLORS[i % COLORS.length]} fillOpacity={0.3} />
               ))}
             </AreaChart>
           </ResponsiveContainer>
@@ -145,13 +195,20 @@ function GraphCard({ data, pending }: { data: any, pending?: boolean }) {
                 cx="50%"
                 cy="50%"
                 outerRadius={80}
-                label
+                label={{ fill: themeColors.text, fontSize: 12 }}
               >
                 {plotData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: themeColors.tooltip.bg, 
+                  color: themeColors.tooltip.text,
+                  borderColor: themeColors.tooltip.border,
+                  borderRadius: '8px'
+                }} 
+              />
               <Legend />
             </PieChart>
           </ResponsiveContainer>
@@ -159,12 +216,26 @@ function GraphCard({ data, pending }: { data: any, pending?: boolean }) {
       case 'scatter':
         return (
           <ResponsiveContainer width="100%" height="100%">
-            <ScatterChart>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis type="number" dataKey={config.xAxisKey} name={config.xAxisKey} />
-              <YAxis type="number" dataKey={config.yAxisKey} name={config.yAxisKey} />
-              <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-              <Legend />
+            <ScatterChart margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={themeColors.grid} />
+              <XAxis 
+                type="number" 
+                dataKey={config.xAxisKey} 
+                name={config.xAxisKey} 
+                {...commonAxisProps}
+                dy={10}
+              />
+              <YAxis type="number" dataKey={config.yAxisKey} name={config.yAxisKey} {...commonAxisProps} />
+              <Tooltip 
+                cursor={{ strokeDasharray: '3 3' }} 
+                contentStyle={{ 
+                  backgroundColor: themeColors.tooltip.bg, 
+                  color: themeColors.tooltip.text,
+                  borderColor: themeColors.tooltip.border,
+                  borderRadius: '8px'
+                }} 
+              />
+              <Legend wrapperStyle={{ paddingTop: '20px' }} />
               {config.series?.map((s, i) => (
                 <Scatter key={s.key} name={s.name} data={plotData} fill={s.color || COLORS[i % COLORS.length]} />
               ))}
