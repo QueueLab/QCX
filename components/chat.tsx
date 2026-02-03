@@ -76,14 +76,18 @@ export function Chat({ id }: ChatProps) {
   }, [id, path, messages])
 
   useEffect(() => {
-    if (aiState.messages[aiState.messages.length - 1]?.type === 'response') {
+    const lastMessage = aiState.messages[aiState.messages.length - 1];
+    if (lastMessage?.type === 'response' && lastMessage.id !== lastRefreshedMessageIdRef.current) {
       // Refresh the page to chat history updates
+      lastRefreshedMessageIdRef.current = lastMessage.id;
       router.refresh()
     }
   }, [aiState, router])
 
   // Get mapData to access drawnFeatures
   const { mapData } = useMapData();
+  const lastSyncedDataRef = useRef<string>('');
+  const lastRefreshedMessageIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (isSubmitting) {
@@ -92,21 +96,31 @@ export function Chat({ id }: ChatProps) {
     }
   }, [isSubmitting])
 
-  // useEffect to call the server action when drawnFeatures changes
+  // useEffect to call the server action when drawnFeatures or uploadedGeoJson changes
   useEffect(() => {
-    if (id && mapData.drawnFeatures && mapData.cameraState) {
-      console.log('Chat.tsx: drawnFeatures changed, calling updateDrawingContext', mapData.drawnFeatures);
-      updateDrawingContext(id, {
-        drawnFeatures: mapData.drawnFeatures,
+    if (id && (mapData.drawnFeatures || mapData.uploadedGeoJson) && mapData.cameraState) {
+      const currentData = JSON.stringify({
+        drawnFeatures: mapData.drawnFeatures || [],
         cameraState: mapData.cameraState,
+        uploadedGeoJson: (mapData.uploadedGeoJson || []).map(item => ({ id: item.id, visible: item.visible }))
       });
+
+      if (currentData !== lastSyncedDataRef.current) {
+        console.log('Chat.tsx: map data changed, calling updateDrawingContext');
+        lastSyncedDataRef.current = currentData;
+        updateDrawingContext(id, {
+          drawnFeatures: mapData.drawnFeatures || [],
+          cameraState: mapData.cameraState,
+          uploadedGeoJson: mapData.uploadedGeoJson || []
+        });
+      }
     }
-  }, [id, mapData.drawnFeatures, mapData.cameraState]);
+  }, [id, mapData.drawnFeatures, mapData.cameraState, mapData.uploadedGeoJson]);
 
   // Mobile layout
   if (isMobile) {
     return (
-      <MapDataProvider> {/* Add Provider */}
+      <>
         <HeaderSearchButton />
         <div className="mobile-layout-container">
           <div className="mobile-map-section">
@@ -160,13 +174,13 @@ export function Chat({ id }: ChatProps) {
           )}
         </div>
         </div>
-      </MapDataProvider>
+      </>
     );
   }
 
   // Desktop layout
   return (
-    <MapDataProvider> {/* Add Provider */}
+    <>
       <HeaderSearchButton />
       <div className="flex justify-start items-start">
         {/* This is the new div for scrolling */}
@@ -224,6 +238,6 @@ export function Chat({ id }: ChatProps) {
           {activeView ? <SettingsView /> : isUsageOpen ? <UsageView /> : <MapProvider />}
         </div>
       </div>
-    </MapDataProvider>
+    </>
   );
 }

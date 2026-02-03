@@ -48,14 +48,11 @@ export default async function SearchPage({ params }: SearchPageProps) {
   const initialMessages: AIMessage[] = dbMessages.map((dbMsg): AIMessage => {
     return {
       id: dbMsg.id,
-      role: dbMsg.role as AIMessage['role'], // Cast role, ensure AIMessage['role'] includes all dbMsg.role possibilities
+      role: dbMsg.role as AIMessage['role'],
       content: dbMsg.content,
       createdAt: dbMsg.createdAt ? new Date(dbMsg.createdAt) : undefined,
-      // 'type' and 'name' are not in the basic Drizzle 'messages' schema.
-      // These would be undefined unless specific logic is added to derive them.
-      // For instance, if a message with role 'tool' should have a 'name',
-      // or if some messages have a specific 'type' based on content or other flags.
-      // This mapping assumes standard user/assistant messages primarily.
+      type: dbMsg.type as AIMessage['type'],
+      name: dbMsg.toolName as string,
     };
   });
 

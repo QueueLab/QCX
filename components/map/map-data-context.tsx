@@ -29,6 +29,12 @@ export interface MapData {
     longitude: number;
     title?: string;
   }>;
+  uploadedGeoJson?: Array<{
+    id: string;
+    filename: string;
+    data: any; // FeatureCollection
+    visible: boolean;
+  }>;
 }
 
 interface MapDataContextType {
@@ -39,7 +45,11 @@ interface MapDataContextType {
 const MapDataContext = createContext<MapDataContextType | undefined>(undefined);
 
 export const MapDataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [mapData, setMapData] = useState<MapData>({ drawnFeatures: [], markers: [] });
+  const [mapData, setMapData] = useState<MapData>({
+    drawnFeatures: [],
+    markers: [],
+    uploadedGeoJson: []
+  });
 
   return (
     <MapDataContext.Provider value={{ mapData, setMapData }}>

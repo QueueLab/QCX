@@ -23,6 +23,7 @@ import { BotMessage } from '@/components/message'
 import { SearchSection } from '@/components/search-section'
 import SearchRelated from '@/components/search-related'
 import { GeoJsonLayer } from '@/components/map/geojson-layer'
+import { MapDataUpdater } from '@/components/map/map-data-updater'
 import { CopilotDisplay } from '@/components/copilot-display'
 import RetrieveSection from '@/components/retrieve-section'
 import { VideoSearchSection } from '@/components/video-search-section'
@@ -210,6 +211,37 @@ async function submit(formData?: FormData, skip?: boolean) {
     : ((formData?.get('related_query') as string) ||
       (formData?.get('input') as string))
 
+  let isGeoJsonInput = false
+  if (userInput) {
+    try {
+      const trimmedInput = userInput.trim()
+      if ((trimmedInput.startsWith('{') && trimmedInput.endsWith('}')) || (trimmedInput.startsWith('[') && trimmedInput.endsWith(']'))) {
+        const geoJson = JSON.parse(trimmedInput)
+        if (geoJson.type === 'FeatureCollection' || geoJson.type === 'Feature') {
+          isGeoJsonInput = true
+          const geoJsonId = nanoid()
+          aiState.update({
+            ...aiState.get(),
+            messages: [
+              ...aiState.get().messages,
+              {
+                id: geoJsonId,
+                role: 'assistant',
+                content: JSON.stringify({ data: geoJson, filename: 'Pasted GeoJSON' }),
+                type: 'geojson_upload'
+              }
+            ]
+          })
+          uiStream.append(
+            <MapDataUpdater id={geoJsonId} data={geoJson} filename="Pasted GeoJSON" />
+          )
+        }
+      }
+    } catch (e) {
+      // Not a valid JSON, ignore
+    }
+  }
+
   if (userInput.toLowerCase().trim() === 'what is a planet computer?' || userInput.toLowerCase().trim() === 'what is qcx-terra?') {
     const definition = userInput.toLowerCase().trim() === 'what is a planet computer?'
       ? `A planet computer is a proprietary environment aware system that interoperates weather forecasting, mapping and scheduling using cutting edge multi-agents to streamline automation and exploration on a planet. Available for our Pro and Enterprise customers. [QCX Pricing](https://www.queue.cx/#pricing)`
@@ -301,6 +333,8 @@ async function submit(formData?: FormData, skip?: boolean) {
   }[] = []
 
   if (userInput) {
+    // If it's a GeoJSON input, we still want to keep it in the message history for the AI to see,
+    // but we might want to truncate it if it's huge. For now, just pass it.
     messageParts.push({ type: 'text', text: userInput })
   }
 
@@ -315,8 +349,39 @@ async function submit(formData?: FormData, skip?: boolean) {
         image: dataUrl,
         mimeType: file.type
       })
-    } else if (file.type === 'text/plain') {
+    } else if (file.type === 'text/plain' || file.name.endsWith('.geojson') || file.type === 'application/geo+json') {
       const textContent = Buffer.from(buffer).toString('utf-8')
+      const isGeoJson = file.name.endsWith('.geojson') || file.type === 'application/geo+json'
+
+      if (isGeoJson) {
+        try {
+          const geoJson = JSON.parse(textContent)
+          if (geoJson.type === 'FeatureCollection' || geoJson.type === 'Feature') {
+            const geoJsonId = nanoid()
+            // Add a special message to track the GeoJSON upload
+            aiState.update({
+              ...aiState.get(),
+              messages: [
+                ...aiState.get().messages,
+                {
+                  id: geoJsonId,
+                  role: 'assistant',
+                  content: JSON.stringify({ data: geoJson, filename: file.name }),
+                  type: 'geojson_upload'
+                }
+              ]
+            })
+
+            // Immediately append the updater to the UI stream
+            uiStream.append(
+              <MapDataUpdater id={geoJsonId} data={geoJson} filename={file.name} />
+            )
+          }
+        } catch (e) {
+          console.error('Failed to parse GeoJSON:', e)
+        }
+      }
+
       const existingTextPart = messageParts.find(p => p.type === 'text')
       if (existingTextPart) {
         existingTextPart.text = `${textContent}\n\n${existingTextPart.text}`
@@ -624,9 +689,18 @@ export const AI = createAI<AIState, UIState>({
 export const getUIStateFromAIState = (aiState: AIState): UIState => {
   const chatId = aiState.chatId
   const isSharePage = aiState.isSharePage
+
+  // Filter messages to only include the last 'data' message if multiple exist
+  const lastDataMessageIndex = [...aiState.messages].reverse().findIndex(m => m.role === 'data')
+  const actualLastDataIndex = lastDataMessageIndex === -1 ? -1 : aiState.messages.length - 1 - lastDataMessageIndex
+
   return aiState.messages
     .map((message, index) => {
       const { role, content, id, type, name } = message
+
+      if (role === 'data' && index !== actualLastDataIndex) {
+        return null
+      }
 
       if (
         !type ||
@@ -718,6 +792,13 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                 )
               }
             }
+            case 'geojson_upload': {
+              const { data, filename } = JSON.parse(content as string)
+              return {
+                id,
+                component: <MapDataUpdater id={id} data={data} filename={filename} />
+              }
+            }
           }
           break
         case 'tool':
@@ -779,6 +860,26 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
             }
           }
           break
+        case 'data':
+          try {
+            const contextData = JSON.parse(content as string)
+            if (contextData.uploadedGeoJson && Array.isArray(contextData.uploadedGeoJson)) {
+              return {
+                id,
+                component: (
+                  <>
+                    {contextData.uploadedGeoJson.map((item: any) => (
+                      <MapDataUpdater key={item.id} id={item.id} data={item.data} filename={item.filename} />
+                    ))}
+                  </>
+                )
+              }
+            }
+            return { id, component: null }
+          } catch (e) {
+            console.error('Error parsing data message:', e)
+            return { id, component: null }
+          }
         default:
           return {
             id,

@@ -162,7 +162,7 @@ export async function saveChat(chat: OldChatType, userId: string): Promise<strin
 //   return null;
 // }
 
-export async function updateDrawingContext(chatId: string, contextData: { drawnFeatures: any[], cameraState: any }) {
+export async function updateDrawingContext(chatId: string, contextData: { drawnFeatures: any[], cameraState: any, uploadedGeoJson?: any[] }) {
   'use server';
   console.log('[Action] updateDrawingContext called for chatId:', chatId);
 
@@ -186,8 +186,25 @@ export async function updateDrawingContext(chatId: string, contextData: { drawnF
   };
 
   try {
-    // We need to ensure the message is associated with the chat.
-    // dbCreateMessage requires chatId.
+    // Check if a 'data' message already exists to avoid duplication
+    const existingMessages = await dbGetMessagesByChatId(chatId);
+    const dataMessage = existingMessages.find(m => m.role === 'data');
+
+    if (dataMessage) {
+      // Update existing message content using direct db call since chat-db.ts doesn't have an updateMessage
+      const { db } = await import('@/lib/db');
+      const { messages } = await import('@/lib/db/schema');
+      const { eq } = await import('drizzle-orm');
+
+      await db.update(messages)
+        .set({ content: JSON.stringify(contextData) })
+        .where(eq(messages.id, dataMessage.id));
+
+      console.log('Drawing context updated for chat:', chatId, 'messageId:', dataMessage.id);
+      return { success: true, messageId: dataMessage.id };
+    }
+
+    // Otherwise create a new one
     const messageToSave: DbNewMessage = {
       ...newDrawingMessage,
       chatId: chatId,

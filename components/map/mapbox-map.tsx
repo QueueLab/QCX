@@ -13,6 +13,7 @@ import { useMapToggle, MapToggleEnum } from '../map-toggle-context'
 import { useMapData } from './map-data-context'; // Add this import
 import { useMapLoading } from '../map-loading-context'; // Import useMapLoading
 import { useMap } from './map-context'
+import { GeoJsonLayer } from './geojson-layer'
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN as string;
 
@@ -467,7 +468,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         geolocationWatchIdRef.current = null
       }
     }
-  }, [setMap, setIsMapLoaded, captureMapCenter, handleUserInteraction, stopRotation])
+  }, [setMap, setIsMapLoaded, captureMapCenter, handleUserInteraction, stopRotation, mapData.cameraState, position?.latitude, position?.longitude])
 
   // Handle map mode changes
   useEffect(() => {
@@ -593,6 +594,9 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp} // Clear timer if mouse leaves container while pressed
       />
+      {mapData.uploadedGeoJson?.map(item => (
+        item.visible && <GeoJsonLayer key={item.id} id={item.id} data={item.data} />
+      ))}
     </div>
   )
 }

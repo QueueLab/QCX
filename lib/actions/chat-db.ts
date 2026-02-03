@@ -119,7 +119,21 @@ export async function saveChat(chatData: NewChat, messagesData: Omit<NewMessage,
         chatId: chatId!, // Ensure chatId is set for all messages
         userId: msg.userId || chatData.userId!, // Ensure userId is set
       }));
-      await tx.insert(messages).values(messagesToInsert);
+
+      // Use upsert to avoid duplicate primary keys and prevent redundant appends
+      await tx.insert(messages)
+        .values(messagesToInsert)
+        .onConflictDoUpdate({
+          target: messages.id,
+          set: {
+            content: sql`excluded.content`,
+            role: sql`excluded.role`,
+            type: sql`excluded.type`,
+            toolName: sql`excluded.tool_name`,
+            toolCallId: sql`excluded.tool_call_id`,
+            attachments: sql`excluded.attachments`
+          }
+        });
     }
     return chatId;
   });
