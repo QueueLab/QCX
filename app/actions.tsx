@@ -13,10 +13,8 @@ import { Spinner } from '@/components/ui/spinner'
 import { Section } from '@/components/section'
 import { FollowupPanel } from '@/components/followup-panel'
 import { inquire, researcher, taskManager, querySuggestor, resolutionSearch, type DrawnFeature } from '@/lib/agents'
-// Removed import of useGeospatialToolMcp as it no longer exists and was incorrectly used here.
-// The geospatialTool (if used by agents like researcher) now manages its own MCP client.
 import { writer } from '@/lib/agents/writer'
-import { saveChat, getSystemPrompt } from '@/lib/actions/chat' // Added getSystemPrompt
+import { saveChat, getSystemPrompt } from '@/lib/actions/chat'
 import { Chat, AIMessage } from '@/lib/types'
 import { UserMessage } from '@/components/user-message'
 import { BotMessage } from '@/components/message'
@@ -27,14 +25,13 @@ import { ResolutionImage } from '@/components/resolution-image'
 import { CopilotDisplay } from '@/components/copilot-display'
 import RetrieveSection from '@/components/retrieve-section'
 import { VideoSearchSection } from '@/components/video-search-section'
-import { MapQueryHandler } from '@/components/map/map-query-handler' // Add this import
+import { MapQueryHandler } from '@/components/map/map-query-handler'
 
 // Define the type for related queries
 type RelatedQueries = {
   items: { query: string }[]
 }
 
-// Removed mcp parameter from submit, as geospatialTool now handles its client.
 async function submit(formData?: FormData, skip?: boolean) {
   'use server'
 
@@ -44,16 +41,17 @@ async function submit(formData?: FormData, skip?: boolean) {
   const isCollapsed = createStreamableValue(false)
 
   const action = formData?.get('action') as string;
+  const drawnFeaturesString = formData?.get('drawnFeatures') as string;
+  let drawnFeatures: DrawnFeature[] = [];
+  try {
+    drawnFeatures = drawnFeaturesString ? JSON.parse(drawnFeaturesString) : [];
+  } catch (e) {
+    console.error('Failed to parse drawnFeatures:', e);
+  }
+
   if (action === 'resolution_search') {
     const file = formData?.get('file') as File;
     const timezone = (formData?.get('timezone') as string) || 'UTC';
-    const drawnFeaturesString = formData?.get('drawnFeatures') as string;
-    let drawnFeatures: DrawnFeature[] = [];
-    try {
-      drawnFeatures = drawnFeaturesString ? JSON.parse(drawnFeaturesString) : [];
-    } catch (e) {
-      console.error('Failed to parse drawnFeatures:', e);
-    }
 
     if (!file) {
       throw new Error('No file provided for resolution search.');
@@ -62,7 +60,6 @@ async function submit(formData?: FormData, skip?: boolean) {
     const buffer = await file.arrayBuffer();
     const dataUrl = `data:${file.type};base64,${Buffer.from(buffer).toString('base64')}`;
 
-    // Get the current messages, excluding tool-related ones.
     const messages: CoreMessage[] = [...(aiState.get().messages as any[])].filter(
       message =>
         message.role !== 'tool' &&
@@ -72,16 +69,12 @@ async function submit(formData?: FormData, skip?: boolean) {
         message.type !== 'resolution_search_result'
     );
 
-    // The user's prompt for this action is static.
     const userInput = 'Analyze this map view.';
-
-    // Construct the multimodal content for the user message.
     const content: CoreMessage['content'] = [
       { type: 'text', text: userInput },
       { type: 'image', image: dataUrl, mimeType: file.type }
     ];
 
-    // Add the new user message to the AI state.
     aiState.update({
       ...aiState.get(),
       messages: [
@@ -91,13 +84,11 @@ async function submit(formData?: FormData, skip?: boolean) {
     });
     messages.push({ role: 'user', content });
 
-    // Create a streamable value for the summary.
     const summaryStream = createStreamableValue<string>('');
     const groupeId = nanoid();
 
     async function processResolutionSearch() {
       try {
-        // Call the simplified agent, which now returns a stream.
         const streamResult = await resolutionSearch(messages, timezone, drawnFeatures);
 
         let fullSummary = '';
@@ -109,8 +100,6 @@ async function submit(formData?: FormData, skip?: boolean) {
         }
 
         const analysisResult = await streamResult.object;
-
-        // Mark the summary stream as done with the result.
         summaryStream.done(analysisResult.summary || 'Analysis complete.');
 
         if (analysisResult.geoJson) {
@@ -185,10 +174,8 @@ async function submit(formData?: FormData, skip?: boolean) {
       }
     }
 
-    // Start the background process without awaiting it.
     processResolutionSearch();
 
-    // Immediately update the UI stream with the BotMessage component.
     uiStream.update(
       <Section title="response">
         <ResolutionImage src={dataUrl} />
@@ -256,7 +243,6 @@ async function submit(formData?: FormData, skip?: boolean) {
 
     uiStream.append(answerSection);
 
-    const groupeId = nanoid();
     const relatedQueries = { items: [] };
 
     aiState.done({
@@ -340,7 +326,6 @@ async function submit(formData?: FormData, skip?: boolean) {
   }
 
   const hasImage = messageParts.some(part => part.type === 'image')
-  // Properly type the content based on whether it contains images
   const content: CoreMessage['content'] = hasImage
     ? messageParts as CoreMessage['content']
     : messageParts.map(part => part.text).join('\n')
@@ -374,7 +359,6 @@ async function submit(formData?: FormData, skip?: boolean) {
 
   const userId = 'anonymous'
   const currentSystemPrompt = (await getSystemPrompt(userId)) || ''
-
   const mapProvider = formData?.get('mapProvider') as 'mapbox' | 'google'
 
   async function processEvents() {
@@ -423,7 +407,8 @@ async function submit(formData?: FormData, skip?: boolean) {
         streamText,
         messages,
         mapProvider,
-        useSpecificAPI
+        useSpecificAPI,
+        drawnFeatures
       )
       answer = fullResponse
       toolOutputs = toolResponses
@@ -656,12 +641,10 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
             case 'input_related':
               let messageContent: string | any[]
               try {
-                // For backward compatibility with old messages that stored a JSON string
                 const json = JSON.parse(content as string)
                 messageContent =
                   type === 'input' ? json.input : json.related_query
               } catch (e) {
-                // New messages will store the content array or string directly
                 messageContent = content
               }
               return {
