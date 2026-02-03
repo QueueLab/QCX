@@ -113,7 +113,7 @@ export function Chat({ id }: ChatProps) {
   // Mobile layout
   if (isMobile) {
     return (
-      <MapDataProvider> {/* Add Provider */}
+      <>
         <HeaderSearchButton />
         <div className="mobile-layout-container">
           <div className="mobile-map-section">
@@ -167,13 +167,13 @@ export function Chat({ id }: ChatProps) {
           )}
         </div>
         </div>
-      </MapDataProvider>
+      </>
     );
   }
 
   // Desktop layout
   return (
-    <MapDataProvider> {/* Add Provider */}
+    <>
       <HeaderSearchButton />
       <div className="flex justify-start items-start">
         {/* This is the new div for scrolling */}
@@ -231,6 +231,6 @@ export function Chat({ id }: ChatProps) {
           {activeView ? <SettingsView /> : isUsageOpen ? <UsageView /> : <MapProvider />}
         </div>
       </div>
-    </MapDataProvider>
+    </>
   );
 }
