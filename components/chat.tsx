@@ -39,15 +39,17 @@ export function Chat({ id }: ChatProps) {
   const [showEmptyScreen, setShowEmptyScreen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [suggestions, setSuggestions] = useState<PartialRelated | null>(null)
-  const chatPanelRef = useRef<ChatPanelRef>(null);
+  const chatPanelRef = useRef<ChatPanelRef>(null)
+  const lastRefreshedMessageIdRef = useRef<string | null>(null)
+  const lastSyncedDataRef = useRef<string>('')
 
   const handleAttachment = () => {
-    chatPanelRef.current?.handleAttachmentClick();
-  };
+    chatPanelRef.current?.handleAttachmentClick()
+  }
 
   const handleMobileSubmit = () => {
-    chatPanelRef.current?.submitForm();
-  };
+    chatPanelRef.current?.submitForm()
+  }
   
   useEffect(() => {
     setShowEmptyScreen(messages.length === 0)
@@ -76,18 +78,16 @@ export function Chat({ id }: ChatProps) {
   }, [id, path, messages])
 
   useEffect(() => {
-    const lastMessage = aiState.messages[aiState.messages.length - 1];
-    if (lastMessage?.type === 'response' && lastMessage.id !== lastRefreshedMessageIdRef.current) {
+    const lastResponse = [...aiState.messages].reverse().find(m => m.type === 'response')
+    if (lastResponse && lastResponse.id !== lastRefreshedMessageIdRef.current) {
       // Refresh the page to chat history updates
-      lastRefreshedMessageIdRef.current = lastMessage.id;
+      lastRefreshedMessageIdRef.current = lastResponse.id
       router.refresh()
     }
-  }, [aiState, router])
+  }, [aiState.messages, router])
 
   // Get mapData to access drawnFeatures
-  const { mapData } = useMapData();
-  const lastSyncedDataRef = useRef<string>('');
-  const lastRefreshedMessageIdRef = useRef<string | null>(null);
+  const { mapData } = useMapData()
 
   useEffect(() => {
     if (isSubmitting) {
@@ -103,19 +103,19 @@ export function Chat({ id }: ChatProps) {
         drawnFeatures: mapData.drawnFeatures || [],
         cameraState: mapData.cameraState,
         uploadedGeoJson: (mapData.uploadedGeoJson || []).map(item => ({ id: item.id, visible: item.visible }))
-      });
+      })
 
       if (currentData !== lastSyncedDataRef.current) {
-        console.log('Chat.tsx: map data changed, calling updateDrawingContext');
-        lastSyncedDataRef.current = currentData;
+        console.log('Chat.tsx: map data changed, calling updateDrawingContext')
+        lastSyncedDataRef.current = currentData
         updateDrawingContext(id, {
           drawnFeatures: mapData.drawnFeatures || [],
           cameraState: mapData.cameraState,
           uploadedGeoJson: mapData.uploadedGeoJson || []
-        });
+        })
       }
     }
-  }, [id, mapData.drawnFeatures, mapData.cameraState, mapData.uploadedGeoJson]);
+  }, [id, mapData.drawnFeatures, mapData.cameraState, mapData.uploadedGeoJson])
 
   // Mobile layout
   if (isMobile) {
@@ -175,7 +175,7 @@ export function Chat({ id }: ChatProps) {
         </div>
         </div>
       </>
-    );
+    )
   }
 
   // Desktop layout
@@ -239,5 +239,5 @@ export function Chat({ id }: ChatProps) {
         </div>
       </div>
     </>
-  );
+  )
 }
