@@ -17,8 +17,8 @@ import { useProfileToggle, ProfileToggleEnum } from "@/components/profile-toggle
 import { useUsageToggle } from "@/components/usage-toggle-context";
 import SettingsView from "@/components/settings/settings-view";
 import { UsageView } from "@/components/usage-view";
-import { MapDataProvider, useMapData } from './map/map-data-context'; // Add this and useMapData
-import { updateDrawingContext } from '@/lib/actions/chat'; // Import the server action
+import { MapDataProvider, useMapData } from './map/map-data-context';
+import { updateDrawingContext } from '@/lib/actions/chat';
 import dynamic from 'next/dynamic'
 import { HeaderSearchButton } from './header-search-button'
 
@@ -40,6 +40,7 @@ export function Chat({ id }: ChatProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [suggestions, setSuggestions] = useState<PartialRelated | null>(null)
   const chatPanelRef = useRef<ChatPanelRef>(null);
+  const lastRefreshedMessageIdRef = useRef<string | null>(null);
 
   const handleAttachment = () => {
     chatPanelRef.current?.handleAttachmentClick();
@@ -58,14 +59,8 @@ export function Chat({ id }: ChatProps) {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768)
     }
-    
-    // Initial check
     checkMobile()
-    
-    // Add event listener for window resize
     window.addEventListener('resize', checkMobile)
-    
-    // Cleanup
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
@@ -76,9 +71,15 @@ export function Chat({ id }: ChatProps) {
   }, [id, path, messages])
 
   useEffect(() => {
-    if (aiState.messages[aiState.messages.length - 1]?.type === 'response') {
-      // Refresh the page to chat history updates
-      router.refresh()
+    // Search for a 'response' type message in aiState.messages
+    // Use the memory-prescribed pattern to avoid infinite loops and catch all responses
+    const responseMessage = aiState.messages.find(
+      (m: any) => m.type === 'response'
+    );
+
+    if (responseMessage && responseMessage.id !== lastRefreshedMessageIdRef.current) {
+      lastRefreshedMessageIdRef.current = responseMessage.id;
+      router.refresh();
     }
   }, [aiState, router])
 
@@ -95,13 +96,20 @@ export function Chat({ id }: ChatProps) {
   // useEffect to call the server action when drawnFeatures changes
   useEffect(() => {
     if (id && mapData.drawnFeatures && mapData.cameraState) {
-      console.log('Chat.tsx: drawnFeatures changed, calling updateDrawingContext', mapData.drawnFeatures);
       updateDrawingContext(id, {
         drawnFeatures: mapData.drawnFeatures,
         cameraState: mapData.cameraState,
       });
     }
   }, [id, mapData.drawnFeatures, mapData.cameraState]);
+
+  const submitMessage = (message: string) => {
+    setInput(message);
+    // Use a small timeout to ensure state has propagated before triggering submission
+    setTimeout(() => {
+      setIsSubmitting(true);
+    }, 50);
+  };
 
   const renderSuggestions = () => {
     if (!suggestions) return null;
@@ -110,12 +118,8 @@ export function Chat({ id }: ChatProps) {
         <SuggestionsDropdown
           suggestions={suggestions}
           onSelect={query => {
-            setInput(query)
-            setSuggestions(null)
-            // Use a small timeout to ensure state update before submission
-            setTimeout(() => {
-              setIsSubmitting(true)
-            }, 0)
+            submitMessage(query);
+            setSuggestions(null);
           }}
           onClose={() => setSuggestions(null)}
           className="relative bottom-auto mb-0 w-full shadow-none border-none bg-transparent"
@@ -127,7 +131,7 @@ export function Chat({ id }: ChatProps) {
   // Mobile layout
   if (isMobile) {
     return (
-      <MapDataProvider> {/* Add Provider */}
+      <MapDataProvider>
         <HeaderSearchButton />
         <div className="mobile-layout-container">
           <div className="mobile-map-section">
@@ -152,14 +156,7 @@ export function Chat({ id }: ChatProps) {
             <div className="relative w-full h-full">
               <div className={cn("transition-all duration-300", suggestions ? "blur-md pointer-events-none" : "")}>
                 {showEmptyScreen ? (
-                  <EmptyScreen
-                    submitMessage={message => {
-                      setInput(message)
-                      setTimeout(() => {
-                        setIsSubmitting(true)
-                      }, 0)
-                    }}
-                  />
+                  <EmptyScreen submitMessage={submitMessage} />
                 ) : (
                   <ChatMessages messages={messages} />
                 )}
@@ -175,10 +172,9 @@ export function Chat({ id }: ChatProps) {
 
   // Desktop layout
   return (
-    <MapDataProvider> {/* Add Provider */}
+    <MapDataProvider>
       <HeaderSearchButton />
       <div className="flex justify-start items-start">
-        {/* This is the new div for scrolling */}
         <div className="w-1/2 flex flex-col space-y-3 md:space-y-4 px-8 sm:px-12 pt-16 md:pt-20 pb-4 h-[calc(100vh-0.5in)] overflow-y-auto">
         {isCalendarOpen ? (
           <CalendarNotepad chatId={id} />
@@ -193,14 +189,7 @@ export function Chat({ id }: ChatProps) {
             <div className="relative min-h-[100px]">
               <div className={cn("transition-all duration-300", suggestions ? "blur-md pointer-events-none" : "")}>
                 {showEmptyScreen ? (
-                  <EmptyScreen
-                    submitMessage={message => {
-                      setInput(message)
-                      setTimeout(() => {
-                        setIsSubmitting(true)
-                      }, 0)
-                    }}
-                  />
+                  <EmptyScreen submitMessage={submitMessage} />
                 ) : (
                   <ChatMessages messages={messages} />
                 )}
@@ -212,7 +201,7 @@ export function Chat({ id }: ChatProps) {
       </div>
         <div
           className="w-1/2 p-4 fixed h-[calc(100vh-0.5in)] top-0 right-0 mt-[0.5in]"
-          style={{ zIndex: 10 }} // Added z-index
+          style={{ zIndex: 10 }}
         >
           {activeView ? <SettingsView /> : isUsageOpen ? <UsageView /> : <MapProvider />}
         </div>
