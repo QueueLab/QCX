@@ -32,14 +32,14 @@ async function getConnectedMcpClient(): Promise<any | null> {
 
   try {
     // Dynamic imports to avoid Webpack issues with MCP SDK in production
-    const { Client } = await import('@modelcontextprotocol/sdk/client/index');
-    const { StreamableHTTPClientTransport } = await import('@modelcontextprotocol/sdk/client/streamableHttp');
+    const { Client } = await import('@modelcontextprotocol/sdk/client/index.js');
+    const { StreamableHTTPClientTransport } = await import('@modelcontextprotocol/sdk/client/streamableHttp.js');
 
     const authConfigId = process.env.COMPOSIO_MAPBOX_AUTH_CONFIG_ID || 'mapbox';
     const baseUrl = 'https://backend.composio.dev/mcp/client/streamable';
     const url = `${baseUrl}?userId=${composioUserId}&authConfigId=${authConfigId}&mapboxApiKey=${mapboxAccessToken}&composioApiKey=${composioApiKey}`;
 
-    const transport = new StreamableHTTPClientTransport(url);
+    const transport = new StreamableHTTPClientTransport(new URL(url));
     const client = new Client(
       { name: 'mapbox-mcp-client', version: '1.0.0' },
       { capabilities: {} }
@@ -188,7 +188,7 @@ export const geospatialTool = ({ uiStream, mapProvider }: { uiStream: any, mapPr
 
       if (textBlocks.length === 0) throw new Error('No content returned from mapping service');
 
-      let contentStr = textBlocks.find(t => t.startsWith('```json')) || textBlocks[0];
+      let contentStr = textBlocks.find((t: string) => t.startsWith('```json')) || textBlocks[0];
       const jsonRegex = /```(?:json)?\n?([\s\S]*?)\n?```/;
       const match = contentStr.match(jsonRegex);
       if (match) contentStr = match[1].trim();
