@@ -3,7 +3,7 @@
 import { createStreamableUI, createStreamableValue } from 'ai/rsc'
 import { CoreMessage, LanguageModel, streamObject } from 'ai'
 import { PartialRelated, relatedSchema } from '@/lib/schema/related'
-import { getModel } from '../utils'
+import { getModel } from '../utils/ai-model'
 import { MapData } from '@/components/map/map-data-context'
 
 export async function getSuggestions(

@@ -1,6 +1,6 @@
 import { CoreMessage, generateObject, LanguageModel } from 'ai'
 import { nextActionSchema } from '../schema/next-action'
-import { getModel } from '../utils'
+import { getModel } from '../utils/ai-model'
 
 // Decide whether inquiry is required for the user input
 export async function taskManager(messages: CoreMessage[]) {

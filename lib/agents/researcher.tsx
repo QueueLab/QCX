@@ -10,7 +10,7 @@ import {
 import { Section } from '@/components/section'
 import { BotMessage } from '@/components/message'
 import { getTools } from './tools'
-import { getModel } from '../utils'
+import { getModel } from '../utils/ai-model'
 import { MapProvider } from '@/lib/store/settings'
 import { DrawnFeature } from './resolution-search'
 

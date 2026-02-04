@@ -1,5 +1,5 @@
 import { CoreMessage, streamObject } from 'ai'
-import { getModel } from '@/lib/utils'
+import { getModel } from '@/lib/utils/ai-model'
 import { z } from 'zod'
 
 // This agent is now a pure data-processing module, with no UI dependencies.

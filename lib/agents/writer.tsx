@@ -2,7 +2,7 @@ import { createStreamableUI, createStreamableValue } from 'ai/rsc'
 import { CoreMessage, LanguageModel, streamText as nonexperimental_streamText } from 'ai'
 import { Section } from '@/components/section'
 import { BotMessage } from '@/components/message'
-import { getModel } from '../utils'
+import { getModel } from '../utils/ai-model'
 
 export async function writer(
   dynamicSystemPrompt: string, // New parameter
