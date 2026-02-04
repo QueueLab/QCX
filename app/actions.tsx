@@ -84,7 +84,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     });
     messages.push({ role: 'user', content });
 
-    const summaryStream = createStreamableValue<string>('');
+    const summaryStream = createStreamableValue<string>('Analyzing map view...');
     const groupeId = nanoid();
 
     async function processResolutionSearch() {
@@ -117,12 +117,24 @@ async function submit(formData?: FormData, skip?: boolean) {
           if (Array.isArray(m.content)) {
             return {
               ...m,
-              content: m.content.filter(part => part.type !== 'image')
+              content: m.content.filter((part: any) => part.type !== 'image')
             } as CoreMessage
           }
           return m
         })
 
+        const currentMessages = aiState.get().messages;
+        const sanitizedHistory = currentMessages.map(m => {
+          if (m.role === "user" && Array.isArray(m.content)) {
+            return {
+              ...m,
+              content: m.content.map((part: any) =>
+                part.type === "image" ? { ...part, image: "IMAGE_PROCESSED" } : part
+              )
+            }
+          }
+          return m
+        });
         const relatedQueries = await querySuggestor(uiStream, sanitizedMessages);
         uiStream.append(
           <Section title="Follow-up">
@@ -198,7 +210,17 @@ async function submit(formData?: FormData, skip?: boolean) {
       message.type !== 'related' &&
       message.type !== 'end' &&
       message.type !== 'resolution_search_result'
-  )
+  ).map(m => {
+    if (Array.isArray(m.content)) {
+      return {
+        ...m,
+        content: m.content.filter((part: any) =>
+          part.type !== "image" || (typeof part.image === "string" && part.image.startsWith("data:"))
+        )
+      } as any
+    }
+    return m
+  })
 
   const groupeId = nanoid()
   const useSpecificAPI = process.env.USE_SPECIFIC_API_FOR_WRITER === 'true'
@@ -241,7 +263,7 @@ async function submit(formData?: FormData, skip?: boolean) {
       </Section>
     );
 
-    uiStream.append(answerSection);
+    uiStream.update(answerSection);
 
     const relatedQueries = { items: [] };
 

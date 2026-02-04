@@ -113,9 +113,7 @@ export function Chat({ id }: ChatProps) {
             setInput(query)
             setSuggestions(null)
             // Use a small timeout to ensure state update before submission
-            setTimeout(() => {
-              setIsSubmitting(true)
-            }, 0)
+            setIsSubmitting(true)
           }}
           onClose={() => setSuggestions(null)}
           className="relative bottom-auto mb-0 w-full shadow-none border-none bg-transparent"
@@ -155,9 +153,7 @@ export function Chat({ id }: ChatProps) {
                   <EmptyScreen
                     submitMessage={message => {
                       setInput(message)
-                      setTimeout(() => {
-                        setIsSubmitting(true)
-                      }, 0)
+                      setIsSubmitting(true)
                     }}
                   />
                 ) : (
@@ -196,9 +192,7 @@ export function Chat({ id }: ChatProps) {
                   <EmptyScreen
                     submitMessage={message => {
                       setInput(message)
-                      setTimeout(() => {
-                        setIsSubmitting(true)
-                      }, 0)
+                      setIsSubmitting(true)
                     }}
                   />
                 ) : (
