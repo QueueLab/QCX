@@ -1,31 +1,36 @@
 import sys
+import re
 
-with open('app/actions.tsx', 'r') as f:
-    lines = f.readlines()
+content = open('app/actions.tsx').read()
 
-start_idx = -1
-end_idx = -1
-
-for i, line in enumerate(lines):
-    if "if (action === 'resolution_search') {" in line:
-        start_idx = i
-        # Find the matching closing brace
-        brace_count = 0
-        for j in range(i, len(lines)):
-            brace_count += lines[j].count('{')
-            brace_count -= lines[j].count('}')
+# 1. Update Resolution Search Input Processing
+res_search_start = re.search(r"if \(action === 'resolution_search'\) \{", content)
+if res_search_start:
+    start_idx = res_search_start.start()
+    # Find matching end brace
+    brace_count = 0
+    end_idx = -1
+    for i in range(start_idx, len(content)):
+        if content[i] == '{': brace_count += 1
+        elif content[i] == '}':
+            brace_count -= 1
             if brace_count == 0:
-                end_idx = j
+                end_idx = i + 1
                 break
-        break
 
-if start_idx != -1 and end_idx != -1:
-    print(f"Replacing lines {start_idx+1} to {end_idx+1}")
-    new_block = """  if (action === 'resolution_search') {
+    if end_idx != -1:
+        new_res_search = """  if (action === 'resolution_search') {
     const mapboxFile = formData?.get('mapboxFile') as File;
     const googleFile = formData?.get('googleFile') as File;
     const legacyFile = formData?.get('file') as File;
     const timezone = (formData?.get('timezone') as string) || 'UTC';
+    const drawnFeaturesString = formData?.get('drawnFeatures') as string;
+    let drawnFeatures: DrawnFeature[] = [];
+    try {
+      drawnFeatures = drawnFeaturesString ? JSON.parse(drawnFeaturesString) : [];
+    } catch (e) {
+      console.error('Failed to parse drawnFeatures:', e);
+    }
 
     let mapboxDataUrl = '';
     let googleDataUrl = '';
@@ -79,7 +84,7 @@ if start_idx != -1 and end_idx != -1:
     });
     messages.push({ role: 'user', content });
 
-    const summaryStream = createStreamableValue<string>('');
+    const summaryStream = createStreamableValue<string>('Analyzing map view...');
     const groupeId = nanoid();
 
     async function processResolutionSearch() {
@@ -112,11 +117,24 @@ if start_idx != -1 and end_idx != -1:
           if (Array.isArray(m.content)) {
             return {
               ...m,
-              content: m.content.filter(part => part.type !== 'image')
+              content: m.content.filter((part: any) => part.type !== 'image')
             } as CoreMessage
           }
           return m
         })
+
+        const currentMessages = aiState.get().messages;
+        const sanitizedHistory = currentMessages.map(m => {
+          if (m.role === "user" && Array.isArray(m.content)) {
+            return {
+              ...m,
+              content: m.content.map((part: any) =>
+                part.type === "image" ? { ...part, image: "IMAGE_PROCESSED" } : part
+              )
+            }
+          }
+          return m
+        });
 
         const relatedQueries = await querySuggestor(uiStream, sanitizedMessages);
         uiStream.append(
@@ -130,7 +148,7 @@ if start_idx != -1 and end_idx != -1:
         aiState.done({
           ...aiState.get(),
           messages: [
-            ...aiState.get().messages,
+            ...sanitizedHistory,
             {
               id: groupeId,
               role: 'assistant',
@@ -183,24 +201,25 @@ if start_idx != -1 and end_idx != -1:
       component: uiStream.value,
       isCollapsed: isCollapsed.value
     };
-  }
-"""
-    lines[start_idx:end_idx+1] = [new_block]
+  }"""
+        content = content[:start_idx] + new_res_search + content[end_idx:]
 
-# Replace getUIStateFromAIState block
-for i, line in enumerate(lines):
-    if "case 'resolution_search_result': {" in line:
-        start_idx = i
-        brace_count = 0
-        for j in range(i, len(lines)):
-            brace_count += lines[j].count('{')
-            brace_count -= lines[j].count('}')
+# 2. Update resolution_search_result rendering in getUIStateFromAIState
+ui_search = re.search(r"case 'resolution_search_result': \{", content)
+if ui_search:
+    start_idx = ui_search.start()
+    brace_count = 0
+    end_idx = -1
+    for i in range(start_idx, len(content)):
+        if content[i] == '{': brace_count += 1
+        elif content[i] == '}':
+            brace_count -= 1
             if brace_count == 0:
-                end_idx = j
+                end_idx = i + 1
                 break
 
-        print(f"Replacing UI block at line {start_idx+1} to {end_idx+1}")
-        new_ui = """            case 'resolution_search_result': {
+    if end_idx != -1:
+        new_ui_search = """            case 'resolution_search_result': {
               const analysisResult = JSON.parse(content as string);
               const geoJson = analysisResult.geoJson as FeatureCollection;
               const imageData = analysisResult.image as string;
@@ -231,10 +250,8 @@ for i, line in enumerate(lines):
                   </>
                 )
               }
-            }
-"""
-        lines[start_idx:end_idx+1] = [new_ui]
-        break
+            }"""
+        content = content[:start_idx] + new_ui_search + content[end_idx:]
 
 with open('app/actions.tsx', 'w') as f:
-    f.writelines(lines)
+    f.write(content)

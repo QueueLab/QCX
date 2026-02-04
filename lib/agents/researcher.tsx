@@ -23,7 +23,7 @@ As a comprehensive AI assistant, your primary directive is **Exploration Efficie
 Current date and time: ${date}.
 
 ${drawnFeatures && drawnFeatures.length > 0 ? `The user has drawn the following features on the map for your reference:
-${drawnFeatures.map(f => `- ${f.type} with measurement ${f.measurement}`).join('\n')}
+${drawnFeatures.map(f => `- ${f.type} (${f.measurement}): ${JSON.stringify(f.geometry)}`).join('\n')}
 Use these user-drawn areas/lines as primary areas of interest for your analysis if applicable to the query.` : ''}
 
 **Exploration Efficiency Directives:**
@@ -100,13 +100,13 @@ export async function researcher(
   const currentDate = new Date().toLocaleString()
 
   const drawnFeaturesContext = (drawnFeatures && drawnFeatures.length > 0)
-    ? `\n\nThe user has drawn the following features on the map for your reference:\n${drawnFeatures.map(f => `- ${f.type} with measurement ${f.measurement}`).join('\n')}\nUse these user-drawn areas/lines as primary areas of interest for your analysis if applicable to the query.`
+    ? `\n\nThe user has drawn the following features on the map for your reference:\n${drawnFeatures.map(f => `- ${f.type} (${f.measurement}): ${JSON.stringify(f.geometry)}`).join('\n')}\nUse these user-drawn areas/lines as primary areas of interest for your analysis if applicable to the query.`
     : '';
 
   const systemPromptToUse =
-    dynamicSystemPrompt?.trim()
+    (dynamicSystemPrompt?.trim()
       ? dynamicSystemPrompt + drawnFeaturesContext
-      : getDefaultSystemPrompt(currentDate, drawnFeatures)
+      : getDefaultSystemPrompt(currentDate, drawnFeatures))
 
   // Check if any message contains an image
   const hasImage = messages.some(message =>
