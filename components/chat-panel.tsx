@@ -13,7 +13,7 @@ import { useSettingsStore } from '@/lib/store/settings'
 import { PartialRelated } from '@/lib/schema/related'
 import { getSuggestions } from '@/lib/actions/suggest'
 import { useMapData } from './map/map-data-context'
-import SuggestionsDropdown from './suggestions-dropdown'
+import { toast } from 'sonner'
 
 interface ChatPanelProps {
   messages: UIState
@@ -56,7 +56,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
   // Detect mobile layout
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 1024)
+      setIsMobile(window.innerWidth < 768)
     }
     checkMobile()
     window.addEventListener('resize', checkMobile)
@@ -67,7 +67,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     const file = e.target.files?.[0]
     if (file) {
       if (file.size > 10 * 1024 * 1024) {
-        alert('File size must be less than 10MB')
+        toast.error('File size must be less than 10MB')
         return
       }
       setSelectedFile(file)
@@ -161,31 +161,6 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     inputRef.current?.focus()
   }, [])
 
-  // New chat button (appears when there are messages)
-  if (messages.length > 0 && !isMobile) {
-    return (
-      <div
-        className={cn(
-          'fixed bottom-2 left-2 flex justify-start items-center pointer-events-none',
-          isMobile ? 'w-full px-2' : 'md:bottom-8'
-        )}
-      >
-        <Button
-          type="button"
-          variant={'secondary'}
-          className="rounded-full bg-secondary/80 group transition-all hover:scale-105 pointer-events-auto"
-          onClick={() => handleClear()}
-          data-testid="new-chat-button"
-        >
-          <span className="text-sm mr-2 group-hover:block hidden animate-in fade-in duration-300">
-            New
-          </span>
-          <Plus size={18} className="group-hover:rotate-90 transition-all" />
-        </Button>
-      </div>
-    )
-  }
-
   return (
     <div
       className={cn(
@@ -195,6 +170,28 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
           : 'sticky bottom-0 bg-background z-10 w-full border-t border-border px-2 py-3 md:px-4'
       )}
     >
+      {/* New chat button (appears when there are messages on desktop) */}
+      {messages.length > 0 && !isMobile && (
+        <div
+          className={cn(
+            'fixed bottom-2 left-2 flex justify-start items-center pointer-events-none md:bottom-8'
+          )}
+        >
+          <Button
+            type="button"
+            variant={'secondary'}
+            className="rounded-full bg-secondary/80 group transition-all hover:scale-105 pointer-events-auto"
+            onClick={() => handleClear()}
+            data-testid="new-chat-button"
+          >
+            <span className="text-sm mr-2 group-hover:block hidden animate-in fade-in duration-300">
+              New
+            </span>
+            <Plus size={18} className="group-hover:rotate-90 transition-all" />
+          </Button>
+        </div>
+      )}
+
       <form
         ref={formRef}
         onSubmit={handleSubmit}
@@ -242,10 +239,10 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
             value={input}
             data-testid="chat-input"
             className={cn(
-              'resize-none w-full min-h-12 rounded-fill border border-input pl-14 pr-12 pt-3 pb-1 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+              'resize-none w-full min-h-12 rounded-fill border border-input pr-12 pt-3 pb-1 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
               isMobile
-                ? 'mobile-chat-input input bg-background'
-                : 'bg-muted'
+                ? 'mobile-chat-input input bg-background px-4'
+                : 'bg-muted pl-14'
             )}
             onChange={e => {
               setInput(e.target.value)
@@ -294,7 +291,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
       {selectedFile && (
         <div className="w-full px-4 pb-2 mb-2">
           <div className="flex items-center justify-between p-2 bg-muted rounded-lg">
-            <span className="text-sm text-muted-foreground truncate max-w-xs">
+            <span className="text-sm text-muted-foreground truncate max-w-xs break-all">
               {selectedFile.name}
             </span>
             <Button variant="ghost" size="icon" onClick={clearAttachment} data-testid="clear-attachment-button">

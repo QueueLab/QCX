@@ -9,7 +9,7 @@ import { useActions, useUIState } from 'ai/rsc'
 import { AI } from '@/app/actions'
 import { nanoid } from 'nanoid'
 import { UserMessage } from './user-message'
-import { toast } from 'react-toastify'
+import { toast } from 'sonner'
 import { useSettingsStore } from '@/lib/store/settings'
 import { useMapData } from './map/map-data-context'
 
@@ -48,14 +48,6 @@ export function HeaderSearchButton() {
     setIsAnalyzing(true)
 
     try {
-      setMessages(currentMessages => [
-        ...currentMessages,
-        {
-          id: nanoid(),
-          component: <UserMessage content={[{ type: 'text', text: 'Analyze this map view.' }]} />
-        }
-      ])
-
       let blob: Blob | null = null;
 
       if (mapProvider === 'mapbox') {
@@ -85,6 +77,23 @@ export function HeaderSearchButton() {
       if (!blob) {
         throw new Error('Failed to capture map image.')
       }
+
+      const imageUrl = URL.createObjectURL(blob);
+
+      setMessages(currentMessages => [
+        ...currentMessages,
+        {
+          id: nanoid(),
+          component: (
+            <UserMessage
+              content={[
+                { type: 'text', text: 'Analyze this map view.' },
+                { type: 'image', image: imageUrl }
+              ]}
+            />
+          )
+        }
+      ])
 
       const formData = new FormData()
       formData.append('file', blob, 'map_capture.png')

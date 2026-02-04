@@ -84,7 +84,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     });
     messages.push({ role: 'user', content });
 
-    const summaryStream = createStreamableValue<string>('');
+    const summaryStream = createStreamableValue<string>('Analyzing map view...');
     const groupeId = nanoid();
 
     async function processResolutionSearch() {
