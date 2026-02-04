@@ -99,9 +99,13 @@ export async function researcher(
 
   const currentDate = new Date().toLocaleString()
 
+  const drawnFeaturesContext = (drawnFeatures && drawnFeatures.length > 0)
+    ? `\n\nThe user has drawn the following features on the map for your reference:\n${drawnFeatures.map(f => `- ${f.type} with measurement ${f.measurement}`).join('\n')}\nUse these user-drawn areas/lines as primary areas of interest for your analysis if applicable to the query.`
+    : '';
+
   const systemPromptToUse =
     dynamicSystemPrompt?.trim()
-      ? dynamicSystemPrompt
+      ? dynamicSystemPrompt + drawnFeaturesContext
       : getDefaultSystemPrompt(currentDate, drawnFeatures)
 
   // Check if any message contains an image
