@@ -4,11 +4,9 @@ import { User, Settings, Paintbrush, Shield, CircleUserRound } from "lucide-reac
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { ProfileToggleEnum, useProfileToggle } from "./profile-toggle-context"
-import { useUsageToggle } from "./usage-toggle-context"
 
 export function ProfileToggle() {
-  const { toggleProfileSection, activeView } = useProfileToggle()
-  const { isUsageOpen, closeUsage } = useUsageToggle()
+  const { toggleProfileSection } = useProfileToggle()
   const [alignValue, setAlignValue] = useState<'start' | 'end'>("end")
   const [isMobile, setIsMobile] = useState(false)
   
@@ -34,11 +32,7 @@ export function ProfileToggle() {
     return () => window.removeEventListener("resize", debouncedResize)
   }, [])
   
-  const handleSectionToggle = (section: ProfileToggleEnum) => {
-    // If we're about to open a profile section and usage is open, close usage first
-    if (activeView !== section && isUsageOpen) {
-      closeUsage()
-    }
+  const handleSectionChange = (section: ProfileToggleEnum) => {
     toggleProfileSection(section)
   }
 
@@ -60,19 +54,19 @@ export function ProfileToggle() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align={alignValue} forceMount>
-        <DropdownMenuItem onClick={() => handleSectionToggle(ProfileToggleEnum.Account)} data-testid="profile-account">
+        <DropdownMenuItem onClick={() => handleSectionChange(ProfileToggleEnum.Account)} data-testid="profile-account">
           <User className="mr-2 h-4 w-4" />
           <span>Account</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleSectionToggle(ProfileToggleEnum.Settings)} data-testid="profile-settings">
+        <DropdownMenuItem onClick={() => handleSectionChange(ProfileToggleEnum.Settings)} data-testid="profile-settings">
           <Settings className="mr-2 h-4 w-4" />
           <span>Settings</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleSectionToggle(ProfileToggleEnum.Appearance)} data-testid="profile-appearance">
+        <DropdownMenuItem onClick={() => handleSectionChange(ProfileToggleEnum.Appearance)} data-testid="profile-appearance">
           <Paintbrush className="mr-2 h-4 w-4" />
           <span>Appearance</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleSectionToggle(ProfileToggleEnum.Security)} data-testid="profile-security">
+        <DropdownMenuItem onClick={() => handleSectionChange(ProfileToggleEnum.Security)} data-testid="profile-security">
           <Shield className="mr-2 h-4 w-4" />
           <span>Security</span>
         </DropdownMenuItem>

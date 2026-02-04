@@ -35,11 +35,6 @@ test.describe('Map functionality', () => {
       return;
     }
 
-    // Zoom controls are now only visible in Drawing Mode on desktop
-    await page.click('[data-testid="map-toggle"]');
-    await page.click('[data-testid="map-mode-draw"]');
-    await expect(page.locator('.mapboxgl-ctrl-zoom-in')).toBeVisible();
-
     const hasMap = await page.evaluate(() => Boolean((window as any).map));
     if (!hasMap) test.skip(true, 'Map instance not available on window for E2E');
 

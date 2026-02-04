@@ -1,26 +1,50 @@
-'use client'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger
+} from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { ChevronLeft, Menu } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useHistoryToggle } from './history-toggle-context'
+import { History as HistoryIcon } from 'lucide-react'
+import { ChatHistoryClient } from './sidebar/chat-history-client' // Updated import
+import { Suspense } from 'react'
+import { HistorySkeleton } from './history-skelton'
 
 type HistoryProps = {
   location: 'sidebar' | 'header'
 }
 
 export function History({ location }: HistoryProps) {
-  const { toggleHistory } = useHistoryToggle()
   return (
-    <Button
-      variant="ghost"
-      size="icon"
-      className={cn({
-        'rounded-full text-foreground/30': location === 'sidebar'
-      })}
-      data-testid="history-button"
-      onClick={toggleHistory}
-    >
-      {location === 'header' ? <Menu /> : <ChevronLeft size={16} />}
-    </Button>
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn({
+            'rounded-full text-foreground/30': location === 'sidebar'
+          })}
+          data-testid="history-button"
+        >
+          {location === 'header' ? <Menu /> : <ChevronLeft size={16} />}
+        </Button>
+      </SheetTrigger>
+      <SheetContent className="w-64 rounded-tl-xl rounded-bl-xl" data-testid="history-panel">
+        <SheetHeader>
+          <SheetTitle className="flex items-center gap-1 text-sm font-normal mb-2">
+            <HistoryIcon size={14} />
+            History
+          </SheetTitle>
+        </SheetHeader>
+        <div className="my-2 h-full pb-12 md:pb-10">
+          <Suspense fallback={<HistorySkeleton />}>
+            <ChatHistoryClient />
+          </Suspense>
+        </div>
+      </SheetContent>
+    </Sheet>
   )
 }

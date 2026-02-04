@@ -1,18 +1,19 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Button } from './ui/button'
 import { ArrowRight } from 'lucide-react'
 import {
   useActions,
   useStreamableValue,
   useUIState,
+  readStreamableValue,
   StreamableValue
 } from 'ai/rsc'
 import { AI } from '@/app/actions'
+// Removed import of useGeospatialToolMcp as it's no longer used/available
 import { UserMessage } from './user-message'
 import { PartialRelated } from '@/lib/schema/related'
-import { nanoid } from 'nanoid'
 
 export interface SearchRelatedProps {
   relatedQueries: StreamableValue<PartialRelated, any>
@@ -22,18 +23,30 @@ export const SearchRelated: React.FC<SearchRelatedProps> = ({
   relatedQueries
 }) => {
   const { submit } = useActions()
+  // Removed mcp instance as it's no longer passed to submit
   const [, setMessages] = useUIState<typeof AI>()
-  const [data] = useStreamableValue<PartialRelated>(relatedQueries)
+  const [data, error, pending] =
+    useStreamableValue<PartialRelated>(relatedQueries)
 
-  const handleRelatedClick = async (query: string) => {
-    const formData = new FormData()
-    formData.append('related_query', query)
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const formData = new FormData(event.currentTarget as HTMLFormElement)
+
+    // // Get the submitter of the form
+    const submitter = (event.nativeEvent as SubmitEvent)
+      .submitter as HTMLInputElement
+    let query = ''
+    if (submitter) {
+      formData.append(submitter.name, submitter.value)
+      query = submitter.value
+    }
 
     const userMessage = {
-      id: nanoid(),
+      id: Date.now(),
       component: <UserMessage content={query} />
     }
 
+    // Removed mcp argument from submit call
     const responseMessage = await submit(formData)
     setMessages(currentMessages => [
       ...currentMessages,
@@ -43,7 +56,7 @@ export const SearchRelated: React.FC<SearchRelatedProps> = ({
   }
 
   return (
-    <div className="flex flex-wrap">
+    <form onSubmit={handleSubmit} className="flex flex-wrap">
       {data?.items
         ?.filter(item => item?.query !== '')
         .map((item, index) => (
@@ -52,13 +65,15 @@ export const SearchRelated: React.FC<SearchRelatedProps> = ({
             <Button
               variant="link"
               className="flex-1 justify-start px-0 py-1 h-fit font-semibold text-accent-foreground/50 whitespace-normal text-left"
-              onClick={() => handleRelatedClick(item?.query || '')}
+              type="submit"
+              name={'related_query'}
+              value={item?.query}
             >
               {item?.query}
             </Button>
           </div>
         ))}
-    </div>
+    </form>
   )
 }
 
