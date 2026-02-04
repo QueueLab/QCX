@@ -12,7 +12,7 @@ import { BotMessage } from '@/components/message'
 import { getTools } from './tools'
 import { getModel } from '../utils/ai-model'
 import { MapProvider } from '@/lib/store/settings'
-import { DrawnFeature } from './resolution-search'
+import { type DrawnFeature } from '@/lib/types/geospatial'
 
 // This magic tag lets us write raw multi-line strings with backticks, arrows, etc.
 const raw = String.raw

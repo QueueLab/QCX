@@ -9,7 +9,7 @@ const nextConfig = {
       bodySizeLimit: '200mb',
     },
   },
-  transpilePackages: ['mapbox_mcp'], // Removed 'QCX' as it's the app itself
+  // Removed transpilePackages as it can cause module loading issues for local folders
 };  
 
 export default nextConfig

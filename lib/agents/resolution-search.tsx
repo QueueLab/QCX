@@ -1,8 +1,7 @@
 import { CoreMessage, streamObject } from 'ai'
 import { getModel } from '@/lib/utils/ai-model'
 import { z } from 'zod'
-
-// This agent is now a pure data-processing module, with no UI dependencies.
+import { type DrawnFeature } from '@/lib/types/geospatial'
 
 // Define the schema for the structured response from the AI.
 const resolutionSearchSchema = z.object({
@@ -22,13 +21,6 @@ const resolutionSearchSchema = z.object({
     })),
   }).describe('A GeoJSON object containing points of interest and classified land features to be overlaid on the map.'),
 })
-
-export interface DrawnFeature {
-  id: string;
-  type: 'Polygon' | 'LineString';
-  measurement: string;
-  geometry: any;
-}
 
 export async function resolutionSearch(messages: CoreMessage[], timezone: string = 'UTC', drawnFeatures?: DrawnFeature[]) {
   const localTime = new Date().toLocaleString('en-US', {
@@ -63,15 +55,16 @@ Analyze the user's prompt and the image to provide a holistic understanding of t
 
   const filteredMessages = messages.filter(msg => msg.role !== 'system');
 
-  // Check if any message contains an image (resolution search is specifically for image analysis)
+  // Check if any message contains an image
   const hasImage = messages.some(message => 
     Array.isArray(message.content) && 
     message.content.some(part => part.type === 'image')
   )
 
-  // Use streamObject to get partial results.
+  const model = await getModel(hasImage);
+
   return streamObject({
-    model: await getModel(hasImage),
+    model,
     system: systemPrompt,
     messages: filteredMessages,
     schema: resolutionSearchSchema,

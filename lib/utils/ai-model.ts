@@ -1,8 +1,4 @@
 import { getSelectedModel } from '@/lib/actions/users'
-import { createOpenAI } from '@ai-sdk/openai'
-import { createGoogleGenerativeAI } from '@ai-sdk/google'
-import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock'
-import { createXai } from '@ai-sdk/xai';
 
 export async function getModel(requireVision: boolean = false) {
   // Check for specific API model override
@@ -11,10 +7,13 @@ export async function getModel(requireVision: boolean = false) {
     const modelId = process.env.SPECIFIC_API_MODEL.split(':').slice(1).join(':');
 
     if (provider === 'openai') {
+      const { createOpenAI } = await import('@ai-sdk/openai');
       return createOpenAI({ apiKey: process.env.OPENAI_API_KEY })(modelId);
     } else if (provider === 'google') {
+      const { createGoogleGenerativeAI } = await import('@ai-sdk/google');
       return createGoogleGenerativeAI({ apiKey: process.env.GEMINI_3_PRO_API_KEY })(modelId);
     } else if (provider === 'xai') {
+      const { createXai } = await import('@ai-sdk/xai');
       return createXai({ apiKey: process.env.XAI_API_KEY })(modelId);
     }
   }
@@ -26,13 +25,14 @@ export async function getModel(requireVision: boolean = false) {
   const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID;
   const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
   const awsRegion = process.env.AWS_REGION;
-  const bedrockModelId = process.env.BEDROCK_MODEL_ID || (requireVision ? 'anthropic.claude-3-5-sonnet-20241022-v2:0' : 'anthropic.claude-3-5-sonnet-20241022-v2:0');
+  const bedrockModelId = process.env.BEDROCK_MODEL_ID || 'anthropic.claude-3-5-sonnet-20241022-v2:0';
   const openaiApiKey = process.env.OPENAI_API_KEY;
 
   if (selectedModel) {
     switch (selectedModel) {
       case 'Grok 4.2':
         if (xaiApiKey) {
+          const { createXai } = await import('@ai-sdk/xai');
           const xai = createXai({
             apiKey: xaiApiKey,
             baseURL: 'https://api.x.ai/v1',
@@ -42,14 +42,16 @@ export async function getModel(requireVision: boolean = false) {
         break;
       case 'Gemini 3':
         if (gemini3ProApiKey) {
+          const { createGoogleGenerativeAI } = await import('@ai-sdk/google');
           const google = createGoogleGenerativeAI({
             apiKey: gemini3ProApiKey,
           });
-          return google(requireVision ? 'gemini-1.5-pro' : 'gemini-1.5-pro');
+          return google('gemini-1.5-pro');
         }
         break;
       case 'GPT-5.1':
         if (openaiApiKey) {
+          const { createOpenAI } = await import('@ai-sdk/openai');
           const openai = createOpenAI({
             apiKey: openaiApiKey,
           });
@@ -61,29 +63,32 @@ export async function getModel(requireVision: boolean = false) {
 
   // Default behavior: Grok -> Gemini -> Bedrock -> OpenAI
   if (xaiApiKey) {
-    const xai = createXai({
-      apiKey: xaiApiKey,
-      baseURL: 'https://api.x.ai/v1',
-    });
     try {
+      const { createXai } = await import('@ai-sdk/xai');
+      const xai = createXai({
+        apiKey: xaiApiKey,
+        baseURL: 'https://api.x.ai/v1',
+      });
       return xai(requireVision ? 'grok-vision-beta' : 'grok-beta');
     } catch (error) {
-      console.warn('xAI API unavailable, falling back to next provider');
+      console.warn('xAI API unavailable, falling back');
     }
   }
 
   if (gemini3ProApiKey) {
-    const google = createGoogleGenerativeAI({
-      apiKey: gemini3ProApiKey,
-    });
     try {
-      return google(requireVision ? 'gemini-1.5-pro' : 'gemini-1.5-pro');
+      const { createGoogleGenerativeAI } = await import('@ai-sdk/google');
+      const google = createGoogleGenerativeAI({
+        apiKey: gemini3ProApiKey,
+      });
+      return google('gemini-1.5-pro');
     } catch (error) {
-      console.warn('Gemini 3 Pro API unavailable, falling back to next provider:', error);
+      console.warn('Gemini 3 Pro API unavailable, falling back');
     }
   }
 
   if (awsAccessKeyId && awsSecretAccessKey) {
+    const { createAmazonBedrock } = await import('@ai-sdk/amazon-bedrock');
     const bedrock = createAmazonBedrock({
       bedrockOptions: {
         region: awsRegion,
@@ -96,6 +101,7 @@ export async function getModel(requireVision: boolean = false) {
     return bedrock(bedrockModelId);
   }
 
+  const { createOpenAI } = await import('@ai-sdk/openai');
   const openai = createOpenAI({
     apiKey: openaiApiKey,
   });
