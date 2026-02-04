@@ -133,7 +133,7 @@ export function ChatHistoryClient({}: ChatHistoryClientProps) {
           </div>
           {isCreditsVisible ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
         </Button>
-        
+
         {isCreditsVisible && (
           <div className="mt-2 p-3 rounded-lg bg-muted/50 border border-border/50 space-y-2">
             <div className="flex justify-between items-center text-xs">
