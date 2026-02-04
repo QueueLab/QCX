@@ -1,3 +1,5 @@
+'use server'
+
 import { getSelectedModel } from '@/lib/actions/users'
 
 export async function getModel(requireVision: boolean = false) {

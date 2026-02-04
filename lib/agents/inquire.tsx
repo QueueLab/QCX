@@ -1,3 +1,5 @@
+'use server'
+
 import { Copilot } from '@/components/copilot';
 import { createStreamableUI, createStreamableValue } from 'ai/rsc';
 import { CoreMessage, LanguageModel, streamObject } from 'ai';

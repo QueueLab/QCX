@@ -1,3 +1,5 @@
+'use server'
+
 import { CoreMessage, generateObject, LanguageModel } from 'ai'
 import { nextActionSchema } from '../schema/next-action'
 import { getModel } from '../utils/ai-model'

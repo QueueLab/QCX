@@ -1,3 +1,5 @@
+'use server'
+
 import { createStreamableUI, createStreamableValue } from 'ai/rsc'
 import { CoreMessage, LanguageModel, streamText as nonexperimental_streamText } from 'ai'
 import { Section } from '@/components/section'

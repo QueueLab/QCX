@@ -1,3 +1,5 @@
+'use server'
+
 import { createStreamableUI, createStreamableValue } from 'ai/rsc'
 import { CoreMessage, LanguageModel, streamObject } from 'ai'
 import { PartialRelated, relatedSchema } from '@/lib/schema/related'

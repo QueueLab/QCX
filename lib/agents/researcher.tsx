@@ -1,3 +1,5 @@
+'use server'
+
 // lib/agents/researcher.tsx
 import { createStreamableUI, createStreamableValue } from 'ai/rsc'
 import {

@@ -1,3 +1,5 @@
+'use server'
+
 import { CoreMessage, streamObject } from 'ai'
 import { getModel } from '@/lib/utils/ai-model'
 import { z } from 'zod'
