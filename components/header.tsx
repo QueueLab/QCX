@@ -15,11 +15,36 @@ import {
 } from 'lucide-react'
 import { MapToggle } from './map-toggle'
 import { ProfileToggle } from './profile-toggle'
+import { PurchaseCreditsPopup } from './purchase-credits-popup'
+import { useUsageToggle } from './usage-toggle-context'
+import { useProfileToggle } from './profile-toggle-context'
+import { useHistoryToggle } from './history-toggle-context'
+import { useState, useEffect } from 'react'
 
 export const Header = () => {
   const { toggleCalendar } = useCalendarToggle()
+  const [isPurchaseOpen, setIsPurchaseOpen] = useState(false)
+  const { toggleUsage, isUsageOpen } = useUsageToggle()
+  const { activeView, closeProfileView } = useProfileToggle()
+  const { toggleHistory } = useHistoryToggle()
+
+  const handleUsageToggle = () => {
+    // If we're about to open usage and profile is open, close profile first
+    if (!isUsageOpen && activeView) {
+      closeProfileView()
+    }
+    toggleUsage()
+  }
+
+  useEffect(() => {
+    // Open payment popup as soon as application opens
+    setIsPurchaseOpen(true)
+  }, [])
+
   return (
-    <header className="fixed w-full p-1 md:p-2 flex justify-between items-center z-20 backdrop-blur bg-background/95 border-b border-border/40">
+    <>
+      <PurchaseCreditsPopup isOpen={isPurchaseOpen} onClose={() => setIsPurchaseOpen(false)} />
+    <header className="fixed w-full p-1 md:p-2 flex justify-between items-center z-[60] backdrop-blur bg-background/95 border-b border-border/40">
       <div>
         <a href="/">
           <span className="sr-only">Chat</span>
@@ -27,7 +52,7 @@ export const Header = () => {
       </div>
       
       <div className="absolute left-1 flex items-center">
-        <Button variant="ghost" size="icon">
+        <Button variant="ghost" size="icon" onClick={toggleHistory} data-testid="logo-history-toggle">
           <Image
             src="/images/logo.svg"
             alt="Logo"
@@ -41,9 +66,8 @@ export const Header = () => {
         </h1>
       </div>
       
-      <div className="w-1/2 gap-20 hidden md:flex justify-between px-10 items-center z-10">
-        
-          <ProfileToggle/>
+      <div className="flex-1 hidden md:flex justify-center gap-10 items-center z-10">
+        <ProfileToggle/>
         
         <MapToggle />
         
@@ -51,13 +75,11 @@ export const Header = () => {
           <CalendarDays className="h-[1.2rem] w-[1.2rem]" />
         </Button>
         
-        <div id="header-search-portal" />
+        <div id="header-search-portal" className="contents" />
         
-        <a href="https://buy.stripe.com/3cIaEX3tRcur9EM7tbasg00" target="_blank" rel="noopener noreferrer">
-          <Button variant="ghost" size="icon">
-            <TentTree className="h-[1.2rem] w-[1.2rem]" />
-          </Button>
-        </a>
+        <Button variant="ghost" size="icon" onClick={handleUsageToggle}>
+          <TentTree className="h-[1.2rem] w-[1.2rem]" />
+        </Button>
         
         <ModeToggle />
         
@@ -67,14 +89,13 @@ export const Header = () => {
       {/* Mobile menu buttons */}
       <div className="flex md:hidden gap-2">
         
-        <a href="https://buy.stripe.com/3cIaEX3tRcur9EM7tbasg00" target="_blank" rel="noopener noreferrer">
-          <Button variant="ghost" size="icon">
-            <TentTree className="h-[1.2rem] w-[1.2rem]" />
-          </Button>
-        </a>
+        <Button variant="ghost" size="icon" onClick={handleUsageToggle}>
+          <TentTree className="h-[1.2rem] w-[1.2rem]" />
+        </Button>
         <ProfileToggle/>
       </div>
     </header>
+    </>
   )
 }
 

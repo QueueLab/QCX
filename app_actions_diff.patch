@@ -1,0 +1,54 @@
+--- app/actions.tsx
++++ app/actions.tsx
+@@ -84,7 +84,7 @@
+     });
+     messages.push({ role: 'user', content });
+
+-    const summaryStream = createStreamableValue<string>('');
++    const summaryStream = createStreamableValue<string>('Analyzing map view...');
+     const groupeId = nanoid();
+
+     async function processResolutionSearch() {
+@@ -143,15 +143,26 @@
+           return m
+         })
+
++        const currentMessages = aiState.get().messages;
++        const sanitizedHistory = currentMessages.map(m => {
++          if (m.role === 'user' && Array.isArray(m.content)) {
++            return {
++              ...m,
++              content: m.content.map(part =>
++                part.type === 'image' ? { ...part, image: 'IMAGE_PROCESSED' } : part
++              )
++            } as AIMessage
++          }
++          return m
++        });
++
+         const relatedQueries = await querySuggestor(uiStream, sanitizedMessages);
+         uiStream.append(
+           <Section title="Follow-up">
+             <FollowupPanel />
+           </Section>
+         );
+
+         await new Promise(resolve => setTimeout(resolve, 500));
+
+         aiState.done({
+           ...aiState.get(),
+-          messages: [
+-            ...aiState.get().messages,
++          messages: [
++            ...sanitizedHistory,
+             {
+               id: groupeId,
+               role: 'assistant',
+@@ -241,7 +252,7 @@
+       </Section>
+     );
+
+-    uiStream.append(answerSection);
++    uiStream.update(answerSection);
+
+     const relatedQueries = { items: [] };

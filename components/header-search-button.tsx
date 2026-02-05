@@ -73,7 +73,7 @@ export function HeaderSearchButton() {
         const { center, range } = mapData.cameraState
         const zoom = Math.round(Math.log2(40000000 / (range || 1)));
 
-        let staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${center.lat},${center.lng}&zoom=${zoom}&size=640x480&maptype=satellite&key=${apiKey}`;
+        let staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${center.lat},${center.lng}&zoom=${zoom}&size=640x480&scale=2&maptype=satellite&key=${apiKey}`;
 
         const response = await fetch(staticMapUrl);
         if (!response.ok) {
