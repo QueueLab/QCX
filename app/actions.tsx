@@ -221,190 +221,20 @@ async function submit(formData?: FormData, skip?: boolean) {
     };
   }
 
-
-    const buffer = await file.arrayBuffer();
-    const dataUrl = `data:${file.type};base64,${Buffer.from(buffer).toString('base64')}`;
-
-    const messages: CoreMessage[] = [...(aiState.get().messages as any[])].filter(
-      message =>
-        message.role !== 'tool' &&
-        message.type !== 'followup' &&
-        message.type !== 'related' &&
-        message.type !== 'end' &&
-        message.type !== 'resolution_search_result'
-    );
-
-    const userInput = 'Analyze this map view.';
-    const content: CoreMessage['content'] = [
-      { type: 'text', text: userInput },
-      { type: 'image', image: dataUrl, mimeType: file.type }
-    ];
-
-    aiState.update({
-      ...aiState.get(),
-      messages: [
-        ...aiState.get().messages,
-        { id: nanoid(), role: 'user', content, type: 'input' }
-      ]
-    });
-    messages.push({ role: 'user', content });
-
-    const summaryStream = createStreamableValue<string>('Analyzing map view...');
-    const groupeId = nanoid();
-
-    async function processResolutionSearch() {
-      try {
-        const streamResult = await resolutionSearch(messages, timezone, drawnFeatures);
-
-        let fullSummary = '';
-        for await (const partialObject of streamResult.partialObjectStream) {
-          if (partialObject.summary) {
-            fullSummary = partialObject.summary;
-            summaryStream.update(fullSummary);
-          }
-        }
-
-        const analysisResult = await streamResult.object;
-        summaryStream.done(analysisResult.summary || 'Analysis complete.');
-
-        if (analysisResult.geoJson) {
-          uiStream.append(
-            <GeoJsonLayer
-              id={groupeId}
-              data={analysisResult.geoJson as FeatureCollection}
-            />
-          );
-        }
-
-        messages.push({ role: 'assistant', content: analysisResult.summary || 'Analysis complete.' });
-
-        const sanitizedMessages: CoreMessage[] = messages.map(m => {
-          if (Array.isArray(m.content)) {
-            return {
-              ...m,
-              content: m.content.filter((part: any) => part.type !== 'image')
-            } as CoreMessage
-          }
-          return m
-        })
-
-        const currentMessages = aiState.get().messages;
-        const sanitizedHistory = currentMessages.map(m => {
-          if (m.role === "user" && Array.isArray(m.content)) {
-            return {
-              ...m,
-              content: m.content.map((part: any) =>
-                part.type === "image" ? { ...part, image: "IMAGE_PROCESSED" } : part
-              )
-            }
-          }
-          return m
-        });
-        const relatedQueries = await querySuggestor(uiStream, sanitizedMessages);
-        uiStream.append(
-          <Section title="Follow-up">
-            <FollowupPanel />
-          </Section>
-        );
-
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        aiState.done({
-          ...aiState.get(),
-          messages: [
-            ...aiState.get().messages,
-            {
-              id: groupeId,
-              role: 'assistant',
-              content: analysisResult.summary || 'Analysis complete.',
-              type: 'response'
-            },
-            {
-              id: groupeId,
-              role: 'assistant',
-              content: JSON.stringify({
-                ...analysisResult,
-                image: dataUrl
-              }),
-              type: 'resolution_search_result'
-            },
-            {
-              id: groupeId,
-              role: 'assistant',
-              content: JSON.stringify(relatedQueries),
-              type: 'related'
-            },
-            {
-              id: groupeId,
-              role: 'assistant',
-              content: 'followup',
-              type: 'followup'
-            }
-          ]
-        });
-      } catch (error) {
-        console.error('Error in resolution search:', error);
-        summaryStream.error(error);
-      } finally {
-        isGenerating.done(false);
-        uiStream.done();
-      }
-    }
-
-    processResolutionSearch();
-
-    uiStream.update(
-      <Section title="response">
-        <ResolutionImage src={dataUrl} />
-        <BotMessage content={summaryStream.value} />
-      </Section>
-    );
-
-    return {
-      id: nanoid(),
-      isGenerating: isGenerating.value,
-      component: uiStream.value,
-      isCollapsed: isCollapsed.value
-    };
-  }
-
-  const messages: CoreMessage[] = [...(aiState.get().messages as any[])].filter(
-    message =>
-      message.role !== 'tool' &&
-      message.type !== 'followup' &&
-      message.type !== 'related' &&
-      message.type !== 'end' &&
-      message.type !== 'resolution_search_result'
-  ).map(m => {
-    if (Array.isArray(m.content)) {
-      return {
-        ...m,
-        content: m.content.filter((part: any) =>
-          part.type !== "image" || (typeof part.image === "string" && part.image.startsWith("data:"))
-        )
-      } as any
-    }
-    return m
-  })
-
-  const groupeId = nanoid()
-  const useSpecificAPI = process.env.USE_SPECIFIC_API_FOR_WRITER === 'true'
-  const maxMessages = useSpecificAPI ? 5 : 10
-  messages.splice(0, Math.max(messages.length - maxMessages, 0))
-
+  const file = !skip ? (formData?.get('file') as File) : undefined
   const userInput = skip
     ? `{"action": "skip"}`
     : ((formData?.get('related_query') as string) ||
       (formData?.get('input') as string))
 
-  if (userInput.toLowerCase().trim() === 'what is a planet computer?' || userInput.toLowerCase().trim() === 'what is qcx-terra?') {
+  if (userInput && (userInput.toLowerCase().trim() === 'what is a planet computer?' || userInput.toLowerCase().trim() === 'what is qcx-terra?')) {
     const definition = userInput.toLowerCase().trim() === 'what is a planet computer?'
       ? `A planet computer is a proprietary environment aware system that interoperates weather forecasting, mapping and scheduling using cutting edge multi-agents to streamline automation and exploration on a planet. Available for our Pro and Enterprise customers. [QCX Pricing](https://www.queue.cx/#pricing)`
-
       : `QCX-Terra is a model garden of pixel level precision geospatial foundational models for efficient land feature predictions from satellite imagery. Available for our Pro and Enterprise customers. [QCX Pricing] (https://www.queue.cx/#pricing)`;
 
     const content = JSON.stringify(Object.fromEntries(formData!));
     const type = 'input';
+    const groupeId = nanoid();
 
     aiState.update({
       ...aiState.get(),
@@ -464,10 +294,9 @@ async function submit(formData?: FormData, skip?: boolean) {
       id: nanoid(),
       isGenerating: isGenerating.value,
       component: uiStream.value,
-      isCollapsed: isCollapsed.value,
+      isCollapsed: isCollapsed.value
     };
   }
-  const file = !skip ? (formData?.get('file') as File) : undefined
 
   if (!userInput && !file) {
     isGenerating.done(false)
@@ -478,6 +307,30 @@ async function submit(formData?: FormData, skip?: boolean) {
       isCollapsed: isCollapsed.value
     }
   }
+
+  const messages: CoreMessage[] = [...(aiState.get().messages as any[])].filter(
+    (message: any) =>
+      message.role !== 'tool' &&
+      message.type !== 'followup' &&
+      message.type !== 'related' &&
+      message.type !== 'end' &&
+      message.type !== 'resolution_search_result'
+  ).map((m: any) => {
+    if (Array.isArray(m.content)) {
+      return {
+        ...m,
+        content: m.content.filter((part: any) =>
+          part.type !== "image" || (typeof part.image === "string" && part.image.startsWith("data:"))
+        )
+      } as any
+    }
+    return m
+  })
+
+  const groupeId = nanoid()
+  const useSpecificAPI = process.env.USE_SPECIFIC_API_FOR_WRITER === 'true'
+  const maxMessages = useSpecificAPI ? 5 : 10
+  messages.splice(0, Math.max(messages.length - maxMessages, 0))
 
   const messageParts: {
     type: 'text' | 'image'
