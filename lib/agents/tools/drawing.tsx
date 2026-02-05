@@ -4,9 +4,6 @@ import { drawingToolSchema } from '@/lib/schema/drawing';
 import { z } from 'zod';
 import { getConnectedMcpClient, closeClient } from '@/lib/utils/mcp';
 import * as turf from '@turf/turf';
-import { Units } from "@turf/helpers";
-import { ToolOutput } from '@/lib/types/tools';
-import { Feature } from 'geojson';
 
 export const drawingTool = ({
   uiStream
@@ -16,7 +13,7 @@ export const drawingTool = ({
   description: `Use this tool to draw shapes on the map. You can draw polygons, lines, and circles.
   For example: "Draw a 5km circle around London", "Draw a polygon around Central Park", "Draw a line between New York and Boston".`,
   parameters: drawingToolSchema,
-  execute: async (params: z.infer<typeof drawingToolSchema>): Promise<ToolOutput> => {
+  execute: async (params: z.infer<typeof drawingToolSchema>) => {
     const { type } = params;
     console.log('[DrawingTool] Execute called with:', params);
 
@@ -31,52 +28,37 @@ export const drawingTool = ({
       feedbackMessage = 'Drawing functionality is partially unavailable (geocoding failed). Please check configuration.';
       uiFeedbackStream.update(feedbackMessage);
       uiFeedbackStream.done();
-      return { type: 'DRAWING_TRIGGER', timestamp: new Date().toISOString(), error: 'MCP client initialization failed' };
+      return { type: 'DRAWING_TRIGGER', error: 'MCP client initialization failed' };
     }
 
     try {
-      let features: Feature[] = [];
+      let features: any[] = [];
       let center: [number, number] | null = null;
 
-      // Geocode location if provided (type-safe access)
-      let locationToGeocode: string | undefined;
-      if (params.type === 'polygon' || params.type === 'circle') {
-        locationToGeocode = params.location;
-      }
-
+      // Geocode location if provided
+      const locationToGeocode = (params as any).location;
       if (locationToGeocode) {
         feedbackMessage = `Geocoding location: ${locationToGeocode}...`;
         uiFeedbackStream.update(feedbackMessage);
 
-        const toolCallResult = await mcpClient.callTool(
-          {
-            name: 'forward_geocode_tool',
-            arguments: { searchText: locationToGeocode, maxResults: 1 }
-          },
-          undefined,
-          { timeout: 10000 }
-        );
+        const toolCallResult = await mcpClient.callTool({
+          name: 'forward_geocode_tool',
+          arguments: { searchText: locationToGeocode, maxResults: 1 }
+        });
 
-        // Guarded validation of geocoding response
-        if (toolCallResult && Array.isArray(toolCallResult.content) && typeof toolCallResult.content[0]?.text === 'string') {
-          const text = toolCallResult.content[0].text;
-          try {
-            const jsonMatch = text.match(/\`\`\`json\n([\s\S]*?)\n\`\`\`/);
-            const content = jsonMatch ? JSON.parse(jsonMatch[1]) : JSON.parse(text);
-
-            if (content && Array.isArray(content.results) && content.results[0]?.coordinates) {
-              const coords = content.results[0].coordinates;
-              if (typeof coords.latitude === 'number' && typeof coords.longitude === 'number') {
-                center = [coords.longitude, coords.latitude];
-              }
-            }
-          } catch (parseError) {
-            console.error('[DrawingTool] Failed to parse geocoding response:', parseError);
+        const serviceResponse = toolCallResult as { content?: Array<{ text?: string | null }> };
+        const text = serviceResponse?.content?.[0]?.text;
+        if (text) {
+          const jsonMatch = text.match(/\`\`\`json\n([\s\S]*?)\n\`\`\`/);
+          const content = jsonMatch ? JSON.parse(jsonMatch[1]) : JSON.parse(text);
+          if (content.results?.[0]?.coordinates) {
+            const coords = content.results[0].coordinates;
+            center = [coords.longitude, coords.latitude];
           }
         }
       }
 
-      if (params.type === 'circle') {
+      if (type === 'circle') {
         const circleCenter = params.center ? [params.center.lng, params.center.lat] : center;
         if (!circleCenter) throw new Error('Could not determine center for circle');
 
@@ -84,7 +66,7 @@ export const drawingTool = ({
         uiFeedbackStream.update(feedbackMessage);
 
         const circle = turf.circle(circleCenter, params.radius, {
-          units: params.units as Units,
+          units: params.units as any,
           steps: 64,
           properties: {
             user_isCircle: true,
@@ -96,22 +78,24 @@ export const drawingTool = ({
           }
         });
         features.push(circle);
-      } else if (params.type === 'polygon') {
+      } else if (type === 'polygon') {
         const polyCoords = params.coordinates
-          ? [params.coordinates.map((c: {lat: number, lng: number}) => [c.lng, c.lat])]
-          : null;
+          ? [params.coordinates.map(c => [c.lng, c.lat])]
+          : null; // If no coords, we might want to use geocoded center but it's just a point
 
         if (!polyCoords) {
            if (center) {
+             // Fallback: draw a small square around the center if geocoded but no vertices
              const buffered = turf.buffer(turf.point(center), 0.5, { units: 'kilometers' });
              if (buffered) {
                buffered.properties = { ...buffered.properties, user_label: params.label, user_color: params.color };
-               features.push(buffered as Feature);
+               features.push(buffered);
              }
            } else {
              throw new Error('No coordinates or location provided for polygon');
            }
         } else {
+          // Ensure polygon is closed
           if (polyCoords[0][0][0] !== polyCoords[0][polyCoords[0].length-1][0] || polyCoords[0][0][1] !== polyCoords[0][polyCoords[0].length-1][1]) {
             polyCoords[0].push(polyCoords[0][0]);
           }
@@ -121,8 +105,12 @@ export const drawingTool = ({
           });
           features.push(polygon);
         }
-      } else if (params.type === 'line') {
-        const lineCoords = params.coordinates.map((c: {lat: number, lng: number}) => [c.lng, c.lat]);
+      } else if (type === 'line') {
+        const lineCoords = params.coordinates
+          ? params.coordinates.map(c => [c.lng, c.lat])
+          : null;
+
+        if (!lineCoords) throw new Error('No coordinates provided for line');
 
         const line = turf.lineString(lineCoords, {
           user_label: params.label,
@@ -136,7 +124,7 @@ export const drawingTool = ({
 
       return {
         type: 'DRAWING_TRIGGER',
-        originalUserInput: JSON.stringify(params),
+        params,
         features,
         timestamp: new Date().toISOString()
       };
@@ -145,7 +133,7 @@ export const drawingTool = ({
       feedbackMessage = `Error generating drawing: ${error.message}`;
       uiFeedbackStream.update(feedbackMessage);
       console.error('[DrawingTool] Execution failed:', error);
-      return { type: 'DRAWING_TRIGGER', timestamp: new Date().toISOString(), error: error.message };
+      return { type: 'DRAWING_TRIGGER', error: error.message };
     } finally {
       await closeClient(mcpClient);
       uiFeedbackStream.done();

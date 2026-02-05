@@ -13,9 +13,9 @@ export async function getConnectedMcpClient(): Promise<McpClient | null> {
   const composioUserId = process.env.COMPOSIO_USER_ID;
 
   console.log('[MCP Utility] Environment check:', {
-    composioApiKey: composioApiKey ? 'PRESENT' : 'MISSING',
-    mapboxAccessToken: mapboxAccessToken ? 'PRESENT' : 'MISSING',
-    composioUserId: composioUserId ? 'PRESENT' : 'MISSING',
+    composioApiKey: composioApiKey ? `${composioApiKey.substring(0, 8)}...` : 'MISSING',
+    mapboxAccessToken: mapboxAccessToken ? `${mapboxAccessToken.substring(0, 8)}...` : 'MISSING',
+    composioUserId: composioUserId ? `${composioUserId.substring(0, 8)}...` : 'MISSING',
   });
 
   if (!composioApiKey || !mapboxAccessToken || !composioUserId || !composioApiKey.trim() || !mapboxAccessToken.trim() || !composioUserId.trim()) {
@@ -80,14 +80,8 @@ export async function getConnectedMcpClient(): Promise<McpClient | null> {
 
 /**
  * Safely close the MCP client with timeout.
- *
- * By default, errors during closure are logged and swallowed.
- * Set throwOnError to true to re-throw the error for the caller to handle.
- *
- * @param client The MCP client to close
- * @param throwOnError Whether to re-throw errors encountered during closure
  */
-export async function closeClient(client: McpClient | null, throwOnError = false): Promise<void> {
+export async function closeClient(client: McpClient | null) {
   if (!client) return;
   try {
     await Promise.race([
@@ -96,9 +90,6 @@ export async function closeClient(client: McpClient | null, throwOnError = false
     ]);
     console.log('[MCP Utility] MCP client closed successfully');
   } catch (error: any) {
-    if (throwOnError) {
-      throw error;
-    }
     console.error('[MCP Utility] Error closing MCP client:', error.message);
   }
 }
