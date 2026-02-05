@@ -45,9 +45,10 @@ export const MobileIconsBar: React.FC<MobileIconsBarProps> = ({ onAttachmentClic
       <Button variant="ghost" size="icon" onClick={toggleCalendar} title="Open Calendar" data-testid="mobile-calendar-button">
         <CalendarDays className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>
-      <Button variant="ghost" size="icon" data-testid="mobile-search-button">
-        <Search className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
-      </Button>
+
+      {/* Portal target for resolution search button on mobile */}
+      <div id="mobile-header-search-portal" />
+
       <a href="https://buy.stripe.com/14A3cv7K72TR3go14Nasg02" target="_blank" rel="noopener noreferrer">
         <Button variant="ghost" size="icon">
           <TentTree className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
