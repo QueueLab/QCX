@@ -1,6 +1,8 @@
 'use server'
 
 import { and, desc, eq, isNull, sql } from 'drizzle-orm'
+import { users as usersSchema } from "@/lib/db/schema";
+import { syncUserWithDatabase } from "./users";
 import { db } from '@/lib/db'
 import { calendarNotes } from '@/lib/db/schema'
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
@@ -61,8 +63,43 @@ export async function getNotes(date: Date, chatId: string | null): Promise<Calen
  * @param noteData - The note data to save.
  * @returns A promise that resolves to the saved note or null if an error occurs.
  */
+/**
+ * Extracts @mentions from content and validates them against the users table.
+ */
+async function extractAndValidateMentions(content: string): Promise<string[]> {
+  const mentionRegex = /@(\w+)/g;
+  const matches = Array.from(content.matchAll(mentionRegex));
+  const potentialEmails = matches.map(match => match[1]);
+
+  if (potentialEmails.length === 0) return [];
+
+  try {
+    // Fetch all users to match against prefixes
+    // In a larger system, we would use a more optimized search
+    const users = await db.select({ id: usersSchema.id, email: usersSchema.email })
+      .from(usersSchema)
+      .execute();
+
+    const validatedIds: string[] = [];
+    potentialEmails.forEach(mention => {
+      const found = users.find(u => u.email?.toLowerCase().startsWith(mention.toLowerCase()));
+      if (found) validatedIds.push(found.id);
+    });
+
+    return Array.from(new Set(validatedIds));
+  } catch (error) {
+    console.error("Error validating mentions:", error);
+    return [];
+  }
+}
+
 export async function saveNote(noteData: NewCalendarNote | CalendarNote): Promise<CalendarNote | null> {
+    // Ensure current user is synced
+    await syncUserWithDatabase();
+
     const userId = await getCurrentUserIdOnServer();
+
+    const userTags = await extractAndValidateMentions(noteData.content);
     if (!userId) {
         console.error('saveNote: User not authenticated');
         return null;
@@ -73,7 +110,7 @@ export async function saveNote(noteData: NewCalendarNote | CalendarNote): Promis
         try {
             const [updatedNote] = await db
                 .update(calendarNotes)
-                .set({ ...noteData, updatedAt: new Date() })
+                .set({ ...noteData, userTags, updatedAt: new Date() })
                 .where(and(eq(calendarNotes.id, noteData.id), eq(calendarNotes.userId, userId)))
                 .returning();
             return updatedNote;
@@ -86,7 +123,7 @@ export async function saveNote(noteData: NewCalendarNote | CalendarNote): Promis
         try {
             const [newNote] = await db
                 .insert(calendarNotes)
-                .values({ ...noteData, userId })
+                .values({ ...noteData, userTags, userId })
                 .returning();
 
             if (newNote && newNote.chatId) {
