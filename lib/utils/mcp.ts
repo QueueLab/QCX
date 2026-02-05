@@ -13,9 +13,9 @@ export async function getConnectedMcpClient(): Promise<McpClient | null> {
   const composioUserId = process.env.COMPOSIO_USER_ID;
 
   console.log('[MCP Utility] Environment check:', {
-    composioApiKey: composioApiKey ? `${composioApiKey.substring(0, 8)}...` : 'MISSING',
-    mapboxAccessToken: mapboxAccessToken ? `${mapboxAccessToken.substring(0, 8)}...` : 'MISSING',
-    composioUserId: composioUserId ? `${composioUserId.substring(0, 8)}...` : 'MISSING',
+    composioApiKey: composioApiKey ? 'PRESENT' : 'MISSING',
+    mapboxAccessToken: mapboxAccessToken ? 'PRESENT' : 'MISSING',
+    composioUserId: composioUserId ? 'PRESENT' : 'MISSING',
   });
 
   if (!composioApiKey || !mapboxAccessToken || !composioUserId || !composioApiKey.trim() || !mapboxAccessToken.trim() || !composioUserId.trim()) {

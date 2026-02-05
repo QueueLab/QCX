@@ -41,10 +41,14 @@ export const drawingTool = ({
         feedbackMessage = `Geocoding location: ${locationToGeocode}...`;
         uiFeedbackStream.update(feedbackMessage);
 
-        const toolCallResult = await mcpClient.callTool({
-          name: 'forward_geocode_tool',
-          arguments: { searchText: locationToGeocode, maxResults: 1 }
-        });
+        const toolCallResult = await mcpClient.callTool(
+          {
+            name: 'forward_geocode_tool',
+            arguments: { searchText: locationToGeocode, maxResults: 1 }
+          },
+          undefined,
+          { timeout: 10000 }
+        );
 
         const serviceResponse = toolCallResult as { content?: Array<{ text?: string | null }> };
         const text = serviceResponse?.content?.[0]?.text;
@@ -80,12 +84,11 @@ export const drawingTool = ({
         features.push(circle);
       } else if (type === 'polygon') {
         const polyCoords = params.coordinates
-          ? [params.coordinates.map(c => [c.lng, c.lat])]
-          : null; // If no coords, we might want to use geocoded center but it's just a point
+          ? [params.coordinates.map((c: {lat: number, lng: number}) => [c.lng, c.lat])]
+          : null;
 
         if (!polyCoords) {
            if (center) {
-             // Fallback: draw a small square around the center if geocoded but no vertices
              const buffered = turf.buffer(turf.point(center), 0.5, { units: 'kilometers' });
              if (buffered) {
                buffered.properties = { ...buffered.properties, user_label: params.label, user_color: params.color };
@@ -95,7 +98,6 @@ export const drawingTool = ({
              throw new Error('No coordinates or location provided for polygon');
            }
         } else {
-          // Ensure polygon is closed
           if (polyCoords[0][0][0] !== polyCoords[0][polyCoords[0].length-1][0] || polyCoords[0][0][1] !== polyCoords[0][polyCoords[0].length-1][1]) {
             polyCoords[0].push(polyCoords[0][0]);
           }
@@ -106,11 +108,21 @@ export const drawingTool = ({
           features.push(polygon);
         }
       } else if (type === 'line') {
-        const lineCoords = params.coordinates
-          ? params.coordinates.map(c => [c.lng, c.lat])
+        let lineCoords = params.coordinates
+          ? params.coordinates.map((c: {lat: number, lng: number}) => [c.lng, c.lat])
           : null;
 
-        if (!lineCoords) throw new Error('No coordinates provided for line');
+        if (!lineCoords) {
+          if (center) {
+            // Fallback: draw a small horizontal line around the center
+            lineCoords = [
+              [center[0] - 0.01, center[1]],
+              [center[0] + 0.01, center[1]]
+            ];
+          } else {
+            throw new Error('No coordinates or location provided for line');
+          }
+        }
 
         const line = turf.lineString(lineCoords, {
           user_label: params.label,

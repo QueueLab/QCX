@@ -33,7 +33,10 @@ export const MapQueryHandler: React.FC<MapQueryHandlerProps> = ({ toolOutput }) 
   const { setMapType } = useMapToggle();
 
   useEffect(() => {
-    if (!toolOutput) return;
+    if (!toolOutput) {
+      console.warn('MapQueryHandler: missing toolOutput');
+      return;
+    }
 
     if (toolOutput.type === 'DRAWING_TRIGGER' && toolOutput.features) {
       console.log('MapQueryHandler: Received drawing data.', toolOutput.features);
@@ -42,19 +45,25 @@ export const MapQueryHandler: React.FC<MapQueryHandlerProps> = ({ toolOutput }) 
         ...prevData,
         pendingFeatures: toolOutput.features
       }));
-    } else if (toolOutput.type === 'MAP_QUERY_TRIGGER' && toolOutput.mcp_response && toolOutput.mcp_response.location) {
-      const { latitude, longitude, place_name } = toolOutput.mcp_response.location;
+    } else if (toolOutput.type === 'MAP_QUERY_TRIGGER') {
+      if (toolOutput.mcp_response && toolOutput.mcp_response.location) {
+        const { latitude, longitude, place_name } = toolOutput.mcp_response.location;
 
-      if (typeof latitude === 'number' && typeof longitude === 'number') {
-        console.log(`MapQueryHandler: Received data from geospatialTool. Place: ${place_name}, Lat: ${latitude}, Lng: ${longitude}`);
-        setMapData(prevData => ({
-          ...prevData,
-          targetPosition: { lat: latitude, lng: longitude },
-          mapFeature: {
-            place_name, 
-            mapUrl: toolOutput.mcp_response?.mapUrl 
-          } 
-        }));
+        if (typeof latitude === 'number' && typeof longitude === 'number') {
+          console.log(`MapQueryHandler: Received data from geospatialTool. Place: ${place_name}, Lat: ${latitude}, Lng: ${longitude}`);
+          setMapData(prevData => ({
+            ...prevData,
+            targetPosition: { lat: latitude, lng: longitude },
+            mapFeature: {
+              place_name,
+              mapUrl: toolOutput.mcp_response?.mapUrl
+            }
+          }));
+        } else {
+          console.warn('MapQueryHandler: invalid MAP_QUERY_TRIGGER payload', { toolOutput, mcp_response: toolOutput.mcp_response });
+        }
+      } else {
+        console.warn('MapQueryHandler: invalid MAP_QUERY_TRIGGER payload', { toolOutput, mcp_response: toolOutput.mcp_response });
       }
     }
   }, [toolOutput, setMapData, setMapType]);
