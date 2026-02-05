@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter as FontSans } from 'next/font/google'
+import { Inter as FontSans, Poppins } from 'next/font/google'
 import './globals.css'
+import 'katex/dist/katex.min.css';
 import { cn } from '@/lib/utils'
 import { ThemeProvider } from '@/components/theme-provider'
 import Header from '@/components/header'
@@ -13,20 +14,31 @@ import { MapToggleProvider } from '@/components/map-toggle-context'
 import { ProfileToggleProvider } from '@/components/profile-toggle-context'
 import { GeospatialModelProvider } from '@/lib/geospatial-model-context'
 import ErrorBoundary from '@/components/error-boundary'
+import { UsageToggleProvider } from '@/components/usage-toggle-context'
+import { CalendarToggleProvider } from '@/components/calendar-toggle-context'
+import { HistoryToggleProvider } from '@/components/history-toggle-context'
+import { HistorySidebar } from '@/components/history-sidebar'
 import { MapLoadingProvider } from '@/components/map-loading-context';
 import ConditionalLottie from '@/components/conditional-lottie';
+import { MapProvider as MapContextProvider } from '@/components/map/map-context'
 
 const fontSans = FontSans({
   subsets: ['latin'],
   variable: '--font-sans'
 })
 
-const title = 'Beta'
+const fontPoppins = Poppins({
+  subsets: ['latin'],
+  variable: '--font-poppins',
+  weight: ['400', '500', '600', '700']
+})
+
+const title = ''
 const description =
   'language to Maps'
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://labs.queue.cx'),
+  metadataBase: new URL('https://www.qcx.world'),
   title,
   description,
   openGraph: {
@@ -37,7 +49,7 @@ export const metadata: Metadata = {
     title,
     description,
     card: 'summary_large_image',
-    creator: '@queuelabs'
+    creator: '@queueLab'
   }
 }
 
@@ -55,30 +67,68 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={cn('font-sans antialiased', fontSans.variable)}>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                const htmxEvents = [
+                  'sseError', 'sseOpen', 'swapError', 'targetError', 'timeout',
+                  'validation:validate', 'validation:failed', 'validation:halted',
+                  'xhr:abort', 'xhr:loadend', 'xhr:loadstart'
+                ];
+                htmxEvents.forEach(event => {
+                  const funcName = 'func ' + event;
+                  if (typeof window[funcName] === 'undefined') {
+                    window[funcName] = function() { 
+                      console.warn('HTMX event handler "' + funcName + '" was called but not defined. Providing safety fallback.');
+                    };
+                  }
+                });
+              })();
+            `,
+          }}
+        />
+      </head>
+      <body
+        className={cn(
+          'font-sans antialiased',
+          fontSans.variable,
+          fontPoppins.variable
+        )}
+      >
         <ErrorBoundary>
-          <MapToggleProvider>
-            <ProfileToggleProvider>
-              <GeospatialModelProvider>
-                <ThemeProvider
-                  attribute="class"
-                  defaultTheme="earth"
-                  enableSystem
-                  disableTransitionOnChange
-                  themes={['light', 'dark', 'earth']}
-                >
-                  <MapLoadingProvider>
-                    <Header />
-                    <ConditionalLottie />
-                    {children}
-                    <Sidebar />
-                    <Footer />
-                    <Toaster />
-                  </MapLoadingProvider>
-                </ThemeProvider>
-              </GeospatialModelProvider>
-            </ProfileToggleProvider>
-          </MapToggleProvider>
+          <CalendarToggleProvider>
+            <HistoryToggleProvider>
+              <MapToggleProvider>
+                <ProfileToggleProvider>
+                  <UsageToggleProvider>
+                    <GeospatialModelProvider>
+                      <ThemeProvider
+                        attribute="class"
+                        defaultTheme="earth"
+                        enableSystem
+                        disableTransitionOnChange
+                        themes={['light', 'dark', 'earth']}
+                      >
+                        <MapContextProvider>
+                          <MapLoadingProvider>
+                            <Header />
+                            <ConditionalLottie />
+                            {children}
+                            <Sidebar />
+                            <HistorySidebar />
+                            <Footer />
+                            <Toaster />
+                          </MapLoadingProvider>
+                        </MapContextProvider>
+                      </ThemeProvider>
+                    </GeospatialModelProvider>
+                  </UsageToggleProvider>
+                </ProfileToggleProvider>
+              </MapToggleProvider>
+            </HistoryToggleProvider>
+          </CalendarToggleProvider>
         </ErrorBoundary>
         <Analytics />
         <SpeedInsights />

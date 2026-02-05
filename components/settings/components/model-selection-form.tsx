@@ -9,6 +9,13 @@ import {
   FormDescription,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,33 +32,33 @@ const models = [
   {
     id: "QCX-Terra",
     name: "QCX-Terra",
-    description: "Geospatial foundational model",
+    description: "Geospatial foundational model for planetary insights.",
     icon: Earth,
     badge: "Recommended",
     badgeVariant: "default" as const,
   },
   {
-    id: "Grok-3",
-    name: "Grok-3",
-    description: "Fast and efficient model for most everyday tasks and queries.",
-    icon: Zap,
-    badge: "Fast",
+    id: "Grok 4.2",
+    name: "Grok 4.2",
+    description: "The latest from xAI, pushing the boundaries of reasoning and problem-solving.",
+    icon: Rocket,
+    badge: "New",
     badgeVariant: "secondary" as const,
   },
   {
-    id: "claude-4-sonnet",
-    name: "Claude-4-sonnet",
-    description: "Advanced model with strong reasoning and detailed planetary knowledge.",
-    icon: Rocket,
-    badge: "Advanced",
+    id: "Gemini 3",
+    name: "Gemini 3",
+    description: "Google's next-generation multimodal model, excelling at understanding and processing diverse information.",
+    icon: Sparkles,
+    badge: "Multimodal",
     badgeVariant: "outline" as const,
   },
   {
-    id: "llama-4",
-    name: "Llama-4",
-    description: "Open-source model with good performance for general planetary information.",
-    icon: Cpu,
-    badge: "Open Source",
+    id: "GPT-5.1",
+    name: "GPT-5.1",
+    description: "The cutting-edge of language models, offering unparalleled performance in creative and analytical tasks.",
+    icon: Zap,
+    badge: "Advanced",
     badgeVariant: "outline" as const,
   },
 ];
@@ -65,11 +72,34 @@ export function ModelSelectionForm({ form }: ModelSelectionFormProps) {
       name="selectedModel"
       render={({ field }) => (
         <FormItem className="space-y-4">
-          <FormLabel>AI Model</FormLabel>
+          <div className="flex items-center justify-between">
+            <FormLabel>AI Model</FormLabel>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Quick Select:</span>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Select model" />
+                </SelectTrigger>
+                <SelectContent>
+                  {models.map((model) => {
+                    const Icon = model.icon;
+                    return (
+                      <SelectItem key={model.id} value={model.id}>
+                        <div className="flex items-center gap-2">
+                          <Icon className="h-4 w-4" />
+                          <span>{model.name}</span>
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
           <FormControl>
             <RadioGroup
               onValueChange={field.onChange}
-              defaultValue={field.value}
+              value={field.value}
               className="space-y-3"
             >
               {models.map((model) => {

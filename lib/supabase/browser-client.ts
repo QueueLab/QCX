@@ -1,0 +1,1 @@
+export const getSupabaseBrowserClient = () => ({ auth: { getUser: () => ({ data: { user: null }, error: null }) } });

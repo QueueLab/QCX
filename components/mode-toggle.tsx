@@ -25,7 +25,7 @@ export function ModeToggle() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
+        <Button variant="ghost" size="icon" className="relative" data-testid="theme-toggle">
           <span className="relative block">
             <Sun
               className={`h-[1.2rem] w-[1.2rem] transition-all ${
@@ -47,16 +47,16 @@ export function ModeToggle() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => setTheme('light')}>
+        <DropdownMenuItem onClick={() => setTheme('light')} data-testid="theme-light">
           Light
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme('dark')}>
+        <DropdownMenuItem onClick={() => setTheme('dark')} data-testid="theme-dark">
           Dark
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme('earth')}>
+        <DropdownMenuItem onClick={() => setTheme('earth')} data-testid="theme-earth">
           Earth
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme('system')}>
+        <DropdownMenuItem onClick={() => setTheme('system')} data-testid="theme-system">
           System
         </DropdownMenuItem>
       </DropdownMenuContent>

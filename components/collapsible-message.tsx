@@ -9,6 +9,7 @@ import {
 import { Button } from './ui/button'
 import { ChevronDown } from 'lucide-react'
 import { StreamableValue, useStreamableValue } from 'ai/rsc'
+import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { Separator } from './ui/separator'
 
@@ -68,7 +69,21 @@ export const CollapsibleMessage: React.FC<CollapsibleMessageProps> = ({
           </Button>
         </div>
       </CollapsibleTrigger>
-      <CollapsibleContent>{message.component}</CollapsibleContent>
+      <AnimatePresence initial={false}>
+        {open && (
+          <CollapsibleContent asChild forceMount>
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+              className="overflow-hidden"
+            >
+              {message.component}
+            </motion.div>
+          </CollapsibleContent>
+        )}
+      </AnimatePresence>
       {!open && <Separator className="my-2 bg-muted" />}
     </Collapsible>
   )

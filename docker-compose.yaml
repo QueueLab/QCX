@@ -1,12 +1,49 @@
+name: qcx-stack
 
-
-name: qcx-stack.
 services:
-  mapgpt:
+  qcx:
     build:
-      context: . # The build context is the current directory
+      context: .
       dockerfile: Dockerfile
-    command: bun dev # Use `bun dev -H 0.0.0.0` to listen on all interfaces
-    env_file: .env.local # Load environment variables
+      target: runner  # Use the production stage
     ports:
-      - "3000:3000" # Maps port 3000 on the host to port 3000 in the container.
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+    env_file:
+      - .env.local  # Load environment variables from .env.local if it exists
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Development service (optional - for local development with hot reload)
+  qcx-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder  # Use the builder stage for development
+    command: bun dev
+    ports:
+      - "3001:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+    env_file:
+      - .env.local
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+      - next_build:/app/.next
+    restart: unless-stopped
+    profiles:
+      - dev  # Only start this service when explicitly requested with --profile dev
+
+volumes:
+  node_modules:
+  next_build:

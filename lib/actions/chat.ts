@@ -120,7 +120,7 @@ export async function saveChat(chat: OldChatType, userId: string): Promise<strin
     id: msg.id, // Keep existing ID
     userId: effectiveUserId, // Ensure messages have a userId
     role: msg.role, // Allow all AIMessage roles to pass through
-    content: msg.content,
+    content: typeof msg.content === 'object' ? JSON.stringify(msg.content) : msg.content,
     createdAt: msg.createdAt ? new Date(msg.createdAt) : new Date(),
     // attachments: (msg as any).attachments, // If AIMessage had attachments
     // type: (msg as any).type // If AIMessage had a type
@@ -162,7 +162,7 @@ export async function saveChat(chat: OldChatType, userId: string): Promise<strin
 //   return null;
 // }
 
-export async function updateDrawingContext(chatId: string, drawnFeatures: any[]) {
+export async function updateDrawingContext(chatId: string, contextData: { drawnFeatures: any[], cameraState: any }) {
   'use server';
   console.log('[Action] updateDrawingContext called for chatId:', chatId);
 
@@ -178,7 +178,7 @@ export async function updateDrawingContext(chatId: string, drawnFeatures: any[])
     // id: `drawnData-${Date.now().toString()}`, // Let DB generate UUID
     userId: userId,
     role: 'data' as 'user' | 'assistant' | 'system' | 'tool' | 'data', // Cast 'data' if not in standard roles
-    content: JSON.stringify(drawnFeatures), // Store features as stringified JSON
+    content: JSON.stringify(contextData), // Store both features and camera state as stringified JSON
     // type: 'drawing_context', // This field is not in the Drizzle 'messages' schema.
     // If `type` is important, the schema needs to be updated or content needs to reflect it.
     // For now, we'll assume 'content' holds the necessary info and role='data' signifies it.

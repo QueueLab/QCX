@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useRef, useCallback } from 'react' // Removed useState
+import { useEffect, useRef, useCallback, useState } from 'react'
 import mapboxgl from 'mapbox-gl'
 import MapboxDraw from '@mapbox/mapbox-gl-draw'
 import * as turf from '@turf/turf'
+import tzlookup from 'tz-lookup'
 import { toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import 'mapbox-gl/dist/mapbox-gl.css'
@@ -11,13 +12,16 @@ import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css'
 import { useMapToggle, MapToggleEnum } from '../map-toggle-context'
 import { useMapData } from './map-data-context'; // Add this import
 import { useMapLoading } from '../map-loading-context'; // Import useMapLoading
+import { useMap } from './map-context'
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN as string;
 
 export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number; } }> = ({ position }) => {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
+  const { setMap } = useMap()
   const drawRef = useRef<MapboxDraw | null>(null)
+  const navControlRef = useRef<mapboxgl.NavigationControl | null>(null)
   const rotationFrameRef = useRef<number | null>(null)
   const polygonLabelsRef = useRef<{ [id: string]: mapboxgl.Marker }>({})
   const lineLabelsRef = useRef<{ [id: string]: mapboxgl.Marker }>({})
@@ -25,6 +29,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   const isRotatingRef = useRef<boolean>(false)
   const isUpdatingPositionRef = useRef<boolean>(false)
   const geolocationWatchIdRef = useRef<number | null>(null)
+  const [isMapReady, setIsMapReady] = useState(false)
   const initializedRef = useRef<boolean>(false)
   const currentMapCenterRef = useRef<{ center: [number, number]; zoom: number; pitch: number }>({ center: [position?.longitude ?? 0, position?.latitude ?? 0], zoom: 2, pitch: 0 });
   const drawingFeatures = useRef<any>(null)
@@ -253,6 +258,16 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         console.log('Error removing draw control:', e)
       }
     }
+
+    // Remove existing navigation control if present
+    if (navControlRef.current) {
+      try {
+        map.current.removeControl(navControlRef.current)
+        navControlRef.current = null
+      } catch (e) {
+        console.log('Error removing navigation control:', e)
+      }
+    }
     
     // Create new draw control with both polygon and line tools
     drawRef.current = new MapboxDraw({
@@ -268,6 +283,12 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     
     // Add control to map
     map.current.addControl(drawRef.current, 'top-right')
+
+    // Add navigation control only on desktop
+    if (window.innerWidth > 768) {
+      navControlRef.current = new mapboxgl.NavigationControl()
+      map.current.addControl(navControlRef.current, 'top-left')
+    }
     
     // Set up event listeners for measurements
     map.current.on('draw.create', updateMeasurementLabels)
@@ -318,9 +339,23 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
       const center = map.current.getCenter();
       const zoom = map.current.getZoom();
       const pitch = map.current.getPitch();
+      const bearing = map.current.getBearing();
       currentMapCenterRef.current = { center: [center.lng, center.lat], zoom, pitch };
+
+      const timezone = tzlookup(center.lat, center.lng);
+
+      setMapData(prevData => ({
+        ...prevData,
+        currentTimezone: timezone,
+        cameraState: {
+          center: { lat: center.lat, lng: center.lng },
+          zoom,
+          pitch,
+          bearing
+        }
+      }));
     }
-  }, [])
+  }, [setMapData])
 
   // Set up idle rotation checker
   useEffect(() => {
@@ -334,79 +369,41 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     return () => clearInterval(checkIdle)
   }, [startRotation])
 
-  // Handle map type changes
-  useEffect(() => {
-    // Store previous map type to detect changes
-    const isMapTypeChanged = previousMapTypeRef.current !== mapType
-    previousMapTypeRef.current = mapType
-    
-    // Only proceed if map is initialized
-    if (!map.current || !initializedRef.current) return
-    
-    // If we're switching modes, capture the current map center
-    if (isMapTypeChanged) {
-      captureMapCenter()
-      
-      // Handle geolocation setup based on mode
-      setupGeolocationWatcher()
-      
-      // Handle draw controls based on mode
-      if (mapType === MapToggleEnum.DrawingMode) {
-        // If switching to drawing mode, setup drawing tools
-        setupDrawingTools()
-      } else {
-        // If switching from drawing mode, remove drawing tools but save features
-        if (drawRef.current) {
-          // Save current drawings before removing control
-          drawingFeatures.current = drawRef.current.getAll()
-          
-          try {
-            map.current.off('draw.create', updateMeasurementLabels)
-            map.current.off('draw.delete', updateMeasurementLabels)
-            map.current.off('draw.update', updateMeasurementLabels)
-            map.current.removeControl(drawRef.current)
-            drawRef.current = null
-            
-            // Clean up any existing labels
-            Object.values(polygonLabelsRef.current).forEach(marker => marker.remove())
-            Object.values(lineLabelsRef.current).forEach(marker => marker.remove())
-            polygonLabelsRef.current = {}
-            lineLabelsRef.current = {}
-          } catch (e) {
-            console.log('Error removing draw control:', e)
-          }
-        }
-      }
-    }
-
-    return () => {
-      if (geolocationWatchIdRef.current !== null) {
-        navigator.geolocation.clearWatch(geolocationWatchIdRef.current)
-        geolocationWatchIdRef.current = null
-      }
-    }
-  }, [mapType, updateMeasurementLabels, setupGeolocationWatcher, captureMapCenter, setupDrawingTools])
-
   // Initialize map (only once)
   useEffect(() => {
     if (mapContainer.current && !map.current) {
+      let initialCenter: [number, number] = [position?.longitude ?? 0, position?.latitude ?? 0];
       let initialZoom = 2;
-      if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      let initialPitch = 0;
+      let initialBearing = 0;
+
+      if (mapData.cameraState) {
+        const { center, range, tilt, heading, zoom, pitch, bearing } = mapData.cameraState;
+        initialCenter = [center.lng, center.lat];
+        if (zoom !== undefined) {
+          initialZoom = zoom;
+        } else if (range !== undefined) {
+          initialZoom = Math.log2(40000000 / range);
+        }
+        initialPitch = pitch ?? tilt ?? 0;
+        initialBearing = bearing ?? heading ?? 0;
+      } else if (typeof window !== 'undefined' && window.innerWidth < 768) {
         initialZoom = 1.3;
       }
+
+      currentMapCenterRef.current = { center: initialCenter, zoom: initialZoom, pitch: initialPitch };
 
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/satellite-streets-v12',
-        center: currentMapCenterRef.current.center,
-        zoom: currentMapCenterRef.current.zoom,
-        pitch: currentMapCenterRef.current.pitch,
-        bearing: 0,
+        center: initialCenter,
+        zoom: initialZoom,
+        pitch: initialPitch,
+        bearing: initialBearing,
         maxZoom: 22,
-        attributionControl: true
+        attributionControl: true,
+        preserveDrawingBuffer: true
       })
-
-      map.current.addControl(new mapboxgl.NavigationControl(), 'top-left')
 
       // Register event listeners
       map.current.on('moveend', captureMapCenter)
@@ -418,6 +415,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
 
       map.current.on('load', () => {
         if (!map.current) return
+        setMap(map.current) // Set map instance in context
 
         // Add terrain and sky
         map.current.addSource('mapbox-dem', {
@@ -439,36 +437,19 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
           },
         })
 
-        // Initialize drawing tools based on initial mode
-        if (mapType === MapToggleEnum.DrawingMode) {
-          setupDrawingTools()
-        }
-
-        // If not in real-time mode, start rotation
-        if (mapType !== MapToggleEnum.RealTimeMode) {
-          startRotation()
-        }
-
         initializedRef.current = true
+        setIsMapReady(true)
         setIsMapLoaded(true) // Set map loaded state to true
-        setupGeolocationWatcher()
       })
     }
 
     return () => {
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
       if (map.current) {
         map.current.off('moveend', captureMapCenter)
-        
-        if (drawRef.current) {
-          try {
-            map.current.off('draw.create', updateMeasurementLabels)
-            map.current.off('draw.delete', updateMeasurementLabels)
-            map.current.off('draw.update', updateMeasurementLabels)
-            map.current.removeControl(drawRef.current)
-          } catch (e) {
-            console.log('Draw control already removed')
-          }
-        }
         
         // Clean up any existing labels
         Object.values(polygonLabelsRef.current).forEach(marker => marker.remove())
@@ -476,6 +457,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         
         stopRotation()
         setIsMapLoaded(false) // Reset map loaded state on cleanup
+        setMap(null) // Clear map instance from context
         map.current.remove()
         map.current = null
       }
@@ -485,17 +467,73 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         geolocationWatchIdRef.current = null
       }
     }
-  }, [
-    handleUserInteraction, 
-    startRotation, 
-    stopRotation, 
-    mapType, 
-    updateMeasurementLabels, 
-    setupGeolocationWatcher, 
-    captureMapCenter, 
-    setupDrawingTools,
-    setIsMapLoaded
-  ])
+  }, [setMap, setIsMapLoaded, captureMapCenter, handleUserInteraction, stopRotation])
+
+  // Handle map mode changes
+  useEffect(() => {
+    // Store previous map type to detect changes
+    const prevMapType = previousMapTypeRef.current
+    const isMapTypeChanged = prevMapType !== mapType
+
+    // Only proceed if map is initialized
+    if (!map.current || !isMapReady) return
+
+    // If we're switching modes
+    if (isMapTypeChanged) {
+      previousMapTypeRef.current = mapType
+      captureMapCenter()
+
+      // Stop current mode-specific activities
+      stopRotation()
+      if (geolocationWatchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(geolocationWatchIdRef.current)
+        geolocationWatchIdRef.current = null
+      }
+
+      // Handle setup for new mode
+      if (mapType === MapToggleEnum.DrawingMode) {
+        setupDrawingTools()
+      } else if (mapType === MapToggleEnum.RealTimeMode) {
+        setupGeolocationWatcher()
+      } else {
+        startRotation()
+      }
+
+      // Cleanup drawing tools if switching AWAY from drawing mode
+      if (prevMapType === MapToggleEnum.DrawingMode && mapType !== MapToggleEnum.DrawingMode) {
+        if (drawRef.current) {
+          // Save current drawings before removing control
+          drawingFeatures.current = drawRef.current.getAll()
+
+          try {
+            map.current.off('draw.create', updateMeasurementLabels)
+            map.current.off('draw.delete', updateMeasurementLabels)
+            map.current.off('draw.update', updateMeasurementLabels)
+            map.current.removeControl(drawRef.current)
+            drawRef.current = null
+
+            // Clean up any existing labels
+            Object.values(polygonLabelsRef.current).forEach(marker => marker.remove())
+            Object.values(lineLabelsRef.current).forEach(marker => marker.remove())
+            polygonLabelsRef.current = {}
+            lineLabelsRef.current = {}
+          } catch (e) {
+            console.log('Error removing draw control:', e)
+          }
+        }
+
+        // Also remove navigation control when leaving drawing mode
+        if (navControlRef.current) {
+          try {
+            map.current.removeControl(navControlRef.current)
+            navControlRef.current = null
+          } catch (e) {
+            console.log('Error removing navigation control:', e)
+          }
+        }
+      }
+    }
+  }, [mapType, isMapReady, updateMeasurementLabels, setupGeolocationWatcher, captureMapCenter, setupDrawingTools, startRotation, stopRotation])
 
   // Handle position updates from props
   useEffect(() => {
@@ -507,14 +545,9 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   // Effect to handle map updates from MapDataContext
   useEffect(() => {
     if (mapData.targetPosition && map.current) {
-      // console.log("Mapbox.tsx: Received new targetPosition from context:", mapData.targetPosition);
-      // targetPosition is LngLatLike, which can be [number, number]
-      // updateMapPosition expects (latitude, longitude)
-      const [lng, lat] = mapData.targetPosition as [number, number]; // Assuming LngLatLike is [lng, lat]
+      const { lat, lng } = mapData.targetPosition;
       if (typeof lat === 'number' && typeof lng === 'number') {
         updateMapPosition(lat, lng);
-      } else {
-        // console.error("Mapbox.tsx: Invalid targetPosition format in mapData", mapData.targetPosition);
       }
     }
     // TODO: Handle mapData.mapFeature for drawing routes, polygons, etc. in a future step.
@@ -549,55 +582,6 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     }
   }, []);
 
-  // Cleanup for the main useEffect
-  useEffect(() => {
-    // ... existing useEffect logic ...
-    return () => {
-      // ... existing cleanup logic ...
-      if (longPressTimerRef.current) { // Cleanup timer on component unmount
-        clearTimeout(longPressTimerRef.current);
-        longPressTimerRef.current = null;
-      }
-      // ... existing cleanup logic for map and geolocation ...
-      if (map.current) {
-        map.current.off('moveend', captureMapCenter)
-
-        if (drawRef.current) {
-          try {
-            map.current.off('draw.create', updateMeasurementLabels)
-            map.current.off('draw.delete', updateMeasurementLabels)
-            map.current.off('draw.update', updateMeasurementLabels)
-            map.current.removeControl(drawRef.current)
-          } catch (e) {
-            console.log('Draw control already removed')
-          }
-        }
-
-        Object.values(polygonLabelsRef.current).forEach(marker => marker.remove())
-        Object.values(lineLabelsRef.current).forEach(marker => marker.remove())
-
-        stopRotation()
-        setIsMapLoaded(false)
-        map.current.remove()
-        map.current = null
-      }
-
-      if (geolocationWatchIdRef.current !== null) {
-        navigator.geolocation.clearWatch(geolocationWatchIdRef.current)
-        geolocationWatchIdRef.current = null
-      }
-    };
-  }, [
-    handleUserInteraction,
-    startRotation,
-    stopRotation,
-    mapType, // mapType is already here, good.
-    updateMeasurementLabels,
-    setupGeolocationWatcher,
-    captureMapCenter,
-    setupDrawingTools,
-    setIsMapLoaded
-  ]);
 
 
   return (
