@@ -58,7 +58,7 @@ export function ResolutionCarousel({ mapboxImage, googleImage, initialImage }: R
     }
   }
 
-  const slides = []
+  const slides: Array<{ type: 'compare', left: string, right: string } | { type: 'image', src: string, showAnalysis: boolean, label: string }> = []
 
   // Slide 1: Comparison (if both exist)
   if (mapboxImage && googleImage) {
@@ -110,10 +110,10 @@ export function ResolutionCarousel({ mapboxImage, googleImage, initialImage }: R
             <CarouselItem key={index}>
               <div className="flex flex-col items-center p-1">
                 {slide.type === 'compare' ? (
-                  <CompareSlider leftImage={slide.left!} rightImage={slide.right!} className="w-full" />
+                  <CompareSlider leftImage={slide.left} rightImage={slide.right} className="w-full" />
                 ) : (
                   <>
-                    <ResolutionImage src={slide.src!} className="mb-0 mt-0 w-full" />
+                    <ResolutionImage src={slide.src} className="mb-0 mt-0 w-full" />
                     {slide.showAnalysis && (
                       <Button
                         variant="secondary"
