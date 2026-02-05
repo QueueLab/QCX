@@ -20,6 +20,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, Zap, Rocket, Cpu, Earth } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { useGeospatialModel } from "@/lib/geospatial-model-context";
 
 interface ModelSelectionFormProps {
   form: UseFormReturn<any>;
@@ -61,6 +64,8 @@ const models = [
 ];
 
 export function ModelSelectionForm({ form }: ModelSelectionFormProps) {
+  const { isGeospatialModelEnabled, toggleGeospatialModel } = useGeospatialModel();
+
   return (
     <FormField
       control={form.control}
@@ -115,11 +120,25 @@ export function ModelSelectionForm({ form }: ModelSelectionFormProps) {
                             <Icon className="h-5 w-5" />
                           </div>
                           <div className="flex-1 space-y-1">
-                            <div className="flex items-center gap-2">
-                              <h4 className="font-medium">{model.name}</h4>
-                              <Badge variant={model.badgeVariant}>
-                                {model.badge}
-                              </Badge>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-medium">{model.name}</h4>
+                                <Badge variant={model.badgeVariant}>
+                                  {model.badge}
+                                </Badge>
+                              </div>
+                              {model.id === "QCX-Terra" && (
+                                <div className="flex items-center space-x-2">
+                                  <Label htmlFor="geospatial-model-toggle" className="sr-only">
+                                    Enable Geospatial Foundational Model
+                                  </Label>
+                                  <Switch
+                                    id="geospatial-model-toggle"
+                                    checked={isGeospatialModelEnabled}
+                                    onCheckedChange={toggleGeospatialModel}
+                                  />
+                                </div>
+                              )}
                             </div>
                             <p className="text-sm text-muted-foreground">
                               {model.description}

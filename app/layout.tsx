@@ -12,6 +12,8 @@ import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Toaster } from '@/components/ui/sonner'
 import { MapToggleProvider } from '@/components/map-toggle-context'
 import { ProfileToggleProvider } from '@/components/profile-toggle-context'
+import { GeospatialModelProvider } from '@/lib/geospatial-model-context'
+import ErrorBoundary from '@/components/error-boundary'
 import { UsageToggleProvider } from '@/components/usage-toggle-context'
 import { CalendarToggleProvider } from '@/components/calendar-toggle-context'
 import { HistoryToggleProvider } from '@/components/history-toggle-context'
@@ -95,35 +97,39 @@ export default function RootLayout({
           fontPoppins.variable
         )}
       >
-        <CalendarToggleProvider>
-          <HistoryToggleProvider>
-            <MapToggleProvider>
-              <ProfileToggleProvider>
-                <UsageToggleProvider>
-                  <ThemeProvider
-                    attribute="class"
-                    defaultTheme="earth"
-                    enableSystem
-                    disableTransitionOnChange
-                    themes={['light', 'dark', 'earth']}
-                  >
-                    <MapContextProvider>
-                      <MapLoadingProvider>
-                        <Header />
-                        <ConditionalLottie />
-                        {children}
-                        <Sidebar />
-                        <HistorySidebar />
-                        <Footer />
-                        <Toaster />
-                      </MapLoadingProvider>
-                    </MapContextProvider>
-                  </ThemeProvider>
-                </UsageToggleProvider>
-              </ProfileToggleProvider>
-            </MapToggleProvider>
-          </HistoryToggleProvider>
-        </CalendarToggleProvider>
+        <ErrorBoundary>
+          <CalendarToggleProvider>
+            <HistoryToggleProvider>
+              <MapToggleProvider>
+                <ProfileToggleProvider>
+                  <UsageToggleProvider>
+                    <GeospatialModelProvider>
+                      <ThemeProvider
+                        attribute="class"
+                        defaultTheme="earth"
+                        enableSystem
+                        disableTransitionOnChange
+                        themes={['light', 'dark', 'earth']}
+                      >
+                        <MapContextProvider>
+                          <MapLoadingProvider>
+                            <Header />
+                            <ConditionalLottie />
+                            {children}
+                            <Sidebar />
+                            <HistorySidebar />
+                            <Footer />
+                            <Toaster />
+                          </MapLoadingProvider>
+                        </MapContextProvider>
+                      </ThemeProvider>
+                    </GeospatialModelProvider>
+                  </UsageToggleProvider>
+                </ProfileToggleProvider>
+              </MapToggleProvider>
+            </HistoryToggleProvider>
+          </CalendarToggleProvider>
+        </ErrorBoundary>
         <Analytics />
         <SpeedInsights />
       </body>

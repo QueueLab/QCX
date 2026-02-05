@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, ChangeEvent, forwardRef, useImperativeHandle, useCallback } from 'react'
 import type { AI, UIState } from '@/app/actions'
 import { useUIState, useActions, readStreamableValue } from 'ai/rsc'
+import { useGeospatialModel } from '@/lib/geospatial-model-context'
 import { cn } from '@/lib/utils'
 import { UserMessage } from './user-message'
 import { Button } from './ui/button'
@@ -30,6 +31,7 @@ export interface ChatPanelRef {
 export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, input, setInput, onSuggestionsChange }, ref) => {
   const [, setMessages] = useUIState<typeof AI>()
   const { submit, clearChat } = useActions()
+  const { isGeospatialModelEnabled } = useGeospatialModel();
   const { mapProvider } = useSettingsStore()
   const [isMobile, setIsMobile] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -53,7 +55,6 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     }
   }));
 
-  // Detect mobile layout
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth <= 1024)
@@ -87,42 +88,114 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (!input.trim() && !selectedFile) {
-      return
+
+    const trimmedInput = input.trim();
+    if (!trimmedInput && !selectedFile) {
+      return; // Prevent submission if both text and file are empty
     }
 
-    const content: ({ type: 'text'; text: string } | { type: 'image'; image: string })[] = []
-    if (input) {
-      content.push({ type: 'text', text: input })
-    }
-    if (selectedFile && selectedFile.type.startsWith('image/')) {
-      content.push({
-        type: 'image',
-        image: URL.createObjectURL(selectedFile)
-      })
-    }
-
-    setMessages(currentMessages => [
-      ...currentMessages,
-      {
-        id: nanoid(),
-        component: <UserMessage content={content} />
+    if (isGeospatialModelEnabled) {
+      // Logic for Geospatial Model (ONNX)
+      const userMessageContent: ({ type: 'text'; text: string } | { type: 'image'; image: string })[] = [];
+      if (trimmedInput) {
+        userMessageContent.push({ type: 'text', text: `[ONNX Request]: ${trimmedInput}` });
       }
-    ])
+      if (selectedFile) {
+        userMessageContent.push({ type: 'image', image: URL.createObjectURL(selectedFile) });
+      }
 
-    const formData = new FormData(e.currentTarget)
-    if (selectedFile) {
-      formData.append('file', selectedFile)
+      setMessages(currentMessages => [
+        ...currentMessages,
+        { id: nanoid(), component: <UserMessage content={userMessageContent} /> }
+      ]);
+
+      const onnxFormData = new FormData();
+      if (trimmedInput) {
+        onnxFormData.append('query', trimmedInput);
+      }
+      if (selectedFile) {
+        onnxFormData.append('file', selectedFile);
+      }
+
+      setInput('');
+      clearAttachment();
+
+      try {
+        const response = await fetch('/api/onnx', {
+          method: 'POST',
+          body: onnxFormData,
+        });
+
+        if (!response.ok) {
+          throw new Error(`ONNX API request failed with status ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // Validate the response shape
+        if (typeof data !== 'object' || data === null || !data.prediction) {
+          console.error("Unexpected response format from ONNX API:", data);
+          throw new Error('Unexpected response format from the ONNX model.');
+        }
+
+        const predictionText = typeof data.prediction === 'string' ? data.prediction : JSON.stringify(data.prediction, null, 2);
+
+        setMessages(currentMessages => [
+          ...currentMessages,
+          {
+            id: nanoid(),
+            component: (
+              <div className="p-4 my-2 border rounded-lg bg-muted">
+                <p><strong>ONNX Model Response:</strong></p>
+                <pre className="whitespace-pre-wrap">{predictionText}</pre>
+              </div>
+            )
+          }
+        ]);
+
+      } catch (error) {
+        console.error('ONNX API call failed:', error);
+        setMessages(currentMessages => [
+          ...currentMessages,
+          {
+            id: nanoid(),
+            component: (
+              <div className="p-4 my-2 border rounded-lg bg-destructive/20 text-destructive">
+                <p><strong>Error:</strong> {error instanceof Error ? error.message : 'Failed to get ONNX model response.'}</p>
+              </div>
+            )
+          }
+        ]);
+      }
+    } else {
+      // Default chat submission logic
+      const defaultContent: ({ type: 'text'; text: string } | { type: 'image'; image: string })[] = [];
+      if (trimmedInput) {
+        defaultContent.push({ type: 'text', text: trimmedInput });
+      }
+      if (selectedFile) {
+        defaultContent.push({ type: 'image', image: URL.createObjectURL(selectedFile) });
+      }
+
+      setMessages(currentMessages => [
+        ...currentMessages,
+        { id: nanoid(), component: <UserMessage content={defaultContent} /> }
+      ]);
+
+      const defaultFormData = new FormData(e.currentTarget);
+      if (selectedFile) {
+        defaultFormData.append('file', selectedFile);
+      }
+      
+      // Include drawn features in the form data
+      defaultFormData.append('drawnFeatures', JSON.stringify(mapData.drawnFeatures || []))
+
+      setInput('');
+      clearAttachment();
+
+      const responseMessage = await submit(defaultFormData);
+      setMessages(currentMessages => [...currentMessages, responseMessage as any]);
     }
-
-    // Include drawn features in the form data
-    formData.append('drawnFeatures', JSON.stringify(mapData.drawnFeatures || []))
-
-    setInput('')
-    clearAttachment()
-
-    const responseMessage = await submit(formData)
-    setMessages(currentMessages => [...currentMessages, responseMessage as any])
   }
 
   const handleClear = async () => {
@@ -161,7 +234,6 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     inputRef.current?.focus()
   }, [])
 
-  // New chat button (appears when there are messages)
   if (messages.length > 0 && !isMobile) {
     return (
       <div
