@@ -9,7 +9,8 @@ import { relations } from 'drizzle-orm';
 // we'll include a basic one that can be referenced by chats and messages.
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(), // Assuming Supabase user IDs are UUIDs
-  email: text('email'), // Supabase handles this in auth.users
+  email: text('email').notNull(), // Supabase handles this in auth.users
+  role: text('role').notNull().default('viewer'),
   // Other profile fields if necessary
 });
 

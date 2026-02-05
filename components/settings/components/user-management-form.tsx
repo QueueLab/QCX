@@ -143,10 +143,10 @@ export function UserManagementForm({ form }: UserManagementFormProps) {
                     <TableCell>{user.email}</TableCell>
                     <TableCell className="capitalize">{user.role}</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => console.log('Edit user:', user.id)} className="mr-2">
+                      <Button type="button" variant="ghost" size="icon" onClick={() => console.log('Edit user:', user.id)} className="mr-2">
                         <Edit3 className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => remove(index)}>
+                      <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </TableCell>

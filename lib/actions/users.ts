@@ -1,5 +1,6 @@
 'use server';
 
+import crypto from "crypto";
 import { db } from "@/lib/db";
 import { users as usersSchema } from "@/lib/db/schema";
 import { eq, ilike } from "drizzle-orm";
@@ -17,38 +18,118 @@ export interface User {
   role: UserRole;
 }
 
-// In-memory store for role management simulation
-let usersStore: Record<string, Array<User>> = {
-  'default-user': [
-    { id: '1', email: 'admin@example.com', role: 'admin' },
-    { id: '2', email: 'editor@example.com', role: 'editor' },
-  ],
-};
-
-const simulateDBDelay = () => new Promise(resolve => setTimeout(resolve, 500));
-
+/**
+ * Fetches all users from the database.
+ */
 export async function getUsers(userId: string = 'default-user'): Promise<{ users: User[] }> {
-  await simulateDBDelay();
-  if (!usersStore[userId]) {
-    usersStore[userId] = [];
+  try {
+    const results = await db.select().from(usersSchema);
+    return { users: results as User[] };
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    return { users: [] };
   }
-  return { users: usersStore[userId] };
 }
 
+/**
+ * Adds a new user to the database.
+ */
 export async function addUser(userId: string = 'default-user', newUser: { email: string; role: UserRole }): Promise<{ user?: User; error?: string }> {
-  await simulateDBDelay();
-  if (!usersStore[userId]) {
-    usersStore[userId] = [];
-  }
+  try {
+    // Check if user already exists
+    const existing = await db.select().from(usersSchema).where(eq(usersSchema.email, newUser.email)).limit(1);
+    if (existing.length > 0) {
+      return { error: 'User with this email already exists.' };
+    }
 
-  if (usersStore[userId].some(user => user.email === newUser.email)) {
-    return { error: 'User with this email already exists.' };
-  }
+    const [inserted] = await db.insert(usersSchema).values({
+      id: crypto.randomUUID(),
+      email: newUser.email,
+      role: newUser.role
+    }).returning();
 
-  const userToAdd: User = { ...newUser, id: Math.random().toString(36).substr(2, 9) };
-  usersStore[userId].push(userToAdd);
-  revalidatePath('/settings');
-  return { user: userToAdd };
+    return { user: inserted as User };
+  } catch (error) {
+    console.error('Error adding user:', error);
+    return { error: 'Failed to add user.' };
+  }
+}
+
+/**
+ * Updates a user's role in the database.
+ */
+export async function updateUserRole(userId: string = 'default-user', userEmail: string, newRole: UserRole): Promise<{ user?: User; error?: string }> {
+  try {
+    const [updated] = await db.update(usersSchema)
+      .set({ role: newRole })
+      .where(eq(usersSchema.email, userEmail))
+      .returning();
+
+    if (!updated) return { error: 'User not found.' };
+    return { user: updated as User };
+  } catch (error) {
+    console.error('Error updating role:', error);
+    return { error: 'Failed to update user role.' };
+  }
+}
+
+/**
+ * Removes a user from the database.
+ */
+export async function removeUser(userId: string = 'default-user', userEmail: string): Promise<{ success?: boolean; error?: string }> {
+  try {
+    const result = await db.delete(usersSchema)
+      .where(eq(usersSchema.email, userEmail))
+      .returning();
+
+    if (result.length === 0) return { error: 'User not found.' };
+    return { success: true };
+  } catch (error) {
+    console.error('Error removing user:', error);
+    return { error: 'Failed to remove user.' };
+  }
+}
+
+/**
+ * Updates settings and users (bulk update).
+ */
+export async function updateSettingsAndUsers(
+  userId: string = 'default-user',
+  formData: { users: Array<Omit<User, 'id'> & { id?: string }> }
+): Promise<{ success: boolean; message?: string; users?: User[] }> {
+  try {
+    const existingUsers = await db.select().from(usersSchema);
+    const incomingEmails = new Set(formData.users.map(u => u.email));
+
+    // Delete missing
+    const toDelete = existingUsers.filter(u => u.email && !incomingEmails.has(u.email));
+    for (const u of toDelete) {
+        if (u.email) await db.delete(usersSchema).where(eq(usersSchema.email, u.email));
+    }
+
+    // Upsert incoming
+    for (const u of formData.users) {
+        if (!u.email) continue;
+        const existing = existingUsers.find(ex => ex.email === u.email);
+        if (existing) {
+            await db.update(usersSchema)
+                .set({ role: u.role })
+                .where(eq(usersSchema.id, existing.id));
+        } else {
+            await db.insert(usersSchema).values({
+                id: u.id || crypto.randomUUID(),
+                email: u.email,
+                role: u.role
+            });
+        }
+    }
+
+    const updatedUsers = await db.select().from(usersSchema);
+    return { success: true, message: 'Settings and users updated successfully.', users: updatedUsers as User[] };
+  } catch (error) {
+    console.error('Error updating settings and users:', error);
+    return { success: false, message: 'Failed to update settings and users.' };
+  }
 }
 
 /**
@@ -56,7 +137,7 @@ export async function addUser(userId: string = 'default-user', newUser: { email:
  */
 export async function syncUserWithDatabase() {
   const { user } = await getSupabaseUserAndSessionOnServer();
-  if (!user) return null;
+  if (!user || !user.email) return null;
 
   try {
     const existingUser = await db.query.users.findFirst({
@@ -64,10 +145,21 @@ export async function syncUserWithDatabase() {
     });
 
     if (!existingUser) {
-      await db.insert(usersSchema).values({
-        id: user.id,
-        email: user.email,
-      });
+      // Check if user was added by email in settings
+      const existingByEmail = await db.select().from(usersSchema).where(eq(usersSchema.email, user.email)).limit(1);
+
+      if (existingByEmail.length > 0) {
+          // Update the placeholder ID with the real Supabase ID
+          await db.update(usersSchema)
+            .set({ id: user.id })
+            .where(eq(usersSchema.id, existingByEmail[0].id));
+      } else {
+          await db.insert(usersSchema).values({
+            id: user.id,
+            email: user.email,
+            role: 'viewer' // Default role for synced users
+          });
+      }
     } else if (existingUser.email !== user.email) {
       await db.update(usersSchema)
         .set({ email: user.email })
@@ -118,7 +210,6 @@ export async function saveSelectedModel(model: string): Promise<{ success: boole
   try {
     const data = JSON.stringify({ selectedModel: model }, null, 2);
     await fs.writeFile(modelConfigPath, data, 'utf8');
-    revalidatePath('/settings');
     return { success: true };
   } catch (error) {
     return { success: false, error: 'Failed to save selected model.' };
