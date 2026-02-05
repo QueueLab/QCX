@@ -117,6 +117,25 @@ export function Chat({ id }: ChatProps) {
     }
   }, [id, mapData.drawnFeatures, mapData.cameraState, mapData.uploadedGeoJson])
 
+  const renderSuggestions = () => {
+    if (!suggestions) return null;
+    return (
+      <div className="absolute inset-0 z-20 flex flex-col items-start p-4">
+        <SuggestionsDropdown
+          suggestions={suggestions}
+          onSelect={query => {
+            setInput(query)
+            setSuggestions(null)
+            // Use a small timeout to ensure state update before submission
+            setIsSubmitting(true)
+          }}
+          onClose={() => setSuggestions(null)}
+          className="relative bottom-auto mb-0 w-full shadow-none border-none bg-transparent"
+        />
+      </div>
+    );
+  };
+
   // Mobile layout
   if (isMobile) {
     return (
@@ -141,36 +160,22 @@ export function Chat({ id }: ChatProps) {
         <div className="mobile-chat-messages-area relative">
           {isCalendarOpen ? (
             <CalendarNotepad chatId={id} />
-          ) : showEmptyScreen ? (
+          ) : (
             <div className="relative w-full h-full">
               <div className={cn("transition-all duration-300", suggestions ? "blur-md pointer-events-none" : "")}>
-                <EmptyScreen
-                  submitMessage={message => {
-                    setInput(message)
-                    setIsSubmitting(true)
-                  }}
-                />
-              </div>
-              {suggestions && (
-                <div className="absolute inset-0 z-20 flex flex-col items-start p-4">
-                  <SuggestionsDropdown
-                    suggestions={suggestions}
-                    onSelect={query => {
-                      setInput(query)
-                      setSuggestions(null)
-                      // Use a small timeout to ensure state update before submission
-                      setTimeout(() => {
-                        setIsSubmitting(true)
-                      }, 0)
+                {showEmptyScreen ? (
+                  <EmptyScreen
+                    submitMessage={message => {
+                      setInput(message)
+                      setIsSubmitting(true)
                     }}
-                    onClose={() => setSuggestions(null)}
-                    className="relative bottom-auto mb-0 w-full shadow-none border-none bg-transparent"
                   />
-                </div>
-              )}
+                ) : (
+                  <ChatMessages messages={messages} />
+                )}
+              </div>
+              {renderSuggestions()}
             </div>
-          ) : (
-            <ChatMessages messages={messages} />
           )}
         </div>
         </div>
@@ -195,38 +200,20 @@ export function Chat({ id }: ChatProps) {
               setInput={setInput} 
               onSuggestionsChange={setSuggestions}
             />
-            <div className="relative">
-              {showEmptyScreen ? (
-                <>
-                  <div className={cn("transition-all duration-300", suggestions ? "blur-md pointer-events-none" : "")}>
-                    <EmptyScreen
-                      submitMessage={message => {
-                        setInput(message)
-                        setIsSubmitting(true)
-                      }}
-                    />
-                  </div>
-                  {suggestions && (
-                    <div className="absolute inset-0 z-20 flex flex-col items-start p-4">
-                      <SuggestionsDropdown
-                        suggestions={suggestions}
-                        onSelect={query => {
-                          setInput(query)
-                          setSuggestions(null)
-                          // Use a small timeout to ensure state update before submission
-                          setTimeout(() => {
-                            setIsSubmitting(true)
-                          }, 0)
-                        }}
-                        onClose={() => setSuggestions(null)}
-                        className="relative bottom-auto mb-0 w-full shadow-none border-none bg-transparent"
-                      />
-                    </div>
-                  )}
-                </>
-              ) : (
-                <ChatMessages messages={messages} />
-              )}
+            <div className="relative min-h-[100px]">
+              <div className={cn("transition-all duration-300", suggestions ? "blur-md pointer-events-none" : "")}>
+                {showEmptyScreen ? (
+                  <EmptyScreen
+                    submitMessage={message => {
+                      setInput(message)
+                      setIsSubmitting(true)
+                    }}
+                  />
+                ) : (
+                  <ChatMessages messages={messages} />
+                )}
+              </div>
+              {renderSuggestions()}
             </div>
           </>
         )}
