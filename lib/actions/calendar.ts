@@ -22,6 +22,11 @@ export async function getNotes(date: Date, chatId: string | null): Promise<Calen
     return []
   }
 
+  if (!db) {
+    console.warn('getNotes: Database unavailable, returning empty list');
+    return [];
+  }
+
   // Normalize date to the start of the day for consistent querying
   const startDate = new Date(date)
   startDate.setHours(0, 0, 0, 0)
@@ -50,7 +55,7 @@ export async function getNotes(date: Date, chatId: string | null): Promise<Calen
       .orderBy(desc(calendarNotes.createdAt))
       .execute()
 
-    return notes;
+    return notes as CalendarNote[];
 
   } catch (error) {
     console.error('Error fetching notes:', error)
@@ -58,11 +63,6 @@ export async function getNotes(date: Date, chatId: string | null): Promise<Calen
   }
 }
 
-/**
- * Saves a new note or updates an existing one.
- * @param noteData - The note data to save.
- * @returns A promise that resolves to the saved note or null if an error occurs.
- */
 /**
  * Extracts @mentions from content and validates them against the users table.
  */
@@ -73,36 +73,57 @@ async function extractAndValidateMentions(content: string): Promise<string[]> {
 
   if (potentialEmails.length === 0) return [];
 
+  // If no DB, we just store the strings themselves as a fallback?
+  // User asked for "tag user ... work in memory".
+  // Let's store the usernames as tags if DB is missing.
+  if (!db) {
+    return potentialEmails;
+  }
+
   try {
-    // Fetch all users to match against prefixes
-    // In a larger system, we would use a more optimized search
     const users = await db.select({ id: usersSchema.id, email: usersSchema.email })
       .from(usersSchema)
       .execute();
 
     const validatedIds: string[] = [];
-    potentialEmails.forEach(mention => {
-      const found = users.find(u => u.email?.toLowerCase().startsWith(mention.toLowerCase()));
+    potentialEmails.forEach((mention: string) => {
+      const found = users.find((u: any) => u.email?.toLowerCase().startsWith(mention.toLowerCase()));
       if (found) validatedIds.push(found.id);
+      else validatedIds.push(mention); // Fallback to raw string if not found
     });
 
     return Array.from(new Set(validatedIds));
   } catch (error) {
     console.error("Error validating mentions:", error);
-    return [];
+    return potentialEmails;
   }
 }
 
+/**
+ * Saves a new note or updates an existing one.
+ */
 export async function saveNote(noteData: NewCalendarNote | CalendarNote): Promise<CalendarNote | null> {
-    // Ensure current user is synced
-    await syncUserWithDatabase();
-
     const userId = await getCurrentUserIdOnServer();
-
-    const userTags = await extractAndValidateMentions(noteData.content);
     if (!userId) {
         console.error('saveNote: User not authenticated');
         return null;
+    }
+
+    // Ensure current user is synced if possible
+    await syncUserWithDatabase();
+
+    const userTags = await extractAndValidateMentions(noteData.content);
+
+    if (!db) {
+      console.warn('saveNote: Database unavailable, returning mock saved note');
+      return {
+        ...noteData,
+        id: ('id' in noteData) ? noteData.id : Math.random().toString(36).substr(2, 9),
+        userId,
+        userTags,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as CalendarNote;
     }
 
     if ('id' in noteData) {
@@ -113,7 +134,7 @@ export async function saveNote(noteData: NewCalendarNote | CalendarNote): Promis
                 .set({ ...noteData, userTags, updatedAt: new Date() })
                 .where(and(eq(calendarNotes.id, noteData.id), eq(calendarNotes.userId, userId)))
                 .returning();
-            return updatedNote;
+            return updatedNote as CalendarNote;
         } catch (error) {
             console.error('Error updating note:', error);
             return null;
@@ -139,7 +160,7 @@ export async function saveNote(noteData: NewCalendarNote | CalendarNote): Promis
                 await createMessage(calendarContextMessage);
             }
 
-            return newNote;
+            return newNote as CalendarNote;
         } catch (error) {
             console.error('Error creating note:', error);
             return null;
