@@ -15,8 +15,7 @@ export const drawingToolSchema = z.discriminatedUnion('type', [
   }),
   z.object({
     type: z.literal('line'),
-    location: z.string().optional().describe('Name of the place to draw a line at'),
-    coordinates: z.array(coordinateSchema).min(2).optional().describe('List of coordinates for the line segments'),
+    coordinates: z.array(coordinateSchema).min(2).describe('List of coordinates for the line segments'),
     label: z.string().optional().describe('Label for the line'),
     color: z.string().optional().describe('Color for the line (e.g., "#0000ff")')
   }),

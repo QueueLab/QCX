@@ -80,8 +80,14 @@ export async function getConnectedMcpClient(): Promise<McpClient | null> {
 
 /**
  * Safely close the MCP client with timeout.
+ *
+ * By default, errors during closure are logged and swallowed.
+ * Set throwOnError to true to re-throw the error for the caller to handle.
+ *
+ * @param client The MCP client to close
+ * @param throwOnError Whether to re-throw errors encountered during closure
  */
-export async function closeClient(client: McpClient | null) {
+export async function closeClient(client: McpClient | null, throwOnError = false): Promise<void> {
   if (!client) return;
   try {
     await Promise.race([
@@ -90,6 +96,9 @@ export async function closeClient(client: McpClient | null) {
     ]);
     console.log('[MCP Utility] MCP client closed successfully');
   } catch (error: any) {
+    if (throwOnError) {
+      throw error;
+    }
     console.error('[MCP Utility] Error closing MCP client:', error.message);
   }
 }

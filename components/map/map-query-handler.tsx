@@ -3,26 +3,7 @@
 import { useEffect } from 'react';
 import { useMapData } from './map-data-context'; 
 import { useMapToggle, MapToggleEnum } from '../map-toggle-context';
-
-// Define the expected structure of the mcp_response from geospatialTool
-interface McpResponseData {
-  location: {
-    latitude?: number;
-    longitude?: number;
-    place_name?: string;
-    address?: string;
-  };
-  mapUrl?: string;
-}
-
-interface ToolOutput {
-  type: string;
-  originalUserInput?: string;
-  timestamp: string;
-  mcp_response?: McpResponseData | null;
-  features?: any[];
-  error?: string | null;
-}
+import { ToolOutput } from '@/lib/types/tools';
 
 interface MapQueryHandlerProps {
   toolOutput?: ToolOutput | null;
@@ -34,7 +15,9 @@ export const MapQueryHandler: React.FC<MapQueryHandlerProps> = ({ toolOutput }) 
 
   useEffect(() => {
     if (!toolOutput) {
-      console.warn('MapQueryHandler: missing toolOutput');
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('MapQueryHandler: missing toolOutput');
+      }
       return;
     }
 
@@ -63,7 +46,7 @@ export const MapQueryHandler: React.FC<MapQueryHandlerProps> = ({ toolOutput }) 
           console.warn('MapQueryHandler: invalid MAP_QUERY_TRIGGER payload', { toolOutput, mcp_response: toolOutput.mcp_response });
         }
       } else {
-        console.warn('MapQueryHandler: invalid MAP_QUERY_TRIGGER payload', { toolOutput, mcp_response: toolOutput.mcp_response });
+        console.warn('MapQueryHandler: invalid MAP_QUERY_TRIGGER payload', { toolOutput, mcp_response: toolOutput?.mcp_response });
       }
     }
   }, [toolOutput, setMapData, setMapType]);
