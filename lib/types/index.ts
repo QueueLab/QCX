@@ -25,6 +25,27 @@ export type SearchResultItem = {
   content: string
 }
 
+export type DataAnalysisResult = {
+  title: string;
+  description?: string;
+  chartType: 'bar' | 'line' | 'pie' | 'area' | 'scatter';
+  data: any[];
+  config: {
+    xAxisKey: string;
+    yAxisKey?: string;
+    series: {
+      key: string;
+      name: string;
+      color?: string;
+    }[];
+  };
+  geospatial?: {
+    latitude: number;
+    longitude: number;
+    label?: string;
+  }[];
+};
+
 export type ExaSearchResultItem = {
   score: number
   title: string
