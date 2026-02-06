@@ -119,24 +119,18 @@ export async function researcher(
     switch (delta.type) {
       case 'text-delta':
         if (delta.textDelta) {
-          if (fullResponse.length === 0 && delta.textDelta.length > 0) {
-            uiStream.update(answerSection)
-          }
           fullResponse += delta.textDelta
           streamText.update(fullResponse)
         }
         break
 
       case 'tool-call':
-        toolCalls.push(delta)
+        toolCalls.push(delta as ToolCallPart)
         break
 
       case 'tool-result':
-        if (!useSpecificModel && toolResponses.length === 0 && delta.result) {
-          uiStream.append(answerSection)
-        }
         if (!delta.result) hasError = true
-        toolResponses.push(delta)
+        toolResponses.push(delta as ToolResultPart)
         break
 
       case 'error':

@@ -486,11 +486,7 @@ async function processChatWorkflow({
         ? answer.length === 0
         : answer.length === 0 && !errorOccurred
     ) {
-      const {
-        fullResponse,
-        hasError,
-        toolResponses
-      } = await researcher(
+      const researcherResult = await researcher(
         currentSystemPrompt,
         uiStream,
         streamText,
@@ -498,9 +494,9 @@ async function processChatWorkflow({
         mapProvider,
         useSpecificAPI
       )
-      answer = fullResponse
-      toolOutputs = toolResponses
-      errorOccurred = hasError
+      answer = researcherResult.fullResponse
+      toolOutputs = researcherResult.toolResponses
+      errorOccurred = researcherResult.hasError
 
       if (toolOutputs.length > 0) {
         toolOutputs.map(output => {
