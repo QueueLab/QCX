@@ -16,6 +16,7 @@ import { nanoid } from 'nanoid'
 import { UserMessage } from './user-message'
 import { toast } from 'sonner'
 import { CompareSlider } from './compare-slider'
+import { compressImage } from '@/lib/utils/image-utils'
 
 interface ResolutionCarouselProps {
   mapboxImage?: string | null
@@ -34,7 +35,11 @@ export function ResolutionCarousel({ mapboxImage, googleImage, initialImage }: R
 
     try {
       const response = await fetch(googleImage)
-      const blob = await response.blob()
+      const rawBlob = await response.blob()
+      const blob = await compressImage(rawBlob).catch(e => {
+        console.error('Failed to compress image for analysis:', e);
+        return rawBlob;
+      });
 
       setMessages((currentMessages: any[]) => [
         ...currentMessages,
@@ -88,9 +93,9 @@ export function ResolutionCarousel({ mapboxImage, googleImage, initialImage }: R
           <ResolutionImage src={item.src} className="mb-0" />
           {item.showAnalysis && (
             <Button
-              variant="secondary"
+              variant="default"
               size="sm"
-              className="mt-2 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 h-auto text-xs"
+              className="mt-2 w-full font-bold py-4 h-auto text-xs uppercase tracking-widest"
               onClick={handleQCXAnalysis}
               disabled={isAnalyzing}
             >
@@ -116,9 +121,9 @@ export function ResolutionCarousel({ mapboxImage, googleImage, initialImage }: R
                     <ResolutionImage src={slide.src} className="mb-0 mt-0 w-full" />
                     {slide.showAnalysis && (
                       <Button
-                        variant="secondary"
+                        variant="default"
                         size="sm"
-                        className="mt-2 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 h-auto text-xs"
+                        className="mt-2 w-full font-bold py-4 h-auto text-xs uppercase tracking-widest"
                         onClick={handleQCXAnalysis}
                         disabled={isAnalyzing}
                       >

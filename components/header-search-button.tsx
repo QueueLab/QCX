@@ -12,6 +12,7 @@ import { UserMessage } from './user-message'
 import { toast } from 'sonner'
 import { useSettingsStore } from '@/lib/store/settings'
 import { useMapData } from './map/map-data-context'
+import { compressImage } from '@/lib/utils/image-utils'
 
 // Define an interface for the actions to help TypeScript during build
 interface HeaderActions {
@@ -62,9 +63,15 @@ export function HeaderSearchButton() {
       if (mapProvider === 'mapbox' && map) {
         // Capture Mapbox
         const canvas = map.getCanvas()
-        mapboxBlob = await new Promise<Blob | null>(resolve => {
+        const rawMapboxBlob = await new Promise<Blob | null>(resolve => {
           canvas.toBlob(resolve, 'image/png')
         })
+        if (rawMapboxBlob) {
+          mapboxBlob = await compressImage(rawMapboxBlob).catch(e => {
+            console.error('Failed to compress Mapbox image:', e);
+            return rawMapboxBlob;
+          });
+        }
 
         // Also fetch Google Static Map for the same view
         const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -76,7 +83,11 @@ export function HeaderSearchButton() {
           try {
             const response = await fetch(staticMapUrl);
             if (response.ok) {
-              googleBlob = await response.blob();
+              const rawGoogleBlob = await response.blob();
+              googleBlob = await compressImage(rawGoogleBlob).catch(e => {
+                console.error('Failed to compress Google image:', e);
+                return rawGoogleBlob;
+              });
             }
           } catch (e) {
             console.error('Failed to fetch Google static map during Mapbox session:', e);
@@ -98,7 +109,11 @@ export function HeaderSearchButton() {
         if (!response.ok) {
           throw new Error('Failed to fetch static map image.');
         }
-        googleBlob = await response.blob();
+        const rawGoogleBlob = await response.blob();
+        googleBlob = await compressImage(rawGoogleBlob).catch(e => {
+          console.error('Failed to compress Google image:', e);
+          return rawGoogleBlob;
+        });
       }
 
       if (!mapboxBlob && !googleBlob) {
