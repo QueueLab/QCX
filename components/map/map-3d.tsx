@@ -12,6 +12,11 @@ import {useCallbackRef} from '@/lib/hooks/use-callback-ref';
 import {useMap3DCameraEvents} from '@/lib/hooks/use-map-3d-camera-events';
 import {useDeepCompareEffect} from '@/lib/hooks/use-deep-compare-effect';
 import type {Map3DProps} from './map-3d-types';
+<<<<<<< HEAD
+=======
+import { useMapData } from './map-data-context';
+import tzlookup from 'tz-lookup';
+>>>>>>> origin/main
 
 export const Map3D = forwardRef(
   (
@@ -24,6 +29,25 @@ export const Map3D = forwardRef(
       useCallbackRef<google.maps.maps3d.Map3DElement>();
 
     useMap3DCameraEvents(map3DElement, p => {
+<<<<<<< HEAD
+=======
+      const { center, range, heading, tilt } = p.detail;
+      const lat = center.lat();
+      const lng = center.lng();
+      const timezone = tzlookup(lat, lng);
+
+      setMapData(prevData => ({
+        ...prevData,
+        currentTimezone: timezone,
+        cameraState: {
+          ...prevData.cameraState,
+          center: { lat, lng },
+          range,
+          heading,
+          tilt
+        }
+      }));
+>>>>>>> origin/main
       if (!props.onCameraChange) return;
 
       props.onCameraChange(p);

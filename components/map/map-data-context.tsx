@@ -4,6 +4,11 @@ import React, { createContext, useContext, useState, ReactNode } from 'react';
 // Define the shape of the map data you want to share
 export interface MapData {
   targetPosition?: { lat: number; lng: number } | null; // For flying to a location
+<<<<<<< HEAD
+=======
+  cameraState?: CameraState; // For saving camera state
+  currentTimezone?: string; // Current timezone identifier
+>>>>>>> origin/main
   // TODO: Add other relevant map data types later (e.g., routeGeoJSON, poiList)
   mapFeature?: any | null; // Generic feature from MCP hook's processLocationQuery
   drawnFeatures?: Array<{ // Added to store drawn features and their measurements

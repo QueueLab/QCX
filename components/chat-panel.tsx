@@ -2,8 +2,12 @@
 
 import { useEffect, useState, useRef, ChangeEvent, forwardRef, useImperativeHandle } from 'react'
 import type { AI, UIState } from '@/app/actions'
+<<<<<<< HEAD
 import { useUIState, useActions } from 'ai/rsc'
 // Removed import of useGeospatialToolMcp as it's no longer used/available
+=======
+import { useUIState, useActions, readStreamableValue } from 'ai/rsc'
+>>>>>>> origin/main
 import { cn } from '@/lib/utils'
 import { UserMessage } from './user-message'
 import { Button } from './ui/button'
@@ -25,7 +29,6 @@ export interface ChatPanelRef {
 export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, input, setInput }, ref) => {
   const [, setMessages] = useUIState<typeof AI>()
   const { submit, clearChat } = useActions()
-  // Removed mcp instance as it's no longer passed to submit
   const { mapProvider } = useSettingsStore()
   const [isMobile, setIsMobile] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -101,6 +104,9 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
       formData.append('file', selectedFile)
     }
 
+    // Include drawn features in the form data
+    formData.append('drawnFeatures', JSON.stringify(mapData.drawnFeatures || []))
+
     setInput('')
     clearAttachment()
 
@@ -114,6 +120,35 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     await clearChat()
   }
 
+<<<<<<< HEAD
+=======
+  const debouncedGetSuggestions = useCallback(
+    (value: string) => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current)
+      }
+
+      const wordCount = value.trim().split(/\s+/).filter(Boolean).length
+      if (wordCount < 2) {
+        setSuggestions(null)
+        return
+      }
+
+      debounceTimeoutRef.current = setTimeout(async () => {
+        const suggestionsStream = await getSuggestions(value, mapData)
+        for await (const partialSuggestions of readStreamableValue(
+          suggestionsStream
+        )) {
+          if (partialSuggestions) {
+            setSuggestions(partialSuggestions as PartialRelated)
+          }
+        }
+      }, 500) // 500ms debounce delay
+    },
+    [mapData, setSuggestions]
+  )
+
+>>>>>>> origin/main
   useEffect(() => {
     inputRef.current?.focus()
   }, [])
