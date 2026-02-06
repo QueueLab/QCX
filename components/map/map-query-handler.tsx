@@ -36,16 +36,23 @@ export const MapQueryHandler: React.FC<MapQueryHandlerProps> = ({ toolOutput }) 
 
       if (typeof latitude === 'number' && typeof longitude === 'number') {
         console.log(`MapQueryHandler: Received data from geospatialTool. Place: ${place_name}, Lat: ${latitude}, Lng: ${longitude}`);
-        setMapData(prevData => ({
-          ...prevData,
-          targetPosition: { lat: latitude, lng: longitude },
-          // Optionally store more info from mcp_response if needed by MapboxMap component later
-          mapFeature: {
-            place_name, 
-            // Potentially add mapUrl or other details from toolOutput.mcp_response
-            mapUrl: toolOutput.mcp_response?.mapUrl 
-          } 
-        }));
+        const id = `${latitude},${longitude}`;
+        setMapData(prevData => {
+          const exists = prevData.markers?.some(m => m.id === id);
+          const newMarkers = exists ? prevData.markers : [...(prevData.markers || []), { id, latitude, longitude, title: place_name || id }];
+
+          return {
+            ...prevData,
+            targetPosition: { lat: latitude, lng: longitude },
+            markers: newMarkers,
+            // Optionally store more info from mcp_response if needed by MapboxMap component later
+            mapFeature: {
+              place_name,
+              // Potentially add mapUrl or other details from toolOutput.mcp_response
+              mapUrl: toolOutput.mcp_response?.mapUrl
+            }
+          };
+        });
       } else {
         console.warn("MapQueryHandler: Invalid latitude/longitude in toolOutput.mcp_response:", toolOutput.mcp_response.location);
         // Clear target position if data is invalid
