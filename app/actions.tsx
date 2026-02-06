@@ -15,6 +15,7 @@ import { FollowupPanel } from '@/components/followup-panel'
 import { inquire, researcher, taskManager, querySuggestor, resolutionSearch, type DrawnFeature } from '@/lib/agents'
 import { writer } from '@/lib/agents/writer'
 import { saveChat, getSystemPrompt } from '@/lib/actions/chat'
+import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
 import { Chat, AIMessage } from '@/lib/types'
 import { UserMessage } from '@/components/user-message'
 import { BotMessage } from '@/components/message'
@@ -303,9 +304,20 @@ async function submit(formData?: FormData, skip?: boolean) {
     };
   }
 
-  const systemPrompt = await getSystemPrompt()
+  const userId = await getCurrentUserIdOnServer()
+  const systemPrompt = userId ? await getSystemPrompt(userId) : null
 
-  const result = await researcher(uiStream, messages, systemPrompt)
+  const answerStream = createStreamableValue<string>('')
+
+  const result = await researcher(
+    systemPrompt || '',
+    uiStream,
+    answerStream,
+    messages,
+    'mapbox',
+    false,
+    drawnFeatures
+  )
 
   aiState.update({
     ...aiState.get(),
@@ -319,15 +331,13 @@ async function submit(formData?: FormData, skip?: boolean) {
       }
     ]
   })
-
-  const answerStream = createStreamableValue<string>('')
   let finalAnswer = ''
   let fullResponse = ''
   let hasError = false
 
   async function processEvents() {
     try {
-      for await (const event of result.fullStream) {
+      for await (const event of result.result.fullStream) {
         if (event.type === 'text-delta') {
           fullResponse += event.textDelta
           answerStream.update(fullResponse)
@@ -335,7 +345,7 @@ async function submit(formData?: FormData, skip?: boolean) {
           if (event.toolName === 'dataAnalysis') {
             uiStream.append(
               <Section title="Analysis">
-                <GraphSection data={event.args as any} />
+                <GraphSection result={event.args as any} />
               </Section>
             )
           }

@@ -12,7 +12,7 @@ import { BotMessage } from '@/components/message'
 import { getTools } from './tools'
 import { getModel } from '../utils'
 import { MapProvider } from '@/lib/store/settings'
-import { DrawnFeature } from './resolution-search'
+import { type DrawnFeature } from './index'
 
 // This magic tag lets us write raw multi-line strings with backticks, arrows, etc.
 const raw = String.raw
@@ -32,7 +32,7 @@ Use these user-drawn areas/lines as primary areas of interest for your analysis 
 3. **Search Specificity:** When using the 'search' tool, formulate queries that are as specific as possible.
 4. **Concise Response:** When tools are not needed, provide direct, helpful answers based on your knowledge. Match the user's language.
 5. **Citations:** Always cite source URLs when using information from tools.
-6. **No Text-Based Charts:** NEVER create charts, graphs, or visual representations using text-based formatting, asterisks (*), or other hardcoded characters. ALWAYS use the `dataAnalysis` tool for any visual data representation.
+6. **No Text-Based Charts:** NEVER create charts, graphs, or visual representations using text-based formatting, asterisks (*), or other hardcoded characters. ALWAYS use the \`dataAnalysis\` tool for any visual data representation.
 
 ### **Tool Usage Guidelines (Mandatory)**
 
