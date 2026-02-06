@@ -181,7 +181,7 @@ export function CalendarNotepad({ chatId }: CalendarNotepadProps) {
             rows={3}
           />
           {showSuggestions && (
-            <div className="absolute bottom-full mb-2 w-full bg-background border rounded-md shadow-lg z-50 p-1 max-h-40 overflow-y-auto">
+            <div className="absolute top-full mt-2 w-full bg-background border rounded-md shadow-lg z-50 p-1 max-h-40 overflow-y-auto">
               {userSuggestions.map(user => (
                 <button
                   key={user.id}
@@ -197,7 +197,7 @@ export function CalendarNotepad({ chatId }: CalendarNotepadProps) {
           )}
           <button
             onClick={handleTagLocation}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            className="absolute right-2 top-2 text-muted-foreground hover:text-foreground" title="Tag current map location"
           >
             <MapPin className="h-5 w-5" />
           </button>
