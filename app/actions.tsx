@@ -14,7 +14,13 @@ import { Section } from '@/components/section'
 import { FollowupPanel } from '@/components/followup-panel'
 import { inquire, researcher, taskManager, querySuggestor, resolutionSearch, type DrawnFeature } from '@/lib/agents'
 import { writer } from '@/lib/agents/writer'
-import { saveChat, getSystemPrompt } from '@/lib/actions/chat'
+import {
+  saveChat,
+  getSystemPrompt,
+  updateMessage,
+  deleteMessage,
+  deleteTrailingMessages
+} from '@/lib/actions/chat'
 import { Chat, AIMessage } from '@/lib/types'
 import { UserMessage } from '@/components/user-message'
 import { BotMessage } from '@/components/message'
@@ -75,11 +81,18 @@ async function submit(formData?: FormData, skip?: boolean) {
       { type: 'image', image: dataUrl, mimeType: file.type }
     ];
 
+    const messageId = (formData?.get('id') as string) || nanoid();
     aiState.update({
       ...aiState.get(),
       messages: [
         ...aiState.get().messages,
-        { id: nanoid(), role: 'user', content, type: 'input' }
+        {
+          id: messageId,
+          role: 'user',
+          content,
+          type: 'input',
+          createdAt: new Date()
+        }
       ]
     });
     messages.push({ role: 'user', content });
@@ -152,7 +165,8 @@ async function submit(formData?: FormData, skip?: boolean) {
               id: groupeId,
               role: 'assistant',
               content: analysisResult.summary || 'Analysis complete.',
-              type: 'response'
+              type: 'response',
+              createdAt: new Date()
             },
             {
               id: groupeId,
@@ -161,19 +175,22 @@ async function submit(formData?: FormData, skip?: boolean) {
                 ...analysisResult,
                 image: dataUrl
               }),
-              type: 'resolution_search_result'
+              type: 'resolution_search_result',
+              createdAt: new Date()
             },
             {
               id: groupeId,
               role: 'assistant',
               content: JSON.stringify(relatedQueries),
-              type: 'related'
+              type: 'related',
+              createdAt: new Date()
             },
             {
               id: groupeId,
               role: 'assistant',
               content: 'followup',
-              type: 'followup'
+              type: 'followup',
+              createdAt: new Date()
             }
           ]
         });
@@ -250,18 +267,19 @@ async function submit(formData?: FormData, skip?: boolean) {
           role: 'user',
           content,
           type,
-        },
-      ],
-    });
+          createdAt: new Date()
+        }
+      ]
+    })
 
-    const definitionStream = createStreamableValue();
-    definitionStream.done(definition);
+    const definitionStream = createStreamableValue()
+    definitionStream.done(definition)
 
     const answerSection = (
       <Section title="response">
         <BotMessage content={definitionStream.value} />
       </Section>
-    );
+    )
 
     uiStream.update(answerSection);
 
@@ -276,21 +294,24 @@ async function submit(formData?: FormData, skip?: boolean) {
           role: 'assistant',
           content: definition,
           type: 'response',
+          createdAt: new Date()
         },
         {
           id: groupeId,
           role: 'assistant',
           content: JSON.stringify(relatedQueries),
           type: 'related',
+          createdAt: new Date()
         },
         {
           id: groupeId,
           role: 'assistant',
           content: 'followup',
           type: 'followup',
-        },
-      ],
-    });
+          createdAt: new Date()
+        }
+      ]
+    })
 
     isGenerating.done(false);
     uiStream.done();
@@ -360,16 +381,19 @@ async function submit(formData?: FormData, skip?: boolean) {
     ? 'input_related'
     : 'inquiry'
 
+  const messageId = (formData?.get('id') as string) || nanoid()
+
   if (content) {
     aiState.update({
       ...aiState.get(),
       messages: [
         ...aiState.get().messages,
         {
-          id: nanoid(),
+          id: messageId,
           role: 'user',
           content,
-          type
+          type,
+          createdAt: new Date()
         }
       ]
     })
@@ -379,13 +403,63 @@ async function submit(formData?: FormData, skip?: boolean) {
     } as CoreMessage)
   }
 
-  const userId = 'anonymous'
+  const { getCurrentUserIdOnServer } = await import(
+    '@/lib/auth/get-current-user'
+  )
+  const userId = (await getCurrentUserIdOnServer()) || 'anonymous'
   const currentSystemPrompt = (await getSystemPrompt(userId)) || ''
   const mapProvider = formData?.get('mapProvider') as 'mapbox' | 'google'
 
-  async function processEvents() {
+  processChatWorkflow({
+    aiState,
+    uiStream,
+    isGenerating,
+    isCollapsed,
+    messages,
+    groupeId,
+    currentSystemPrompt,
+    mapProvider,
+    useSpecificAPI,
+    maxMessages,
+    skipTaskManager: skip
+  })
+
+  return {
+    id: nanoid(),
+    isGenerating: isGenerating.value,
+    component: uiStream.value,
+    isCollapsed: isCollapsed.value
+  }
+}
+
+async function processChatWorkflow({
+  aiState,
+  uiStream,
+  isGenerating,
+  isCollapsed,
+  messages,
+  groupeId,
+  currentSystemPrompt,
+  mapProvider,
+  useSpecificAPI,
+  maxMessages,
+  skipTaskManager = false
+}: {
+  aiState: any
+  uiStream: any
+  isGenerating: any
+  isCollapsed: any
+  messages: CoreMessage[]
+  groupeId: string
+  currentSystemPrompt: string
+  mapProvider: any
+  useSpecificAPI: boolean
+  maxMessages: number
+  skipTaskManager?: boolean
+}) {
+  try {
     let action: any = { object: { next: 'proceed' } }
-    if (!skip) {
+    if (!skipTaskManager) {
       const taskManagerResult = await taskManager(messages)
       if (taskManagerResult) {
         action.object = taskManagerResult.object
@@ -394,9 +468,6 @@ async function submit(formData?: FormData, skip?: boolean) {
 
     if (action.object.next === 'inquire') {
       const inquiry = await inquire(uiStream, messages)
-      uiStream.done()
-      isGenerating.done()
-      isCollapsed.done(false)
       aiState.done({
         ...aiState.get(),
         messages: [
@@ -404,10 +475,14 @@ async function submit(formData?: FormData, skip?: boolean) {
           {
             id: nanoid(),
             role: 'assistant',
-            content: `inquiry: ${inquiry?.question}`
+            content: `inquiry: ${inquiry?.question}`,
+            createdAt: new Date()
           }
         ]
       })
+      isGenerating.done(false)
+      isCollapsed.done(false)
+      uiStream.done()
       return
     }
 
@@ -415,26 +490,32 @@ async function submit(formData?: FormData, skip?: boolean) {
     let answer = ''
     let toolOutputs: ToolResultPart[] = []
     let errorOccurred = false
-    const streamText = createStreamableValue<string>()
-    uiStream.update(<Spinner />)
+    const streamText = createStreamableValue('')
+
+    const answerSection = (
+      <Section title="response">
+        <BotMessage content={streamText.value} />
+      </Section>
+    )
+
+    uiStream.update(answerSection)
 
     while (
       useSpecificAPI
         ? answer.length === 0
         : answer.length === 0 && !errorOccurred
     ) {
-      const { fullResponse, hasError, toolResponses } = await researcher(
+      const researcherResult = await researcher(
         currentSystemPrompt,
         uiStream,
         streamText,
         messages,
         mapProvider,
-        useSpecificAPI,
-        drawnFeatures
+        useSpecificAPI
       )
-      answer = fullResponse
-      toolOutputs = toolResponses
-      errorOccurred = hasError
+      answer = researcherResult.fullResponse
+      toolOutputs = researcherResult.toolResponses
+      errorOccurred = researcherResult.hasError
 
       if (toolOutputs.length > 0) {
         toolOutputs.map(output => {
@@ -452,22 +533,24 @@ async function submit(formData?: FormData, skip?: boolean) {
             ]
           })
         })
+      } else {
+        // If no tool calls and researcher finished, break to possibly call writer or end
+        break
       }
     }
 
     if (useSpecificAPI && answer.length === 0) {
-      const modifiedMessages = aiState
-        .get()
-        .messages.map(msg =>
+      const modifiedMessages = (aiState.get().messages as AIMessage[]).map(
+        (msg: AIMessage) =>
           msg.role === 'tool'
-            ? {
+            ? ({
                 ...msg,
                 role: 'assistant',
                 content: JSON.stringify(msg.content),
                 type: 'tool'
-              }
+              } as AIMessage)
             : msg
-        ) as CoreMessage[]
+      ) as CoreMessage[]
       const latestMessages = modifiedMessages.slice(maxMessages * -1)
       answer = await writer(
         currentSystemPrompt,
@@ -479,7 +562,12 @@ async function submit(formData?: FormData, skip?: boolean) {
       streamText.done()
     }
 
-    if (!errorOccurred) {
+    if (answer.length === 0 && !errorOccurred) {
+      answer = "I'm sorry, I couldn't generate a response. Please try again."
+      streamText.done(answer)
+    }
+
+    if (!errorOccurred || answer.length > 0) {
       const relatedQueries = await querySuggestor(uiStream, messages)
       uiStream.append(
         <Section title="Follow-up">
@@ -497,35 +585,168 @@ async function submit(formData?: FormData, skip?: boolean) {
             id: groupeId,
             role: 'assistant',
             content: answer,
-            type: 'response'
+            type: 'response',
+            createdAt: new Date()
           },
           {
             id: groupeId,
             role: 'assistant',
             content: JSON.stringify(relatedQueries),
-            type: 'related'
+            type: 'related',
+            createdAt: new Date()
           },
           {
             id: groupeId,
             role: 'assistant',
             content: 'followup',
-            type: 'followup'
+            type: 'followup',
+            createdAt: new Date()
           }
         ]
       })
     }
-
+  } catch (error) {
+    console.error('Error in processChatWorkflow:', error)
+    uiStream.append(
+      <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
+        An error occurred while generating the response. Please try again.
+      </div>
+    )
+    aiState.done(aiState.get())
+  } finally {
     isGenerating.done(false)
     uiStream.done()
   }
+}
 
-  processEvents()
+async function resubmit(
+  messageId: string,
+  content: string,
+  mapProvider: 'mapbox' | 'google' = 'mapbox'
+) {
+  'use server'
+
+  const aiState = getMutableAIState<typeof AI>()
+  const uiStream = createStreamableUI()
+  const isGenerating = createStreamableValue(true)
+  const isCollapsed = createStreamableValue(false)
+
+  const messages = aiState.get().messages
+  const index = messages.findIndex(m => m.id === messageId)
+
+  if (index === -1) {
+    isGenerating.done(false)
+    uiStream.done()
+    return {
+      id: nanoid(),
+      isGenerating: isGenerating.value,
+      component: null,
+      isCollapsed: isCollapsed.value
+    }
+  }
+
+  const editedMessage = messages[index]
+  const chatId = aiState.get().chatId
+
+  if (editedMessage.createdAt) {
+    await deleteTrailingMessages(chatId, new Date(editedMessage.createdAt))
+  }
+  const truncatedMessages = messages.slice(0, index + 1)
+  const editedMessageInState = truncatedMessages[index]
+
+  if (Array.isArray(editedMessageInState.content)) {
+    const textPart = editedMessageInState.content.find(p => p.type === 'text') as
+      | { type: 'text'; text: string }
+      | undefined
+    if (textPart) {
+      textPart.text = content
+    }
+  } else {
+    editedMessageInState.content = content
+  }
+
+  await updateMessage(
+    messageId,
+    typeof editedMessageInState.content === 'object'
+      ? JSON.stringify(editedMessageInState.content)
+      : editedMessageInState.content
+  )
+
+  aiState.update({
+    ...aiState.get(),
+    messages: truncatedMessages
+  })
+
+  const coreMessages: CoreMessage[] = truncatedMessages
+    .filter(
+      message =>
+        message.role !== 'tool' &&
+        message.type !== 'followup' &&
+        message.type !== 'related' &&
+        message.type !== 'end' &&
+        message.type !== 'resolution_search_result'
+    )
+    .map(m => {
+      return {
+        role: m.role as 'user' | 'assistant' | 'system' | 'tool',
+        content: m.content
+      } as CoreMessage
+    })
+
+  const groupeId = nanoid()
+  const useSpecificAPI = process.env.USE_SPECIFIC_API_FOR_WRITER === 'true'
+  const maxMessages = useSpecificAPI ? 5 : 10
+  coreMessages.splice(0, Math.max(coreMessages.length - maxMessages, 0))
+
+  const { getCurrentUserIdOnServer } = await import(
+    '@/lib/auth/get-current-user'
+  )
+  const userId = (await getCurrentUserIdOnServer()) || 'anonymous'
+  const currentSystemPrompt = (await getSystemPrompt(userId)) || ''
+
+  processChatWorkflow({
+    aiState,
+    uiStream,
+    isGenerating,
+    isCollapsed,
+    messages: coreMessages,
+    groupeId,
+    currentSystemPrompt,
+    mapProvider,
+    useSpecificAPI,
+    maxMessages,
+    skipTaskManager: true // Usually we want to skip task manager on resubmit
+  })
 
   return {
     id: nanoid(),
     isGenerating: isGenerating.value,
     component: uiStream.value,
     isCollapsed: isCollapsed.value
+  }
+}
+
+async function deleteMessageAction(messageId: string) {
+  'use server'
+
+  const aiState = getMutableAIState<typeof AI>()
+  const messages = aiState.get().messages
+  const index = messages.findIndex(m => m.id === messageId)
+
+  if (index !== -1) {
+    const messageToDelete = messages[index]
+    const chatId = aiState.get().chatId
+
+    if (messageToDelete.createdAt) {
+      await deleteTrailingMessages(chatId, new Date(messageToDelete.createdAt))
+    }
+    await deleteMessage(messageId)
+
+    const truncatedMessages = messages.slice(0, index)
+    aiState.done({
+      ...aiState.get(),
+      messages: truncatedMessages
+    })
   }
 }
 
@@ -560,88 +781,7 @@ const initialAIState: AIState = {
 
 const initialUIState: UIState = []
 
-export const AI = createAI<AIState, UIState>({
-  actions: {
-    submit,
-    clearChat
-  },
-  initialUIState,
-  initialAIState,
-  onGetUIState: async () => {
-    'use server'
-
-    const aiState = getAIState() as AIState
-    if (aiState) {
-      const uiState = getUIStateFromAIState(aiState)
-      return uiState
-    }
-    return initialUIState
-  },
-  onSetAIState: async ({ state }) => {
-    'use server'
-
-    if (!state.messages.some(e => e.type === 'response')) {
-      return
-    }
-
-    const { chatId, messages } = state
-    const createdAt = new Date()
-    const path = `/search/${chatId}`
-
-    let title = 'Untitled Chat'
-    if (messages.length > 0) {
-      const firstMessageContent = messages[0].content
-      if (typeof firstMessageContent === 'string') {
-        try {
-          const parsedContent = JSON.parse(firstMessageContent)
-          title = parsedContent.input?.substring(0, 100) || 'Untitled Chat'
-        } catch (e) {
-          title = firstMessageContent.substring(0, 100)
-        }
-      } else if (Array.isArray(firstMessageContent)) {
-        const textPart = (
-          firstMessageContent as { type: string; text?: string }[]
-        ).find(p => p.type === 'text')
-        title =
-          textPart && textPart.text
-            ? textPart.text.substring(0, 100)
-            : 'Image Message'
-      }
-    }
-
-    const updatedMessages: AIMessage[] = [
-      ...messages,
-      {
-        id: nanoid(),
-        role: 'assistant',
-        content: `end`,
-        type: 'end'
-      }
-    ]
-
-    const { getCurrentUserIdOnServer } = await import(
-      '@/lib/auth/get-current-user'
-    )
-    const actualUserId = await getCurrentUserIdOnServer()
-
-    if (!actualUserId) {
-      console.error('onSetAIState: User not authenticated. Chat not saved.')
-      return
-    }
-
-    const chat: Chat = {
-      id: chatId,
-      createdAt,
-      userId: actualUserId,
-      path,
-      title,
-      messages: updatedMessages
-    }
-    await saveChat(chat, actualUserId)
-  }
-})
-
-export const getUIStateFromAIState = (aiState: AIState): UIState => {
+const getUIStateFromAIState = (aiState: AIState): UIState => {
   const chatId = aiState.chatId
   const isSharePage = aiState.isSharePage
   return aiState.messages
@@ -673,6 +813,7 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                 id,
                 component: (
                   <UserMessage
+                    id={id}
                     content={messageContent}
                     chatId={chatId}
                     showShare={index === 0 && !isSharePage}
@@ -689,136 +830,75 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
         case 'assistant':
           const answer = createStreamableValue(content as string)
           answer.done(content as string)
+
           switch (type) {
             case 'response':
               return {
                 id,
-                component: (
-                  <Section title="response">
-                    <BotMessage content={answer.value} />
-                  </Section>
-                )
+                component: <BotMessage content={answer.value} />
               }
             case 'related':
-              const relatedQueries = createStreamableValue<RelatedQueries>({
-                items: []
-              })
+              const relatedQueries = createStreamableValue(
+                JSON.parse(content as string)
+              )
               relatedQueries.done(JSON.parse(content as string))
               return {
                 id,
-                component: (
-                  <Section title="Related" separator={true}>
-                    <SearchRelated relatedQueries={relatedQueries.value} />
-                  </Section>
-                )
+                component: <SearchRelated relatedQueries={relatedQueries.value} />
               }
             case 'followup':
               return {
                 id,
                 component: (
-                  <Section title="Follow-up" className="pb-8">
+                  <Section title="Follow-up" isCollapsed={isSharePage}>
                     <FollowupPanel />
                   </Section>
                 )
               }
-            case 'resolution_search_result': {
-              const analysisResult = JSON.parse(content as string);
-              const geoJson = analysisResult.geoJson as FeatureCollection;
-              const image = analysisResult.image as string;
-
-              return {
-                id,
-                component: (
-                  <>
-                    {image && <ResolutionImage src={image} />}
-                    {geoJson && (
-                      <GeoJsonLayer id={id} data={geoJson} />
-                    )}
-                  </>
-                )
-              }
-            }
           }
           break
         case 'tool':
           try {
-            const toolOutput = JSON.parse(content as string)
-            const isCollapsed = createStreamableValue(true)
-            isCollapsed.done(true)
-
-            if (
-              toolOutput.type === 'MAP_QUERY_TRIGGER' &&
-              name === 'geospatialQueryTool'
-            ) {
-              const mapUrl = toolOutput.mcp_response?.mapUrl;
-              const placeName = toolOutput.mcp_response?.location?.place_name;
-
-              return {
-                id,
-                component: (
-                  <>
-                    {mapUrl && (
-                      <ResolutionImage
-                        src={mapUrl}
-                        className="mb-0"
-                        alt={placeName ? `Map of ${placeName}` : 'Map Preview'}
-                      />
-                    )}
-                    <MapQueryHandler toolOutput={toolOutput} />
-                  </>
-                ),
-                isCollapsed: false
-              }
-            }
-
-            const searchResults = createStreamableValue(
-              JSON.stringify(toolOutput)
-            )
-            searchResults.done(JSON.stringify(toolOutput))
+            const toolResult = JSON.parse(content as string)
             switch (name) {
               case 'search':
                 return {
                   id,
-                  component: <SearchSection result={searchResults.value} />,
-                  isCollapsed: isCollapsed.value
+                  component: <SearchSection result={toolResult} />,
+                  isCollapsed: createStreamableValue(true).value
                 }
               case 'retrieve':
                 return {
                   id,
-                  component: <RetrieveSection data={toolOutput} />,
-                  isCollapsed: isCollapsed.value
+                  component: <RetrieveSection data={toolResult} />,
+                  isCollapsed: createStreamableValue(true).value
                 }
               case 'videoSearch':
                 return {
                   id,
-                  component: (
-                    <VideoSearchSection result={searchResults.value} />
-                  ),
-                  isCollapsed: isCollapsed.value
+                  component: <VideoSearchSection result={toolResult} />,
+                  isCollapsed: createStreamableValue(true).value
                 }
-              default:
-                console.warn(
-                  `Unhandled tool result in getUIStateFromAIState: ${name}`
-                )
-                return { id, component: null }
             }
-          } catch (error) {
-            console.error(
-              'Error parsing tool content in getUIStateFromAIState:',
-              error
-            )
-            return {
-              id,
-              component: null
-            }
+          } catch (e) {
+            return null
           }
           break
-        default:
-          return {
-            id,
-            component: null
-          }
       }
+      return null
     })
     .filter(message => message !== null) as UIState
 }
+
+export const AI = createAI<AIState, UIState>({
+  actions: {
+    submit,
+    resubmit,
+    deleteMessageAction,
+    clearChat
+  },
+  initialUIState,
+  initialAIState,
+  unmaskRequiredConfigs: true,
+  onGetUIState: getUIStateFromAIState
+})

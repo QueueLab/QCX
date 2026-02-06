@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import { chats, messages, users } from '@/lib/db/schema';
-import { eq, desc, and, sql, asc } from 'drizzle-orm'; // Added asc
+import { eq, desc, and, sql, asc, gt } from 'drizzle-orm'; // Added asc, gt
 import { alias } from 'drizzle-orm/pg-core';
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'; // We'll use this to ensure user-specific actions
 
@@ -119,7 +119,17 @@ export async function saveChat(chatData: NewChat, messagesData: Omit<NewMessage,
         chatId: chatId!, // Ensure chatId is set for all messages
         userId: msg.userId || chatData.userId!, // Ensure userId is set
       }));
-      await tx.insert(messages).values(messagesToInsert);
+      await tx
+        .insert(messages)
+        .values(messagesToInsert)
+        .onConflictDoUpdate({
+          target: messages.id,
+          set: {
+            content: sql`EXCLUDED.content`,
+            role: sql`EXCLUDED.role`,
+            createdAt: sql`EXCLUDED.created_at`
+          }
+        });
     }
     return chatId;
   });
@@ -213,11 +223,63 @@ export async function getMessagesByChatId(chatId: string): Promise<Message[]> {
   }
 }
 
-// More granular functions might be needed based on PR #533 specifics:
-// - updateMessage(messageId: string, updates: Partial<NewMessage>): Promise<Message | null>
-// - deleteMessage(messageId: string, userId: string): Promise<boolean>
-// - deleteTrailingMessages(chatId: string, lastKeptMessageId: string): Promise<void>
-// These are placeholders for now and can be implemented if subsequent steps show they are directly part of PR #533's changes.
-// The PR mentions "feat: Add message update and trailing deletion logic" and "refactor(chat): Adjust message edit logic".
+/**
+ * Updates an existing message.
+ * @param messageId - The ID of the message to update.
+ * @param updates - The updates to apply.
+ * @returns The updated message object or null if error.
+ */
+export async function updateMessage(
+  messageId: string,
+  updates: Partial<NewMessage>
+): Promise<Message | null> {
+  try {
+    const result = await db
+      .update(messages)
+      .set(updates)
+      .where(eq(messages.id, messageId))
+      .returning();
+    return result[0] || null;
+  } catch (error) {
+    console.error('Error updating message:', error);
+    return null;
+  }
+}
+
+/**
+ * Deletes a specific message.
+ * @param messageId - The ID of the message to delete.
+ * @returns True if deletion was successful, false otherwise.
+ */
+export async function deleteMessage(messageId: string): Promise<boolean> {
+  try {
+    const result = await db
+      .delete(messages)
+      .where(eq(messages.id, messageId))
+      .returning({ id: messages.id });
+    return result.length > 0;
+  } catch (error) {
+    console.error('Error deleting message:', error);
+    return false;
+  }
+}
+
+/**
+ * Deletes all messages in a chat created after a certain message.
+ * @param chatId - The ID of the chat.
+ * @param createdAt - The timestamp after which messages should be deleted.
+ */
+export async function deleteTrailingMessages(
+  chatId: string,
+  createdAt: Date
+): Promise<void> {
+  try {
+    await db
+      .delete(messages)
+      .where(and(eq(messages.chatId, chatId), gt(messages.createdAt, createdAt)));
+  } catch (error) {
+    console.error('Error deleting trailing messages:', error);
+  }
+}
 
 console.log('Chat DB actions loaded. Ensure getCurrentUserId() is correctly implemented for server-side usage if applicable.');

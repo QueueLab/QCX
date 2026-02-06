@@ -111,14 +111,12 @@ export async function researcher(
   )
 
   const result = await nonexperimental_streamText({
-    model: (await getModel(hasImage)) as LanguageModel,
+    model: (await getModel(useSpecificModel, hasImage)) as LanguageModel,
     maxTokens: 4096,
     system: systemPromptToUse,
     messages,
     tools: getTools({ uiStream, fullResponse, mapProvider }),
   })
-
-  uiStream.update(null) // remove spinner
 
   const toolCalls: ToolCallPart[] = []
   const toolResponses: ToolResultPart[] = []
@@ -127,24 +125,18 @@ export async function researcher(
     switch (delta.type) {
       case 'text-delta':
         if (delta.textDelta) {
-          if (fullResponse.length === 0 && delta.textDelta.length > 0) {
-            uiStream.update(answerSection)
-          }
           fullResponse += delta.textDelta
           streamText.update(fullResponse)
         }
         break
 
       case 'tool-call':
-        toolCalls.push(delta)
+        toolCalls.push(delta as ToolCallPart)
         break
 
       case 'tool-result':
-        if (!useSpecificModel && toolResponses.length === 0 && delta.result) {
-          uiStream.append(answerSection)
-        }
         if (!delta.result) hasError = true
-        toolResponses.push(delta)
+        toolResponses.push(delta as ToolResultPart)
         break
 
       case 'error':

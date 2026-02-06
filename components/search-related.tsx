@@ -29,9 +29,10 @@ export const SearchRelated: React.FC<SearchRelatedProps> = ({
     const formData = new FormData()
     formData.append('related_query', query)
 
+    const id = nanoid()
     const userMessage = {
-      id: nanoid(),
-      component: <UserMessage content={query} />
+      id,
+      component: <UserMessage content={query} id={id} />
     }
 
     const responseMessage = await submit(formData)
