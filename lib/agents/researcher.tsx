@@ -12,14 +12,19 @@ import { BotMessage } from '@/components/message'
 import { getTools } from './tools'
 import { getModel } from '../utils'
 import { MapProvider } from '@/lib/store/settings'
+import { DrawnFeature } from './resolution-search'
 
 // This magic tag lets us write raw multi-line strings with backticks, arrows, etc.
 const raw = String.raw
 
-const getDefaultSystemPrompt = (date: string) => raw`
+const getDefaultSystemPrompt = (date: string, drawnFeatures?: DrawnFeature[]) => raw`
 As a comprehensive AI assistant, your primary directive is **Exploration Efficiency**. You must use the provided tools judiciously to gather information and formulate a response.
 
 Current date and time: ${date}.
+
+${drawnFeatures && drawnFeatures.length > 0 ? `The user has drawn the following features on the map for your reference:
+${drawnFeatures.map(f => `- ${f.type} with measurement ${f.measurement}`).join('\n')}
+Use these user-drawn areas/lines as primary areas of interest for your analysis if applicable to the query.` : ''}
 
 **Exploration Efficiency Directives:**
 1. **Tool First:** Always check if a tool can directly or partially answer the user's query. Use the most specific tool available.
@@ -80,7 +85,8 @@ export async function researcher(
   streamText: ReturnType<typeof createStreamableValue<string>>,
   messages: CoreMessage[],
   mapProvider: MapProvider,
-  useSpecificModel?: boolean
+  useSpecificModel?: boolean,
+  drawnFeatures?: DrawnFeature[]
 ) {
   let fullResponse = ''
   let hasError = false
@@ -96,7 +102,7 @@ export async function researcher(
   const systemPromptToUse =
     dynamicSystemPrompt?.trim()
       ? dynamicSystemPrompt
-      : getDefaultSystemPrompt(currentDate)
+      : getDefaultSystemPrompt(currentDate, drawnFeatures)
 
   // Check if any message contains an image
   const hasImage = messages.some(message =>

@@ -7,8 +7,8 @@
     },
     "standard": {
       "name": "Standard",
-      "credits": 8000,
-      "price": 41,
+      "credits": 500,
+      "price": 500,
       "billing_cycle": "yearly",
       "price_id_env": "STANDARD_TIER_PRICE_ID"
     }

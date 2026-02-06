@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils"
 import { getNotes, saveNote } from "@/lib/actions/calendar"
 import { useMapData } from "./map/map-data-context"
 import type { CalendarNote, NewCalendarNote } from "@/lib/types"
+import { TimezoneClock } from "./timezone-clock"
 
 interface CalendarNotepadProps {
   chatId?: string;
@@ -172,6 +173,8 @@ export function CalendarNotepad({ chatId }: CalendarNotepadProps) {
           </p>
         )}
       </div>
+
+      <TimezoneClock />
     </div>
   )
 }

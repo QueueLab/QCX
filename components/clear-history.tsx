@@ -15,7 +15,6 @@ import {
 import { Button } from '@/components/ui/button'
 import { clearChats } from '@/lib/actions/chat'
 import { toast } from 'sonner'
-import { useRouter } from 'next/navigation'
 import { Spinner } from './ui/spinner'
 
 type ClearHistoryProps = {
@@ -25,7 +24,6 @@ type ClearHistoryProps = {
 export function ClearHistory({ empty }: ClearHistoryProps) {
   const [open, setOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
-  const router = useRouter()
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
@@ -53,7 +51,6 @@ export function ClearHistory({ empty }: ClearHistoryProps) {
                   toast.error(result.error)
                 } else {
                   toast.success('History cleared')
-                  router.push('/')
                 }
                 setOpen(false)
               })

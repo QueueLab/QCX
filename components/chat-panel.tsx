@@ -19,8 +19,6 @@ interface ChatPanelProps {
   messages: UIState
   input: string
   setInput: (value: string) => void
-  chatId: string
-  shareableLink: string
   onSuggestionsChange?: (suggestions: PartialRelated | null) => void
 }
 
@@ -29,7 +27,7 @@ export interface ChatPanelRef {
   submitForm: () => void
 }
 
-export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, input, setInput, chatId, shareableLink, onSuggestionsChange }, ref) => {
+export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, input, setInput, onSuggestionsChange }, ref) => {
   const [, setMessages] = useUIState<typeof AI>()
   const { submit, clearChat } = useActions()
   const { mapProvider } = useSettingsStore()
@@ -55,6 +53,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     }
   }));
 
+  // Detect mobile layout
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth <= 1024)
@@ -116,6 +115,9 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
       formData.append('file', selectedFile)
     }
 
+    // Include drawn features in the form data
+    formData.append('drawnFeatures', JSON.stringify(mapData.drawnFeatures || []))
+
     setInput('')
     clearAttachment()
 
@@ -152,13 +154,14 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
         }
       }, 500) // 500ms debounce delay
     },
-    [mapData]
+    [mapData, setSuggestions]
   )
 
   useEffect(() => {
     inputRef.current?.focus()
   }, [])
 
+  // New chat button (appears when there are messages)
   if (messages.length > 0 && !isMobile) {
     return (
       <div
@@ -203,7 +206,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
         <div
           className={cn(
             'relative flex items-start w-full',
-            isMobile && 'mobile-chat-input'
+            isMobile && 'mobile-chat-input' // Apply mobile chat input styling
           )}
         >
           <input type="hidden" name="mapProvider" value={mapProvider} />
@@ -286,7 +289,6 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
           >
             <ArrowRight size={isMobile ? 18 : 20} />
           </Button>
-          {/* Suggestions are now handled by the parent component (chat.tsx) as an overlay */}
         </div>
       </form>
       {selectedFile && (

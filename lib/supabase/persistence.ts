@@ -141,3 +141,59 @@ export async function createMessage(messageData: {
     }
     return { data: data as AIMessage, error };
 }
+
+export async function getChat(id: string, userId: string): Promise<{ data: Chat | null; error: PostgrestError | null }> {
+  const supabase = getSupabaseServerClient()
+  const { data, error } = await supabase
+    .from('chats')
+    .select('*, messages(*)')
+    .eq('id', id)
+    .eq('user_id', userId)
+    .single()
+
+  if (error) {
+    console.error('Error fetching chat:', error)
+    return { data: null, error }
+  }
+
+  // Map Supabase messages to AIMessage type if needed
+  const chat: Chat = {
+    ...data,
+    messages: data.messages.map((m: any) => ({
+      ...m,
+      content: typeof m.content === 'string' ? JSON.parse(m.content) : m.content
+    }))
+  }
+
+  return { data: chat, error: null }
+}
+
+export async function getChats(userId: string): Promise<{ data: Chat[] | null; error: PostgrestError | null }> {
+  const supabase = getSupabaseServerClient()
+  const { data, error } = await supabase
+    .from('chats')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('Error fetching chats:', error)
+    return { data: null, error }
+  }
+
+  return { data: data as Chat[], error: null }
+}
+
+export async function clearChats(userId: string): Promise<{ error: PostgrestError | null }> {
+  const supabase = getSupabaseServerClient()
+  const { error } = await supabase
+    .from('chats')
+    .delete()
+    .eq('user_id', userId)
+
+  if (error) {
+    console.error('Error clearing chats:', error)
+  }
+
+  return { error }
+}
