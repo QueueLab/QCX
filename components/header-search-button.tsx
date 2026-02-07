@@ -9,7 +9,7 @@ import { useActions, useUIState } from 'ai/rsc'
 import { AI } from '@/app/actions'
 import { nanoid } from 'nanoid'
 import { UserMessage } from './user-message'
-import { toast } from 'react-toastify'
+import { toast } from 'sonner'
 import { useSettingsStore } from '@/lib/store/settings'
 import { useMapData } from './map/map-data-context'
 
@@ -22,22 +22,44 @@ export function HeaderSearchButton() {
   const { map } = useMap()
   const { mapProvider } = useSettingsStore()
   const { mapData } = useMapData()
-  // Cast the actions to our defined interface to avoid build errors
   const actions = useActions<typeof AI>() as unknown as HeaderActions
   const [, setMessages] = useUIState<typeof AI>()
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+
+  // Use state for portals to trigger re-renders when they are found
   const [desktopPortal, setDesktopPortal] = useState<HTMLElement | null>(null)
   const [mobilePortal, setMobilePortal] = useState<HTMLElement | null>(null)
 
   useEffect(() => {
-    // Portals can only be used on the client-side after the DOM has mounted
-    setDesktopPortal(document.getElementById('header-search-portal'))
-    setMobilePortal(document.getElementById('mobile-header-search-portal'))
+    // Function to find and set portals
+    const findPortals = () => {
+      setDesktopPortal(document.getElementById('header-search-portal'))
+      setMobilePortal(document.getElementById('mobile-header-search-portal'))
+    }
+
+    // Initial check
+    findPortals()
+
+    // Use a MutationObserver to detect when portals are added to the DOM
+    const observer = new MutationObserver(() => {
+      findPortals()
+    })
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    })
+
+    return () => observer.disconnect()
   }, [])
 
   const handleResolutionSearch = async () => {
     if (mapProvider === 'mapbox' && !map) {
       toast.error('Map is not available yet. Please wait for it to load.')
+      return
+    }
+    if (mapProvider === 'google' && !mapData.cameraState) {
+      toast.error('Google Maps state is not available. Try moving the map first.')
       return
     }
     if (!actions) {
@@ -102,12 +124,14 @@ export function HeaderSearchButton() {
     }
   }
 
+  const isMapAvailable = mapProvider === 'mapbox' ? !!map : !!mapData.cameraState
+
   const desktopButton = (
     <Button
       variant="ghost"
       size="icon"
       onClick={handleResolutionSearch}
-      disabled={isAnalyzing || !map || !actions}
+      disabled={isAnalyzing || !isMapAvailable || !actions}
       title="Analyze current map view"
     >
       {isAnalyzing ? (
@@ -119,7 +143,7 @@ export function HeaderSearchButton() {
   )
 
   const mobileButton = (
-    <Button variant="ghost" size="sm" onClick={handleResolutionSearch} disabled={isAnalyzing || !map || !actions}>
+    <Button variant="ghost" size="sm" onClick={handleResolutionSearch} disabled={isAnalyzing || !isMapAvailable || !actions}>
       <Search className="h-4 w-4 mr-2" />
       Search
     </Button>

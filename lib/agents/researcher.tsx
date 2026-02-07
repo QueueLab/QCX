@@ -52,6 +52,7 @@ Use these user-drawn areas/lines as primary areas of interest for your analysis 
   • Drawing shapes (circles, polygons, lines) on the map
   • Highlighting areas or marking specific routes/boundaries
   • Responding to requests like "Draw a 1km circle around...", "Highlight this area", etc.
+  • **Priority**: If a query involves both drawing and geospatial lookup (e.g., "Draw a circle around Eiffel Tower"), use this tool. It will geocode the location internally.
 
 **Behavior when using \`drawingQueryTool\`:**
 - Geocode the location internally if a place name is provided.
@@ -80,8 +81,8 @@ Use these user-drawn areas/lines as primary areas of interest for your analysis 
 
 #### **Summary of Decision Flow**
 1. User gave explicit URLs? → \`retrieve\`
-2. Location/distance/direction/maps? → \`geospatialQueryTool\` (mandatory)
-3. Draw shapes, highlight areas, or circle locations? → \`drawingQueryTool\` (mandatory)
+2. Draw shapes, highlight areas, or circle locations? → \`drawingQueryTool\` (mandatory)
+3. Location/distance/direction/maps? → \`geospatialQueryTool\` (mandatory)
 4. Everything else needing external data? → \`search\`
 5. Otherwise → answer from knowledge
 
