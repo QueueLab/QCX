@@ -17,7 +17,7 @@ export function HistorySidebar() {
 
   return (
     <Sheet open={isHistoryOpen} onOpenChange={setHistoryOpen}>
-      <SheetContent className="w-64 rounded-tl-xl rounded-bl-xl" data-testid="history-panel">
+      <SheetContent side="left" className="w-64 rounded-tr-xl rounded-br-xl" data-testid="history-panel">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-1 text-sm font-normal mb-2">
             <HistoryIcon size={14} />
