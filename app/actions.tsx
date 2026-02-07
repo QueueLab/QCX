@@ -12,13 +12,13 @@ import type { FeatureCollection } from 'geojson'
 import { Spinner } from '@/components/ui/spinner'
 import { Section } from '@/components/section'
 import { FollowupPanel } from '@/components/followup-panel'
-import { inquire, researcher, taskManager, querySuggestor, resolutionSearch } from '@/lib/agents'
-import { mapControlOrchestrator } from '@/lib/agents/map-control-orchestrator'
+import { inquire, researcher, taskManager, querySuggestor, resolutionSearch, runMapGraph } from '@/lib/agents'
 import { initializeComposioMapbox } from '@/mapbox_mcp/composio-mapbox'
 import { Composio } from '@composio/core'
 import { writer } from '@/lib/agents/writer'
 import { saveChat, getSystemPrompt } from '@/lib/actions/chat'
 import { Chat, AIMessage } from '@/lib/types'
+import { MapStatus } from '@/components/map/map-status'
 import { UserMessage } from '@/components/user-message'
 import { BotMessage } from '@/components/message'
 import { SearchSection } from '@/components/search-section'
@@ -426,13 +426,18 @@ async function submit(formData?: FormData, skip?: boolean) {
 
       try {
         // Use the Orchestrator with fallback to basic enricher handled internally if needed
-        console.log('🚀 Starting Map Control Orchestrator...');
-        locationResponse = await mapControlOrchestrator(answer, {
+        console.log("🚀 Starting LangGraph Map Orchestrator...");
+        const statusStream = createStreamableUI(<MapStatus status="Initializing..." />);
+        uiStream.append(statusStream.value);
+
+        locationResponse = await runMapGraph(answer, {
             mcpClient,
             connectionId,
-            enableFeedbackLoop: false // Disable for now to reduce latency
+            onStatusUpdate: (status) => {
+                statusStream.update(<MapStatus status={status} />);
+            }
         });
-        console.log('✨ Orchestrator finished:', locationResponse);
+        statusStream.done();
       } catch (e) {
         console.error("Error during map orchestration:", e);
         // Fallback to basic enricher
