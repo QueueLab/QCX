@@ -121,7 +121,6 @@ export async function saveChat(chat: OldChatType, userId: string): Promise<strin
 }
 
 export async function updateDrawingContext(chatId: string, contextData: { drawnFeatures: any[], cameraState: any }) {
-  'use server';
   const userId = await getCurrentUserIdOnServer();
   if (!userId) {
     console.error('updateDrawingContext: Could not get current user ID.');

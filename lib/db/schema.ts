@@ -1,5 +1,5 @@
-import { pgTable, text, timestamp, uuid, varchar, jsonb, boolean, customType } from 'drizzle-orm/pg-core';
-import { relations, sql } from 'drizzle-orm';
+import { pgTable, text, timestamp, uuid, jsonb, customType, unique } from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
 
 // Custom type for PostGIS geometry
 const geometry = customType<{ data: string }>({
@@ -8,7 +8,11 @@ const geometry = customType<{ data: string }>({
   },
 });
 
-// Custom type for vector
+/**
+ * Custom type for vector embeddings.
+ * Currently assumed to use text-embedding-ada-002 => 1536 dimensions.
+ * Switching to models like text-embedding-3-large (3072) requires a migration.
+ */
 const vector = customType<{ data: number[] }>({
   dataType() {
     return 'vector(1536)';
@@ -17,7 +21,7 @@ const vector = customType<{ data: number[] }>({
 
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
-  email: text('email'),
+  email: text('email').unique(), // Enforced unique for user identity
   role: text('role').default('viewer'),
   selectedModel: text('selected_model'),
   systemPrompt: text('system_prompt'),
@@ -27,37 +31,10 @@ export const chats = pgTable('chats', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   title: text('title').notNull().default('Untitled Chat'),
-  visibility: text('visibility').default('private'), // 'private', 'public'
+  visibility: text('visibility').default('private'),
   path: text('path'),
   sharePath: text('share_path'),
   shareableLinkId: uuid('shareable_link_id').defaultRandom().unique(),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-});
-
-export const messages = pgTable('messages', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  chatId: uuid('chat_id').notNull().references(() => chats.id, { onDelete: 'cascade' }),
-  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  role: text('role').notNull(), // 'user', 'assistant', 'system', 'tool', 'data'
-  content: text('content').notNull(),
-  embedding: vector('embedding'),
-  locationId: uuid('location_id'), // Reference added via relation/manual constraint if needed
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-});
-
-export const chatParticipants = pgTable('chat_participants', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  chatId: uuid('chat_id').notNull().references(() => chats.id, { onDelete: 'cascade' }),
-  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  role: text('role').notNull().default('collaborator'), // 'owner', 'collaborator'
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-});
-
-export const systemPrompts = pgTable('system_prompts', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  prompt: text('prompt').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
@@ -70,6 +47,36 @@ export const locations = pgTable('locations', {
   geometry: geometry('geometry'),
   name: text('name'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const messages = pgTable('messages', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  chatId: uuid('chat_id').notNull().references(() => chats.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  role: text('role').notNull(),
+  content: text('content').notNull(),
+  embedding: vector('embedding'),
+  locationId: uuid('location_id').references(() => locations.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const chatParticipants = pgTable('chat_participants', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  chatId: uuid('chat_id').notNull().references(() => chats.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  role: text('role').notNull().default('collaborator'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  // Prevent duplicate participants in the same chat
+  chatUserUnique: unique('chat_participants_chat_user_unique').on(t.chatId, t.userId),
+}));
+
+export const systemPrompts = pgTable('system_prompts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  prompt: text('prompt').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
 export const visualizations = pgTable('visualizations', {

@@ -22,8 +22,9 @@ import { useToast } from "@/components/ui/hooks/use-toast"
 import { getSystemPrompt, saveSystemPrompt } from "../../../lib/actions/chat"
 import { getSelectedModel, saveSelectedModel } from "../../../lib/actions/users"
 import { useCurrentUser } from "@/lib/auth/use-current-user"
+import { SettingsSkeleton } from './settings-skeleton'
 
-// Define the form schema
+// Define the form schema with enum validation for roles
 const settingsFormSchema = z.object({
   systemPrompt: z
     .string()
@@ -40,11 +41,11 @@ const settingsFormSchema = z.object({
     z.object({
       id: z.string(),
       email: z.string().email(),
-      role: z.string(),
+      role: z.enum(["admin", "editor", "viewer"]),
     }),
   ),
-  newUserEmail: z.string().email().optional(),
-  newUserRole: z.string().optional(),
+  newUserEmail: z.string().email().optional().or(z.literal('')),
+  newUserRole: z.enum(["admin", "editor", "viewer"]).optional(),
 })
 
 export type SettingsFormValues = z.infer<typeof settingsFormSchema>
@@ -64,10 +65,10 @@ interface SettingsProps {
 export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
   const { toast } = useToast()
   const router = useRouter()
-  const [isLoading, setIsLoading] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const [currentTab, setCurrentTab] = useState(initialTab);
   const { mapProvider, setMapProvider } = useSettingsStore();
-  const { user } = useCurrentUser();
+  const { user, loading: authLoading } = useCurrentUser();
 
   useEffect(() => {
     setCurrentTab(initialTab);
@@ -82,7 +83,7 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
 
   useEffect(() => {
     async function fetchData() {
-      if (!userId) return;
+      if (!userId || authLoading) return;
 
       const [existingPrompt, selectedModel] = await Promise.all([
         getSystemPrompt(userId),
@@ -97,7 +98,11 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
       }
     }
     fetchData();
-  }, [form, userId]);
+  }, [form, userId, authLoading]);
+
+  if (authLoading) {
+    return <SettingsSkeleton />;
+  }
 
   async function onSubmit(data: SettingsFormValues) {
     if (!userId) {
@@ -109,7 +114,7 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
       return;
     }
 
-    setIsLoading(true)
+    setIsSaving(true)
 
     try {
       // Save the system prompt and selected model
@@ -140,7 +145,7 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
         variant: "destructive",
       })
     } finally {
-      setIsLoading(false)
+      setIsSaving(false)
     }
   }
 
@@ -228,12 +233,12 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
 
           <Card>
             <CardFooter className="flex justify-between pt-6">
-              <Button type="button" variant="outline" onClick={onReset} disabled={isLoading}>
+              <Button type="button" variant="outline" onClick={onReset} disabled={isSaving}>
                 <RotateCcw className="mr-2 h-4 w-4" />
                 Reset to Defaults
               </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? (
+              <Button type="submit" disabled={isSaving}>
+                {isSaving ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Saving...
