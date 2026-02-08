@@ -112,7 +112,6 @@ export default function RootLayout({
                         <Header />
                         <ConditionalLottie />
                         {children}
-                        <Sidebar />
                         <HistorySidebar />
                         <Footer />
                         <Toaster />

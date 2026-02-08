@@ -87,7 +87,7 @@ export async function saveChat(chatData: NewChat, messagesData: Omit<NewMessage,
   }
 
   // Transaction to ensure atomicity
-  return db.transaction(async (tx: any) => {
+  return db.transaction(async (tx) => {
     let chatId = chatData.id;
 
     if (chatId) { // If chat ID is provided, assume update or append messages
@@ -99,7 +99,7 @@ export async function saveChat(chatData: NewChat, messagesData: Omit<NewMessage,
       } else {
         // Optionally update chat metadata here if needed, e.g., title
         if (chatData.title) {
-          await tx.update(chats).set({ title: chatData.title }).where(eq(chats.id, chatId));
+          await tx.update(chats).set({ title: chatData.title, visibility: chatData.visibility, updatedAt: chatData.updatedAt }).where(eq(chats.id, chatId));
         }
       }
     } else { // No chat ID, create new chat
@@ -119,7 +119,7 @@ export async function saveChat(chatData: NewChat, messagesData: Omit<NewMessage,
         chatId: chatId!, // Ensure chatId is set for all messages
         userId: msg.userId || chatData.userId!, // Ensure userId is set
       }));
-      await tx.insert(messages).values(messagesToInsert);
+      await tx.insert(messages).values(messagesToInsert).onConflictDoUpdate({ target: messages.id, set: { content: sql`EXCLUDED.content`, role: sql`EXCLUDED.role` } });
     }
     return chatId;
   });
