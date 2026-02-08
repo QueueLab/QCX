@@ -13,7 +13,9 @@ import {
   getChat as supabaseGetChat,
   getChats as supabaseGetChats,
   clearChats as supabaseClearChats,
+  getSharedChat as supabaseGetSharedChat,
 } from '@/lib/supabase/persistence'
+import { getSupabaseServerClient } from '../supabase/client'
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
 
 export async function getChats(userId?: string | null): Promise<Chat[]> {
@@ -102,12 +104,15 @@ export async function saveChat(chat: Chat, userId: string): Promise<string | nul
     }
     const effectiveUserId = userId || chat.userId
 
+    console.log(`[ChatAction] Attempting to save chat ${chat.id} for user ${effectiveUserId}`);
     const { data, error } = await supabaseSaveChat(chat, effectiveUserId)
 
     if (error) {
-      console.error('Error saving chat:', error)
+      console.error('Error saving chat:', error);
+      console.log('Failed chat data:', chat);
       return null
     }
+    console.log(`[ChatAction] Successfully saved chat ${chat.id}`);
     return data
   } catch (error) {
     console.error('saveChat: Unexpected error:', error)
@@ -205,5 +210,62 @@ export async function getChatMessages(chatId: string): Promise<AIMessage[]> {
   } catch (error) {
     console.error('getChatMessages: Unexpected error:', error)
     return []
+  }
+}
+
+export async function shareChat(id: string): Promise<Chat | null> {
+  try {
+    const userId = await getCurrentUserIdOnServer();
+    if (!userId) {
+      console.error('shareChat: User not authenticated');
+      return null;
+    }
+
+    const supabase = getSupabaseServerClient();
+
+    // First, check if the user is the owner
+    const { data: participant, error: pError } = await supabase
+      .from('chat_participants')
+      .select('role')
+      .eq('chat_id', id)
+      .eq('user_id', userId)
+      .eq('role', 'owner')
+      .single();
+
+    if (pError || !participant) {
+      console.error('shareChat: Only owners can share chats');
+      return null;
+    }
+
+    const { data, error } = await supabase
+      .from('chats')
+      .update({ visibility: 'public' })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error sharing chat:', error);
+      return null;
+    }
+
+    return data as Chat;
+  } catch (error) {
+    console.error('shareChat: Unexpected error:', error);
+    return null;
+  }
+}
+
+export async function getSharedChat(id: string): Promise<Chat | null> {
+  try {
+    const { data, error } = await supabaseGetSharedChat(id)
+    if (error) {
+      console.error('Error fetching shared chat:', error)
+      return null
+    }
+    return data as Chat
+  } catch (error) {
+    console.error('getSharedChat: Unexpected error:', error)
+    return null
   }
 }

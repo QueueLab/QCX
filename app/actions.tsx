@@ -629,6 +629,7 @@ export const AI = createAI<AIState, UIState>({
       '@/lib/auth/get-current-user'
     )
     const actualUserId = await getCurrentUserIdOnServer()
+    console.log(`[AIState] actualUserId for save: ${actualUserId}`);
 
     if (!actualUserId) {
       console.error('onSetAIState: User not authenticated. Chat not saved.')
@@ -643,6 +644,7 @@ export const AI = createAI<AIState, UIState>({
       title,
       messages: updatedMessages
     }
+    console.log(`[AIState] Saving chat ${chatId} with ${messages.length} messages`);
     await saveChat(chat, actualUserId)
   }
 })
