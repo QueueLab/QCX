@@ -1,0 +1,9 @@
+{
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": {
+      "label": "Next.js App",
+      "onAutoForward": "openPreview"
+    }
+  }
+}
