@@ -117,3 +117,22 @@ export async function getModel(requireVision: boolean = false) {
   });
   return openai('gpt-4o');
 }
+
+export function getGoogleStaticMapUrl(latitude: number, longitude: number): string {
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+  if (!apiKey) {
+    throw new Error('GOOGLE_MAPS_API_KEY is missing');
+  }
+
+  const url = new URL('https://maps.googleapis.com/maps/api/staticmap');
+  const params = new URLSearchParams({
+    center: `${latitude},${longitude}`,
+    zoom: '14',
+    size: '600x300',
+    maptype: 'roadmap',
+    markers: `color:red|${latitude},${longitude}`,
+    key: apiKey
+  });
+  url.search = params.toString();
+  return url.toString();
+}

@@ -2,7 +2,8 @@ import { createStreamableUI } from 'ai/rsc'
 import { retrieveTool } from './retrieve'
 import { searchTool } from './search'
 import { videoSearchTool } from './video-search'
-import { geospatialTool } from './geospatial' // Removed useGeospatialToolMcp import
+import { geospatialTool } from './geospatial'
+import { drawingTool } from './drawing'
 
 import { MapProvider } from '@/lib/store/settings'
 
@@ -25,6 +26,9 @@ export const getTools = ({ uiStream, fullResponse, mapProvider }: ToolProps) => 
     geospatialQueryTool: geospatialTool({
       uiStream,
       mapProvider
+    }),
+    drawingQueryTool: drawingTool({
+      uiStream
     })
   }
 

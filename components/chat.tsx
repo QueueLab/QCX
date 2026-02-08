@@ -12,13 +12,15 @@ import { useCalendarToggle } from './calendar-toggle-context'
 import { CalendarNotepad } from './calendar-notepad'
 import { MapProvider } from './map/map-provider'
 import { useUIState, useAIState } from 'ai/rsc'
+import { AI } from '@/app/actions'
+import { AIMessage } from '@/lib/types'
 import MobileIconsBar from './mobile-icons-bar'
 import { useProfileToggle, ProfileToggleEnum } from "@/components/profile-toggle-context";
 import { useUsageToggle } from "@/components/usage-toggle-context";
 import SettingsView from "@/components/settings/settings-view";
 import { UsageView } from "@/components/usage-view";
-import { MapDataProvider, useMapData } from './map/map-data-context'; // Add this and useMapData
-import { updateDrawingContext } from '@/lib/actions/chat'; // Import the server action
+import { MapDataProvider, useMapData } from './map/map-data-context';
+import { updateDrawingContext } from '@/lib/actions/chat';
 import dynamic from 'next/dynamic'
 import { HeaderSearchButton } from './header-search-button'
 
@@ -29,8 +31,8 @@ type ChatProps = {
 export function Chat({ id }: ChatProps) {
   const router = useRouter()
   const path = usePathname()
-  const [messages] = useUIState()
-  const [aiState] = useAIState()
+  const [messages] = useUIState<typeof AI>()
+  const [aiState] = useAIState<typeof AI>()
   const [isMobile, setIsMobile] = useState(false)
   const { activeView } = useProfileToggle();
   const { isUsageOpen } = useUsageToggle();
@@ -40,6 +42,9 @@ export function Chat({ id }: ChatProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [suggestions, setSuggestions] = useState<PartialRelated | null>(null)
   const chatPanelRef = useRef<ChatPanelRef>(null);
+
+  // Ref to track the last message ID we refreshed the router for, to prevent infinite loops
+  const lastRefreshedMessageIdRef = useRef<string | null>(null);
 
   const handleAttachment = () => {
     chatPanelRef.current?.handleAttachmentClick();
@@ -54,18 +59,11 @@ export function Chat({ id }: ChatProps) {
   }, [messages])
 
   useEffect(() => {
-    // Check if device is mobile
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768)
     }
-    
-    // Initial check
     checkMobile()
-    
-    // Add event listener for window resize
     window.addEventListener('resize', checkMobile)
-    
-    // Cleanup
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
@@ -76,13 +74,16 @@ export function Chat({ id }: ChatProps) {
   }, [id, path, messages])
 
   useEffect(() => {
-    if (aiState.messages[aiState.messages.length - 1]?.type === 'response') {
-      // Refresh the page to chat history updates
-      router.refresh()
-    }
-  }, [aiState, router])
+    // Check if there is a 'response' message in the history
+    const responseMessage = aiState.messages.findLast((m: AIMessage) => m.type === 'response');
 
-  // Get mapData to access drawnFeatures
+    if (responseMessage && responseMessage.id !== lastRefreshedMessageIdRef.current) {
+      console.log('Chat.tsx: refreshing router for message:', responseMessage.id);
+      lastRefreshedMessageIdRef.current = responseMessage.id;
+      router.refresh();
+    }
+  }, [aiState.messages, router])
+
   const { mapData } = useMapData();
 
   useEffect(() => {
@@ -92,10 +93,8 @@ export function Chat({ id }: ChatProps) {
     }
   }, [isSubmitting])
 
-  // useEffect to call the server action when drawnFeatures changes
   useEffect(() => {
     if (id && mapData.drawnFeatures && mapData.cameraState) {
-      console.log('Chat.tsx: drawnFeatures changed, calling updateDrawingContext', mapData.drawnFeatures);
       updateDrawingContext(id, {
         drawnFeatures: mapData.drawnFeatures,
         cameraState: mapData.cameraState,
@@ -112,7 +111,6 @@ export function Chat({ id }: ChatProps) {
           onSelect={query => {
             setInput(query)
             setSuggestions(null)
-            // Use a small timeout to ensure state update before submission
             setIsSubmitting(true)
           }}
           onClose={() => setSuggestions(null)}
@@ -122,10 +120,9 @@ export function Chat({ id }: ChatProps) {
     );
   };
 
-  // Mobile layout
   if (isMobile) {
     return (
-      <MapDataProvider> {/* Add Provider */}
+      <MapDataProvider>
         <HeaderSearchButton />
         <div className="mobile-layout-container">
           <div className="mobile-map-section">
@@ -169,12 +166,10 @@ export function Chat({ id }: ChatProps) {
     );
   }
 
-  // Desktop layout
   return (
-    <MapDataProvider> {/* Add Provider */}
+    <MapDataProvider>
       <HeaderSearchButton />
       <div className="flex justify-start items-start">
-        {/* This is the new div for scrolling */}
         <div className="w-1/2 flex flex-col space-y-3 md:space-y-4 px-8 sm:px-12 pt-16 md:pt-20 pb-4 h-[calc(100vh-0.5in)] overflow-y-auto">
         {isCalendarOpen ? (
           <CalendarNotepad chatId={id} />
@@ -206,7 +201,7 @@ export function Chat({ id }: ChatProps) {
       </div>
         <div
           className="w-1/2 p-4 fixed h-[calc(100vh-0.5in)] top-0 right-0 mt-[0.5in]"
-          style={{ zIndex: 10 }} // Added z-index
+          style={{ zIndex: 10 }}
         >
           {activeView ? <SettingsView /> : isUsageOpen ? <UsageView /> : <MapProvider />}
         </div>

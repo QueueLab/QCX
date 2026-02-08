@@ -1,0 +1,1544 @@
+diff --git a/bun.lock b/bun.lock
+index a3de981..f101e5d 100644
+--- a/bun.lock
++++ b/bun.lock
+@@ -61,7 +61,7 @@
+         "lottie-react": "^2.4.1",
+         "lucide-react": "^0.507.0",
+         "mapbox-gl": "^3.11.0",
+-        "next": "15.3.6",
++        "next": "15.3.8",
+         "next-themes": "^0.3.0",
+         "open-codex": "^0.1.30",
+         "pg": "^8.16.2",
+@@ -401,7 +401,7 @@
+
+     "@napi-rs/wasm-runtime": ["@napi-rs/wasm-runtime@0.2.12", "", { "dependencies": { "@emnapi/core": "^1.4.3", "@emnapi/runtime": "^1.4.3", "@tybys/wasm-util": "^0.10.0" } }, "sha512-ZVWUcfwY4E/yPitQJl481FjFo3K22D6qF0DuFH6Y/nbnE11GY5uguDxZMGXPQ8WQ0128MXQD7TnfHyK4oWoIJQ=="],
+
+-    "@next/env": ["@next/env@15.3.6", "", {}, "sha512-/cK+QPcfRbDZxmI/uckT4lu9pHCfRIPBLqy88MhE+7Vg5hKrEYc333Ae76dn/cw2FBP2bR/GoK/4DU+U7by/Nw=="],
++    "@next/env": ["@next/env@15.3.8", "", {}, "sha512-SAfHg0g91MQVMPioeFeDjE+8UPF3j3BvHjs8ZKJAUz1BG7eMPvfCKOAgNWJ6s1MLNeP6O2InKQRTNblxPWuq+Q=="],
+
+     "@next/eslint-plugin-next": ["@next/eslint-plugin-next@14.2.35", "", { "dependencies": { "glob": "10.3.10" } }, "sha512-Jw9A3ICz2183qSsqwi7fgq4SBPiNfmOLmTPXKvlnzstUwyvBrtySiY+8RXJweNAs9KThb1+bYhZh9XWcNOr2zQ=="],
+
+@@ -1939,7 +1939,7 @@
+
+     "negotiator": ["negotiator@1.0.0", "", {}, "sha512-8Ofs/AUQh8MaEcrlq5xOX0CQ9ypTF5dl78mjlMNfOK08fzpgTHQRQPBxcPlEtIw0yRpws+Zo/3r+5WRby7u3Gg=="],
+
+-    "next": ["next@15.3.6", "", { "dependencies": { "@next/env": "15.3.6", "@swc/counter": "0.1.3", "@swc/helpers": "0.5.15", "busboy": "1.6.0", "caniuse-lite": "^1.0.30001579", "postcss": "8.4.31", "styled-jsx": "5.1.6" }, "optionalDependencies": { "@next/swc-darwin-arm64": "15.3.5", "@next/swc-darwin-x64": "15.3.5", "@next/swc-linux-arm64-gnu": "15.3.5", "@next/swc-linux-arm64-musl": "15.3.5", "@next/swc-linux-x64-gnu": "15.3.5", "@next/swc-linux-x64-musl": "15.3.5", "@next/swc-win32-arm64-msvc": "15.3.5", "@next/swc-win32-x64-msvc": "15.3.5", "sharp": "^0.34.1" }, "peerDependencies": { "@opentelemetry/api": "^1.1.0", "@playwright/test": "^1.41.2", "babel-plugin-react-compiler": "*", "react": "^18.2.0 || 19.0.0-rc-de68d2f4-20241204 || ^19.0.0", "react-dom": "^18.2.0 || 19.0.0-rc-de68d2f4-20241204 || ^19.0.0", "sass": "^1.3.0" }, "optionalPeers": ["@opentelemetry/api", "@playwright/test", "babel-plugin-react-compiler", "sass"], "bin": { "next": "dist/bin/next" } }, "sha512-oI6D1zbbsh6JzzZFDCSHnnx6Qpvd1fSkVJu/5d8uluqnxzuoqtodVZjYvNovooznUq8udSAiKp7MbwlfZ8Gm6w=="],
++    "next": ["next@15.3.8", "", { "dependencies": { "@next/env": "15.3.8", "@swc/counter": "0.1.3", "@swc/helpers": "0.5.15", "busboy": "1.6.0", "caniuse-lite": "^1.0.30001579", "postcss": "8.4.31", "styled-jsx": "5.1.6" }, "optionalDependencies": { "@next/swc-darwin-arm64": "15.3.5", "@next/swc-darwin-x64": "15.3.5", "@next/swc-linux-arm64-gnu": "15.3.5", "@next/swc-linux-arm64-musl": "15.3.5", "@next/swc-linux-x64-gnu": "15.3.5", "@next/swc-linux-x64-musl": "15.3.5", "@next/swc-win32-arm64-msvc": "15.3.5", "@next/swc-win32-x64-msvc": "15.3.5", "sharp": "^0.34.1" }, "peerDependencies": { "@opentelemetry/api": "^1.1.0", "@playwright/test": "^1.41.2", "babel-plugin-react-compiler": "*", "react": "^18.2.0 || 19.0.0-rc-de68d2f4-20241204 || ^19.0.0", "react-dom": "^18.2.0 || 19.0.0-rc-de68d2f4-20241204 || ^19.0.0", "sass": "^1.3.0" }, "optionalPeers": ["@opentelemetry/api", "@playwright/test", "babel-plugin-react-compiler", "sass"], "bin": { "next": "dist/bin/next" } }, "sha512-L+4c5Hlr84fuaNADZbB9+ceRX9/CzwxJ+obXIGHupboB/Q1OLbSUapFs4bO8hnS/E6zV/JDX7sG1QpKVR2bguA=="],
+
+     "next-themes": ["next-themes@0.3.0", "", { "peerDependencies": { "react": "^16.8 || ^17 || ^18", "react-dom": "^16.8 || ^17 || ^18" } }, "sha512-/QHIrsYpd6Kfk7xakK4svpDI5mmXP0gfvCoJdGpZQ2TOrQZmsW0QxjaiLn8wbIKjtm4BTSqLoix4lxYYOnLJ/w=="],
+
+diff --git a/components/map/draw-modes/circle-mode.ts b/components/map/draw-modes/circle-mode.ts
+new file mode 100644
+index 0000000..5664f28
+--- /dev/null
++++ b/components/map/draw-modes/circle-mode.ts
+@@ -0,0 +1,72 @@
++import * as turf from '@turf/turf';
++
++const CircleMode: any = {
++  onSetup: function(opts: any) {
++    const state: any = {};
++    state.circle = this.newFeature({
++      type: 'Feature',
++      properties: {
++        user_isCircle: true,
++        user_center: []
++      },
++      geometry: {
++        type: 'Polygon',
++        coordinates: [[]]
++      }
++    });
++    this.addFeature(state.circle);
++    this.clearSelectedFeatures();
++    this.updateUIClasses({ mouse: 'add' });
++    this.activateUIButton('circle');
++    this.setActionableState({
++      trash: true
++    });
++    return state;
++  },
++
++  onTap: function(state: any, e: any) {
++    this.onClick(state, e);
++  },
++
++  onClick: function(state: any, e: any) {
++    if (state.circle.properties.user_center.length === 0) {
++      state.circle.properties.user_center = [e.lngLat.lng, e.lngLat.lat];
++      // Set initial point-like polygon
++      state.circle.setCoordinates([[
++        [e.lngLat.lng, e.lngLat.lat],
++        [e.lngLat.lng, e.lngLat.lat],
++        [e.lngLat.lng, e.lngLat.lat],
++        [e.lngLat.lng, e.lngLat.lat]
++      ]]);
++    } else {
++      this.changeMode('simple_select', { featureIds: [state.circle.id] });
++    }
++  },
++
++  onMouseMove: function(state: any, e: any) {
++    if (state.circle.properties.user_center.length > 0) {
++      const center = state.circle.properties.user_center;
++      const distance = turf.distance(center, [e.lngLat.lng, e.lngLat.lat], { units: 'kilometers' });
++      const circle = turf.circle(center, distance, { steps: 64, units: 'kilometers' });
++      state.circle.setCoordinates(circle.geometry.coordinates);
++      state.circle.properties.user_radiusInKm = distance;
++    }
++  },
++
++  onKeyUp: function(state: any, e: any) {
++    if (e.keyCode === 27) return this.changeMode('simple_select');
++  },
++
++  toDisplayFeatures: function(state: any, geojson: any, display: any) {
++    const isActive = geojson.id === state.circle.id;
++    geojson.properties.active = isActive ? 'true' : 'false';
++    if (!isActive) return display(geojson);
++
++    // Only display if it has a center (and thus coordinates set)
++    if (geojson.properties.user_center && geojson.properties.user_center.length > 0) {
++      display(geojson);
++    }
++  }
++};
++
++export default CircleMode;
+diff --git a/components/map/map-data-context.tsx b/components/map/map-data-context.tsx
+index 9b10254..e10072d 100644
+--- a/components/map/map-data-context.tsx
++++ b/components/map/map-data-context.tsx
+@@ -24,6 +24,7 @@ export interface MapData {
+     measurement: string;
+     geometry: any;
+   }>;
++  pendingFeatures?: any[]; // For programmatic drawing commands
+   markers?: Array<{
+     latitude: number;
+     longitude: number;
+@@ -39,7 +40,7 @@ interface MapDataContextType {
+ const MapDataContext = createContext<MapDataContextType | undefined>(undefined);
+
+ export const MapDataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+-  const [mapData, setMapData] = useState<MapData>({ drawnFeatures: [], markers: [] });
++  const [mapData, setMapData] = useState<MapData>({ drawnFeatures: [], pendingFeatures: [], markers: [] });
+
+   return (
+     <MapDataContext.Provider value={{ mapData, setMapData }}>
+diff --git a/components/map/map-query-handler.tsx b/components/map/map-query-handler.tsx
+index ea46017..b0b957e 100644
+--- a/components/map/map-query-handler.tsx
++++ b/components/map/map-query-handler.tsx
+@@ -1,8 +1,8 @@
+ 'use client';
+
+ import { useEffect } from 'react';
+-// Removed useMCPMapClient as we'll use data passed via props
+ import { useMapData } from './map-data-context';
++import { useMapToggle, MapToggleEnum } from '../map-toggle-context';
+
+ // Define the expected structure of the mcp_response from geospatialTool
+ interface McpResponseData {
+@@ -15,23 +15,34 @@ interface McpResponseData {
+   mapUrl?: string;
+ }
+
+-interface GeospatialToolOutput {
+-  type: string; // e.g., "MAP_QUERY_TRIGGER"
+-  originalUserInput: string;
++interface ToolOutput {
++  type: string;
++  originalUserInput?: string;
+   timestamp: string;
+-  mcp_response: McpResponseData | null;
++  mcp_response?: McpResponseData | null;
++  features?: any[];
++  error?: string | null;
+ }
+
+ interface MapQueryHandlerProps {
+-  // originalUserInput: string; // Kept for now, but primary data will come from toolOutput
+-  toolOutput?: GeospatialToolOutput | null; // The direct output from geospatialTool
++  toolOutput?: ToolOutput | null;
+ }
+
+ export const MapQueryHandler: React.FC<MapQueryHandlerProps> = ({ toolOutput }) => {
+   const { setMapData } = useMapData();
++  const { setMapType } = useMapToggle();
+
+   useEffect(() => {
+-    if (toolOutput && toolOutput.mcp_response && toolOutput.mcp_response.location) {
++    if (!toolOutput) return;
++
++    if (toolOutput.type === 'DRAWING_TRIGGER' && toolOutput.features) {
++      console.log('MapQueryHandler: Received drawing data.', toolOutput.features);
++      setMapType(MapToggleEnum.DrawingMode);
++      setMapData(prevData => ({
++        ...prevData,
++        pendingFeatures: toolOutput.features
++      }));
++    } else if (toolOutput.type === 'MAP_QUERY_TRIGGER' && toolOutput.mcp_response && toolOutput.mcp_response.location) {
+       const { latitude, longitude, place_name } = toolOutput.mcp_response.location;
+
+       if (typeof latitude === 'number' && typeof longitude === 'number') {
+@@ -39,44 +50,14 @@ export const MapQueryHandler: React.FC<MapQueryHandlerProps> = ({ toolOutput })
+         setMapData(prevData => ({
+           ...prevData,
+           targetPosition: { lat: latitude, lng: longitude },
+-          // Optionally store more info from mcp_response if needed by MapboxMap component later
+           mapFeature: {
+             place_name,
+-            // Potentially add mapUrl or other details from toolOutput.mcp_response
+             mapUrl: toolOutput.mcp_response?.mapUrl
+           }
+         }));
+-      } else {
+-        console.warn("MapQueryHandler: Invalid latitude/longitude in toolOutput.mcp_response:", toolOutput.mcp_response.location);
+-        // Clear target position if data is invalid
+-        setMapData(prevData => ({
+-          ...prevData,
+-          targetPosition: null,
+-          mapFeature: null
+-        }));
+-      }
+-    } else {
+-      // This case handles when toolOutput or its critical parts are missing.
+-      // Depending on requirements, could fall back to originalUserInput and useMCPMapClient,
+-      // or simply log that no valid data was provided from the tool.
+-      // For this subtask, we primarily focus on using the new toolOutput.
+-      if (toolOutput) { // It exists, but data is not as expected
+-        console.warn("MapQueryHandler: toolOutput provided, but mcp_response or location data is missing.", toolOutput);
+       }
+-      // If toolOutput is null/undefined, this component might not need to do anything,
+-      // or it's an indication that it shouldn't have been rendered/triggered.
+-      // For now, if no valid toolOutput, we clear map data or leave it as is.
+-      // setMapData(prevData => ({ ...prevData, targetPosition: null, mapFeature: null }));
+     }
+-    // The dependencies for this useEffect should be based on the props that trigger its logic.
+-    // If originalUserInput and the old MCP client were still used as a fallback, they'd be dependencies.
+-  }, [toolOutput, setMapData]);
++  }, [toolOutput, setMapData, setMapType]);
+
+-  // This component is a handler and does not render any visible UI itself.
+-  // Its purpose is to trigger map data updates based on AI tool results.
+-  // If it were to use the old useMCPMapClient, mcpLoading and mcpError would be relevant.
+-  // It could return a small status indicator or debug info if needed for development.
+   return null;
+-  // Example for debugging with previous client:
+-  // return <div data-map-query-processed={originalUserInput} data-mcp-loading={mcpLoading} data-mcp-error={mcpError} style={{display: 'none'}} />;
+ };
+diff --git a/components/map/mapbox-map.tsx b/components/map/mapbox-map.tsx
+index eecd7f5..bbae628 100644
+--- a/components/map/mapbox-map.tsx
++++ b/components/map/mapbox-map.tsx
+@@ -3,15 +3,15 @@
+ import { useEffect, useRef, useCallback, useState } from 'react'
+ import mapboxgl from 'mapbox-gl'
+ import MapboxDraw from '@mapbox/mapbox-gl-draw'
++import CircleMode from './draw-modes/circle-mode'
+ import * as turf from '@turf/turf'
+ import tzlookup from 'tz-lookup'
+-import { toast } from 'react-toastify'
+-import 'react-toastify/dist/ReactToastify.css'
++import { toast } from 'sonner'
+ import 'mapbox-gl/dist/mapbox-gl.css'
+ import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css'
+ import { useMapToggle, MapToggleEnum } from '../map-toggle-context'
+-import { useMapData } from './map-data-context'; // Add this import
+-import { useMapLoading } from '../map-loading-context'; // Import useMapLoading
++import { useMapData } from './map-data-context';
++import { useMapLoading } from '../map-loading-context';
+ import { useMap } from './map-context'
+
+ mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN as string;
+@@ -33,41 +33,33 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
+   const initializedRef = useRef<boolean>(false)
+   const currentMapCenterRef = useRef<{ center: [number, number]; zoom: number; pitch: number }>({ center: [position?.longitude ?? 0, position?.latitude ?? 0], zoom: 2, pitch: 0 });
+   const drawingFeatures = useRef<any>(null)
+-  const { mapType, setMapType } = useMapToggle() // Get setMapType
+-  const { mapData, setMapData } = useMapData(); // Consume the new context, get setMapData
+-  const { setIsMapLoaded } = useMapLoading(); // Get setIsMapLoaded from context
++  const { mapType, setMapType } = useMapToggle()
++  const { mapData, setMapData } = useMapData();
++  const { setIsMapLoaded } = useMapLoading();
+   const previousMapTypeRef = useRef<MapToggleEnum | null>(null)
+
+-  // Refs for long-press functionality
+   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+   const isMouseDownRef = useRef<boolean>(false);
+
+-  // const [isMapLoaded, setIsMapLoaded] = useState(false); // Removed local state
+-
+-  // Formats the area or distance for display
+   const formatMeasurement = useCallback((value: number, isArea = true) => {
+     if (isArea) {
+-      // Area formatting
+       if (value >= 1000000) {
+-      return `${(value / 1000000).toFixed(2)} km²`
++        return `${(value / 1000000).toFixed(2)} km²`
+       } else {
+-      return `${value.toFixed(2)} m²`
++        return `${value.toFixed(2)} m²`
+       }
+     } else {
+-      // Distance formatting
+       if (value >= 1000) {
+-      return `${(value / 1000).toFixed(2)} km`
++        return `${(value / 1000).toFixed(2)} km`
+       } else {
+-      return `${value.toFixed(0)} m`
++        return `${value.toFixed(0)} m`
+       }
+     }
+   }, [])
+
+-  // Create measurement labels for all features
+   const updateMeasurementLabels = useCallback(() => {
+     if (!map.current || !drawRef.current) return
+
+-    // Remove existing labels
+     Object.values(polygonLabelsRef.current).forEach(marker => marker.remove())
+     Object.values(lineLabelsRef.current).forEach(marker => marker.remove())
+     polygonLabelsRef.current = {}
+@@ -83,16 +75,22 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
+
+       if (feature.geometry.type === 'Polygon') {
+         featureType = 'Polygon';
+-        // Calculate area for polygons
+         const area = turf.area(feature)
+         const formattedArea = formatMeasurement(area, true)
+-        measurement = formattedArea;
+
+-        // Get centroid for label placement
++        const isCircle = feature.properties?.user_isCircle;
++        const radiusInKm = feature.properties?.user_radiusInKm;
++
++        if (isCircle && radiusInKm) {
++          const formattedRadius = formatMeasurement(radiusInKm * 1000, false);
++          measurement = `R: ${formattedRadius}, A: ${formattedArea}`;
++        } else {
++          measurement = formattedArea;
++        }
++
+         const centroid = turf.centroid(feature)
+         const coordinates = centroid.geometry.coordinates
+
+-        // Create a label
+         const el = document.createElement('div')
+         el.className = 'area-label'
+         el.style.background = 'rgba(255, 255, 255, 0.8)'
+@@ -100,38 +98,28 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
+         el.style.borderRadius = '4px'
+         el.style.fontSize = '12px'
+         el.style.fontWeight = 'bold'
+-        el.style.color = '#333333' // Added darker color
++        el.style.color = '#333333'
+         el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)'
+         el.style.pointerEvents = 'none'
+-        el.textContent = formattedArea
++        el.textContent = measurement
+
+-        // Add marker for the label
+-
+-
+-
+-
+-
+         if (map.current) {
+           const marker = new mapboxgl.Marker({ element: el })
+             .setLngLat(coordinates as [number, number])
+             .addTo(map.current)
+-
+           polygonLabelsRef.current[id] = marker
+         }
+       }
+       else if (feature.geometry.type === 'LineString') {
+         featureType = 'LineString';
+-        // Calculate length for lines
+-        const length = turf.length(feature, { units: 'kilometers' }) * 1000 // Convert to meters
++        const length = turf.length(feature, { units: 'kilometers' }) * 1000
+         const formattedLength = formatMeasurement(length, false)
+         measurement = formattedLength;
+
+-        // Get midpoint for label placement
+         const line = feature.geometry.coordinates
+         const midIndex = Math.floor(line.length / 2) - 1
+         const midpoint = midIndex >= 0 ? line[midIndex] : line[0]
+
+-        // Create a label
+         const el = document.createElement('div')
+         el.className = 'distance-label'
+         el.style.background = 'rgba(255, 255, 255, 0.8)'
+@@ -139,17 +127,15 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
+         el.style.borderRadius = '4px'
+         el.style.fontSize = '12px'
+         el.style.fontWeight = 'bold'
+-        el.style.color = '#333333' // Added darker color
++        el.style.color = '#333333'
+         el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)'
+         el.style.pointerEvents = 'none'
+         el.textContent = formattedLength
+
+-        // Add marker for the label
+         if (map.current) {
+           const marker = new mapboxgl.Marker({ element: el })
+             .setLngLat(midpoint as [number, number])
+             .addTo(map.current)
+-
+           lineLabelsRef.current[id] = marker
+         }
+       }
+@@ -167,7 +153,6 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
+     setMapData(prevData => ({ ...prevData, drawnFeatures: currentDrawnFeatures }))
+   }, [formatMeasurement, setMapData])
+
+-  // Handle map rotation
+   const rotateMap = useCallback(() => {
+     if (map.current && isRotatingRef.current && !isUpdatingPositionRef.current) {
+       const bearing = map.current.getBearing()
+@@ -184,63 +169,84 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
+   }, [rotateMap])
+
+   const stopRotation = useCallback(() => {
++    isRotatingRef.current = false
+     if (rotationFrameRef.current) {
+       cancelAnimationFrame(rotationFrameRef.current)
+       rotationFrameRef.current = null
+-      isRotatingRef.current = false
+     }
+   }, [])
+
+   const handleUserInteraction = useCallback(() => {
+     lastInteractionRef.current = Date.now()
+     stopRotation()
+-
+-    // Update the current map center ref when user interacts with the map
+-    if (map.current) {
+-      const center = map.current.getCenter()
+-      currentMapCenterRef.current.center = [center.lng, center.lat]
+-    }
+   }, [stopRotation])
+
+-  const updateMapPosition = useCallback(async (latitude: number, longitude: number) => {
++  const updateMapPosition = useCallback(async (lat: number, lng: number) => {
+     if (map.current && !isUpdatingPositionRef.current) {
+       isUpdatingPositionRef.current = true
+-      stopRotation()
+-
+-      try {
+-        // Update our current map center ref
+-        currentMapCenterRef.current.center = [longitude, latitude]
+-
+-        await new Promise<void>((resolve) => {
+-          map.current?.flyTo({
+-            center: [longitude, latitude],
+-            zoom: 12,
+-            essential: true,
+-            speed: 0.5,
+-            curve: 1,
+-          })
+-          map.current?.once('moveend', () => {
+-            resolve()
+-          })
+-        })
+-        setTimeout(() => {
+-          if (mapType === MapToggleEnum.RealTimeMode) {
+-            startRotation()
+-          }
+-          isUpdatingPositionRef.current = false
+-        }, 500)
+-      } catch (error) {
+-        console.error('Error updating map position:', error)
++      map.current.flyTo({
++        center: [lng, lat],
++        zoom: 15,
++        pitch: 45,
++        essential: true
++      })
++      setTimeout(() => {
+         isUpdatingPositionRef.current = false
+-      }
++      }, 2000)
++    }
++  }, [])
++
++  const setupGeolocationWatcher = useCallback(() => {
++    if (geolocationWatchIdRef.current !== null) {
++      navigator.geolocation.clearWatch(geolocationWatchIdRef.current)
++      geolocationWatchIdRef.current = null
++    }
++
++    if (mapType !== MapToggleEnum.RealTimeMode) return
++
++    if (!navigator.geolocation) {
++      toast.error('Geolocation is not supported by your browser')
++      return
++    }
++
++    const success = async (geoPos: GeolocationPosition) => {
++      await updateMapPosition(geoPos.coords.latitude, geoPos.coords.longitude)
++    }
++
++    const error = (positionError: GeolocationPositionError) => {
++      console.error('Geolocation Error:', positionError.message)
++      toast.error(`Location error: ${positionError.message}`)
++    }
++
++    geolocationWatchIdRef.current = navigator.geolocation.watchPosition(success, error)
++  }, [mapType, updateMapPosition])
++
++  const captureMapCenter = useCallback(() => {
++    if (map.current) {
++      const center = map.current.getCenter();
++      const zoom = map.current.getZoom();
++      const pitch = map.current.getPitch();
++      const bearing = map.current.getBearing();
++      currentMapCenterRef.current = { center: [center.lng, center.lat], zoom, pitch };
++
++      const timezone = tzlookup(center.lat, center.lng);
++
++      setMapData(prevData => ({
++        ...prevData,
++        currentTimezone: timezone,
++        cameraState: {
++          center: { lat: center.lat, lng: center.lng },
++          zoom,
++          pitch,
++          bearing
++        }
++      }));
+     }
+-  }, [mapType, startRotation, stopRotation])
++  }, [setMapData])
+
+-  // Set up drawing tools
+   const setupDrawingTools = useCallback(() => {
+     if (!map.current) return
+
+-    // Remove existing draw control if present
+     if (drawRef.current) {
+       try {
+         map.current.off('draw.create', updateMeasurementLabels)
+@@ -248,8 +254,6 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
+         map.current.off('draw.update', updateMeasurementLabels)
+         map.current.removeControl(drawRef.current)
+         drawRef.current = null
+-
+-        // Clean up any existing labels
+         Object.values(polygonLabelsRef.current).forEach(marker => marker.remove())
+         Object.values(lineLabelsRef.current).forEach(marker => marker.remove())
+         polygonLabelsRef.current = {}
+@@ -259,7 +263,6 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
+       }
+     }
+
+-    // Remove existing navigation control if present
+     if (navControlRef.current) {
+       try {
+         map.current.removeControl(navControlRef.current)
+@@ -269,7 +272,6 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
+       }
+     }
+
+-    // Create new draw control with both polygon and line tools
+     drawRef.current = new MapboxDraw({
+       displayControlsDefault: false,
+       controls: {
+@@ -277,87 +279,46 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
+         trash: true,
+         line_string: true
+       },
+-      // Start in polygon mode by default
++      modes: {
++        ...MapboxDraw.modes,
++        draw_circle: CircleMode
++      },
+       defaultMode: 'draw_polygon'
+     })
+
+-    // Add control to map
+     map.current.addControl(drawRef.current, 'top-right')
+
+-    // Add navigation control only on desktop
++    const drawControlGroup = document.querySelector('.mapbox-gl-draw_polygon')?.parentElement;
++    if (drawControlGroup) {
++      const circleBtn = document.createElement('button');
++      circleBtn.className = 'mapbox-gl-draw_ctrl-draw-btn mapbox-gl-draw_circle';
++      circleBtn.title = 'Circle Tool';
++      circleBtn.onclick = (e) => {
++        e.preventDefault();
++        e.stopPropagation();
++        drawRef.current?.changeMode('draw_circle');
++      };
++      circleBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" style="margin: auto;"><circle cx="12" cy="12" r="9" stroke="currentColor" fill="none" stroke-width="2"/></svg>';
++      drawControlGroup.appendChild(circleBtn);
++    }
++
+     if (window.innerWidth > 768) {
+       navControlRef.current = new mapboxgl.NavigationControl()
+       map.current.addControl(navControlRef.current, 'top-left')
+     }
+
+-    // Set up event listeners for measurements
+     map.current.on('draw.create', updateMeasurementLabels)
+     map.current.on('draw.delete', updateMeasurementLabels)
+     map.current.on('draw.update', updateMeasurementLabels)
+
+-    // Restore previous drawings if they exist
+     if (drawingFeatures.current && drawingFeatures.current.features.length > 0) {
+-      // Add each feature back to the draw tool
+       drawingFeatures.current.features.forEach((feature: any) => {
+         drawRef.current?.add(feature)
+       })
+-
+-      // Update labels after restoring features
+       setTimeout(updateMeasurementLabels, 100)
+     }
+   }, [updateMeasurementLabels])
+
+-  // Set up geolocation watcher
+-  const setupGeolocationWatcher = useCallback(() => {
+-    if (geolocationWatchIdRef.current !== null) {
+-      navigator.geolocation.clearWatch(geolocationWatchIdRef.current)
+-      geolocationWatchIdRef.current = null
+-    }
+-
+-    if (mapType !== MapToggleEnum.RealTimeMode) return
+-
+-    if (!navigator.geolocation) {
+-      toast('Geolocation is not supported by your browser')
+-      return
+-    }
+-
+-    const success = async (geoPos: GeolocationPosition) => {
+-      await updateMapPosition(geoPos.coords.latitude, geoPos.coords.longitude)
+-    }
+-
+-    const error = (positionError: GeolocationPositionError) => {
+-      console.error('Geolocation Error:', positionError.message)
+-      toast.error(`Location error: ${positionError.message}`)
+-    }
+-
+-    geolocationWatchIdRef.current = navigator.geolocation.watchPosition(success, error)
+-  }, [mapType, updateMapPosition])
+-
+-  // Capture map center changes
+-  const captureMapCenter = useCallback(() => {
+-    if (map.current) {
+-      const center = map.current.getCenter();
+-      const zoom = map.current.getZoom();
+-      const pitch = map.current.getPitch();
+-      const bearing = map.current.getBearing();
+-      currentMapCenterRef.current = { center: [center.lng, center.lat], zoom, pitch };
+-
+-      const timezone = tzlookup(center.lat, center.lng);
+-
+-      setMapData(prevData => ({
+-        ...prevData,
+-        currentTimezone: timezone,
+-        cameraState: {
+-          center: { lat: center.lat, lng: center.lng },
+-          zoom,
+-          pitch,
+-          bearing
+-        }
+-      }));
+-    }
+-  }, [setMapData])
+-
+-  // Set up idle rotation checker
+   useEffect(() => {
+     const checkIdle = setInterval(() => {
+       const idleTime = Date.now() - lastInteractionRef.current
+@@ -369,7 +330,6 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
+     return () => clearInterval(checkIdle)
+   }, [startRotation])
+
+-  // Initialize map (only once)
+   useEffect(() => {
+     if (mapContainer.current && !map.current) {
+       let initialCenter: [number, number] = [position?.longitude ?? 0, position?.latitude ?? 0];
+@@ -405,7 +365,6 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
+         preserveDrawingBuffer: true
+       })
+
+-      // Register event listeners
+       map.current.on('moveend', captureMapCenter)
+       map.current.on('mousedown', handleUserInteraction)
+       map.current.on('touchstart', handleUserInteraction)
+@@ -415,9 +374,8 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
+
+       map.current.on('load', () => {
+         if (!map.current) return
+-        setMap(map.current) // Set map instance in context
++        setMap(map.current)
+
+-        // Add terrain and sky
+         map.current.addSource('mapbox-dem', {
+           type: 'raster-dem',
+           url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
+@@ -439,7 +397,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
+
+         initializedRef.current = true
+         setIsMapReady(true)
+-        setIsMapLoaded(true) // Set map loaded state to true
++        setIsMapLoaded(true)
+       })
+     }
+
+@@ -450,18 +408,14 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
+       }
+       if (map.current) {
+         map.current.off('moveend', captureMapCenter)
+-
+-        // Clean up any existing labels
+         Object.values(polygonLabelsRef.current).forEach(marker => marker.remove())
+         Object.values(lineLabelsRef.current).forEach(marker => marker.remove())
+-
+         stopRotation()
+-        setIsMapLoaded(false) // Reset map loaded state on cleanup
+-        setMap(null) // Clear map instance from context
++        setIsMapLoaded(false)
++        setMap(null)
+         map.current.remove()
+         map.current = null
+       }
+-
+       if (geolocationWatchIdRef.current !== null) {
+         navigator.geolocation.clearWatch(geolocationWatchIdRef.current)
+         geolocationWatchIdRef.current = null
+@@ -469,28 +423,21 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
+     }
+   }, [setMap, setIsMapLoaded, captureMapCenter, handleUserInteraction, stopRotation])
+
+-  // Handle map mode changes
+   useEffect(() => {
+-    // Store previous map type to detect changes
+     const prevMapType = previousMapTypeRef.current
+     const isMapTypeChanged = prevMapType !== mapType
+
+-    // Only proceed if map is initialized
+     if (!map.current || !isMapReady) return
+
+-    // If we're switching modes
+     if (isMapTypeChanged) {
+       previousMapTypeRef.current = mapType
+       captureMapCenter()
+-
+-      // Stop current mode-specific activities
+       stopRotation()
+       if (geolocationWatchIdRef.current !== null) {
+         navigator.geolocation.clearWatch(geolocationWatchIdRef.current)
+         geolocationWatchIdRef.current = null
+       }
+
+-      // Handle setup for new mode
+       if (mapType === MapToggleEnum.DrawingMode) {
+         setupDrawingTools()
+       } else if (mapType === MapToggleEnum.RealTimeMode) {
+@@ -499,20 +446,15 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
+         startRotation()
+       }
+
+-      // Cleanup drawing tools if switching AWAY from drawing mode
+       if (prevMapType === MapToggleEnum.DrawingMode && mapType !== MapToggleEnum.DrawingMode) {
+         if (drawRef.current) {
+-          // Save current drawings before removing control
+           drawingFeatures.current = drawRef.current.getAll()
+-
+           try {
+             map.current.off('draw.create', updateMeasurementLabels)
+             map.current.off('draw.delete', updateMeasurementLabels)
+             map.current.off('draw.update', updateMeasurementLabels)
+             map.current.removeControl(drawRef.current)
+             drawRef.current = null
+-
+-            // Clean up any existing labels
+             Object.values(polygonLabelsRef.current).forEach(marker => marker.remove())
+             Object.values(lineLabelsRef.current).forEach(marker => marker.remove())
+             polygonLabelsRef.current = {}
+@@ -522,7 +464,6 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
+           }
+         }
+
+-        // Also remove navigation control when leaving drawing mode
+         if (navControlRef.current) {
+           try {
+             map.current.removeControl(navControlRef.current)
+@@ -535,14 +476,12 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
+     }
+   }, [mapType, isMapReady, updateMeasurementLabels, setupGeolocationWatcher, captureMapCenter, setupDrawingTools, startRotation, stopRotation])
+
+-  // Handle position updates from props
+   useEffect(() => {
+     if (map.current && position?.latitude && position?.longitude && mapType === MapToggleEnum.RealTimeMode) {
+       updateMapPosition(position.latitude, position.longitude)
+     }
+   }, [position, updateMapPosition, mapType])
+
+-  // Effect to handle map updates from MapDataContext
+   useEffect(() => {
+     if (mapData.targetPosition && map.current) {
+       const { lat, lng } = mapData.targetPosition;
+@@ -550,28 +489,19 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
+         updateMapPosition(lat, lng);
+       }
+     }
+-    // TODO: Handle mapData.mapFeature for drawing routes, polygons, etc. in a future step.
+-    // For example:
+-    // if (mapData.mapFeature && mapData.mapFeature.route_geometry && typeof drawRoute === 'function') {
+-    //   drawRoute(mapData.mapFeature.route_geometry); // Implement drawRoute function if needed
+-    // }
+   }, [mapData.targetPosition, mapData.mapFeature, updateMapPosition]);
+
+-  // Long-press handlers
+   const handleMouseDown = useCallback(() => {
+-    // Only activate long press if not in real-time mode (as that mode has its own interactions)
+     if (mapType === MapToggleEnum.RealTimeMode) return;
+-
+     isMouseDownRef.current = true;
+     if (longPressTimerRef.current) {
+       clearTimeout(longPressTimerRef.current);
+     }
+     longPressTimerRef.current = setTimeout(() => {
+       if (isMouseDownRef.current && map.current && mapType !== MapToggleEnum.DrawingMode) {
+-        console.log('Long press detected, activating drawing mode.');
+         setMapType(MapToggleEnum.DrawingMode);
+       }
+-    }, 3000); // 3-second delay for long press
++    }, 3000);
+   }, [mapType, setMapType]);
+
+   const handleMouseUp = useCallback(() => {
+@@ -582,7 +512,15 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
+     }
+   }, []);
+
+-
++  useEffect(() => {
++    if (mapData.pendingFeatures && mapData.pendingFeatures.length > 0 && drawRef.current) {
++      mapData.pendingFeatures.forEach(feature => {
++        drawRef.current?.add(feature);
++      });
++      setMapData(prev => ({ ...prev, pendingFeatures: [] }));
++      setTimeout(updateMeasurementLabels, 100);
++    }
++  }, [mapData.pendingFeatures, updateMeasurementLabels, setMapData]);
+
+   return (
+     <div className="relative h-full w-full">
+@@ -591,7 +529,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
+         className="h-full w-full overflow-hidden rounded-l-lg"
+         onMouseDown={handleMouseDown}
+         onMouseUp={handleMouseUp}
+-        onMouseLeave={handleMouseUp} // Clear timer if mouse leaves container while pressed
++        onMouseLeave={handleMouseUp}
+       />
+     </div>
+   )
+diff --git a/lib/agents/researcher.tsx b/lib/agents/researcher.tsx
+index ce801af..0055167 100644
+--- a/lib/agents/researcher.tsx
++++ b/lib/agents/researcher.tsx
+@@ -47,7 +47,19 @@ Use these user-drawn areas/lines as primary areas of interest for your analysis
+   ONLY when the user explicitly provides one or more URLs and asks you to read, summarize, or extract content from them.
+ - **Never use** this tool proactively.
+
+-#### **3. Location, Geography, Navigation, and Mapping Queries**
++#### **3. Map Drawing and Annotation**
++- **Tool**: \`drawingQueryTool\` → **MUST be used** for:
++  • Drawing shapes (circles, polygons, lines) on the map
++  • Highlighting areas or marking specific routes/boundaries
++  • Responding to requests like "Draw a 1km circle around...", "Highlight this area", etc.
++
++**Behavior when using \`drawingQueryTool\`:**
++- Geocode the location internally if a place name is provided.
++- In your final response: provide concise text only.
++- → NEVER say "drawing shape" or "highlighting area".
++- → Trust the system handles the visual drawing automatically.
++
++#### **4. Location, Geography, Navigation, and Mapping Queries**
+ - **Tool**: \`geospatialQueryTool\` → **MUST be used (no exceptions)** for:
+   • Finding places, businesses, "near me", distances, directions
+   • Travel times, routes, traffic, map generation
+@@ -69,8 +81,9 @@ Use these user-drawn areas/lines as primary areas of interest for your analysis
+ #### **Summary of Decision Flow**
+ 1. User gave explicit URLs? → \`retrieve\`
+ 2. Location/distance/direction/maps? → \`geospatialQueryTool\` (mandatory)
+-3. Everything else needing external data? → \`search\`
+-4. Otherwise → answer from knowledge
++3. Draw shapes, highlight areas, or circle locations? → \`drawingQueryTool\` (mandatory)
++4. Everything else needing external data? → \`search\`
++5. Otherwise → answer from knowledge
+
+ These rules override all previous instructions.
+
+@@ -104,7 +117,6 @@ export async function researcher(
+       ? dynamicSystemPrompt
+       : getDefaultSystemPrompt(currentDate, drawnFeatures)
+
+-  // Check if any message contains an image
+   const hasImage = messages.some(message =>
+     Array.isArray(message.content) &&
+     message.content.some(part => part.type === 'image')
+@@ -118,7 +130,7 @@ export async function researcher(
+     tools: getTools({ uiStream, fullResponse, mapProvider }),
+   })
+
+-  uiStream.update(null) // remove spinner
++  uiStream.update(null)
+
+   const toolCalls: ToolCallPart[] = []
+   const toolResponses: ToolResultPart[] = []
+diff --git a/lib/agents/tools/drawing.tsx b/lib/agents/tools/drawing.tsx
+new file mode 100644
+index 0000000..8b84448
+--- /dev/null
++++ b/lib/agents/tools/drawing.tsx
+@@ -0,0 +1,142 @@
++import { createStreamableUI, createStreamableValue } from 'ai/rsc';
++import { BotMessage } from '@/components/message';
++import { drawingToolSchema } from '@/lib/schema/drawing';
++import { z } from 'zod';
++import { getConnectedMcpClient, closeClient } from '@/lib/utils/mcp';
++import * as turf from '@turf/turf';
++
++export const drawingTool = ({
++  uiStream
++}: {
++  uiStream: ReturnType<typeof createStreamableUI>
++}) => ({
++  description: `Use this tool to draw shapes on the map. You can draw polygons, lines, and circles.
++  For example: "Draw a 5km circle around London", "Draw a polygon around Central Park", "Draw a line between New York and Boston".`,
++  parameters: drawingToolSchema,
++  execute: async (params: z.infer<typeof drawingToolSchema>) => {
++    const { type } = params;
++    console.log('[DrawingTool] Execute called with:', params);
++
++    const uiFeedbackStream = createStreamableValue<string>();
++    uiStream.append(<BotMessage content={uiFeedbackStream.value} />);
++
++    let feedbackMessage = `Preparing to draw ${type}... Connecting to mapping service...`;
++    uiFeedbackStream.update(feedbackMessage);
++
++    const mcpClient = await getConnectedMcpClient();
++    if (!mcpClient) {
++      feedbackMessage = 'Drawing functionality is partially unavailable (geocoding failed). Please check configuration.';
++      uiFeedbackStream.update(feedbackMessage);
++      uiFeedbackStream.done();
++      return { type: 'DRAWING_TRIGGER', error: 'MCP client initialization failed' };
++    }
++
++    try {
++      let features: any[] = [];
++      let center: [number, number] | null = null;
++
++      // Geocode location if provided
++      const locationToGeocode = (params as any).location;
++      if (locationToGeocode) {
++        feedbackMessage = `Geocoding location: ${locationToGeocode}...`;
++        uiFeedbackStream.update(feedbackMessage);
++
++        const toolCallResult = await mcpClient.callTool({
++          name: 'forward_geocode_tool',
++          arguments: { searchText: locationToGeocode, maxResults: 1 }
++        });
++
++        const serviceResponse = toolCallResult as { content?: Array<{ text?: string | null }> };
++        const text = serviceResponse?.content?.[0]?.text;
++        if (text) {
++          const jsonMatch = text.match(/\`\`\`json\n([\s\S]*?)\n\`\`\`/);
++          const content = jsonMatch ? JSON.parse(jsonMatch[1]) : JSON.parse(text);
++          if (content.results?.[0]?.coordinates) {
++            const coords = content.results[0].coordinates;
++            center = [coords.longitude, coords.latitude];
++          }
++        }
++      }
++
++      if (type === 'circle') {
++        const circleCenter = params.center ? [params.center.lng, params.center.lat] : center;
++        if (!circleCenter) throw new Error('Could not determine center for circle');
++
++        feedbackMessage = `Generating circle around ${locationToGeocode || 'specified coordinates'} with radius ${params.radius} ${params.units}...`;
++        uiFeedbackStream.update(feedbackMessage);
++
++        const circle = turf.circle(circleCenter, params.radius, {
++          units: params.units as any,
++          steps: 64,
++          properties: {
++            user_isCircle: true,
++            user_radius: params.radius,
++            user_radiusUnits: params.units,
++            user_center: circleCenter,
++            user_label: params.label,
++            user_color: params.color
++          }
++        });
++        features.push(circle);
++      } else if (type === 'polygon') {
++        const polyCoords = params.coordinates
++          ? [params.coordinates.map(c => [c.lng, c.lat])]
++          : null; // If no coords, we might want to use geocoded center but it's just a point
++
++        if (!polyCoords) {
++           if (center) {
++             // Fallback: draw a small square around the center if geocoded but no vertices
++             const buffered = turf.buffer(turf.point(center), 0.5, { units: 'kilometers' });
++             if (buffered) {
++               buffered.properties = { ...buffered.properties, user_label: params.label, user_color: params.color };
++               features.push(buffered);
++             }
++           } else {
++             throw new Error('No coordinates or location provided for polygon');
++           }
++        } else {
++          // Ensure polygon is closed
++          if (polyCoords[0][0][0] !== polyCoords[0][polyCoords[0].length-1][0] || polyCoords[0][0][1] !== polyCoords[0][polyCoords[0].length-1][1]) {
++            polyCoords[0].push(polyCoords[0][0]);
++          }
++          const polygon = turf.polygon(polyCoords, {
++            user_label: params.label,
++            user_color: params.color
++          });
++          features.push(polygon);
++        }
++      } else if (type === 'line') {
++        const lineCoords = params.coordinates
++          ? params.coordinates.map(c => [c.lng, c.lat])
++          : null;
++
++        if (!lineCoords) throw new Error('No coordinates provided for line');
++
++        const line = turf.lineString(lineCoords, {
++          user_label: params.label,
++          user_color: params.color
++        });
++        features.push(line);
++      }
++
++      feedbackMessage = `Successfully generated ${type} drawing.`;
++      uiFeedbackStream.update(feedbackMessage);
++
++      return {
++        type: 'DRAWING_TRIGGER',
++        params,
++        features,
++        timestamp: new Date().toISOString()
++      };
++
++    } catch (error: any) {
++      feedbackMessage = `Error generating drawing: ${error.message}`;
++      uiFeedbackStream.update(feedbackMessage);
++      console.error('[DrawingTool] Execution failed:', error);
++      return { type: 'DRAWING_TRIGGER', error: error.message };
++    } finally {
++      await closeClient(mcpClient);
++      uiFeedbackStream.done();
++    }
++  }
++});
+diff --git a/lib/agents/tools/geospatial.tsx b/lib/agents/tools/geospatial.tsx
+index ca5f9f4..7aa8328 100644
+--- a/lib/agents/tools/geospatial.tsx
++++ b/lib/agents/tools/geospatial.tsx
+@@ -4,17 +4,14 @@
+ import { createStreamableUI, createStreamableValue } from 'ai/rsc';
+ import { BotMessage } from '@/components/message';
+ import { geospatialQuerySchema } from '@/lib/schema/geospatial';
+-import { Client as MCPClientClass } from '@modelcontextprotocol/sdk/client/index.js';
+-import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+-// Smithery SDK removed - using direct URL construction
+ import { z } from 'zod';
+ import { GoogleGenerativeAI } from '@google/generative-ai';
+ import { getSelectedModel } from '@/lib/actions/users';
+ import { MapProvider } from '@/lib/store/settings';
++import { getConnectedMcpClient, closeClient, McpClient } from '@/lib/utils/mcp';
++import { getGoogleStaticMapUrl } from '@/lib/utils';
+
+ // Types
+-export type McpClient = MCPClientClass;
+-
+ interface Location {
+   latitude?: number;
+   longitude?: number;
+@@ -27,143 +24,6 @@ interface McpResponse {
+   mapUrl?: string;
+ }
+
+-interface MapboxConfig {
+-  mapboxAccessToken: string;
+-  version: string;
+-  name: string;
+-}
+-
+-/**
+- * Establish connection to the MCP server with proper environment validation.
+- */
+-async function getConnectedMcpClient(): Promise<McpClient | null> {
+-  const composioApiKey = process.env.COMPOSIO_API_KEY;
+-  const mapboxAccessToken = process.env.MAPBOX_ACCESS_TOKEN;
+-  const composioUserId = process.env.COMPOSIO_USER_ID;
+-
+-  console.log('[GeospatialTool] Environment check:', {
+-    composioApiKey: composioApiKey ? `${composioApiKey.substring(0, 8)}...` : 'MISSING',
+-    mapboxAccessToken: mapboxAccessToken ? `${mapboxAccessToken.substring(0, 8)}...` : 'MISSING',
+-    composioUserId: composioUserId ? `${composioUserId.substring(0, 8)}...` : 'MISSING',
+-  });
+-
+-  if (!composioApiKey || !mapboxAccessToken || !composioUserId || !composioApiKey.trim() || !mapboxAccessToken.trim() || !composioUserId.trim()) {
+-    console.error('[GeospatialTool] Missing or empty required environment variables');
+-    return null;
+-  }
+-
+-  // Load config from file or fallback
+-  let config;
+-  try {
+-    // Use static import for config
+-    let mapboxMcpConfig;
+-    try {
+-      mapboxMcpConfig = require('../../../mapbox_mcp_config.json');
+-      config = { ...mapboxMcpConfig, mapboxAccessToken };
+-      console.log('[GeospatialTool] Config loaded successfully');
+-    } catch (configError: any) {
+-      throw configError;
+-    }
+-  } catch (configError: any) {
+-    console.error('[GeospatialTool] Failed to load mapbox config:', configError.message);
+-    config = { mapboxAccessToken, version: '1.0.0', name: 'mapbox-mcp-server' };
+-    console.log('[GeospatialTool] Using fallback config');
+-  }
+-
+-  // Build Composio MCP server URL
+-  // Note: This should be migrated to use Composio SDK directly instead of MCP client
+-  // For now, constructing URL directly without Smithery SDK
+-  let serverUrlToUse: URL;
+-  try {
+-    // Construct URL with Composio credentials
+-    const baseUrl = 'https://api.composio.dev/v1/mcp/mapbox';
+-    serverUrlToUse = new URL(baseUrl);
+-    serverUrlToUse.searchParams.set('api_key', composioApiKey);
+-    serverUrlToUse.searchParams.set('user_id', composioUserId);
+-
+-    const urlDisplay = serverUrlToUse.toString().split('?')[0];
+-    console.log('[GeospatialTool] Composio MCP Server URL created:', urlDisplay);
+-
+-    if (!serverUrlToUse.href || !serverUrlToUse.href.startsWith('https://')) {
+-      throw new Error('Invalid server URL generated');
+-    }
+-  } catch (urlError: any) {
+-    console.error('[GeospatialTool] Error creating Composio URL:', urlError.message);
+-    return null;
+-  }
+-
+-  // Create transport
+-  let transport;
+-  try {
+-    transport = new StreamableHTTPClientTransport(serverUrlToUse);
+-    console.log('[GeospatialTool] Transport created successfully');
+-  } catch (transportError: any) {
+-    console.error('[GeospatialTool] Failed to create transport:', transportError.message);
+-    return null;
+-  }
+-
+-  // Create client
+-  let client;
+-  try {
+-    client = new MCPClientClass({ name: 'GeospatialToolClient', version: '1.0.0' });
+-    console.log('[GeospatialTool] MCP Client instance created');
+-  } catch (clientError: any) {
+-    console.error('[GeospatialTool] Failed to create MCP client:', clientError.message);
+-    return null;
+-  }
+-
+-  // Connect to server
+-  try {
+-    console.log('[GeospatialTool] Attempting to connect to MCP server...');
+-    await Promise.race([
+-      client.connect(transport),
+-      new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timeout after 15 seconds')), 15000)),
+-    ]);
+-    console.log('[GeospatialTool] Successfully connected to MCP server');
+-  } catch (connectError: any) {
+-    console.error('[GeospatialTool] MCP connection failed:', connectError.message);
+-    return null;
+-  }
+-
+-  // List tools
+-  try {
+-    const tools = await client.listTools();
+-    console.log('[GeospatialTool] Available tools:', tools.tools?.map(t => t.name) || []);
+-  } catch (listError: any) {
+-    console.warn('[GeospatialTool] Could not list tools:', listError.message);
+-  }
+-
+-  return client;
+-}
+-
+-/**
+- * Safely close the MCP client with timeout.
+- */
+-async function closeClient(client: McpClient | null) {
+-  if (!client) return;
+-  try {
+-    await Promise.race([
+-      client.close(),
+-      new Promise((_, reject) => setTimeout(() => reject(new Error('Close timeout after 5 seconds')), 5000)),
+-    ]);
+-    console.log('[GeospatialTool] MCP client closed successfully');
+-  } catch (error: any) {
+-    console.error('[GeospatialTool] Error closing MCP client:', error.message);
+-  }
+-}
+-
+-/**
+- * Helper to generate a Google Static Map URL
+- */
+-function getGoogleStaticMapUrl(latitude: number, longitude: number): string {
+-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY;
+-  if (!apiKey) return '';
+-  return `https://maps.googleapis.com/maps/api/staticmap?center=${latitude},${longitude}&zoom=15&size=640x480&scale=2&markers=color:red%7C${latitude},${longitude}&key=${apiKey}`;
+-}
+-
+-/**
+- * Main geospatial tool executor.
+- */
+ export const geospatialTool = ({
+   uiStream,
+   mapProvider
+@@ -171,70 +31,70 @@ export const geospatialTool = ({
+   uiStream: ReturnType<typeof createStreamableUI>
+   mapProvider?: MapProvider
+ }) => ({
+-  description: `Use this tool for location-based queries including:
+-  There a plethora of tools inside this tool accessible on the mapbox mcp server where switch case into the tool of choice for that use case
+-  If the Query is supposed to use multiple tools in a sequence you must access all the tools in the sequence and then provide a final answer based on the results of all the tools used.
+-
+-Static image tool:
+-
+-Generates static map images using the Mapbox static image API. Features include:
+-
+-Custom map styles (streets, outdoors, satellite, etc.)
+-Adjustable image dimensions and zoom levels
+-Support for multiple markers with custom colors and labels
+-Overlay options including polylines and polygons
+-Auto-fitting to specified coordinates
+-
+-Category search tool:
+-
+-Performs a category search using the Mapbox Search Box category search API. Features include:
+-Search for points of interest by category (restaurants, hotels, gas stations, etc.)
+-Filtering by geographic proximity
+-Customizable result limits
+-Rich metadata for each result
+-Support for multiple languages
+-
+-Reverse geocoding tool:
+-
+-Performs reverse geocoding using the Mapbox geocoding V6 API. Features include:
+-Convert geographic coordinates to human-readable addresses
+-Customizable levels of detail (street, neighborhood, city, etc.)
+-Results filtering by type (address, poi, neighborhood, etc.)
+-Support for multiple languages
+-Rich location context information
+-
+-Directions tool:
+-
+-Fetches routing directions using the Mapbox Directions API. Features include:
+-
+-Support for different routing profiles: driving (with live traffic or typical), walking, and cycling
+-Route from multiple waypoints (2-25 coordinate pairs)
+-Alternative routes option
+-Route annotations (distance, duration, speed, congestion)
+-
+-Scheduling options:
+-
+-Future departure time (depart_at) for driving and driving-traffic profiles
+-Desired arrival time (arrive_by) for driving profile only
+-Profile-specific optimizations:
+-Driving: vehicle dimension constraints (height, width, weight)
+-Exclusion options for routing:
+-Common exclusions: ferry routes, cash-only tolls
+-Driving-specific exclusions: tolls, motorways, unpaved roads, tunnels, country borders, state borders
+-Custom point exclusions (up to 50 geographic points to avoid)
+-GeoJSON geometry output format
+-
+-Isochrone tool:
+-
+-Computes areas that are reachable within a specified amount of times from a location using Mapbox Isochrone API. Features include:
+-
+-Support for different travel profiles (driving, walking, cycling)
+-Customizable travel times or distances
+-Multiple contour generation (e.g., 15, 30, 45 minute ranges)
+-Optional departure or arrival time specification
+-Color customization for visualization
+-
+-Search and geocode tool:
++  description: `Use this tool for location-based queries including:
++  There a plethora of tools inside this tool accessible on the mapbox mcp server where switch case into the tool of choice for that use case
++  If the Query is supposed to use multiple tools in a sequence you must access all the tools in the sequence and then provide a final answer based on the results of all the tools used.
++
++Static image tool:
++
++Generates static map images using the Mapbox static image API. Features include:
++
++Custom map styles (streets, outdoors, satellite, etc.)
++Adjustable image dimensions and zoom levels
++Support for multiple markers with custom colors and labels
++Overlay options including polylines and polygons
++Auto-fitting to specified coordinates
++
++Category search tool:
++
++Performs a category search using the Mapbox Search Box category search API. Features include:
++Search for points of interest by category (restaurants, hotels, gas stations, etc.)
++Filtering by geographic proximity
++Customizable result limits
++Rich metadata for each result
++Support for multiple languages
++
++Reverse geocoding tool:
++
++Performs reverse geocoding using the Mapbox geocoding V6 API. Features include:
++Convert geographic coordinates to human-readable addresses
++Customizable levels of detail (street, neighborhood, city, etc.)
++Results filtering by type (address, poi, neighborhood, etc.)
++Support for multiple languages
++Rich location context information
++
++Directions tool:
++
++Fetches routing directions using the Mapbox Directions API. Features include:
++
++Support for different routing profiles: driving (with live traffic or typical), walking, and cycling
++Route from multiple waypoints (2-25 coordinate pairs)
++Alternative routes option
++Route annotations (distance, duration, speed, congestion)
++
++Scheduling options:
++
++Future departure time (depart_at) for driving and driving-traffic profiles
++Desired arrival time (arrive_by) for driving profile only
++Profile-specific optimizations:
++Driving: vehicle dimension constraints (height, width, weight)
++Exclusion options for routing:
++Common exclusions: ferry routes, cash-only tolls
++Driving-specific exclusions: tolls, motorways, unpaved roads, tunnels, country borders, state borders
++Custom point exclusions (up to 50 geographic points to avoid)
++GeoJSON geometry output format
++
++Isochrone tool:
++
++Computes areas that are reachable within a specified amount of times from a location using Mapbox Isochrone API. Features include:
++
++Support for different travel profiles (driving, walking, cycling)
++Customizable travel times or distances
++Multiple contour generation (e.g., 15, 30, 45 minute ranges)
++Optional departure or arrival time specification
++Color customization for visualization
++
++Search and geocode tool:
+ Uses the Mapbox Search Box Text Search API endpoint to power searching for and geocoding POIs, addresses, places, and any other types supported by that API. This tool consolidates the functionality that was previously provided by the ForwardGeocodeTool and PoiSearchTool (from earlier versions of this MCP server) into a single tool.`
+
+
+@@ -271,8 +131,6 @@ Uses the Mapbox Search Box Text Search API endpoint to power searching for and g
+
+         if (functionCalls && functionCalls.length > 0) {
+           const gsr = functionCalls[0];
+-          // This is a placeholder for the actual response structure,
+-          // as I don't have a way to inspect it at the moment.
+           const place = (gsr as any).results[0].place;
+           if (place) {
+             const { latitude, longitude } = place.coordinates;
+diff --git a/lib/agents/tools/index.tsx b/lib/agents/tools/index.tsx
+index 4c22b88..4fccd0e 100644
+--- a/lib/agents/tools/index.tsx
++++ b/lib/agents/tools/index.tsx
+@@ -2,7 +2,8 @@ import { createStreamableUI } from 'ai/rsc'
+ import { retrieveTool } from './retrieve'
+ import { searchTool } from './search'
+ import { videoSearchTool } from './video-search'
+-import { geospatialTool } from './geospatial' // Removed useGeospatialToolMcp import
++import { geospatialTool } from './geospatial'
++import { drawingTool } from './drawing'
+
+ import { MapProvider } from '@/lib/store/settings'
+
+@@ -25,6 +26,9 @@ export const getTools = ({ uiStream, fullResponse, mapProvider }: ToolProps) =>
+     geospatialQueryTool: geospatialTool({
+       uiStream,
+       mapProvider
++    }),
++    drawingQueryTool: drawingTool({
++      uiStream
+     })
+   }
+
+@@ -36,4 +40,4 @@ export const getTools = ({ uiStream, fullResponse, mapProvider }: ToolProps) =>
+   }
+
+   return tools
+-}
+\ No newline at end of file
++}
+diff --git a/lib/schema/drawing.tsx b/lib/schema/drawing.tsx
+new file mode 100644
+index 0000000..2abc5ce
+--- /dev/null
++++ b/lib/schema/drawing.tsx
+@@ -0,0 +1,38 @@
++import { z } from 'zod';
++
++export const drawingToolSchema = z.discriminatedUnion('type', [
++  z.object({
++    type: z.literal('polygon'),
++    location: z.string().optional().describe('Name of the place to draw a polygon around'),
++    coordinates: z.array(z.object({
++      lat: z.number(),
++      lng: z.number()
++    })).optional().describe('List of coordinates for the polygon vertices'),
++    label: z.string().optional().describe('Label for the polygon'),
++    color: z.string().optional().describe('Color for the polygon (e.g., "#ff0000")')
++  }),
++  z.object({
++    type: z.literal('line'),
++    location: z.string().optional().describe('Name of the place to draw a line at'),
++    coordinates: z.array(z.object({
++      lat: z.number(),
++      lng: z.number()
++    })).optional().describe('List of coordinates for the line segments'),
++    label: z.string().optional().describe('Label for the line'),
++    color: z.string().optional().describe('Color for the line (e.g., "#0000ff")')
++  }),
++  z.object({
++    type: z.literal('circle'),
++    location: z.string().optional().describe('Name of the place to draw a circle around'),
++    center: z.object({
++      lat: z.number(),
++      lng: z.number()
++    }).optional().describe('Center coordinates for the circle'),
++    radius: z.number().describe('Radius of the circle'),
++    units: z.enum(['meters', 'kilometers', 'miles', 'feet']).default('kilometers').describe('Units for the radius'),
++    label: z.string().optional().describe('Label for the circle'),
++    color: z.string().optional().describe('Color for the circle (e.g., "#00ff00")')
++  })
++]);
++
++export type DrawingToolParams = z.infer<typeof drawingToolSchema>;
+diff --git a/lib/utils/index.ts b/lib/utils/index.ts
+index f9b7eeb..d0cbef9 100644
+--- a/lib/utils/index.ts
++++ b/lib/utils/index.ts
+@@ -117,3 +117,8 @@ export async function getModel(requireVision: boolean = false) {
+   });
+   return openai('gpt-4o');
+ }
++
++export function getGoogleStaticMapUrl(latitude: number, longitude: number): string {
++  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
++  return `https://maps.googleapis.com/maps/api/staticmap?center=${latitude},${longitude}&zoom=14&size=600x300&maptype=roadmap&markers=color:red%7C${latitude},${longitude}&key=${apiKey}`;
++}
+diff --git a/lib/utils/mcp.ts b/lib/utils/mcp.ts
+new file mode 100644
+index 0000000..c271457
+--- /dev/null
++++ b/lib/utils/mcp.ts
+@@ -0,0 +1,95 @@
++import { Client as MCPClientClass } from '@modelcontextprotocol/sdk/client/index.js';
++import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
++
++// Types
++export type McpClient = MCPClientClass;
++
++/**
++ * Establish connection to the MCP server with proper environment validation.
++ */
++export async function getConnectedMcpClient(): Promise<McpClient | null> {
++  const composioApiKey = process.env.COMPOSIO_API_KEY;
++  const mapboxAccessToken = process.env.MAPBOX_ACCESS_TOKEN;
++  const composioUserId = process.env.COMPOSIO_USER_ID;
++
++  console.log('[MCP Utility] Environment check:', {
++    composioApiKey: composioApiKey ? `${composioApiKey.substring(0, 8)}...` : 'MISSING',
++    mapboxAccessToken: mapboxAccessToken ? `${mapboxAccessToken.substring(0, 8)}...` : 'MISSING',
++    composioUserId: composioUserId ? `${composioUserId.substring(0, 8)}...` : 'MISSING',
++  });
++
++  if (!composioApiKey || !mapboxAccessToken || !composioUserId || !composioApiKey.trim() || !mapboxAccessToken.trim() || !composioUserId.trim()) {
++    console.error('[MCP Utility] Missing or empty required environment variables');
++    return null;
++  }
++
++  // Build Composio MCP server URL
++  let serverUrlToUse: URL;
++  try {
++    const baseUrl = 'https://api.composio.dev/v1/mcp/mapbox';
++    serverUrlToUse = new URL(baseUrl);
++    serverUrlToUse.searchParams.set('api_key', composioApiKey);
++    serverUrlToUse.searchParams.set('user_id', composioUserId);
++
++    const urlDisplay = serverUrlToUse.toString().split('?')[0];
++    console.log('[MCP Utility] Composio MCP Server URL created:', urlDisplay);
++
++    if (!serverUrlToUse.href || !serverUrlToUse.href.startsWith('https://')) {
++      throw new Error('Invalid server URL generated');
++    }
++  } catch (urlError: any) {
++    console.error('[MCP Utility] Error creating Composio URL:', urlError.message);
++    return null;
++  }
++
++  // Create transport
++  let transport;
++  try {
++    transport = new StreamableHTTPClientTransport(serverUrlToUse);
++    console.log('[MCP Utility] Transport created successfully');
++  } catch (transportError: any) {
++    console.error('[MCP Utility] Failed to create transport:', transportError.message);
++    return null;
++  }
++
++  // Create client
++  let client;
++  try {
++    client = new MCPClientClass({ name: 'SharedMcpClient', version: '1.0.0' });
++    console.log('[MCP Utility] MCP Client instance created');
++  } catch (clientError: any) {
++    console.error('[MCP Utility] Failed to create MCP client:', clientError.message);
++    return null;
++  }
++
++  // Connect to server
++  try {
++    console.log('[MCP Utility] Attempting to connect to MCP server...');
++    await Promise.race([
++      client.connect(transport),
++      new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timeout after 15 seconds')), 15000)),
++    ]);
++    console.log('[MCP Utility] Successfully connected to MCP server');
++  } catch (connectError: any) {
++    console.error('[MCP Utility] MCP connection failed:', connectError.message);
++    return null;
++  }
++
++  return client;
++}
++
++/**
++ * Safely close the MCP client with timeout.
++ */
++export async function closeClient(client: McpClient | null) {
++  if (!client) return;
++  try {
++    await Promise.race([
++      client.close(),
++      new Promise((_, reject) => setTimeout(() => reject(new Error('Close timeout after 5 seconds')), 5000)),
++    ]);
++    console.log('[MCP Utility] MCP client closed successfully');
++  } catch (error: any) {
++    console.error('[MCP Utility] Error closing MCP client:', error.message);
++  }
++}
