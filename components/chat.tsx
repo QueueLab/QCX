@@ -39,15 +39,17 @@ export function Chat({ id }: ChatProps) {
   const [showEmptyScreen, setShowEmptyScreen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [suggestions, setSuggestions] = useState<PartialRelated | null>(null)
-  const chatPanelRef = useRef<ChatPanelRef>(null);
+  const chatPanelRef = useRef<ChatPanelRef>(null)
+  const lastRefreshedMessageIdRef = useRef<string | null>(null)
+  const lastSyncedDataRef = useRef<string>('')
 
   const handleAttachment = () => {
-    chatPanelRef.current?.handleAttachmentClick();
-  };
+    chatPanelRef.current?.handleAttachmentClick()
+  }
 
   const handleMobileSubmit = () => {
-    chatPanelRef.current?.submitForm();
-  };
+    chatPanelRef.current?.submitForm()
+  }
   
   useEffect(() => {
     setShowEmptyScreen(messages.length === 0)
@@ -76,18 +78,16 @@ export function Chat({ id }: ChatProps) {
   }, [id, path, messages])
 
   useEffect(() => {
-    const lastMessage = aiState.messages[aiState.messages.length - 1];
-    if (lastMessage?.type === 'response' && lastMessage.id !== lastRefreshedMessageIdRef.current) {
+    const lastResponse = [...aiState.messages].reverse().find(m => m.type === 'response')
+    if (lastResponse && lastResponse.id !== lastRefreshedMessageIdRef.current) {
       // Refresh the page to chat history updates
-      lastRefreshedMessageIdRef.current = lastMessage.id;
+      lastRefreshedMessageIdRef.current = lastResponse.id
       router.refresh()
     }
-  }, [aiState, router])
+  }, [aiState.messages, router])
 
   // Get mapData to access drawnFeatures
-  const { mapData } = useMapData();
-  const lastSyncedDataRef = useRef<string>('');
-  const lastRefreshedMessageIdRef = useRef<string | null>(null);
+  const { mapData } = useMapData()
 
   useEffect(() => {
     if (isSubmitting) {
@@ -103,19 +103,38 @@ export function Chat({ id }: ChatProps) {
         drawnFeatures: mapData.drawnFeatures || [],
         cameraState: mapData.cameraState,
         uploadedGeoJson: (mapData.uploadedGeoJson || []).map(item => ({ id: item.id, visible: item.visible }))
-      });
+      })
 
       if (currentData !== lastSyncedDataRef.current) {
-        console.log('Chat.tsx: map data changed, calling updateDrawingContext');
-        lastSyncedDataRef.current = currentData;
+        console.log('Chat.tsx: map data changed, calling updateDrawingContext')
+        lastSyncedDataRef.current = currentData
         updateDrawingContext(id, {
           drawnFeatures: mapData.drawnFeatures || [],
           cameraState: mapData.cameraState,
           uploadedGeoJson: mapData.uploadedGeoJson || []
-        });
+        })
       }
     }
-  }, [id, mapData.drawnFeatures, mapData.cameraState, mapData.uploadedGeoJson]);
+  }, [id, mapData.drawnFeatures, mapData.cameraState, mapData.uploadedGeoJson])
+
+  const renderSuggestions = () => {
+    if (!suggestions) return null;
+    return (
+      <div className="absolute inset-0 z-20 flex flex-col items-start p-4">
+        <SuggestionsDropdown
+          suggestions={suggestions}
+          onSelect={query => {
+            setInput(query)
+            setSuggestions(null)
+            // Use a small timeout to ensure state update before submission
+            setIsSubmitting(true)
+          }}
+          onClose={() => setSuggestions(null)}
+          className="relative bottom-auto mb-0 w-full shadow-none border-none bg-transparent"
+        />
+      </div>
+    );
+  };
 
   // Mobile layout
   if (isMobile) {
@@ -141,41 +160,27 @@ export function Chat({ id }: ChatProps) {
         <div className="mobile-chat-messages-area relative">
           {isCalendarOpen ? (
             <CalendarNotepad chatId={id} />
-          ) : showEmptyScreen ? (
+          ) : (
             <div className="relative w-full h-full">
               <div className={cn("transition-all duration-300", suggestions ? "blur-md pointer-events-none" : "")}>
-                <EmptyScreen
-                  submitMessage={message => {
-                    setInput(message)
-                    setIsSubmitting(true)
-                  }}
-                />
-              </div>
-              {suggestions && (
-                <div className="absolute inset-0 z-20 flex flex-col items-start p-4">
-                  <SuggestionsDropdown
-                    suggestions={suggestions}
-                    onSelect={query => {
-                      setInput(query)
-                      setSuggestions(null)
-                      // Use a small timeout to ensure state update before submission
-                      setTimeout(() => {
-                        setIsSubmitting(true)
-                      }, 0)
+                {showEmptyScreen ? (
+                  <EmptyScreen
+                    submitMessage={message => {
+                      setInput(message)
+                      setIsSubmitting(true)
                     }}
-                    onClose={() => setSuggestions(null)}
-                    className="relative bottom-auto mb-0 w-full shadow-none border-none bg-transparent"
                   />
-                </div>
-              )}
+                ) : (
+                  <ChatMessages messages={messages} />
+                )}
+              </div>
+              {renderSuggestions()}
             </div>
-          ) : (
-            <ChatMessages messages={messages} />
           )}
         </div>
         </div>
       </>
-    );
+    )
   }
 
   // Desktop layout
@@ -195,38 +200,20 @@ export function Chat({ id }: ChatProps) {
               setInput={setInput} 
               onSuggestionsChange={setSuggestions}
             />
-            <div className="relative">
-              {showEmptyScreen ? (
-                <>
-                  <div className={cn("transition-all duration-300", suggestions ? "blur-md pointer-events-none" : "")}>
-                    <EmptyScreen
-                      submitMessage={message => {
-                        setInput(message)
-                        setIsSubmitting(true)
-                      }}
-                    />
-                  </div>
-                  {suggestions && (
-                    <div className="absolute inset-0 z-20 flex flex-col items-start p-4">
-                      <SuggestionsDropdown
-                        suggestions={suggestions}
-                        onSelect={query => {
-                          setInput(query)
-                          setSuggestions(null)
-                          // Use a small timeout to ensure state update before submission
-                          setTimeout(() => {
-                            setIsSubmitting(true)
-                          }, 0)
-                        }}
-                        onClose={() => setSuggestions(null)}
-                        className="relative bottom-auto mb-0 w-full shadow-none border-none bg-transparent"
-                      />
-                    </div>
-                  )}
-                </>
-              ) : (
-                <ChatMessages messages={messages} />
-              )}
+            <div className="relative min-h-[100px]">
+              <div className={cn("transition-all duration-300", suggestions ? "blur-md pointer-events-none" : "")}>
+                {showEmptyScreen ? (
+                  <EmptyScreen
+                    submitMessage={message => {
+                      setInput(message)
+                      setIsSubmitting(true)
+                    }}
+                  />
+                ) : (
+                  <ChatMessages messages={messages} />
+                )}
+              </div>
+              {renderSuggestions()}
             </div>
           </>
         )}
@@ -239,5 +226,5 @@ export function Chat({ id }: ChatProps) {
         </div>
       </div>
     </>
-  );
+  )
 }
