@@ -1,22 +1,27 @@
-import asyncio
-from playwright.async_api import async_playwright
-import os
+from playwright.sync_api import sync_playwright
+import time
 
-async def main():
-    async with async_playwright() as p:
-        browser = await p.chromium.launch()
-        page = await browser.new_page()
+def run():
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        context = browser.new_context(viewport={'width': 1280, 'height': 800})
+        page = context.new_page()
 
-        # Go to the app
-        # Since I'm in a sandbox, I might need to start the app first.
-        # But usually I can just check if the code compiles and the UI structure is correct.
-        # Actually, I'll just check the file content for now or try to run the app if possible.
+        try:
+            print("Navigating to http://localhost:3000...")
+            page.goto("http://localhost:3000", timeout=60000)
+            time.sleep(5)
+            print(f"Current URL: {page.url}")
 
-        # If I can't run the app, I'll at least verify the HTML structure via a script that mock-renders or something.
-        # But wait, I have 'run_in_bash_session'. I can try to run 'bun run build' to check for type errors.
+            page.screenshot(path="initial_load.png")
 
-        await browser.close()
+            # If we are on /auth, we can't really test the history toggle easily without logging in.
+            # But we can at least check if the header is there if it's visible on /auth (unlikely).
+
+        except Exception as e:
+            print(f"Error: {e}")
+        finally:
+            browser.close()
 
 if __name__ == "__main__":
-    # asyncio.run(main())
-    print("Verification script placeholder")
+    run()
