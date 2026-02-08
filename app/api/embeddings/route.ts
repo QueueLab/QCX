@@ -125,7 +125,7 @@ function latLonToUTM(lat: number, lon: number, epsgCode: string): { x: number; y
  */
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
+    if (!req || !req.url) return NextResponse.json({ error: "Invalid request" }, { status: 400 }); const { searchParams } = new URL(req.url);
     const latParam = searchParams.get('lat');
     const lonParam = searchParams.get('lon');
     const yearParam = searchParams.get('year');

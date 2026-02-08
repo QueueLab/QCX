@@ -36,6 +36,22 @@ export function CalendarNotepad({ chatId }: CalendarNotepadProps) {
     fetchNotes()
   }, [selectedDate, chatId])
 
+  // Sync notes with map markers
+  useEffect(() => {
+    const noteMarkers = notes
+      .filter(note => note.locationTags && note.locationTags.coordinates)
+      .map(note => ({
+        latitude: note.locationTags.coordinates[1],
+        longitude: note.locationTags.coordinates[0],
+        title: note.content.substring(0, 50) + (note.content.length > 50 ? '...' : '')
+      }));
+
+    setMapData(prev => ({
+      ...prev,
+      markers: noteMarkers
+    }));
+  }, [notes, setMapData]);
+
   const generateDateRange = (offset: number) => {
     const dates = []
     const today = new Date()
@@ -86,7 +102,9 @@ export function CalendarNotepad({ chatId }: CalendarNotepadProps) {
         type: 'Point',
         coordinates: mapData.targetPosition
       });
-      setNoteContent(prev => `${prev} #location`);
+      if (!noteContent.includes('#location')) {
+        setNoteContent(prev => `${prev} #location`);
+      }
     }
   };
 
@@ -128,7 +146,7 @@ export function CalendarNotepad({ chatId }: CalendarNotepadProps) {
 
   const handleFlyTo = (location: any) => {
     if (location && location.coordinates) {
-      setMapData(prev => ({ ...prev, targetPosition: location.coordinates }));
+      setMapData(prev => ({ ...prev, targetPosition: { lat: location.coordinates[1], lng: location.coordinates[0] } }));
     }
   };
 
@@ -207,24 +225,30 @@ export function CalendarNotepad({ chatId }: CalendarNotepadProps) {
       <div className="space-y-4">
         {notes.length > 0 ? (
           notes.map((note) => (
-            <div key={note.id} className="p-3 bg-muted rounded-md">
+            <div key={note.id} className="p-3 bg-muted rounded-md border border-border/50">
               <div className="flex justify-between items-start">
-                <div>
+                <div className="flex-1 min-w-0">
                   <p className="text-xs text-muted-foreground mb-1">
                     {new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </p>
                   <p className="text-sm whitespace-pre-wrap break-words">{renderContent(note.content)}</p>
                 </div>
-                {note.locationTags && (
-                  <button onClick={() => handleFlyTo(note.locationTags)} className="text-muted-foreground hover:text-foreground ml-2">
-                    <MapPin className="h-5 w-5" />
-                  </button>
-                )}
-                {note.userTags && note.userTags.length > 0 && (
-                  <div className="text-muted-foreground ml-2 flex items-center" title={`${note.userTags.length} user(s) tagged`}>
-                    <Users className="h-4 w-4" />
-                  </div>
-                )}
+                <div className="flex items-center space-x-2 ml-2">
+                  {note.locationTags && (
+                    <button
+                      onClick={() => handleFlyTo(note.locationTags)}
+                      className="text-primary hover:text-primary/80 transition-colors"
+                      title="Fly to location"
+                    >
+                      <MapPin className="h-5 w-5" />
+                    </button>
+                  )}
+                  {note.userTags && note.userTags.length > 0 && (
+                    <div className="text-muted-foreground flex items-center" title={`${note.userTags.length} user(s) tagged`}>
+                      <Users className="h-4 w-4" />
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           ))

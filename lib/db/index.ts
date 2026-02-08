@@ -11,7 +11,7 @@ let dbInstance: any = null;
 
 if (databaseUrl) {
   const poolConfig: PoolConfig = {
-    connectionString: databaseUrl,
+    connectionString: databaseUrl, connectionTimeoutMillis: 5000, idleTimeoutMillis: 30000, max: 10,
   };
 
   if (databaseUrl.includes('supabase.co')) {

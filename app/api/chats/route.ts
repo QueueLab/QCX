@@ -9,6 +9,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    if (!request || !request.url) {
+      const result = await getChatsPage(userId, 20, 0);
+      return NextResponse.json(result);
+    }
+
     const { searchParams } = new URL(request.url);
 
     const DEFAULT_LIMIT = 20;

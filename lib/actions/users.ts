@@ -239,6 +239,7 @@ export async function syncUserWithDatabase() {
  * Searches for users by email prefix.
  */
 export async function searchUsers(query: string) {
+  noStore();
   if (!query || query.length < 1) return [];
   const searchTerm = query.startsWith('@') ? query.slice(1) : query;
 
