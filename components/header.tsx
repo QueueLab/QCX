@@ -4,12 +4,8 @@ import Image from 'next/image'
 import { useCalendarToggle } from './calendar-toggle-context'
 import { ModeToggle } from './mode-toggle'
 import { cn } from '@/lib/utils'
-import HistoryContainer from './history-container'
 import { Button } from '@/components/ui/button'
 import {
-  Search,
-  CircleUserRound,
-  Map,
   CalendarDays,
   TentTree
 } from 'lucide-react'
@@ -51,17 +47,24 @@ export const Header = () => {
         </a>
       </div>
       
-      <div className="absolute left-1 flex items-center">
-        <Button variant="ghost" size="icon" onClick={toggleHistory} data-testid="logo-history-toggle">
+      <div className="absolute left-2 flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={toggleHistory}
+          data-testid="logo-history-toggle"
+          className="rounded-lg border-primary/20 hover:bg-primary/5 transition-all active:scale-95 shadow-sm"
+          title="Toggle History"
+        >
           <Image
             src="/images/logo.svg"
             alt="Logo"
-            width={20}
-            height={20}
-            className="h-5 w-auto"
+            width={24}
+            height={24}
+            className="h-6 w-auto"
           />
         </Button>
-        <h1 className="text-2xl font-poppins font-semibold text-primary">
+        <h1 className="text-2xl font-poppins font-semibold text-primary hidden sm:block">
           QCX
         </h1>
       </div>
@@ -82,8 +85,6 @@ export const Header = () => {
         </Button>
         
         <ModeToggle />
-        
-        <HistoryContainer location="header" />
       </div>
 
       {/* Mobile menu buttons */}
