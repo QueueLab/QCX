@@ -1,9 +1,12 @@
+import { History } from './history'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { CircleUserRound } from 'lucide-react'
 
 export async function Sidebar() {
-  // This component is currently not used in the main layout.
-  // The history toggle has been moved to the logo in the Header.
-  return null;
+  return (
+    <div className="h-screen p-2 fixed top-0 right-0 flex-col justify-center pb-24 hidden lg:flex">
+      <History location="sidebar" />
+    </div>
+  )
 }
