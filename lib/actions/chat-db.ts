@@ -87,7 +87,7 @@ export async function saveChat(chatData: NewChat, messagesData: Omit<NewMessage,
   }
 
   // Transaction to ensure atomicity
-  return db.transaction(async (tx) => {
+  return db.transaction(async (tx: any) => {
     let chatId = chatData.id;
 
     if (chatId) { // If chat ID is provided, assume update or append messages

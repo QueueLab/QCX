@@ -54,15 +54,16 @@ export async function getSupabaseUserAndSessionOnServer(): Promise<{
   }
 
   if (!supabaseUrl || !supabaseAnonKey) {
+    console.error("[Auth] Missing Supabase environment variables.");
     console.error('[Auth] Supabase URL or Anon Key is not set for server-side auth.');
     return { user: null, session: null, error: new Error('Missing Supabase environment variables') };
   }
 
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       async get(name: string): Promise<string | undefined> {
-        const cookie = (await cookieStore).get(name); // Use the correct get method
+        const cookie = cookieStore.get(name); // Use the correct get method
         return cookie?.value; // Return the value or undefined
       },
       async set(name: string, value: string, options: CookieOptions): Promise<void> {
@@ -95,6 +96,7 @@ export async function getSupabaseUserAndSessionOnServer(): Promise<{
   }
 
   if (!session) {
+    console.log("[Auth] No session found in getSupabaseUserAndSessionOnServer.");
     // console.log('[Auth] No active Supabase session found.');
     return { user: null, session: null, error: null };
   }

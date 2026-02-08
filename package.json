@@ -62,7 +62,7 @@
     "csv-parse": "^6.1.0",
     "dotenv": "^16.5.0",
     "drizzle-kit": "^0.31.1",
-    "drizzle-orm": "^0.29.0",
+    "drizzle-orm": "^0.45.1",
     "embla-carousel-react": "^8.6.0",
     "exa-js": "^1.6.13",
     "framer-motion": "^12.23.24",

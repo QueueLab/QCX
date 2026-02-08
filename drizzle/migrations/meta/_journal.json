@@ -8,6 +8,34 @@
       "when": 1750358514791,
       "tag": "0000_sweet_metal_master",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1770300600723,
+      "tag": "0001_add_calendar_notes",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1770300624066,
+      "tag": "0002_add_email_to_users",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1770302081113,
+      "tag": "0003_bent_cammi",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1770380396966,
+      "tag": "0004_tense_darkstar",
+      "breakpoints": true
     }
   ]
 }

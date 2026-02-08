@@ -19,6 +19,7 @@ mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN as string;
 export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number; } }> = ({ position }) => {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
+  const noteMarkersRef = useRef<mapboxgl.Marker[]>([]);
   const { setMap } = useMap()
   const drawRef = useRef<MapboxDraw | null>(null)
   const navControlRef = useRef<mapboxgl.NavigationControl | null>(null)
@@ -393,6 +394,10 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
 
       currentMapCenterRef.current = { center: initialCenter, zoom: initialZoom, pitch: initialPitch };
 
+      if (!process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN === "pk.mock") {
+        console.error("Mapbox token is missing or invalid. Map will not be initialized.");
+        return;
+      }
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/satellite-streets-v12',
@@ -583,6 +588,45 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   }, []);
 
 
+
+  // Handle note markers from MapDataContext
+  useEffect(() => {
+    if (!map.current || !initializedRef.current) return;
+
+    // Clear existing note markers
+    noteMarkersRef.current.forEach(marker => marker.remove());
+    noteMarkersRef.current = [];
+
+    if (mapData.markers && mapData.markers.length > 0) {
+      mapData.markers.forEach(markerData => {
+        // Create a custom element for the note pin
+        const el = document.createElement('div');
+        el.className = 'note-marker';
+        el.style.width = '30px';
+        el.style.height = '30px';
+        el.style.display = 'flex';
+        el.style.alignItems = 'center';
+        el.style.justifyContent = 'center';
+        el.style.backgroundColor = 'white';
+        el.style.borderRadius = '50%';
+        el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
+        el.style.border = '2px solid #0070f3';
+        el.style.cursor = 'pointer';
+        el.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" stroke="#0070f3" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>';
+
+        const marker = new mapboxgl.Marker(el)
+          .setLngLat([markerData.longitude, markerData.latitude])
+          .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(`
+            <div style="padding: 4px; font-family: sans-serif;">
+              <p style="margin: 0; font-size: 13px; color: #333;">${markerData.title || 'Note'}</p>
+            </div>
+          `))
+          .addTo(map.current!);
+
+        noteMarkersRef.current.push(marker);
+      });
+    }
+  }, [mapData.markers, isMapReady]);
 
   return (
     <div className="relative h-full w-full">
