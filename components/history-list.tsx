@@ -2,31 +2,13 @@ import React, { cache } from 'react';
 import HistoryItem from './history-item';
 import { ClearHistory } from './clear-history';
 import { getChats } from '@/lib/actions/chat';
-
-// Define the type for the chat data returned by getChats
-type ChatData = {
-  userId: string;
-  id: string;
-  title: string;
-  createdAt: Date;
-  visibility: string | null;
-};
-
-// Define the Chat type expected by HistoryItem
-type Chat = {
-  userId: string;
-  id: string;
-  title: string;
-  createdAt: Date;
-  visibility: string | null;
-  path: string;
-};
+import type { Chat as DrizzleChat } from '@/lib/actions/chat-db';
 
 type HistoryListProps = {
   userId?: string;
 };
 
-const loadChats = cache(async (userId?: string): Promise<ChatData[] | null> => {
+const loadChats = cache(async (userId?: string): Promise<DrizzleChat[] | null> => {
   return await getChats(userId);
 });
 
@@ -52,12 +34,12 @@ export async function HistoryList({ userId }: HistoryListProps) {
               No search history
             </div>
           ) : (
-            chats.map((chat: ChatData) => (
+            chats.map((chat: DrizzleChat) => (
               <HistoryItem
                 key={chat.id}
                 chat={{
                   ...chat,
-                  path: '', // Provide default or derived value
+                  path: chat.path || `/search/${chat.id}`,
                 }}
               />
             ))
