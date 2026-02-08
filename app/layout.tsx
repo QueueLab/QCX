@@ -12,7 +12,10 @@ import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Toaster } from '@/components/ui/sonner'
 import { MapToggleProvider } from '@/components/map-toggle-context'
 import { ProfileToggleProvider } from '@/components/profile-toggle-context'
+import { UsageToggleProvider } from '@/components/usage-toggle-context'
 import { CalendarToggleProvider } from '@/components/calendar-toggle-context'
+import { HistoryToggleProvider } from '@/components/history-toggle-context'
+import { HistorySidebar } from '@/components/history-sidebar'
 import { MapLoadingProvider } from '@/components/map-loading-context';
 import ConditionalLottie from '@/components/conditional-lottie';
 import { MapProvider as MapContextProvider } from '@/components/map/map-context'
@@ -62,6 +65,29 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                const htmxEvents = [
+                  'sseError', 'sseOpen', 'swapError', 'targetError', 'timeout',
+                  'validation:validate', 'validation:failed', 'validation:halted',
+                  'xhr:abort', 'xhr:loadend', 'xhr:loadstart'
+                ];
+                htmxEvents.forEach(event => {
+                  const funcName = 'func ' + event;
+                  if (typeof window[funcName] === 'undefined') {
+                    window[funcName] = function() { 
+                      console.warn('HTMX event handler "' + funcName + '" was called but not defined. Providing safety fallback.');
+                    };
+                  }
+                });
+              })();
+            `,
+          }}
+        />
+      </head>
       <body
         className={cn(
           'font-sans antialiased',
@@ -70,28 +96,32 @@ export default function RootLayout({
         )}
       >
         <CalendarToggleProvider>
-          <MapToggleProvider>
-            <ProfileToggleProvider>
-              <ThemeProvider
-                attribute="class"
-              defaultTheme="earth"
-              enableSystem
-              disableTransitionOnChange
-              themes={['light', 'dark', 'earth']}
-            >
-              <MapContextProvider>
-                <MapLoadingProvider>
-                  <Header />
-                  <ConditionalLottie />
-                  {children}
-                  <Sidebar />
-                  <Footer />
-                  <Toaster />
-                </MapLoadingProvider>
-              </MapContextProvider>
-            </ThemeProvider>
-          </ProfileToggleProvider>
-        </MapToggleProvider>
+          <HistoryToggleProvider>
+            <MapToggleProvider>
+              <ProfileToggleProvider>
+                <UsageToggleProvider>
+                  <ThemeProvider
+                    attribute="class"
+                    defaultTheme="earth"
+                    enableSystem
+                    disableTransitionOnChange
+                    themes={['light', 'dark', 'earth']}
+                  >
+                    <MapContextProvider>
+                      <MapLoadingProvider>
+                        <Header />
+                        <ConditionalLottie />
+                        {children}
+                        <HistorySidebar />
+                        <Footer />
+                        <Toaster />
+                      </MapLoadingProvider>
+                    </MapContextProvider>
+                  </ThemeProvider>
+                </UsageToggleProvider>
+              </ProfileToggleProvider>
+            </MapToggleProvider>
+          </HistoryToggleProvider>
         </CalendarToggleProvider>
         <Analytics />
         <SpeedInsights />

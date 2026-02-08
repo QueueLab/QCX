@@ -3,13 +3,12 @@
 import { useEffect, useState, useRef, ChangeEvent, forwardRef, useImperativeHandle, useCallback } from 'react'
 import type { AI, UIState } from '@/app/actions'
 import { useUIState, useActions, readStreamableValue } from 'ai/rsc'
-// Removed import of useGeospatialToolMcp as it's no longer used/available
 import { cn } from '@/lib/utils'
 import { UserMessage } from './user-message'
 import { Button } from './ui/button'
-import { ArrowRight, Plus, Paperclip, X } from 'lucide-react'
+import { ArrowRight, Plus, Paperclip, X, Sprout } from 'lucide-react'
 import Textarea from 'react-textarea-autosize'
-import { nanoid } from 'nanoid'
+import { nanoid } from '@/lib/utils'
 import { useSettingsStore } from '@/lib/store/settings'
 import { PartialRelated } from '@/lib/schema/related'
 import { getSuggestions } from '@/lib/actions/suggest'
@@ -31,7 +30,6 @@ export interface ChatPanelRef {
 export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, input, setInput, onSuggestionsChange }, ref) => {
   const [, setMessages] = useUIState<typeof AI>()
   const { submit, clearChat } = useActions()
-  // Removed mcp instance as it's no longer passed to submit
   const { mapProvider } = useSettingsStore()
   const [isMobile, setIsMobile] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -117,6 +115,9 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
       formData.append('file', selectedFile)
     }
 
+    // Include drawn features in the form data
+    formData.append('drawnFeatures', JSON.stringify(mapData.drawnFeatures || []))
+
     setInput('')
     clearAttachment()
 
@@ -153,7 +154,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
         }
       }, 500) // 500ms debounce delay
     },
-    [mapData]
+    [mapData, setSuggestions]
   )
 
   useEffect(() => {
@@ -165,21 +166,19 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     return (
       <div
         className={cn(
-          'fixed bottom-2 left-2 flex justify-start items-center pointer-events-none',
-          isMobile ? 'w-full px-2' : 'md:bottom-8'
+          'fixed bottom-4 left-4 flex justify-start items-center pointer-events-none z-50'
         )}
       >
         <Button
           type="button"
-          variant={'secondary'}
-          className="rounded-full bg-secondary/80 group transition-all hover:scale-105 pointer-events-auto"
+          variant={'ghost'}
+          size={'icon'}
+          className="rounded-full transition-all hover:scale-110 pointer-events-auto text-primary"
           onClick={() => handleClear()}
           data-testid="new-chat-button"
+          title="New Chat"
         >
-          <span className="text-sm mr-2 group-hover:block hidden animate-in fade-in duration-300">
-            New
-          </span>
-          <Plus size={18} className="group-hover:rotate-90 transition-all" />
+          <Sprout size={28} className="fill-primary/20" />
         </Button>
       </div>
     )
@@ -288,7 +287,6 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
           >
             <ArrowRight size={isMobile ? 18 : 20} />
           </Button>
-          {/* Suggestions are now handled by the parent component (chat.tsx) as an overlay */}
         </div>
       </form>
       {selectedFile && (
