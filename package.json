@@ -11,6 +11,10 @@
     "lint": "next lint",
     "db:migrate": "cross-env EXECUTE_MIGRATIONS=true bun lib/db/migrate.ts",
     "test:e2e": "playwright test",
+    "test:e2e:smoke": "playwright test --grep @smoke",
+    "test:e2e:parallel": "playwright test --workers=4",
+    "test:e2e:chromium": "playwright test --project=chromium",
+    "test:e2e:shard": "playwright test --shard=$SHARD_INDEX/$SHARD_TOTAL",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug"
