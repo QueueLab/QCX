@@ -1,14 +1,39 @@
-# Dependency directories
-node_modules/
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+.yarn/install-state.gz
 .bun/
 
-# Build outputs
-.next/
-dist/
-build/
-out/
+# testing
+/coverage
+/playwright-report/
+/test-results/
 
-# Environment variables
+# next.js
+/.next/
+/out/
+
+# production
+/build
+/dist
+
+# misc
+.DS_Store
+*.pem
+*.swp
+*.swo
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+dev_server.log
+server.log
+dev.log
+*.log
+
+# local env files
 .env
 .env.local
 .env.development.local
@@ -19,26 +44,21 @@ out/
 # IDE/Editor
 .vscode/
 .idea/
-*.swp
-*.swo
-.DS_Store
-
-# Logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 
 # Lock files
 bun.lockb
 
-# Testing
-playwright-report/
-test-results/
-coverage/
-
 # Supabase local CLI state
 supabase/.temp/
 
-# Misc
-.vercel/
+# vercel
+.vercel
+
+# typescript
 *.tsbuildinfo
+next-env.d.ts
+
+# AlphaEarth Embeddings - Sensitive Files
+gcp_credentials.json
+**/gcp_credentials.json
+aef_index.csv

@@ -15,6 +15,7 @@ export interface CameraState {
 export interface MapData {
   targetPosition?: { lat: number; lng: number } | null; // For flying to a location
   cameraState?: CameraState; // For saving camera state
+  currentTimezone?: string; // Current timezone identifier
   // TODO: Add other relevant map data types later (e.g., routeGeoJSON, poiList)
   mapFeature?: any | null; // Generic feature from MCP hook's processLocationQuery
   drawnFeatures?: Array<{ // Added to store drawn features and their measurements

@@ -8,13 +8,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { useCurrentUser } from '@/lib/auth/use-current-user';
 import { Check, Loader2 } from 'lucide-react';
-import { TIER_CONFIGS, TIERS } from '@/lib/utils/subscription';
+import { TIER_CONFIGS, TIERS, Tier } from '@/lib/utils/subscription';
 import { Badge } from '@/components/ui/badge';
 import { useCredits } from './credits-provider';
 import { toast } from 'sonner';
-
-const COOLDOWN_DAYS = 7;
-const STORAGE_KEY = 'purchase_credits_popup_shown_date';
 
 export function PurchaseCreditsPopup() {
   const { user } = useCurrentUser();
@@ -25,7 +22,6 @@ export function PurchaseCreditsPopup() {
   React.useEffect(() => {
     if (!user) return;
 
-    // Delay slightly to not interfere with initial load
     const timer = setTimeout(() => {
       setIsOpen(true);
     }, 2000);
@@ -36,26 +32,21 @@ export function PurchaseCreditsPopup() {
   const handleUpgrade = async (tier: string) => {
     setLoading(true);
     try {
-      // Call backend to process Stripe payment and add credits
-      const response = await fetch('/api/user/upgrade', {
+      const tierConfig = TIER_CONFIGS[tier as Tier];
+      const response = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ tier }),
+        body: JSON.stringify({ priceId: tierConfig.priceId }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to upgrade tier');
+        throw new Error('Failed to create checkout session');
       }
 
-      const data = await response.json();
-      
-      // Refresh credits after successful purchase
-      await refreshCredits();
-      
-      toast.success(`Credits added: ${data.creditsAdded} credits`);
-      setIsOpen(false);
+      const { url } = await response.json();
+      window.location.href = url;
     } catch (error) {
       console.error('Upgrade error:', error);
       toast.error('Failed to process upgrade. Please try again.');
@@ -71,7 +62,6 @@ export function PurchaseCreditsPopup() {
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent className="sm:max-w-[800px] p-0 overflow-hidden bg-background">
         <div className="grid md:grid-cols-2">
-            {/* Free Tier */}
             <div className="p-6 md:p-8 flex flex-col justify-between border-b md:border-b-0 md:border-r border-border">
                 <div>
                     <div className="mb-4">
@@ -98,7 +88,6 @@ export function PurchaseCreditsPopup() {
                 </Button>
             </div>
 
-            {/* Standard Tier */}
             <div className="p-6 md:p-8 flex flex-col justify-between bg-muted/30 relative">
                 <div className="absolute top-0 right-0 p-4">
                      <Badge className="bg-primary text-primary-foreground hover:bg-primary/90">Recommended</Badge>

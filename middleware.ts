@@ -1,12 +1,8 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
-export function proxy(request: NextRequest) {
-  // If a request is forwarded (for example from a remote editor / codespace)
-  // it may set `x-forwarded-host` that doesn't match `origin`. Next's
-  // Server Actions will reject such requests. Normalize `origin` and strip
-  // the header when it mismatches to avoid "Invalid Server Actions request"
-  // errors in dev.
+export function middleware(request: NextRequest) {
+  // Normalize 'origin' and 'x-forwarded-host' to avoid "Invalid Server Actions request"
   const xForwardedHost = request.headers.get("x-forwarded-host")
   const originHeader = request.headers.get("origin")
   let originHost: string | null = null
@@ -26,19 +22,14 @@ export function proxy(request: NextRequest) {
     return NextResponse.next({ request: { headers } })
   }
 
-  // Skip proxy for server actions to avoid breaking them
-  if (request.headers.get("next-action")) {
+  // Skip middleware for server actions to avoid breaking them
+  if (request.headers.get('next-action')) {
     return NextResponse.next()
   }
 
   return NextResponse.next()
 }
 
-export default proxy
-
 export const config = {
-  // Run proxy on all routes except static assets and _next internals
-  matcher: [
-    "/((?!_next/static|_next/image|favicon.ico).*)",
-  ],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 }

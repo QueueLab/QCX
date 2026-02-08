@@ -5,7 +5,7 @@ import { CircleUserRound } from 'lucide-react'
 
 export async function Sidebar() {
   return (
-    <div className="h-screen p-2 fixed top-0 left-0 flex-col justify-center pb-24 hidden lg:flex z-20">
+    <div className="h-screen p-2 fixed top-0 right-0 flex-col justify-center pb-24 hidden lg:flex">
       <History location="sidebar" />
     </div>
   )

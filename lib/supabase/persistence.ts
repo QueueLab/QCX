@@ -7,14 +7,13 @@ import { PostgrestError } from '@supabase/supabase-js'
 export async function saveChat(chat: Chat, userId: string): Promise<{ data: string | null; error: PostgrestError | null }> {
   const supabase = getSupabaseServerClient()
   
-  // First, upsert the chat
   const { data: chatData, error: chatError } = await supabase
     .from('chats')
     .upsert({
       id: chat.id,
       user_id: userId,
       title: chat.title || 'Untitled Chat',
-      visibility: 'private',
+      visibility: chat.visibility || 'private',
       created_at: chat.createdAt ? new Date(chat.createdAt).toISOString() : new Date().toISOString(),
       updated_at: new Date().toISOString(),
       path: chat.path,
@@ -30,7 +29,6 @@ export async function saveChat(chat: Chat, userId: string): Promise<{ data: stri
     return { data: null, error: chatError }
   }
 
-  // Then, insert messages if there are any
   if (chat.messages && chat.messages.length > 0) {
     const messagesToInsert = chat.messages.map(message => ({
       id: message.id,
@@ -94,7 +92,7 @@ export async function getSystemPrompt(userId: string): Promise<{ data: string | 
     .single()
 
   if (error) {
-    console.error('Error getting system prompt:', error)
+    // console.error('Error getting system prompt:', error)
     return { data: null, error }
   }
 
@@ -140,4 +138,86 @@ export async function createMessage(messageData: {
         console.error('Error creating message:', error);
     }
     return { data: data as AIMessage, error };
+}
+
+export async function getChat(id: string, userId: string): Promise<{ data: Chat | null; error: PostgrestError | null }> {
+  const supabase = getSupabaseServerClient()
+
+  const { data, error } = await supabase
+    .from('chats')
+    .select('*, messages(*)')
+    .eq('id', id)
+    .single()
+
+  if (error) {
+    console.error('Error fetching chat:', error)
+    return { data: null, error }
+  }
+
+  const chat: Chat = {
+    ...data,
+    messages: data.messages.sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()).map((m: any) => ({
+      ...m,
+      content: typeof m.content === 'string' ? (m.content.startsWith('[') || m.content.startsWith('{') ? JSON.parse(m.content) : m.content) : m.content
+    }))
+  }
+
+  return { data: chat, error: null }
+}
+
+export async function getChats(userId: string): Promise<{ data: Chat[] | null; error: PostgrestError | null }> {
+  const supabase = getSupabaseServerClient()
+
+  // Get chats where user is participant
+  const { data, error } = await supabase
+    .from('chats')
+    .select('*, chat_participants!inner(user_id)')
+    .eq('chat_participants.user_id', userId)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('Error fetching chats:', error)
+    return { data: null, error }
+  }
+
+  return { data: data as Chat[], error: null }
+}
+
+export async function clearChats(userId: string): Promise<{ error: PostgrestError | null }> {
+  const supabase = getSupabaseServerClient()
+  const { error } = await supabase
+    .from('chats')
+    .delete()
+    .eq('user_id', userId)
+
+  if (error) {
+    console.error('Error clearing chats:', error)
+  }
+
+  return { error }
+}
+
+export async function getSharedChat(id: string): Promise<{ data: Chat | null; error: PostgrestError | null }> {
+  const supabase = getSupabaseServerClient()
+  const { data, error } = await supabase
+    .from('chats')
+    .select('*, messages(*)')
+    .eq('id', id)
+    .eq('visibility', 'public')
+    .single()
+
+  if (error) {
+    console.error('Error fetching shared chat:', error)
+    return { data: null, error }
+  }
+
+  const chat: Chat = {
+    ...data,
+    messages: data.messages.sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()).map((m: any) => ({
+      ...m,
+      content: typeof m.content === 'string' ? (m.content.startsWith('[') || m.content.startsWith('{') ? JSON.parse(m.content) : m.content) : m.content
+    }))
+  }
+
+  return { data: chat, error: null }
 }

@@ -153,6 +153,15 @@ async function closeClient(client: McpClient | null) {
 }
 
 /**
+ * Helper to generate a Google Static Map URL
+ */
+function getGoogleStaticMapUrl(latitude: number, longitude: number): string {
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY;
+  if (!apiKey) return '';
+  return `https://maps.googleapis.com/maps/api/staticmap?center=${latitude},${longitude}&zoom=15&size=640x480&scale=2&markers=color:red%7C${latitude},${longitude}&key=${apiKey}`;
+}
+
+/**
  * Main geospatial tool executor.
  */
 export const geospatialTool = ({
@@ -269,13 +278,18 @@ Uses the Mapbox Search Box Text Search API endpoint to power searching for and g
             const { latitude, longitude } = place.coordinates;
             const place_name = place.displayName;
 
-            const mcpData = {
+            const mcpData: McpResponse = {
               location: {
                 latitude,
                 longitude,
                 place_name,
               },
             };
+
+            if (mapProvider === 'google') {
+              mcpData.mapUrl = getGoogleStaticMapUrl(latitude, longitude);
+            }
+
             feedbackMessage = `Found location: ${place_name}`;
             uiFeedbackStream.update(feedbackMessage);
             uiFeedbackStream.done();
@@ -391,6 +405,11 @@ Uses the Mapbox Search Box Text Search API endpoint to power searching for and g
 
       feedbackMessage = `Successfully processed ${queryType} query for: ${mcpData.location.place_name || JSON.stringify(params)}`;
       uiFeedbackStream.update(feedbackMessage);
+
+      // Enhance with Google Static Map URL if provider is google and we have coordinates
+      if (mapProvider === 'google' && mcpData.location.latitude && mcpData.location.longitude && !mcpData.mapUrl) {
+        mcpData.mapUrl = getGoogleStaticMapUrl(mcpData.location.latitude, mcpData.location.longitude);
+      }
 
     } catch (error: any) {
       toolError = `Mapping service error: ${error.message}`;

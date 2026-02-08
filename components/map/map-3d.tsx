@@ -13,6 +13,7 @@ import {useMap3DCameraEvents} from '@/lib/hooks/use-map-3d-camera-events';
 import {useDeepCompareEffect} from '@/lib/hooks/use-deep-compare-effect';
 import type {Map3DProps} from './map-3d-types';
 import { useMapData } from './map-data-context';
+import tzlookup from 'tz-lookup';
 
 export const Map3D = forwardRef(
   (
@@ -29,8 +30,11 @@ export const Map3D = forwardRef(
       const { center, range, heading, tilt } = p.detail;
       const lat = center.lat();
       const lng = center.lng();
+      const timezone = tzlookup(lat, lng);
+
       setMapData(prevData => ({
         ...prevData,
+        currentTimezone: timezone,
         cameraState: {
           ...prevData.cameraState,
           center: { lat, lng },

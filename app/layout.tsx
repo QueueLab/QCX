@@ -12,10 +12,13 @@ import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Toaster } from '@/components/ui/sonner'
 import { MapToggleProvider } from '@/components/map-toggle-context'
 import { ProfileToggleProvider } from '@/components/profile-toggle-context'
+import { UsageToggleProvider } from '@/components/usage-toggle-context'
 import { CalendarToggleProvider } from '@/components/calendar-toggle-context'
+import { HistoryToggleProvider } from '@/components/history-toggle-context'
+import { HistorySidebar } from '@/components/history-sidebar'
 import { MapLoadingProvider } from '@/components/map-loading-context';
 import ConditionalLottie from '@/components/conditional-lottie';
-import { MapProvider } from '@/components/map/map-context'
+import { MapProvider as MapContextProvider } from '@/components/map/map-context'
 import { getSupabaseUserAndSessionOnServer } from '@/lib/auth/get-current-user'
 import { PurchaseCreditsPopup } from '@/components/credits/purchase-credits-popup';
 import { CreditsProvider } from '@/components/credits/credits-provider';
@@ -34,9 +37,8 @@ const fontPoppins = Poppins({
   weight: ['400', '500', '600', '700']
 })
 
-const title = ''
-const description =
-  'language to Maps'
+const title = 'QCX'
+const description = 'Language to Maps'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.qcx.world'),
@@ -71,6 +73,29 @@ export default async function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                const htmxEvents = [
+                  'sseError', 'sseOpen', 'swapError', 'targetError', 'timeout',
+                  'validation:validate', 'validation:failed', 'validation:halted',
+                  'xhr:abort', 'xhr:loadend', 'xhr:loadstart'
+                ];
+                htmxEvents.forEach(event => {
+                  const funcName = 'func ' + event;
+                  if (typeof window[funcName] === 'undefined') {
+                    window[funcName] = function() {
+                      console.warn('HTMX event handler "' + funcName + '" was called but not defined. Providing safety fallback.');
+                    };
+                  }
+                });
+              })();
+            `,
+          }}
+        />
+      </head>
       <body
         className={cn(
           'font-sans antialiased',
@@ -87,23 +112,28 @@ export default async function RootLayout({
         >
           {user ? (
             <CalendarToggleProvider>
-              <MapToggleProvider>
-                <ProfileToggleProvider>
-                  <MapProvider>
-                    <MapLoadingProvider>
-                      <CreditsProvider>
-                      <Header />
-                      <ConditionalLottie />
-                      {children}
-                      <Sidebar />
-                      <PurchaseCreditsPopup />
-                      </CreditsProvider>
-                      <Footer />
-                      <Toaster />
-                    </MapLoadingProvider>
-                  </MapProvider>
-                </ProfileToggleProvider>
-              </MapToggleProvider>
+              <HistoryToggleProvider>
+                <MapToggleProvider>
+                  <ProfileToggleProvider>
+                    <UsageToggleProvider>
+                      <MapContextProvider>
+                        <MapLoadingProvider>
+                          <CreditsProvider>
+                            <Header />
+                            <ConditionalLottie />
+                            {children}
+                            <Sidebar />
+                            <HistorySidebar />
+                            <PurchaseCreditsPopup />
+                            <Footer />
+                            <Toaster />
+                          </CreditsProvider>
+                        </MapLoadingProvider>
+                      </MapContextProvider>
+                    </UsageToggleProvider>
+                  </ProfileToggleProvider>
+                </MapToggleProvider>
+              </HistoryToggleProvider>
             </CalendarToggleProvider>
           ) : (
             children
