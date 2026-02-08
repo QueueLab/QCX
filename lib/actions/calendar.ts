@@ -1,6 +1,8 @@
 'use server'
 
 import { and, desc, eq, isNull, sql } from 'drizzle-orm'
+import { users as usersSchema } from "@/lib/db/schema";
+import { syncUserWithDatabase } from "./users";
 import { db } from '@/lib/db'
 import { calendarNotes } from '@/lib/db/schema'
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
@@ -18,6 +20,11 @@ export async function getNotes(date: Date, chatId: string | null): Promise<Calen
   if (!userId) {
     console.error('getNotes: User not authenticated')
     return []
+  }
+
+  if (!db) {
+    console.warn('getNotes: Database unavailable, returning empty list');
+    return [];
   }
 
   // Normalize date to the start of the day for consistent querying
@@ -48,7 +55,7 @@ export async function getNotes(date: Date, chatId: string | null): Promise<Calen
       .orderBy(desc(calendarNotes.createdAt))
       .execute()
 
-    return notes;
+    return notes as CalendarNote[];
 
   } catch (error) {
     console.error('Error fetching notes:', error)
@@ -57,9 +64,43 @@ export async function getNotes(date: Date, chatId: string | null): Promise<Calen
 }
 
 /**
+ * Extracts @mentions from content and validates them against the users table.
+ */
+async function extractAndValidateMentions(content: string): Promise<string[]> {
+  const mentionRegex = /@(\w+)/g;
+  const matches = Array.from(content.matchAll(mentionRegex));
+  const potentialEmails = matches.map(match => match[1]);
+
+  if (potentialEmails.length === 0) return [];
+
+  // If no DB, we just store the strings themselves as a fallback?
+  // User asked for "tag user ... work in memory".
+  // Let's store the usernames as tags if DB is missing.
+  if (!db) {
+    return potentialEmails;
+  }
+
+  try {
+    const users = await db.select({ id: usersSchema.id, email: usersSchema.email })
+      .from(usersSchema)
+      .execute();
+
+    const validatedIds: string[] = [];
+    potentialEmails.forEach((mention: string) => {
+      const found = users.find((u: any) => u.email?.toLowerCase().startsWith(mention.toLowerCase()));
+      if (found) validatedIds.push(found.id);
+      else validatedIds.push(mention); // Fallback to raw string if not found
+    });
+
+    return Array.from(new Set(validatedIds));
+  } catch (error) {
+    console.error("Error validating mentions:", error);
+    return potentialEmails;
+  }
+}
+
+/**
  * Saves a new note or updates an existing one.
- * @param noteData - The note data to save.
- * @returns A promise that resolves to the saved note or null if an error occurs.
  */
 export async function saveNote(noteData: NewCalendarNote | CalendarNote): Promise<CalendarNote | null> {
     const userId = await getCurrentUserIdOnServer();
@@ -68,15 +109,32 @@ export async function saveNote(noteData: NewCalendarNote | CalendarNote): Promis
         return null;
     }
 
+    // Ensure current user is synced if possible
+    await syncUserWithDatabase();
+
+    const userTags = await extractAndValidateMentions(noteData.content);
+
+    if (!db) {
+      console.warn('saveNote: Database unavailable, returning mock saved note');
+      return {
+        ...noteData,
+        id: ('id' in noteData) ? noteData.id : Math.random().toString(36).substr(2, 9),
+        userId,
+        userTags,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as CalendarNote;
+    }
+
     if ('id' in noteData) {
         // Update existing note
         try {
             const [updatedNote] = await db
                 .update(calendarNotes)
-                .set({ ...noteData, updatedAt: new Date() })
+                .set({ ...noteData, userTags, updatedAt: new Date() })
                 .where(and(eq(calendarNotes.id, noteData.id), eq(calendarNotes.userId, userId)))
                 .returning();
-            return updatedNote;
+            return updatedNote as CalendarNote;
         } catch (error) {
             console.error('Error updating note:', error);
             return null;
@@ -86,7 +144,7 @@ export async function saveNote(noteData: NewCalendarNote | CalendarNote): Promis
         try {
             const [newNote] = await db
                 .insert(calendarNotes)
-                .values({ ...noteData, userId })
+                .values({ ...noteData, userTags, userId })
                 .returning();
 
             if (newNote && newNote.chatId) {
@@ -102,7 +160,7 @@ export async function saveNote(noteData: NewCalendarNote | CalendarNote): Promis
                 await createMessage(calendarContextMessage);
             }
 
-            return newNote;
+            return newNote as CalendarNote;
         } catch (error) {
             console.error('Error creating note:', error);
             return null;

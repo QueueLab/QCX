@@ -1,7 +1,8 @@
 "use client"
 
-"use client"
 
+import { Users } from "lucide-react";
+import { searchUsers } from "@/lib/actions/users";
 import type React from "react"
 import { useState, useEffect } from "react"
 import { ChevronLeft, ChevronRight, MapPin } from "lucide-react"
@@ -22,6 +23,10 @@ export function CalendarNotepad({ chatId }: CalendarNotepadProps) {
   const [noteContent, setNoteContent] = useState("")
   const [dateOffset, setDateOffset] = useState(0)
   const [taggedLocation, setTaggedLocation] = useState<any | null>(null)
+
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [userSuggestions, setUserSuggestions] = useState<any[]>([]);
+  const [mentionQuery, setMentionQuery] = useState("");
 
   useEffect(() => {
     const fetchNotes = async () => {
@@ -85,6 +90,42 @@ export function CalendarNotepad({ chatId }: CalendarNotepadProps) {
     }
   };
 
+
+  const handleNoteContentChange = async (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setNoteContent(value);
+
+    const cursorPosition = e.target.selectionStart;
+    const textBeforeCursor = value.substring(0, cursorPosition);
+    const words = textBeforeCursor.split(/\s/);
+    const lastWord = words[words.length - 1];
+
+    if (lastWord.startsWith("@")) {
+      const query = lastWord.slice(1);
+      setMentionQuery(query);
+      const results = await searchUsers(query);
+      setUserSuggestions(results);
+      setShowSuggestions(results.length > 0);
+    } else {
+      setShowSuggestions(false);
+    }
+  };
+
+  const handleSelectUser = (email: string) => {
+    const prefix = email.split('@')[0];
+    setNoteContent(prev => prev.replace(/@\w*$/, `@${prefix} `));
+    setShowSuggestions(false);
+  };
+
+  const renderContent = (text: string) => {
+    if (!text) return null;
+    return text.split(/(@\w+|#location)/g).map((part, i) => {
+      if (part.startsWith('@')) return <span key={i} className="text-primary font-medium">{part}</span>;
+      if (part === '#location') return <span key={i} className="text-primary font-medium">{part}</span>;
+      return part;
+    });
+  };
+
   const handleFlyTo = (location: any) => {
     if (location && location.coordinates) {
       setMapData(prev => ({ ...prev, targetPosition: location.coordinates }));
@@ -133,15 +174,30 @@ export function CalendarNotepad({ chatId }: CalendarNotepadProps) {
         <div className="relative">
           <textarea
             value={noteContent}
-            onChange={(e) => setNoteContent(e.target.value)}
+            onChange={handleNoteContentChange}
             onKeyDown={handleAddNote}
             placeholder="Add note... (⌘+Enter to save, @mention, #location)"
             className="w-full p-2 bg-input rounded-md border focus:ring-ring focus:ring-2 focus:outline-none pr-10"
             rows={3}
           />
+          {showSuggestions && (
+            <div className="absolute top-full mt-2 w-full bg-background border rounded-md shadow-lg z-50 p-1 max-h-40 overflow-y-auto">
+              {userSuggestions.map(user => (
+                <button
+                  key={user.id}
+                  type="button"
+                  onClick={() => handleSelectUser(user.email)}
+                  className="w-full text-left px-3 py-2 hover:bg-accent rounded-sm text-sm truncate"
+                  title={user.email}
+                >
+                  {user.email}
+                </button>
+              ))}
+            </div>
+          )}
           <button
             onClick={handleTagLocation}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            className="absolute right-2 top-2 text-muted-foreground hover:text-foreground" title="Tag current map location"
           >
             <MapPin className="h-5 w-5" />
           </button>
@@ -157,12 +213,17 @@ export function CalendarNotepad({ chatId }: CalendarNotepadProps) {
                   <p className="text-xs text-muted-foreground mb-1">
                     {new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </p>
-                  <p className="text-sm whitespace-pre-wrap break-words">{note.content}</p>
+                  <p className="text-sm whitespace-pre-wrap break-words">{renderContent(note.content)}</p>
                 </div>
                 {note.locationTags && (
                   <button onClick={() => handleFlyTo(note.locationTags)} className="text-muted-foreground hover:text-foreground ml-2">
                     <MapPin className="h-5 w-5" />
                   </button>
+                )}
+                {note.userTags && note.userTags.length > 0 && (
+                  <div className="text-muted-foreground ml-2 flex items-center" title={`${note.userTags.length} user(s) tagged`}>
+                    <Users className="h-4 w-4" />
+                  </div>
                 )}
               </div>
             </div>
