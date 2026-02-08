@@ -230,6 +230,29 @@ async function submit(formData?: FormData, skip?: boolean) {
     : ((formData?.get('related_query') as string) ||
       (formData?.get('input') as string))
 
+  const messages: CoreMessage[] = [...(aiState.get().messages as any[])].filter(
+    (message: any) =>
+      message.role !== 'tool' &&
+      message.type !== 'followup' &&
+      message.type !== 'related' &&
+      message.type !== 'end' &&
+      message.type !== 'resolution_search_result'
+  ).map((m: any) => {
+    if (Array.isArray(m.content)) {
+      return {
+        ...m,
+        content: m.content.filter((part: any) =>
+          part.type !== "image" || (typeof part.image === "string" && part.image.startsWith("data:"))
+        )
+      } as any
+    }
+    return m
+  })
+
+  const useSpecificAPI = process.env.USE_SPECIFIC_API_FOR_WRITER === 'true'
+  const maxMessages = useSpecificAPI ? 5 : 10
+  messages.splice(0, Math.max(messages.length - maxMessages, 0))
+
   if (userInput && (userInput.toLowerCase().trim() === 'what is a planet computer?' || userInput.toLowerCase().trim() === 'what is qcx-terra?')) {
     const definition = userInput.toLowerCase().trim() === 'what is a planet computer?'
       ? `A planet computer is a proprietary environment aware system that interoperates weather forecasting, mapping and scheduling using cutting edge multi-agents to streamline automation and exploration on a planet. Available for our Pro and Enterprise customers. [QCX Pricing](https://www.queue.cx/#pricing)`
@@ -304,6 +327,7 @@ async function submit(formData?: FormData, skip?: boolean) {
   const systemPrompt = userId ? await getSystemPrompt(userId) : null
 
   const answerStream = createStreamableValue<string>('')
+  const groupeId = nanoid()
 
   const result = await researcher(
     systemPrompt || '',
