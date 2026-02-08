@@ -7,7 +7,7 @@ import {
   getMutableAIState
 } from 'ai/rsc'
 import { CoreMessage, ToolResultPart } from 'ai'
-import { nanoid } from 'nanoid'
+import { nanoid } from '@/lib/utils/nanoid'
 import type { FeatureCollection } from 'geojson'
 import { Spinner } from '@/components/ui/spinner'
 import { Section } from '@/components/section'

@@ -1,5 +1,5 @@
 import { Chat } from '@/components/chat'
-import {nanoid } from 'nanoid'
+import {nanoid } from '@/lib/utils/nanoid'
 import { AI } from './actions'
 
 export const maxDuration = 60

@@ -12,7 +12,7 @@ import {
 import { AI } from '@/app/actions'
 import { UserMessage } from './user-message'
 import { PartialRelated } from '@/lib/schema/related'
-import { nanoid } from 'nanoid'
+import { nanoid } from '@/lib/utils/nanoid'
 
 export interface SearchRelatedProps {
   relatedQueries: StreamableValue<PartialRelated, any>

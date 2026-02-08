@@ -1,19 +1,18 @@
-"use client"
+'use client'
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import { z } from "zod"
-import * as Tabs from "@radix-ui/react-tabs";
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { FormProvider, UseFormReturn } from "react-hook-form"; import React from "react";
-import { Loader2, Save, RotateCcw } from "lucide-react"
-import { motion, AnimatePresence } from "framer-motion"
-// Or, if the file does not exist, create it as shown below.
-import { SystemPromptForm } from "./system-prompt-form"
-import { ModelSelectionForm } from "./model-selection-form"
+import React, { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import * as Tabs from '@radix-ui/react-tabs'
+import { useRouter } from 'next/navigation'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useForm } from 'react-hook-form'
+import * as z from 'zod'
+import { Loader2, Save, RotateCcw } from 'lucide-react'
+
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { SystemPromptForm } from './system-prompt-form'
+import { ModelSelectionForm } from './model-selection-form'
 import { UserManagementForm } from './user-management-form';
 import { Form } from "@/components/ui/form"
 import { useSettingsStore, MapProvider } from "@/lib/store/settings";
@@ -22,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/hooks/use-toast"
 import { getSystemPrompt, saveSystemPrompt } from "../../../lib/actions/chat"
 import { getSelectedModel, saveSelectedModel } from "../../../lib/actions/users"
+import { useCurrentUser } from "@/lib/auth/use-current-user"
 
 // Define the form schema
 const settingsFormSchema = z.object({
@@ -40,11 +40,11 @@ const settingsFormSchema = z.object({
     z.object({
       id: z.string(),
       email: z.string().email(),
-      role: z.enum(["admin", "editor", "viewer"]),
+      role: z.string(),
     }),
   ),
   newUserEmail: z.string().email().optional(),
-  newUserRole: z.enum(["admin", "editor", "viewer"]).optional(),
+  newUserRole: z.string().optional(),
 })
 
 export type SettingsFormValues = z.infer<typeof settingsFormSchema>
@@ -54,10 +54,7 @@ const defaultValues: Partial<SettingsFormValues> = {
   systemPrompt:
     "You are a planetary copilot, an AI assistant designed to help users with information about planets, space exploration, and astronomy. Provide accurate, educational, and engaging responses about our solar system and beyond.",
   selectedModel: "Grok 4.2",
-  users: [
-    { id: "1", email: "admin@example.com", role: "admin" },
-    { id: "2", email: "user@example.com", role: "editor" },
-  ],
+  users: [],
 }
 
 interface SettingsProps {
@@ -70,13 +67,13 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [currentTab, setCurrentTab] = useState(initialTab);
   const { mapProvider, setMapProvider } = useSettingsStore();
+  const { user } = useCurrentUser();
 
   useEffect(() => {
     setCurrentTab(initialTab);
   }, [initialTab]);
 
-  // TODO: Replace 'anonymous' with actual user ID from session/auth context
-  const userId = 'anonymous';
+  const userId = user?.id;
 
   const form = useForm<SettingsFormValues>({
     resolver: zodResolver(settingsFormSchema),
@@ -85,6 +82,8 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
 
   useEffect(() => {
     async function fetchData() {
+      if (!userId) return;
+
       const [existingPrompt, selectedModel] = await Promise.all([
         getSystemPrompt(userId),
         getSelectedModel(),
@@ -101,6 +100,15 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
   }, [form, userId]);
 
   async function onSubmit(data: SettingsFormValues) {
+    if (!userId) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to save settings.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true)
 
     try {
@@ -124,9 +132,6 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
         title: "Settings updated",
         description: "Your settings have been saved successfully.",
       })
-
-      // Refresh the page to reflect changes
-      // router.refresh(); // Consider if refresh is needed or if optimistic update is enough
     } catch (error: any) {
       // Error notification
       toast({
