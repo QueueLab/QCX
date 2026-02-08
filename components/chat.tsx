@@ -12,6 +12,8 @@ import { useCalendarToggle } from './calendar-toggle-context'
 import { CalendarNotepad } from './calendar-notepad'
 import { MapProvider } from './map/map-provider'
 import { useUIState, useAIState } from 'ai/rsc'
+import { AI } from '@/app/actions'
+import { AIMessage } from '@/lib/types'
 import MobileIconsBar from './mobile-icons-bar'
 import { useProfileToggle, ProfileToggleEnum } from "@/components/profile-toggle-context";
 import { useUsageToggle } from "@/components/usage-toggle-context";
@@ -29,8 +31,8 @@ type ChatProps = {
 export function Chat({ id }: ChatProps) {
   const router = useRouter()
   const path = usePathname()
-  const [messages] = useUIState()
-  const [aiState] = useAIState()
+  const [messages] = useUIState<typeof AI>()
+  const [aiState] = useAIState<typeof AI>()
   const [isMobile, setIsMobile] = useState(false)
   const { activeView } = useProfileToggle();
   const { isUsageOpen } = useUsageToggle();
@@ -73,7 +75,7 @@ export function Chat({ id }: ChatProps) {
 
   useEffect(() => {
     // Check if there is a 'response' message in the history
-    const responseMessage = aiState.messages.findLast(m => m.type === 'response');
+    const responseMessage = aiState.messages.findLast((m: AIMessage) => m.type === 'response');
 
     if (responseMessage && responseMessage.id !== lastRefreshedMessageIdRef.current) {
       console.log('Chat.tsx: refreshing router for message:', responseMessage.id);

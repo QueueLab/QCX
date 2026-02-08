@@ -421,6 +421,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         geolocationWatchIdRef.current = null
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setMap, setIsMapLoaded, captureMapCenter, handleUserInteraction, stopRotation])
 
   useEffect(() => {
