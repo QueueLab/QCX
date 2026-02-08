@@ -40,7 +40,6 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
   }, [onSuggestionsChange, setSuggestionsState])
   const { mapData } = useMapData()
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const lastRequestIdRef = useRef<number>(0)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -92,13 +91,6 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
       return
     }
 
-    // Clear suggestions and cancel any in-flight suggestion requests
-    if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current)
-    }
-    lastRequestIdRef.current++
-    setSuggestions(null)
-
     const content: ({ type: 'text'; text: string } | { type: 'image'; image: string })[] = []
     if (input) {
       content.push({ type: 'text', text: input })
@@ -147,21 +139,15 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
 
       const wordCount = value.trim().split(/\s+/).filter(Boolean).length
       if (wordCount < 2) {
-        lastRequestIdRef.current++
         setSuggestions(null)
         return
       }
 
       debounceTimeoutRef.current = setTimeout(async () => {
-        const requestId = ++lastRequestIdRef.current
         const suggestionsStream = await getSuggestions(value, mapData)
         for await (const partialSuggestions of readStreamableValue(
           suggestionsStream
         )) {
-          // If a newer request has started or form was submitted, stop updating
-          if (requestId !== lastRequestIdRef.current) {
-            break
-          }
           if (partialSuggestions) {
             setSuggestions(partialSuggestions as PartialRelated)
           }

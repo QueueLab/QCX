@@ -37,6 +37,19 @@ async function submit(formData?: FormData, skip?: boolean) {
   'use server'
 
   const aiState = getMutableAIState<typeof AI>()
+  const currentMessages = aiState.get().messages;
+  const sanitizedHistory = currentMessages.map((m: any) => {
+    if (m.role === "user" && Array.isArray(m.content)) {
+      return {
+        ...m,
+        content: m.content.map((part: any) =>
+          part.type === "image" ? { ...part, image: "IMAGE_PROCESSED" } : part
+        )
+      }
+    }
+    return m
+  });
+
   const uiStream = createStreamableUI()
   const isGenerating = createStreamableValue(true)
   const isCollapsed = createStreamableValue(false)
@@ -51,6 +64,7 @@ async function submit(formData?: FormData, skip?: boolean) {
   }
 
   if (action === 'resolution_search') {
+    const isQCX = formData?.get('isQCX') === 'true';
     const file_mapbox = formData?.get('file_mapbox') as File;
     const file_google = formData?.get('file_google') as File;
     const file = (formData?.get('file') as File) || file_mapbox || file_google;
@@ -81,7 +95,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         message.type !== 'resolution_search_result'
     );
 
-    const userInput = 'Analyze this map view.';
+    const userInput = isQCX ? 'Perform QCX-TERRA ANALYSIS on this Google Satellite image.' : 'Analyze this map view.';
     const content: CoreMessage['content'] = [
       { type: 'text', text: userInput },
       { type: 'image', image: dataUrl, mimeType: file.type }
@@ -90,7 +104,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     aiState.update({
       ...aiState.get(),
       messages: [
-        ...aiState.get().messages,
+        ...sanitizedHistory,
         { id: nanoid(), role: 'user', content, type: 'input' }
       ]
     });
@@ -112,6 +126,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         }
 
         const analysisResult = await streamResult.object;
+        console.log('[ResolutionSearch] Analysis result:', !!analysisResult.summary, !!analysisResult.geoJson);
         summaryStream.done(analysisResult.summary || 'Analysis complete.');
 
         if (analysisResult.geoJson) {
@@ -134,19 +149,6 @@ async function submit(formData?: FormData, skip?: boolean) {
           }
           return m
         })
-
-        const currentMessages = aiState.get().messages;
-        const sanitizedHistory = currentMessages.map((m: any) => {
-          if (m.role === "user" && Array.isArray(m.content)) {
-            return {
-              ...m,
-              content: m.content.map((part: any) =>
-                part.type === "image" ? { ...part, image: "IMAGE_PROCESSED" } : part
-              )
-            }
-          }
-          return m
-        });
         const relatedQueries = await querySuggestor(uiStream, sanitizedMessages);
         uiStream.append(
           <Section title="Follow-up">
@@ -159,7 +161,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         aiState.done({
           ...aiState.get(),
           messages: [
-            ...aiState.get().messages,
+            ...sanitizedHistory,
             {
               id: groupeId,
               role: 'assistant',
@@ -239,7 +241,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     aiState.update({
       ...aiState.get(),
       messages: [
-        ...aiState.get().messages,
+        ...sanitizedHistory,
         {
           id: nanoid(),
           role: 'user',
@@ -265,7 +267,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     aiState.done({
       ...aiState.get(),
       messages: [
-        ...aiState.get().messages,
+        ...sanitizedHistory,
         {
           id: groupeId,
           role: 'assistant',
@@ -332,6 +334,7 @@ async function submit(formData?: FormData, skip?: boolean) {
   const maxMessages = useSpecificAPI ? 5 : 10
   messages.splice(0, Math.max(messages.length - maxMessages, 0))
 
+
   const messageParts: {
     type: 'text' | 'image'
     text?: string
@@ -382,7 +385,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     aiState.update({
       ...aiState.get(),
       messages: [
-        ...aiState.get().messages,
+        ...sanitizedHistory,
         {
           id: nanoid(),
           role: 'user',
@@ -418,7 +421,7 @@ async function submit(formData?: FormData, skip?: boolean) {
       aiState.done({
         ...aiState.get(),
         messages: [
-          ...aiState.get().messages,
+          ...sanitizedHistory,
           {
             id: nanoid(),
             role: 'assistant',
@@ -459,7 +462,7 @@ async function submit(formData?: FormData, skip?: boolean) {
           aiState.update({
             ...aiState.get(),
             messages: [
-              ...aiState.get().messages,
+              ...sanitizedHistory,
               {
                 id: groupeId,
                 role: 'tool',
@@ -510,7 +513,7 @@ async function submit(formData?: FormData, skip?: boolean) {
       aiState.done({
         ...aiState.get(),
         messages: [
-          ...aiState.get().messages,
+          ...sanitizedHistory,
           {
             id: groupeId,
             role: 'assistant',
@@ -551,6 +554,7 @@ async function clearChat() {
   'use server'
 
   const aiState = getMutableAIState<typeof AI>()
+
 
   aiState.done({
     chatId: nanoid(),
