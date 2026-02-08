@@ -40,14 +40,9 @@ export const Header = () => {
   return (
     <>
       <PurchaseCreditsPopup isOpen={isPurchaseOpen} onClose={() => setIsPurchaseOpen(false)} />
-    <header className="fixed w-full p-1 md:p-2 flex justify-between items-center z-[60] backdrop-blur bg-background/95 border-b border-border/40">
-      <div>
-        <a href="/">
-          <span className="sr-only">Chat</span>
-        </a>
-      </div>
-      
-      <div className="absolute left-2 flex items-center gap-2">
+    <header className="fixed w-full p-1 md:p-2 flex items-center justify-between z-[60] backdrop-blur bg-background/95 border-b border-border/40 h-14">
+      {/* Left section: Logo and History Toggle */}
+      <div className="flex items-center gap-2 px-2 z-20">
         <Button
           variant="outline"
           size="icon"
@@ -69,27 +64,24 @@ export const Header = () => {
         </h1>
       </div>
       
-      <div className="flex-1 hidden md:flex justify-center gap-10 items-center z-10">
-        <ProfileToggle/>
-        
-        <MapToggle />
-        
-        <Button variant="ghost" size="icon" onClick={toggleCalendar} title="Open Calendar" data-testid="calendar-toggle">
-          <CalendarDays className="h-[1.2rem] w-[1.2rem]" />
-        </Button>
-        
-        <div id="header-search-portal" className="contents" />
-        
-        <Button variant="ghost" size="icon" onClick={handleUsageToggle}>
-          <TentTree className="h-[1.2rem] w-[1.2rem]" />
-        </Button>
-        
-        <ModeToggle />
+      {/* Center section: Desktop Navigation (hidden on mobile) */}
+      <div className="absolute inset-0 hidden md:flex justify-center items-center pointer-events-none">
+        <div className="flex gap-8 items-center pointer-events-auto z-10">
+          <ProfileToggle/>
+          <MapToggle />
+          <Button variant="ghost" size="icon" onClick={toggleCalendar} title="Open Calendar" data-testid="calendar-toggle">
+            <CalendarDays className="h-[1.2rem] w-[1.2rem]" />
+          </Button>
+          <div id="header-search-portal" className="contents" />
+          <Button variant="ghost" size="icon" onClick={handleUsageToggle}>
+            <TentTree className="h-[1.2rem] w-[1.2rem]" />
+          </Button>
+          <ModeToggle />
+        </div>
       </div>
 
-      {/* Mobile menu buttons */}
-      <div className="flex md:hidden gap-2">
-        
+      {/* Right section: Mobile Navigation (hidden on desktop) */}
+      <div className="flex md:hidden gap-2 px-2 z-20">
         <Button variant="ghost" size="icon" onClick={handleUsageToggle}>
           <TentTree className="h-[1.2rem] w-[1.2rem]" />
         </Button>
