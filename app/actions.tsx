@@ -21,6 +21,7 @@ import { BotMessage } from '@/components/message'
 import { SearchSection } from '@/components/search-section'
 import SearchRelated from '@/components/search-related'
 import { GeoJsonLayer } from '@/components/map/geojson-layer'
+import { ResolutionCarousel } from '@/components/resolution-carousel'
 import { ResolutionImage } from '@/components/resolution-image'
 import { CopilotDisplay } from '@/components/copilot-display'
 import RetrieveSection from '@/components/retrieve-section'
@@ -50,18 +51,29 @@ async function submit(formData?: FormData, skip?: boolean) {
   }
 
   if (action === 'resolution_search') {
-    const file = formData?.get('file') as File;
+    const file_mapbox = formData?.get('file_mapbox') as File;
+    const file_google = formData?.get('file_google') as File;
+    const file = (formData?.get('file') as File) || file_mapbox || file_google;
     const timezone = (formData?.get('timezone') as string) || 'UTC';
+    const lat = formData?.get('latitude') ? parseFloat(formData.get('latitude') as string) : undefined;
+    const lng = formData?.get('longitude') ? parseFloat(formData.get('longitude') as string) : undefined;
+    const location = (lat !== undefined && lng !== undefined) ? { lat, lng } : undefined;
 
     if (!file) {
       throw new Error('No file provided for resolution search.');
     }
 
+    const mapboxBuffer = file_mapbox ? await file_mapbox.arrayBuffer() : null;
+    const mapboxDataUrl = mapboxBuffer ? `data:${file_mapbox.type};base64,${Buffer.from(mapboxBuffer).toString('base64')}` : null;
+
+    const googleBuffer = file_google ? await file_google.arrayBuffer() : null;
+    const googleDataUrl = googleBuffer ? `data:${file_google.type};base64,${Buffer.from(googleBuffer).toString('base64')}` : null;
+
     const buffer = await file.arrayBuffer();
     const dataUrl = `data:${file.type};base64,${Buffer.from(buffer).toString('base64')}`;
 
     const messages: CoreMessage[] = [...(aiState.get().messages as any[])].filter(
-      message =>
+      (message: any) =>
         message.role !== 'tool' &&
         message.type !== 'followup' &&
         message.type !== 'related' &&
@@ -89,7 +101,7 @@ async function submit(formData?: FormData, skip?: boolean) {
 
     async function processResolutionSearch() {
       try {
-        const streamResult = await resolutionSearch(messages, timezone, drawnFeatures);
+        const streamResult = await resolutionSearch(messages, timezone, drawnFeatures, location);
 
         let fullSummary = '';
         for await (const partialObject of streamResult.partialObjectStream) {
@@ -113,7 +125,7 @@ async function submit(formData?: FormData, skip?: boolean) {
 
         messages.push({ role: 'assistant', content: analysisResult.summary || 'Analysis complete.' });
 
-        const sanitizedMessages: CoreMessage[] = messages.map(m => {
+        const sanitizedMessages: CoreMessage[] = messages.map((m: any) => {
           if (Array.isArray(m.content)) {
             return {
               ...m,
@@ -124,7 +136,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         })
 
         const currentMessages = aiState.get().messages;
-        const sanitizedHistory = currentMessages.map(m => {
+        const sanitizedHistory = currentMessages.map((m: any) => {
           if (m.role === "user" && Array.isArray(m.content)) {
             return {
               ...m,
@@ -159,7 +171,9 @@ async function submit(formData?: FormData, skip?: boolean) {
               role: 'assistant',
               content: JSON.stringify({
                 ...analysisResult,
-                image: dataUrl
+                image: dataUrl,
+                mapboxImage: mapboxDataUrl,
+                googleImage: googleDataUrl
               }),
               type: 'resolution_search_result'
             },
@@ -190,7 +204,11 @@ async function submit(formData?: FormData, skip?: boolean) {
 
     uiStream.update(
       <Section title="response">
-        <ResolutionImage src={dataUrl} />
+        <ResolutionCarousel
+          mapboxImage={mapboxDataUrl || undefined}
+          googleImage={googleDataUrl || undefined}
+          initialImage={dataUrl}
+        />
         <BotMessage content={summaryStream.value} />
       </Section>
     );
@@ -203,43 +221,20 @@ async function submit(formData?: FormData, skip?: boolean) {
     };
   }
 
-  const messages: CoreMessage[] = [...(aiState.get().messages as any[])].filter(
-    message =>
-      message.role !== 'tool' &&
-      message.type !== 'followup' &&
-      message.type !== 'related' &&
-      message.type !== 'end' &&
-      message.type !== 'resolution_search_result'
-  ).map(m => {
-    if (Array.isArray(m.content)) {
-      return {
-        ...m,
-        content: m.content.filter((part: any) =>
-          part.type !== "image" || (typeof part.image === "string" && part.image.startsWith("data:"))
-        )
-      } as any
-    }
-    return m
-  })
-
-  const groupeId = nanoid()
-  const useSpecificAPI = process.env.USE_SPECIFIC_API_FOR_WRITER === 'true'
-  const maxMessages = useSpecificAPI ? 5 : 10
-  messages.splice(0, Math.max(messages.length - maxMessages, 0))
-
+  const file = !skip ? (formData?.get('file') as File) : undefined
   const userInput = skip
     ? `{"action": "skip"}`
     : ((formData?.get('related_query') as string) ||
       (formData?.get('input') as string))
 
-  if (userInput.toLowerCase().trim() === 'what is a planet computer?' || userInput.toLowerCase().trim() === 'what is qcx-terra?') {
+  if (userInput && (userInput.toLowerCase().trim() === 'what is a planet computer?' || userInput.toLowerCase().trim() === 'what is qcx-terra?')) {
     const definition = userInput.toLowerCase().trim() === 'what is a planet computer?'
       ? `A planet computer is a proprietary environment aware system that interoperates weather forecasting, mapping and scheduling using cutting edge multi-agents to streamline automation and exploration on a planet. Available for our Pro and Enterprise customers. [QCX Pricing](https://www.queue.cx/#pricing)`
-
       : `QCX-Terra is a model garden of pixel level precision geospatial foundational models for efficient land feature predictions from satellite imagery. Available for our Pro and Enterprise customers. [QCX Pricing] (https://www.queue.cx/#pricing)`;
 
     const content = JSON.stringify(Object.fromEntries(formData!));
     const type = 'input';
+    const groupeId = nanoid();
 
     aiState.update({
       ...aiState.get(),
@@ -299,10 +294,9 @@ async function submit(formData?: FormData, skip?: boolean) {
       id: nanoid(),
       isGenerating: isGenerating.value,
       component: uiStream.value,
-      isCollapsed: isCollapsed.value,
+      isCollapsed: isCollapsed.value
     };
   }
-  const file = !skip ? (formData?.get('file') as File) : undefined
 
   if (!userInput && !file) {
     isGenerating.done(false)
@@ -313,6 +307,30 @@ async function submit(formData?: FormData, skip?: boolean) {
       isCollapsed: isCollapsed.value
     }
   }
+
+  const messages: CoreMessage[] = [...(aiState.get().messages as any[])].filter(
+    (message: any) =>
+      message.role !== 'tool' &&
+      message.type !== 'followup' &&
+      message.type !== 'related' &&
+      message.type !== 'end' &&
+      message.type !== 'resolution_search_result'
+  ).map((m: any) => {
+    if (Array.isArray(m.content)) {
+      return {
+        ...m,
+        content: m.content.filter((part: any) =>
+          part.type !== "image" || (typeof part.image === "string" && part.image.startsWith("data:"))
+        )
+      } as any
+    }
+    return m
+  })
+
+  const groupeId = nanoid()
+  const useSpecificAPI = process.env.USE_SPECIFIC_API_FOR_WRITER === 'true'
+  const maxMessages = useSpecificAPI ? 5 : 10
+  messages.splice(0, Math.max(messages.length - maxMessages, 0))
 
   const messageParts: {
     type: 'text' | 'image'
@@ -725,12 +743,18 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
               const analysisResult = JSON.parse(content as string);
               const geoJson = analysisResult.geoJson as FeatureCollection;
               const image = analysisResult.image as string;
+              const mapboxImage = analysisResult.mapboxImage as string;
+              const googleImage = analysisResult.googleImage as string;
 
               return {
                 id,
                 component: (
                   <>
-                    {image && <ResolutionImage src={image} />}
+                    <ResolutionCarousel
+                      mapboxImage={mapboxImage}
+                      googleImage={googleImage}
+                      initialImage={image}
+                    />
                     {geoJson && (
                       <GeoJsonLayer id={id} data={geoJson} />
                     )}
