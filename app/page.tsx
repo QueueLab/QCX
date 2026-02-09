@@ -1,5 +1,5 @@
 import { Chat } from '@/components/chat'
-import { nanoid } from 'nanoid'
+import { nanoid } from '@/lib/utils'
 import { AI } from './actions'
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
 import { redirect } from 'next/navigation'

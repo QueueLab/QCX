@@ -17,6 +17,12 @@ export function generateUUID(): string {
   return uuidv4();
 }
 
+/**
+ * Re-export generateUUID as nanoid for shorter naming and compatibility with existing code.
+ * Returns a UUID v4 string.
+ */
+export { generateUUID as nanoid };
+
 export async function getModel(requireVision: boolean = false) {
   const selectedModel = await getSelectedModel();
 

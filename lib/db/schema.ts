@@ -1,9 +1,29 @@
-import { pgTable, text, timestamp, uuid, varchar, jsonb, boolean, integer, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, uuid, jsonb, customType, unique, integer, varchar } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
-// Users Table
+// Custom type for PostGIS geometry
+const geometry = customType<{ data: string }>({
+  dataType() {
+    return 'geometry(GEOMETRY, 4326)';
+  },
+});
+
+/**
+ * Custom type for vector embeddings.
+ * Currently assumed to use text-embedding-ada-002 => 1536 dimensions.
+ */
+const vector = customType<{ data: number[] }>({
+  dataType() {
+    return 'vector(1536)';
+  },
+});
+
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
+  email: text('email').unique(),
+  role: text('role').default('viewer'),
+  selectedModel: text('selected_model'),
+  systemPrompt: text('system_prompt'),
   credits: integer('credits').default(0).notNull(),
   tier: varchar('tier', { length: 50 }).default('free').notNull(),
 });
@@ -12,43 +32,65 @@ export const users = pgTable('users', {
 export const chats = pgTable('chats', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  title: varchar('title', { length: 256 }).notNull().default('Untitled Chat'),
-  visibility: varchar('visibility', { length: 50 }).default('private'),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  title: text('title').notNull().default('Untitled Chat'),
+  visibility: text('visibility').default('private'),
   path: text('path'),
   sharePath: text('share_path'),
-  shareableLinkId: uuid('shareable_link_id').unique().defaultRandom(),
+  shareableLinkId: uuid('shareable_link_id').defaultRandom().unique(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
-// Chat Participants Table
-export const chatParticipants = pgTable('chat_participants', {
+export const locations = pgTable('locations', {
   id: uuid('id').primaryKey().defaultRandom(),
-  chatId: uuid('chat_id').notNull().references(() => chats.id, { onDelete: 'cascade' }),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  role: varchar('role', { length: 50 }).notNull().default('collaborator'),
+  chatId: uuid('chat_id').references(() => chats.id, { onDelete: 'cascade' }),
+  geojson: jsonb('geojson').notNull(),
+  geometry: geometry('geometry'),
+  name: text('name'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-}, (table) => {
-  return {
-    uniqueChatUser: uniqueIndex('chat_participants_chat_id_user_id_key').on(table.chatId, table.userId),
-  }
 });
 
 // Messages Table
 export const messages = pgTable('messages', {
   id: uuid('id').primaryKey().defaultRandom(),
   chatId: uuid('chat_id').notNull().references(() => chats.id, { onDelete: 'cascade' }),
-  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }),
-  role: varchar('role', { length: 50 }).notNull(), // e.g., 'user', 'assistant', 'system', 'tool'
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  role: text('role').notNull(),
   content: text('content').notNull(),
+  embedding: vector('embedding'),
+  locationId: uuid('location_id').references(() => locations.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  // attachments: jsonb('attachments'),
-  // toolName: varchar('tool_name', { length: 100 }),
-  // toolCallId: varchar('tool_call_id', {length: 100}),
-  // type: varchar('type', { length: 50 })
 });
 
-// Calendar Notes Table
+export const chatParticipants = pgTable('chat_participants', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  chatId: uuid('chat_id').notNull().references(() => chats.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  role: text('role').notNull().default('collaborator'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  chatUserUnique: unique('chat_participants_chat_user_unique').on(t.chatId, t.userId),
+}));
+
+export const systemPrompts = pgTable('system_prompts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  prompt: text('prompt').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const visualizations = pgTable('visualizations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  chatId: uuid('chat_id').references(() => chats.id, { onDelete: 'cascade' }),
+  type: text('type').notNull().default('map_layer'),
+  data: jsonb('data').notNull(),
+  geometry: geometry('geometry'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
 export const calendarNotes = pgTable('calendar_notes', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
@@ -67,7 +109,10 @@ export const usersRelations = relations(users, ({ many }) => ({
   chats: many(chats),
   messages: many(messages),
   calendarNotes: many(calendarNotes),
-  participation: many(chatParticipants),
+  chatParticipants: many(chatParticipants),
+  systemPrompts: many(systemPrompts),
+  locations: many(locations),
+  visualizations: many(visualizations),
 }));
 
 export const chatsRelations = relations(chats, ({ one, many }) => ({
@@ -78,6 +123,23 @@ export const chatsRelations = relations(chats, ({ one, many }) => ({
   messages: many(messages),
   calendarNotes: many(calendarNotes),
   participants: many(chatParticipants),
+  locations: many(locations),
+  visualizations: many(visualizations),
+}));
+
+export const messagesRelations = relations(messages, ({ one }) => ({
+  chat: one(chats, {
+    fields: [messages.chatId],
+    references: [chats.id],
+  }),
+  user: one(users, {
+    fields: [messages.userId],
+    references: [users.id],
+  }),
+  location: one(locations, {
+    fields: [messages.locationId],
+    references: [locations.id],
+  }),
 }));
 
 export const chatParticipantsRelations = relations(chatParticipants, ({ one }) => ({
@@ -91,14 +153,33 @@ export const chatParticipantsRelations = relations(chatParticipants, ({ one }) =
   }),
 }));
 
-export const messagesRelations = relations(messages, ({ one }) => ({
+export const systemPromptsRelations = relations(systemPrompts, ({ one }) => ({
+  user: one(users, {
+    fields: [systemPrompts.userId],
+    references: [users.id],
+  }),
+}));
+
+export const locationsRelations = relations(locations, ({ one, many }) => ({
+  user: one(users, {
+    fields: [locations.userId],
+    references: [users.id],
+  }),
   chat: one(chats, {
-    fields: [messages.chatId],
+    fields: [locations.chatId],
     references: [chats.id],
   }),
+  messages: many(messages),
+}));
+
+export const visualizationsRelations = relations(visualizations, ({ one }) => ({
   user: one(users, {
-    fields: [messages.userId],
+    fields: [visualizations.userId],
     references: [users.id],
+  }),
+  chat: one(chats, {
+    fields: [visualizations.chatId],
+    references: [chats.id],
   }),
 }));
 

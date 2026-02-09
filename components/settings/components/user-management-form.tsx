@@ -1,4 +1,3 @@
-// File: components/settings/components/user-management-form.tsx
 import React, { useState } from 'react';
 import { UseFormReturn, useFieldArray } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
@@ -51,8 +50,6 @@ export function UserManagementForm({ form, chatId }: UserManagementFormProps) {
         form.setError("newUserEmail", { type: "manual", message: result.error });
       } else {
         toast({ title: 'User Invited', description: `${newUserEmail} was successfully invited.` });
-        // We don't append here because the user needs to accept the invite.
-        // We can add a "pending invitations" section in the future.
         form.resetField("newUserEmail");
         form.resetField("newUserRole");
         form.clearErrors("newUserEmail");

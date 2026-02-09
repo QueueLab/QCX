@@ -2,14 +2,15 @@ import React, { cache } from 'react';
 import HistoryItem from './history-item';
 import { ClearHistory } from './clear-history';
 import { getChats } from '@/lib/actions/chat';
-import { type Chat } from '@/lib/types';
+import type { Chat as DrizzleChat } from '@/lib/actions/chat-db';
 
 type HistoryListProps = {
   userId?: string;
 };
 
-const loadChats = cache(async (userId?: string): Promise<Chat[] | null> => {
-  return await getChats(userId);
+const loadChats = cache(async (userId?: string): Promise<DrizzleChat[] | null> => {
+  const chats = await getChats(userId);
+  return chats as unknown as DrizzleChat[];
 });
 
 export async function HistoryList({ userId }: HistoryListProps) {
@@ -34,12 +35,13 @@ export async function HistoryList({ userId }: HistoryListProps) {
               No search history
             </div>
           ) : (
-            chats.map((chat: Chat) => (
+            chats.map((chat: any) => (
               <HistoryItem
                 key={chat.id}
                 chat={{
                   ...chat,
-                  path: `/search/${chat.id}`,
+                  messages: [], // History list doesn't need messages loaded
+                  path: chat.path || `/search/${chat.id}`,
                 }}
               />
             ))
