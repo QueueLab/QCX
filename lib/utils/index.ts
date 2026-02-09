@@ -125,3 +125,15 @@ export async function getModel(requireVision: boolean = false) {
   });
   return openai('gpt-4o');
 }
+
+export function getEmbeddingModel() {
+  const openaiApiKey = process.env.OPENAI_API_KEY;
+  if (!openaiApiKey) {
+    console.warn('OPENAI_API_KEY is not set. Embedding functionality will be unavailable.');
+    return null;
+  }
+  const openai = createOpenAI({
+    apiKey: openaiApiKey,
+  });
+  return openai.embedding('text-embedding-3-small');
+}

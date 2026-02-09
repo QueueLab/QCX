@@ -82,7 +82,7 @@ export async function saveChat(chatData: NewChat, messagesData: Omit<NewMessage,
     let chatId = chatData.id;
 
     if (chatId) {
-      const existingChat = await tx.select({ id: chats.id }).from(chats).where(eq(chats.id, chatId)).limit(1);
+      const existingChat = await tx.select({ id: chats.id }).from(chats).where(and(eq(chats.id, chatId), eq(chats.userId, chatData.userId!))).limit(1);
       if (!existingChat.length) {
         const newChatResult = await tx.insert(chats).values(chatData).returning({ id: chats.id });
         chatId = newChatResult[0].id;
@@ -98,7 +98,7 @@ export async function saveChat(chatData: NewChat, messagesData: Omit<NewMessage,
             title: chatData.title,
             visibility: chatData.visibility,
             updatedAt: chatData.updatedAt || new Date()
-          }).where(eq(chats.id, chatId));
+          }).where(and(eq(chats.id, chatId), eq(chats.userId, chatData.userId!)));
         }
       }
     } else {
@@ -123,7 +123,7 @@ export async function saveChat(chatData: NewChat, messagesData: Omit<NewMessage,
       }));
       await tx.insert(messages).values(messagesToInsert).onConflictDoUpdate({
           target: messages.id,
-          set: { content: sql`EXCLUDED.content`, role: sql`EXCLUDED.role` }
+          set: { content: sql`EXCLUDED.content`, role: sql`EXCLUDED.role`, embedding: sql`EXCLUDED.embedding` }
       });
     }
     return chatId;

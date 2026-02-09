@@ -32,6 +32,8 @@ import {
 import { db } from '@/lib/db'
 import { users, chats } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
+import { embedMany } from 'ai'
+import { getEmbeddingModel } from '@/lib/utils'
 
 // Using Drizzle versions by default as per main's direction
 export async function getChats(userId?: string | null): Promise<Chat[]> {
@@ -136,7 +138,8 @@ export async function saveChat(chat: Chat, userId: string): Promise<string | nul
     updatedAt: new Date(),
   };
 
-  const newMessagesData: Omit<DbNewMessage, 'chatId'>[] = chat.messages.map(msg => ({
+  // Prepare messages data
+  const messagesToProcess = chat.messages.map(msg => ({
     id: msg.id,
     userId: effectiveUserId,
     role: msg.role,
@@ -144,9 +147,55 @@ export async function saveChat(chat: Chat, userId: string): Promise<string | nul
     createdAt: msg.createdAt ? new Date(msg.createdAt) : new Date(),
   }));
 
+  // Attempt to generate embeddings for user and assistant messages if they don't have them
+  // For simplicity and to avoid excessive API calls, we'll only do this if the chat is being updated
+  // with a new response.
+  const embeddingModel = getEmbeddingModel();
+  const processedMessages: DbNewMessage[] = [];
+
+  if (embeddingModel) {
+    try {
+      // Filter messages that should have embeddings (user and assistant)
+      const messagesNeedingEmbeddings = messagesToProcess.filter(m =>
+        (m.role === 'user' || m.role === 'assistant') && m.content && m.content.length > 0
+      );
+
+      if (messagesNeedingEmbeddings.length > 0) {
+        const { embeddings } = await embedMany({
+          model: embeddingModel,
+          values: messagesNeedingEmbeddings.map(m => m.content as string),
+        });
+
+        // Map embeddings back to messages
+        messagesToProcess.forEach(m => {
+          const index = messagesNeedingEmbeddings.findIndex(nm => nm.id === m.id);
+          processedMessages.push({
+            ...m,
+            chatId: chat.id,
+            embedding: index !== -1 ? embeddings[index] : null
+          });
+        });
+      } else {
+        messagesToProcess.forEach(m => {
+          processedMessages.push({ ...m, chatId: chat.id, embedding: null });
+        });
+      }
+    } catch (error) {
+      console.error('Error generating embeddings during saveChat:', error);
+      // Fallback to saving without embeddings
+      messagesToProcess.forEach(m => {
+        processedMessages.push({ ...m, chatId: chat.id, embedding: null });
+      });
+    }
+  } else {
+    messagesToProcess.forEach(m => {
+      processedMessages.push({ ...m, chatId: chat.id, embedding: null });
+    });
+  }
+
   try {
     console.log(`[ChatAction] Saving chat ${chat.id} with ${chat.messages.length} messages`);
-    const savedChatId = await dbSaveChat(newChatData, newMessagesData);
+    const savedChatId = await dbSaveChat(newChatData, processedMessages);
     return savedChatId;
   } catch (error) {
     console.error('Error saving chat:', error);

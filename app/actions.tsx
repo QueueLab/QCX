@@ -448,7 +448,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         : answer.length === 0 && !errorOccurred
     ) {
       const { fullResponse, hasError, toolResponses } = await researcher(
-        currentSystemPrompt,
+        augmentedSystemPrompt,
         uiStream,
         streamText,
         messages,

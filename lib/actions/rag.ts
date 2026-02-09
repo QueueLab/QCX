@@ -2,6 +2,8 @@
 
 import { getSupabaseServerClient } from '@/lib/supabase/client'
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
+import { embed } from 'ai'
+import { getEmbeddingModel } from '@/lib/utils'
 
 export async function retrieveContext(
   query: string,
@@ -16,15 +18,21 @@ export async function retrieveContext(
       return []
     }
 
-    const supabase = getSupabaseServerClient()
-
-    // 1. Generate embedding for the query
-    const { data: embeddingData, error: embeddingError } = await supabase.rpc('generate_embedding', { input: query })
-    if (embeddingError || !embeddingData) {
-      console.error('Error generating query embedding:', embeddingError)
+    const embeddingModel = getEmbeddingModel()
+    if (!embeddingModel) {
+      console.warn('retrieveContext: Embedding model unavailable, skipping context retrieval.')
       return []
     }
-    const queryEmbedding = embeddingData as number[]
+
+    const supabase = getSupabaseServerClient()
+
+    // 1. Generate embedding for the query using AI SDK
+    const { embedding } = await embed({
+      model: embeddingModel,
+      value: query,
+    })
+
+    const queryEmbedding = embedding
 
     // 2. Perform hybrid search
     const geoFilter = location ? `POINT(${location.longitude} ${location.latitude})` : undefined
