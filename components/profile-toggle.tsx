@@ -13,7 +13,6 @@ export function ProfileToggle() {
   const { toggleProfileSection, activeView } = useProfileToggle()
   const { isUsageOpen, closeUsage } = useUsageToggle()
   const [alignValue, setAlignValue] = useState<'start' | 'end'>("end")
-  const [isMobile, setIsMobile] = useState(false)
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
   const supabase = getSupabaseBrowserClient()
   const router = useRouter()
@@ -21,7 +20,6 @@ export function ProfileToggle() {
   useEffect(() => {
     const handleResize = () => {
       const mobile = window.innerWidth < 768
-      setIsMobile(mobile)
       if (mobile) {
         setAlignValue("start")
       } else {
@@ -53,15 +51,6 @@ export function ProfileToggle() {
     router.push('/auth')
   }
 
-  if (isMobile) {
-    return (
-      <Button variant="ghost" size="icon" className="relative" data-testid="profile-toggle" disabled>
-        <CircleUserRound className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
-        <span className="sr-only">Open profile menu</span>
-      </Button>
-    )
-  }
-  
   return (
     <>
       <DropdownMenu>
