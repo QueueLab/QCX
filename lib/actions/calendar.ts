@@ -7,12 +7,6 @@ import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
 import type { CalendarNote, NewCalendarNote } from '@/lib/types'
 import { createMessage } from '@/lib/supabase/persistence'
 
-/**
- * Retrieves notes for a specific date and chat session.
- * @param date - The date to fetch notes for.
- * @param chatId - The ID of the chat session.
- * @returns A promise that resolves to an array of notes.
- */
 export async function getNotes(date: Date, chatId: string | null): Promise<CalendarNote[]> {
   const userId = await getCurrentUserIdOnServer()
   if (!userId) {
@@ -20,7 +14,6 @@ export async function getNotes(date: Date, chatId: string | null): Promise<Calen
     return []
   }
 
-  // Normalize date to the start of the day for consistent querying
   const startDate = new Date(date)
   startDate.setHours(0, 0, 0, 0)
   const endDate = new Date(date)
@@ -48,7 +41,7 @@ export async function getNotes(date: Date, chatId: string | null): Promise<Calen
       .orderBy(desc(calendarNotes.createdAt))
       .execute()
 
-    return notes;
+    return notes as CalendarNote[];
 
   } catch (error) {
     console.error('Error fetching notes:', error)
@@ -56,11 +49,6 @@ export async function getNotes(date: Date, chatId: string | null): Promise<Calen
   }
 }
 
-/**
- * Saves a new note or updates an existing one.
- * @param noteData - The note data to save.
- * @returns A promise that resolves to the saved note or null if an error occurs.
- */
 export async function saveNote(noteData: NewCalendarNote | CalendarNote): Promise<CalendarNote | null> {
     const userId = await getCurrentUserIdOnServer();
     if (!userId) {
@@ -69,20 +57,18 @@ export async function saveNote(noteData: NewCalendarNote | CalendarNote): Promis
     }
 
     if ('id' in noteData) {
-        // Update existing note
         try {
             const [updatedNote] = await db
                 .update(calendarNotes)
                 .set({ ...noteData, updatedAt: new Date() })
                 .where(and(eq(calendarNotes.id, noteData.id), eq(calendarNotes.userId, userId)))
                 .returning();
-            return updatedNote;
+            return updatedNote as CalendarNote;
         } catch (error) {
             console.error('Error updating note:', error);
             return null;
         }
     } else {
-        // Create new note
         try {
             const [newNote] = await db
                 .insert(calendarNotes)
@@ -106,7 +92,7 @@ export async function saveNote(noteData: NewCalendarNote | CalendarNote): Promis
                 }
             }
 
-            return newNote;
+            return newNote as CalendarNote;
         } catch (error) {
             console.error('Error creating note:', error);
             return null;

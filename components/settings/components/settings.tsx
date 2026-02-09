@@ -1,26 +1,27 @@
-"use client"
+'use client'
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { zodResolver } from "@hookform/resolvers/zod"
+import * as z from "zod"
 import { useForm } from "react-hook-form"
-import { z } from "zod"
-import * as Tabs from "@radix-ui/react-tabs";
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
+import * as Tabs from "@radix-ui/react-tabs"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { FormProvider, UseFormReturn } from "react-hook-form"; import React from "react";
+import { Form } from "@/components/ui/form"
 import { Loader2, Save, RotateCcw } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { SystemPromptForm } from "./system-prompt-form"
 import { ModelSelectionForm } from "./model-selection-form"
-import { UserManagementForm } from './user-management-form';
-import { Form } from "@/components/ui/form"
-import { useSettingsStore, MapProvider } from "@/lib/store/settings";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
+import { UserManagementForm } from './user-management-form'
+import { useSettingsStore, MapProvider } from "@/lib/store/settings"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/hooks/use-toast"
-import { getSystemPrompt, saveSystemPrompt } from "../../../lib/actions/chat"
-import { getSelectedModel, saveSelectedModel } from "../../../lib/actions/users"
+import { getSystemPrompt, saveSystemPrompt } from "@/lib/actions/chat"
+import { getSelectedModel, saveSelectedModel } from "@/lib/actions/users"
+import { useCurrentUser } from "@/lib/auth/use-current-user"
+import { SettingsSkeleton } from './settings-skeleton'
 
 const settingsFormSchema = z.object({
   systemPrompt: z
@@ -41,7 +42,7 @@ const settingsFormSchema = z.object({
       role: z.enum(["owner", "collaborator"]),
     }),
   ),
-  newUserEmail: z.string().email().optional(),
+  newUserEmail: z.string().email().optional().or(z.literal('')),
   newUserRole: z.enum(["owner", "collaborator"]).optional(),
 })
 
@@ -61,16 +62,16 @@ interface SettingsProps {
 
 export function Settings({ initialTab = "system-prompt", chatId }: SettingsProps) {
   const { toast } = useToast()
-  const router = useRouter()
-  const [isLoading, setIsLoading] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const [currentTab, setCurrentTab] = useState(initialTab);
   const { mapProvider, setMapProvider } = useSettingsStore();
+  const { user, loading: authLoading } = useCurrentUser();
 
   useEffect(() => {
     setCurrentTab(initialTab);
   }, [initialTab]);
 
-  const userId = 'anonymous';
+  const userId = user?.id;
 
   const form = useForm<SettingsFormValues>({
     resolver: zodResolver(settingsFormSchema),
@@ -79,6 +80,8 @@ export function Settings({ initialTab = "system-prompt", chatId }: SettingsProps
 
   useEffect(() => {
     async function fetchData() {
+      if (!userId || authLoading) return;
+
       const [existingPrompt, selectedModel] = await Promise.all([
         getSystemPrompt(userId),
         getSelectedModel(),
@@ -92,10 +95,23 @@ export function Settings({ initialTab = "system-prompt", chatId }: SettingsProps
       }
     }
     fetchData();
-  }, [form, userId]);
+  }, [form, userId, authLoading]);
+
+  if (authLoading) {
+    return <SettingsSkeleton />;
+  }
 
   async function onSubmit(data: SettingsFormValues) {
-    setIsLoading(true)
+    if (!userId) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to save settings.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSaving(true)
 
     try {
       const [promptSaveResult, modelSaveResult] = await Promise.all([
@@ -110,14 +126,10 @@ export function Settings({ initialTab = "system-prompt", chatId }: SettingsProps
         throw new Error(modelSaveResult.error);
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 200))
-      console.log("Submitted data:", data)
-
       toast({
         title: "Settings updated",
         description: "Your settings have been saved successfully.",
       })
-
     } catch (error: any) {
       toast({
         title: "Something went wrong",
@@ -125,7 +137,7 @@ export function Settings({ initialTab = "system-prompt", chatId }: SettingsProps
         variant: "destructive",
       })
     } finally {
-      setIsLoading(false)
+      setIsSaving(false)
     }
   }
 
@@ -213,12 +225,12 @@ export function Settings({ initialTab = "system-prompt", chatId }: SettingsProps
 
           <Card>
             <CardFooter className="flex justify-between pt-6">
-              <Button type="button" variant="outline" onClick={onReset} disabled={isLoading}>
+              <Button type="button" variant="outline" onClick={onReset} disabled={isSaving}>
                 <RotateCcw className="mr-2 h-4 w-4" />
                 Reset to Defaults
               </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? (
+              <Button type="submit" disabled={isSaving}>
+                {isSaving ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Saving...

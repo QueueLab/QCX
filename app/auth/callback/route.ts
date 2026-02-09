@@ -8,6 +8,16 @@ export async function GET(request: Request) {
   // if "next" is in search params, use it as the redirection URL
   const next = searchParams.get('next') ?? '/'
 
+  // Diagnostic logging
+  console.log('[Auth Callback] Request Details:', {
+    origin,
+    url: request.url,
+    hasCode: !!code,
+    next,
+    envUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'PRESENT' : 'MISSING',
+    envKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'PRESENT' : 'MISSING',
+  })
+
   if (code) {
     const cookieStore = cookies()
     const supabase = createServerClient(
@@ -30,26 +40,35 @@ export async function GET(request: Request) {
         },
       }
     )
+
     const { error } = await supabase.auth.exchangeCodeForSession(code)
+
     if (error) {
       console.error('[Auth Callback] Exchange code error:', {
         message: error.message,
         status: error.status,
         name: error.name,
-        code: code?.substring(0, 10) + '...'
+        codeSnippet: code?.substring(0, 10) + '...',
       })
       return NextResponse.redirect(`${origin}/auth/auth-code-error?error=${encodeURIComponent(error.message)}`)
     } else {
       try {
         const { data: { user }, error: userErr } = await supabase.auth.getUser()
         if (!userErr && user) {
-          console.log('[Auth Callback] User signed in:', user.email)
+          console.log('[Auth Callback] User signed in successfully:', user.email)
         }
       } catch (e) {
         console.warn('[Auth Callback] Could not fetch user after exchange', e)
       }
       return NextResponse.redirect(`${origin}${next}`)
     }
+  }
+
+  // Check if there was an error from the provider in the URL
+  const error_description = searchParams.get('error_description')
+  if (error_description) {
+    console.error('[Auth Callback] Provider error:', error_description)
+    return NextResponse.redirect(`${origin}/auth/auth-code-error?error=${encodeURIComponent(error_description)}`)
   }
 
   // return the user to an error page with instructions

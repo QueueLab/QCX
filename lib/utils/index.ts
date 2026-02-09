@@ -1,10 +1,8 @@
 import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import { getSelectedModel } from '@/lib/actions/users'
-import { openai } from '@ai-sdk/openai'
 import { createOpenAI } from '@ai-sdk/openai'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
-import { createAnthropic } from '@ai-sdk/anthropic'
 import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock'
 import { createXai } from '@ai-sdk/xai';
 import { v4 as uuidv4 } from 'uuid';
@@ -18,6 +16,12 @@ export function cn(...inputs: ClassValue[]) {
 export function generateUUID(): string {
   return uuidv4();
 }
+
+/**
+ * Re-export generateUUID as nanoid for shorter naming and compatibility with existing code.
+ * Returns a UUID v4 string.
+ */
+export { generateUUID as nanoid };
 
 export async function getModel(requireVision: boolean = false) {
   const selectedModel = await getSelectedModel();
@@ -120,4 +124,16 @@ export async function getModel(requireVision: boolean = false) {
     apiKey: openaiApiKey,
   });
   return openai('gpt-4o');
+}
+
+export function getEmbeddingModel() {
+  const openaiApiKey = process.env.OPENAI_API_KEY;
+  if (!openaiApiKey) {
+    console.warn('OPENAI_API_KEY is not set. Embedding functionality will be unavailable.');
+    return null;
+  }
+  const openai = createOpenAI({
+    apiKey: openaiApiKey,
+  });
+  return openai.embedding('text-embedding-3-small');
 }

@@ -10,225 +10,308 @@ import {
   getSystemPrompt as supabaseGetSystemPrompt,
   saveDrawing as supabaseSaveDrawing,
   createMessage as supabaseCreateMessage,
+  getChat as supabaseGetChat,
+  getChats as supabaseGetChats,
+  clearChats as supabaseClearChats,
+  getSharedChat as supabaseGetSharedChat,
 } from '@/lib/supabase/persistence'
-import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
 import { getSupabaseServerClient } from '../supabase/client'
+import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
+import {
+  getChat as dbGetChat,
+  getChatsPage as dbGetChatsPage,
+  clearHistory as dbClearHistory,
+  saveChat as dbSaveChat,
+  createMessage as dbCreateMessage,
+  getMessagesByChatId as dbGetMessagesByChatId,
+  Chat as DrizzleChat,
+  Message as DrizzleMessage,
+  NewChat as DbNewChat,
+  NewMessage as DbNewMessage
+} from './chat-db'
+import { db } from '@/lib/db'
+import { users, chats } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
+import { embedMany } from 'ai'
+import { getEmbeddingModel } from '@/lib/utils'
 
+// Using Drizzle versions by default as per main's direction
 export async function getChats(userId?: string | null): Promise<Chat[]> {
   try {
     let effectiveUserId = userId;
     if (!effectiveUserId) {
       effectiveUserId = await getCurrentUserIdOnServer();
     }
-
-    const supabase = getSupabaseServerClient()
-    let query = supabase
-      .from('chats')
-      .select('*')
-      .order('created_at', { ascending: false })
     
     if (!effectiveUserId) {
       console.warn('getChats: No authenticated user found.')
       return []
     }
 
-    query = query.eq('user_id', effectiveUserId)
-
-    const { data, error } = await query
-
-    if (error) {
-      console.error('Error fetching chats from Supabase:', error)
-      return []
-    }
-
-    return (data as Chat[]) || []
+    const { chats } = await dbGetChatsPage(effectiveUserId, 100, 0)
+    return chats as unknown as Chat[]
   } catch (error) {
     console.error('getChats: Unexpected error:', error)
     return []
   }
 }
 
-export async function getChat(id: string): Promise<Chat | null> {
+export async function getChat(id: string, userId?: string | null): Promise<Chat | null> {
   try {
-    const userId = await getCurrentUserIdOnServer();
-    if (!userId) {
-      console.warn('getChat called without authenticated user.')
+    let effectiveUserId = userId;
+    if (!effectiveUserId) {
+      effectiveUserId = await getCurrentUserIdOnServer();
+    }
+
+    if (!effectiveUserId) {
+      console.warn('getChat: No authenticated user found.')
       return null
     }
 
-    // Validate that `id` is a UUID before querying Postgres.
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-    if (!uuidRegex.test(id)) {
-      console.warn(`getChat: provided id does not look like a UUID: ${id}`)
-      return null
-    }
+    const chat = await dbGetChat(id, effectiveUserId)
+    if (!chat) return null
 
-    const supabase = getSupabaseServerClient()
-    const { data, error } = await supabase
-      .from('chats')
-      .select('*, chat_participants!inner(*)')
-      .eq('id', id)
-      .single()
+    const messages = await dbGetMessagesByChatId(id)
 
-    if (error) {
-      console.error(`Error fetching chat ${id} from Supabase:`, error)
-      return null
-    }
-
-    // Final check to ensure the user is a participant
-    if (data && data.chat_participants.some((p: { user_id: string }) => p.user_id === userId)) {
-      return data as Chat;
-    }
-
-    return null;
+    return {
+      ...chat,
+      messages: messages.map(m => ({
+        ...m,
+        content: typeof m.content === 'string' && (m.content.startsWith('[') || m.content.startsWith('{')) ? JSON.parse(m.content) : m.content
+      }))
+    } as unknown as Chat
   } catch (error) {
     console.error('getChat: Unexpected error:', error)
     return null
   }
 }
 
-export async function getChatMessages(chatId: string): Promise<any[]> {
+export async function getChatMessages(chatId: string): Promise<AIMessage[]> {
+  if (!chatId) return []
   try {
-    if (!chatId) {
-      console.warn('getChatMessages called without chatId')
-      return []
-    }
-    const { data, error } = await supabaseGetMessagesByChatId(chatId)
-    if (error) {
-      return []
-    }
-    return data || []
+    const messages = await dbGetMessagesByChatId(chatId)
+    return messages.map(m => ({
+        ...m,
+        content: typeof m.content === 'string' && (m.content.startsWith('[') || m.content.startsWith('{')) ? JSON.parse(m.content) : m.content
+    })) as unknown as AIMessage[]
   } catch (error) {
     console.error('getChatMessages: Unexpected error:', error)
     return []
   }
 }
 
-export async function clearChats(
-  userId?: string | null
-): Promise<{ error?: string; success?: boolean } | void> {
+export async function clearChats(userId?: string | null): Promise<{ error?: string } | void> {
+  const currentUserId = userId || (await getCurrentUserIdOnServer())
+  if (!currentUserId) {
+    return { error: 'User ID is required to clear chats' }
+  }
+
   try {
-    const currentUserId = userId || (await getCurrentUserIdOnServer())
-    if (!currentUserId) {
-      console.error('clearChats: No user ID provided or found.')
-      return { error: 'User ID is required to clear chats' }
+    const success = await dbClearHistory(currentUserId)
+    if (!success) {
+      return { error: 'Failed to clear chats from database.' }
     }
-
-    const supabase = getSupabaseServerClient()
-    const { error } = await supabase.from('chats').delete().eq('user_id', currentUserId)
-
-    if (error) {
-      console.error('Error clearing chats from Supabase:', error)
-      return { error: 'Failed to clear chat history' }
-    }
-
     revalidatePath('/')
-    return { success: true }
+    redirect('/')
   } catch (error) {
+    if (error instanceof Error && error.message === 'NEXT_REDIRECT') {
+        throw error;
+    }
     console.error('clearChats: Unexpected error:', error)
-    return { error: 'An unexpected error occurred while clearing chats' }
+    return { error: 'An unexpected error occurred' }
   }
 }
 
 export async function saveChat(chat: Chat, userId: string): Promise<string | null> {
-  try {
-    if (!userId && !chat.userId) {
-      console.error('saveChat: userId is required either as a parameter or in chat object.')
-      return null
-    }
-    const effectiveUserId = userId || chat.userId
-
-    const { data, error } = await supabaseSaveChat(chat, effectiveUserId)
-
-    if (error) {
-      return null
-    }
-    return data
-  } catch (error) {
-    console.error('saveChat: Unexpected error:', error)
+  if (!userId && !chat.userId) {
+    console.error('saveChat: userId is required')
     return null
+  }
+  const effectiveUserId = userId || chat.userId
+
+  const newChatData: DbNewChat = {
+    id: chat.id,
+    userId: effectiveUserId,
+    title: chat.title || 'Untitled Chat',
+    createdAt: chat.createdAt ? new Date(chat.createdAt) : new Date(),
+    visibility: chat.visibility || 'private',
+    updatedAt: new Date(),
+  };
+
+  // Prepare messages data
+  const messagesToProcess = chat.messages.map(msg => ({
+    id: msg.id,
+    userId: effectiveUserId,
+    role: msg.role,
+    content: typeof msg.content === 'object' ? JSON.stringify(msg.content) : msg.content,
+    createdAt: msg.createdAt ? new Date(msg.createdAt) : new Date(),
+  }));
+
+  // Attempt to generate embeddings for user and assistant messages if they don't have them
+  // For simplicity and to avoid excessive API calls, we'll only do this if the chat is being updated
+  // with a new response.
+  const embeddingModel = getEmbeddingModel();
+  const processedMessages: DbNewMessage[] = [];
+
+  if (embeddingModel) {
+    try {
+      // Filter messages that should have embeddings (user and assistant)
+      const messagesNeedingEmbeddings = messagesToProcess.filter(m =>
+        (m.role === 'user' || m.role === 'assistant') && m.content && m.content.length > 0
+      );
+
+      if (messagesNeedingEmbeddings.length > 0) {
+        const { embeddings } = await embedMany({
+          model: embeddingModel,
+          values: messagesNeedingEmbeddings.map(m => m.content as string),
+        });
+
+        // Map embeddings back to messages
+        messagesToProcess.forEach(m => {
+          const index = messagesNeedingEmbeddings.findIndex(nm => nm.id === m.id);
+          processedMessages.push({
+            ...m,
+            chatId: chat.id,
+            embedding: index !== -1 ? embeddings[index] : null
+          });
+        });
+      } else {
+        messagesToProcess.forEach(m => {
+          processedMessages.push({ ...m, chatId: chat.id, embedding: null });
+        });
+      }
+    } catch (error) {
+      console.error('Error generating embeddings during saveChat:', error);
+      // Fallback to saving without embeddings
+      messagesToProcess.forEach(m => {
+        processedMessages.push({ ...m, chatId: chat.id, embedding: null });
+      });
+    }
+  } else {
+    messagesToProcess.forEach(m => {
+      processedMessages.push({ ...m, chatId: chat.id, embedding: null });
+    });
+  }
+
+  try {
+    console.log(`[ChatAction] Saving chat ${chat.id} with ${chat.messages.length} messages`);
+    const savedChatId = await dbSaveChat(newChatData, processedMessages);
+    return savedChatId;
+  } catch (error) {
+    console.error('Error saving chat:', error);
+    return null;
   }
 }
 
 export async function updateDrawingContext(chatId: string, contextData: { drawnFeatures: any[], cameraState: any }) {
-  'use server';
+  const userId = await getCurrentUserIdOnServer();
+  if (!userId) {
+    return { error: 'User not authenticated' };
+  }
+
+  const newDrawingMessage: DbNewMessage = {
+    userId: userId,
+    chatId: chatId,
+    role: 'data',
+    content: JSON.stringify(contextData),
+    createdAt: new Date(),
+  };
+
   try {
-    console.log('[Action] updateDrawingContext called for chatId:', chatId);
-
-    const userId = await getCurrentUserIdOnServer();
-    if (!userId) {
-      console.error('updateDrawingContext: Could not get current user ID. User must be authenticated.');
-      return { error: 'User not authenticated' };
+    const savedMessage = await dbCreateMessage(newDrawingMessage);
+    if (!savedMessage) {
+      throw new Error('Failed to save drawing context message.');
     }
-
-    const { data: locationData, error: drawingError } = await supabaseSaveDrawing(chatId, userId, { 
-      features: contextData.drawnFeatures,
-      cameraState: contextData.cameraState 
-    });
-
-    if (drawingError || !locationData) {
-      return { error: 'Failed to save drawing' };
-    }
-
-    const { data: messageData, error: messageError } = await supabaseCreateMessage({
-      chat_id: chatId,
-      user_id: userId,
-      role: 'user',
-      content: 'A drawing has been made.',
-      location_id: locationData.id,
-    });
-
-    if (messageError) {
-      return { error: 'Failed to create message for drawing' };
-    }
-
-    return { success: true, messageId: messageData?.id };
+    return { success: true, messageId: savedMessage.id };
   } catch (error) {
     console.error('updateDrawingContext: Unexpected error:', error)
-    return { error: 'An unexpected error occurred while updating drawing context' }
+    return { error: 'An unexpected error occurred' }
   }
 }
 
 export async function saveSystemPrompt(
   userId: string,
   prompt: string
-): Promise<{ success?: boolean; error?:string }> {
+): Promise<{ success?: boolean; error?: string }> {
+  if (!userId) return { error: 'User ID is required' }
+  if (!prompt) return { error: 'Prompt is required' }
+
   try {
-    if (!userId) {
-      return { error: 'User ID is required' }
-    }
+    await db.update(users)
+      .set({ systemPrompt: prompt })
+      .where(eq(users.id, userId));
 
-    if (!prompt) {
-      return { error: 'Prompt is required' }
-    }
-
-    const { error } = await supabaseSaveSystemPrompt(userId, prompt)
-    if (error) {
-      return { error: 'Failed to save system prompt' }
-    }
     return { success: true }
   } catch (error) {
-    console.error('saveSystemPrompt: Unexpected error:', error)
-    return { error: 'An unexpected error occurred while saving system prompt' }
+    console.error('saveSystemPrompt: Error:', error)
+    return { error: 'Failed to save system prompt' }
   }
 }
 
 export async function getSystemPrompt(
   userId: string
 ): Promise<string | null> {
+  if (!userId) return null
+
   try {
-    if (!userId) {
-      console.error('getSystemPrompt: User ID is required')
-      return null
+    const result = await db.select({ systemPrompt: users.systemPrompt })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    return result[0]?.systemPrompt || null;
+  } catch (error) {
+    console.error('getSystemPrompt: Error:', error)
+    return null
+  }
+}
+
+export async function shareChat(id: string): Promise<Chat | null> {
+  try {
+    const userId = await getCurrentUserIdOnServer();
+    if (!userId) return null;
+
+    // Check if the user is the owner
+    const chat = await dbGetChat(id, userId);
+    if (!chat || chat.userId !== userId) {
+      console.error('shareChat: Only owners can share chats');
+      return null;
     }
 
-    const { data, error } = await supabaseGetSystemPrompt(userId)
-    if (error) {
-      return null
-    }
-    return data
+    const [updatedChat] = await db
+      .update(chats)
+      .set({ visibility: 'public' })
+      .where(eq(chats.id, id))
+      .returning();
+
+    return updatedChat as unknown as Chat;
   } catch (error) {
-    console.error('getSystemPrompt: Unexpected error:', error)
+    console.error('shareChat: Unexpected error:', error);
+    return null;
+  }
+}
+
+export async function getSharedChat(id: string): Promise<Chat | null> {
+  try {
+    const [chat] = await db
+      .select()
+      .from(chats)
+      .where(eq(chats.id, id))
+      .limit(1);
+
+    if (!chat || chat.visibility !== 'public') return null;
+
+    const messages = await dbGetMessagesByChatId(id);
+
+    return {
+      ...chat,
+      messages: messages.map(m => ({
+        ...m,
+        content: typeof m.content === 'string' && (m.content.startsWith('[') || m.content.startsWith('{')) ? JSON.parse(m.content) : m.content
+      }))
+    } as unknown as Chat;
+  } catch (error) {
+    console.error('getSharedChat: Unexpected error:', error)
     return null
   }
 }
