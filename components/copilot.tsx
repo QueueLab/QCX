@@ -98,7 +98,7 @@ export const Copilot: React.FC<CopilotProps> = ({ inquiry }: CopilotProps) => {
       <Card className="p-4 w-full flex justify-between items-center">
         <div className="flex items-center space-x-2">
           <Sparkles className="w-4 h-4" />
-          <h5 className="text-muted-foreground text-xs truncate">
+          <h5 className="text-muted-foreground text-xs whitespace-normal break-words">
             {`error: ${error}`}
           </h5>
         </div>
@@ -114,7 +114,7 @@ export const Copilot: React.FC<CopilotProps> = ({ inquiry }: CopilotProps) => {
     return (
       <Card className="p-3 md:p-4 w-full flex justify-between items-center">
         <div className="flex items-center space-x-2 flex-1 min-w-0">
-          <h5 className="text-muted-foreground text-xs truncate">
+          <h5 className="text-muted-foreground text-xs whitespace-normal break-words">
             {updatedQuery()}
           </h5>
         </div>
@@ -125,7 +125,7 @@ export const Copilot: React.FC<CopilotProps> = ({ inquiry }: CopilotProps) => {
     return (
       <Card className="p-4 rounded-lg w-full mx-auto">
         <div className="mb-4">
-          <p className="text-lg text-foreground text-semibold ml-2">
+          <p className="text-lg text-foreground text-semibold ml-2 break-words">
             {data?.question || value.question}
             
             
@@ -146,7 +146,7 @@ export const Copilot: React.FC<CopilotProps> = ({ inquiry }: CopilotProps) => {
                   }
                 />
                 <label
-                  className="text-sm whitespace-nowrap pr-4"
+                  className="text-sm whitespace-normal break-words pr-4"
                   htmlFor={option?.value}
                 >
                   {option?.label}

@@ -41,7 +41,7 @@ export function EmptyScreen({
               <Button
                 key={item.message} // Use a unique property as the key.
                 variant="link"
-                className="h-auto p-0 text-base flex items-center"
+                className="h-auto p-0 text-base flex items-center whitespace-normal text-left"
                 name={item.message}
                 onClick={async () => {
                   submitMessage(item.message);
