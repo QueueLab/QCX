@@ -1,8 +1,8 @@
-import { NextResponse } from "next/server"
-import type { NextRequest } from "next/server"
+import { createServerClient, type CookieOptions } from "@supabase/ssr"
+import { NextResponse, type NextRequest } from "next/server"
 
-export function middleware(request: NextRequest) {
-  // Normalize 'origin' and 'x-forwarded-host' to avoid "Invalid Server Actions request"
+export async function middleware(request: NextRequest) {
+  // 1. Normalize 'origin' and 'x-forwarded-host' to avoid "Invalid Server Actions request"
   const xForwardedHost = request.headers.get("x-forwarded-host")
   const originHeader = request.headers.get("origin")
   let originHost: string | null = null
@@ -16,18 +16,74 @@ export function middleware(request: NextRequest) {
     }
   }
 
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  })
+
   if (xForwardedHost && originHost && xForwardedHost !== originHost) {
-    const headers = new Headers(request.headers)
-    headers.delete("x-forwarded-host")
-    return NextResponse.next({ request: { headers } })
+    response.headers.delete("x-forwarded-host")
   }
 
-  // Skip middleware for server actions to avoid breaking them
-  if (request.headers.get('next-action')) {
-    return NextResponse.next()
+  // 2. Supabase Session Refresh
+  // Note: We only do this if we have the environment variables
+  if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      {
+        cookies: {
+          get(name: string) {
+            return request.cookies.get(name)?.value
+          },
+          set(name: string, value: string, options: CookieOptions) {
+            request.cookies.set({
+              name,
+              value,
+              ...options,
+            })
+            response = NextResponse.next({
+              request: {
+                headers: request.headers,
+              },
+            })
+            response.cookies.set({
+              name,
+              value,
+              ...options,
+            })
+          },
+          remove(name: string, options: CookieOptions) {
+            request.cookies.set({
+              name,
+              value: '',
+              ...options,
+            })
+            response = NextResponse.next({
+              request: {
+                headers: request.headers,
+              },
+            })
+            response.cookies.set({
+              name,
+              value: '',
+              ...options,
+            })
+          },
+        },
+      }
+    )
+
+    // IMPORTANT: Avoid refreshing session for static assets
+    if (!request.nextUrl.pathname.startsWith('/_next') &&
+        !request.nextUrl.pathname.startsWith('/favicon.ico') &&
+        !request.nextUrl.pathname.startsWith('/images')) {
+      await supabase.auth.getUser()
+    }
   }
 
-  return NextResponse.next()
+  return response
 }
 
 export const config = {
