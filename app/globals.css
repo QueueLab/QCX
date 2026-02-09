@@ -189,7 +189,7 @@
 
   .mobile-chat-input-area {
     height: auto;
-    padding: 4px;
+    padding: 2px;
     background-color: hsl(var(--background));
     /* border-top: 1px solid hsl(var(--border)); */ /* Removed for cleaner separation */
     border-bottom: 1px solid hsl(var(--border)); /* Added for separation from messages area below */
@@ -205,7 +205,7 @@
     /* left: 0; */ /* Handled by parent flex */
     /* right: 0; */ /* Handled by parent flex */
     width: 100%; /* Ensure it takes full width of its container */
-    padding: 4px;
+    padding: 0;
     background-color: hsl(var(--background));
     /* border-top: 1px solid hsl(var(--border)); */ /* Removed to avoid double border */
     /* z-index: 30; */ /* No longer needed */

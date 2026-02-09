@@ -198,7 +198,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
         onSubmit={handleSubmit}
         className={cn(
           'max-w-full w-full',
-          isMobile ? 'px-2 pb-2 pt-1 h-full flex flex-col justify-center' : ''
+          isMobile ? 'p-0 h-full flex flex-col justify-center' : ''
         )}
       >
         <div
