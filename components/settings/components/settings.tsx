@@ -1,19 +1,18 @@
-"use client"
+'use client'
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import { z } from "zod"
-import * as Tabs from "@radix-ui/react-tabs";
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { FormProvider, UseFormReturn } from "react-hook-form"; import React from "react";
-import { Loader2, Save, RotateCcw } from "lucide-react"
-import { motion, AnimatePresence } from "framer-motion"
-// Or, if the file does not exist, create it as shown below.
-import { SystemPromptForm } from "./system-prompt-form"
-import { ModelSelectionForm } from "./model-selection-form"
+import React, { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import * as Tabs from '@radix-ui/react-tabs'
+import { useRouter } from 'next/navigation'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useForm } from 'react-hook-form'
+import * as z from 'zod'
+import { Loader2, Save, RotateCcw } from 'lucide-react'
+
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { SystemPromptForm } from './system-prompt-form'
+import { ModelSelectionForm } from './model-selection-form'
 import { UserManagementForm } from './user-management-form';
 import { Form } from "@/components/ui/form"
 import { useSettingsStore, MapProvider } from "@/lib/store/settings";
@@ -22,8 +21,10 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/hooks/use-toast"
 import { getSystemPrompt, saveSystemPrompt } from "../../../lib/actions/chat"
 import { getSelectedModel, saveSelectedModel } from "../../../lib/actions/users"
+import { useCurrentUser } from "@/lib/auth/use-current-user"
+import { SettingsSkeleton } from './settings-skeleton'
 
-// Define the form schema
+// Define the form schema with enum validation for roles
 const settingsFormSchema = z.object({
   systemPrompt: z
     .string()
@@ -43,7 +44,7 @@ const settingsFormSchema = z.object({
       role: z.enum(["admin", "editor", "viewer"]),
     }),
   ),
-  newUserEmail: z.string().email().optional(),
+  newUserEmail: z.string().email().optional().or(z.literal('')),
   newUserRole: z.enum(["admin", "editor", "viewer"]).optional(),
 })
 
@@ -54,10 +55,7 @@ const defaultValues: Partial<SettingsFormValues> = {
   systemPrompt:
     "You are a planetary copilot, an AI assistant designed to help users with information about planets, space exploration, and astronomy. Provide accurate, educational, and engaging responses about our solar system and beyond.",
   selectedModel: "Grok 4.2",
-  users: [
-    { id: "1", email: "admin@example.com", role: "admin" },
-    { id: "2", email: "user@example.com", role: "editor" },
-  ],
+  users: [],
 }
 
 interface SettingsProps {
@@ -67,16 +65,16 @@ interface SettingsProps {
 export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
   const { toast } = useToast()
   const router = useRouter()
-  const [isLoading, setIsLoading] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const [currentTab, setCurrentTab] = useState(initialTab);
   const { mapProvider, setMapProvider } = useSettingsStore();
+  const { user, loading: authLoading } = useCurrentUser();
 
   useEffect(() => {
     setCurrentTab(initialTab);
   }, [initialTab]);
 
-  // TODO: Replace 'anonymous' with actual user ID from session/auth context
-  const userId = 'anonymous';
+  const userId = user?.id;
 
   const form = useForm<SettingsFormValues>({
     resolver: zodResolver(settingsFormSchema),
@@ -85,6 +83,8 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
 
   useEffect(() => {
     async function fetchData() {
+      if (!userId || authLoading) return;
+
       const [existingPrompt, selectedModel] = await Promise.all([
         getSystemPrompt(userId),
         getSelectedModel(),
@@ -98,10 +98,23 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
       }
     }
     fetchData();
-  }, [form, userId]);
+  }, [form, userId, authLoading]);
+
+  if (authLoading) {
+    return <SettingsSkeleton />;
+  }
 
   async function onSubmit(data: SettingsFormValues) {
-    setIsLoading(true)
+    if (!userId) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to save settings.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSaving(true)
 
     try {
       // Save the system prompt and selected model
@@ -124,9 +137,6 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
         title: "Settings updated",
         description: "Your settings have been saved successfully.",
       })
-
-      // Refresh the page to reflect changes
-      // router.refresh(); // Consider if refresh is needed or if optimistic update is enough
     } catch (error: any) {
       // Error notification
       toast({
@@ -135,7 +145,7 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
         variant: "destructive",
       })
     } finally {
-      setIsLoading(false)
+      setIsSaving(false)
     }
   }
 
@@ -223,12 +233,12 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
 
           <Card>
             <CardFooter className="flex justify-between pt-6">
-              <Button type="button" variant="outline" onClick={onReset} disabled={isLoading}>
+              <Button type="button" variant="outline" onClick={onReset} disabled={isSaving}>
                 <RotateCcw className="mr-2 h-4 w-4" />
                 Reset to Defaults
               </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? (
+              <Button type="submit" disabled={isSaving}>
+                {isSaving ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Saving...

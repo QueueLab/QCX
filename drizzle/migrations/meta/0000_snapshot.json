@@ -1,8 +1,10 @@
 {
-  "version": "7",
-  "dialect": "postgresql",
+  "id": "0d46923a-5423-4b73-91cb-5f46741e7ff9",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "5",
+  "dialect": "pg",
   "tables": {
-    "public.chats": {
+    "chats": {
       "name": "chats",
       "schema": "",
       "columns": {
@@ -46,24 +48,21 @@
         "chats_user_id_users_id_fk": {
           "name": "chats_user_id_users_id_fk",
           "tableFrom": "chats",
+          "tableTo": "users",
           "columnsFrom": [
             "user_id"
           ],
-          "tableTo": "users",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "isRLSEnabled": false,
-      "checkConstraints": {}
+      "uniqueConstraints": {}
     },
-    "public.messages": {
+    "messages": {
       "name": "messages",
       "schema": "",
       "columns": {
@@ -111,37 +110,34 @@
         "messages_chat_id_chats_id_fk": {
           "name": "messages_chat_id_chats_id_fk",
           "tableFrom": "messages",
+          "tableTo": "chats",
           "columnsFrom": [
             "chat_id"
           ],
-          "tableTo": "chats",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "messages_user_id_users_id_fk": {
           "name": "messages_user_id_users_id_fk",
           "tableFrom": "messages",
+          "tableTo": "users",
           "columnsFrom": [
             "user_id"
           ],
-          "tableTo": "users",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "isRLSEnabled": false,
-      "checkConstraints": {}
+      "uniqueConstraints": {}
     },
-    "public.users": {
+    "users": {
       "name": "users",
       "schema": "",
       "columns": {
@@ -156,23 +152,14 @@
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "isRLSEnabled": false,
-      "checkConstraints": {}
+      "uniqueConstraints": {}
     }
   },
   "enums": {},
   "schemas": {},
   "_meta": {
+    "columns": {},
     "schemas": {},
-    "tables": {},
-    "columns": {}
-  },
-  "id": "0d46923a-5423-4b73-91cb-5f46741e7ff9",
-  "prevId": "00000000-0000-0000-0000-000000000000",
-  "sequences": {},
-  "policies": {},
-  "views": {},
-  "roles": {}
+    "tables": {}
+  }
 }

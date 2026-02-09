@@ -1,33 +1,25 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
-import { Pool, type PoolConfig } from 'pg';
+import { Pool, type PoolConfig } from 'pg'; // Uses Pool from pg, import PoolConfig
 import * as dotenv from 'dotenv';
 import * as schema from './schema';
 
 dotenv.config({ path: '.env.local' });
 
-const databaseUrl = process.env.DATABASE_URL;
-
-let dbInstance: any = null;
-
-if (databaseUrl) {
-  const poolConfig: PoolConfig = {
-    connectionString: databaseUrl,
-  };
-
-  if (databaseUrl.includes('supabase.co')) {
-    poolConfig.ssl = {
-      rejectUnauthorized: false,
-    };
-  }
-
-  try {
-    const pool = new Pool(poolConfig);
-    dbInstance = drizzle(pool, { schema, logger: process.env.NODE_ENV === 'development' });
-  } catch (error) {
-    console.error('Failed to initialize Drizzle with DATABASE_URL:', error);
-  }
-} else {
-  console.warn('DATABASE_URL is not set. Database features will be disabled.');
+if (!process.env.DATABASE_URL) {
+  throw new Error('DATABASE_URL environment variable is not set for Drizzle client');
 }
 
-export const db = dbInstance;
+const poolConfig: PoolConfig = {
+  connectionString: process.env.DATABASE_URL,
+};
+
+// Conditionally apply SSL for Supabase URLs
+if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('supabase.co')) {
+  poolConfig.ssl = {
+    rejectUnauthorized: false,
+  };
+}
+
+const pool = new Pool(poolConfig);
+
+export const db = drizzle(pool, { schema, logger: process.env.NODE_ENV === 'development' });

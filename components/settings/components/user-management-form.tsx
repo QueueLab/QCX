@@ -1,4 +1,3 @@
-// File: components/settings/components/user-management-form.tsx
 import React, { useState } from 'react';
 import { UseFormReturn, useFieldArray } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
@@ -9,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Trash2, Edit3, UserPlus, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/hooks/use-toast';
-import { addUser } from '@/lib/actions/users';
+import { addUser, type UserRole } from '@/lib/actions/users';
 import type { SettingsFormValues } from './settings';
 
 interface UserManagementFormProps {
@@ -24,15 +23,11 @@ export function UserManagementForm({ form }: UserManagementFormProps) {
   const { toast } = useToast();
   const [isAddingUser, setIsAddingUser] = useState(false);
 
-  // const watchNewUserEmail = form.watch("newUserEmail", ""); // Not strictly needed for logic below
-  // const watchNewUserRole = form.watch("newUserRole", "viewer"); // Not strictly needed for logic below
-
   const handleAddUser = async () => {
     setIsAddingUser(true);
     const newUserEmail = form.getValues("newUserEmail");
-    const newUserRole = form.getValues("newUserRole") || "viewer"; // Ensure role has a default
+    const newUserRole = form.getValues("newUserRole") || "viewer";
 
-    // Client-side validation first
     if (!newUserEmail) {
       form.setError("newUserEmail", { type: "manual", message: "Email is required." });
       setIsAddingUser(false);
@@ -43,27 +38,29 @@ export function UserManagementForm({ form }: UserManagementFormProps) {
       setIsAddingUser(false);
       return;
     }
-    // Client-side check if user already exists in the local list
     if (fields.some(user => user.email === newUserEmail)) {
       form.setError("newUserEmail", { type: "manual", message: "User with this email already exists locally." });
       setIsAddingUser(false);
       return;
     }
-    // Clear any previous local errors for newUserEmail if client checks pass
     form.clearErrors("newUserEmail");
 
     try {
-      const result = await addUser('default-user', { email: newUserEmail, role: newUserRole });
+      const result = await addUser({ email: newUserEmail, role: newUserRole as UserRole });
 
       if (result.error) {
         toast({ title: 'Error adding user', description: result.error, variant: 'destructive' });
-        form.setError("newUserEmail", { type: "manual", message: result.error }); // Show server error on field
+        form.setError("newUserEmail", { type: "manual", message: result.error });
       } else if (result.user) {
         toast({ title: 'User Added', description: `${result.user.email} was successfully added.` });
-        append(result.user); // Add user with ID from server
+        append({
+          id: result.user.id,
+          email: result.user.email || '',
+          role: result.user.role || 'viewer'
+        });
         form.resetField("newUserEmail");
-        form.resetField("newUserRole"); // Or set to default: form.setValue("newUserRole", "viewer");
-        form.clearErrors("newUserEmail"); // Clear any previous errors
+        form.resetField("newUserRole");
+        form.clearErrors("newUserEmail");
       }
     } catch (error) {
       console.error("Failed to add user:", error);
@@ -143,10 +140,10 @@ export function UserManagementForm({ form }: UserManagementFormProps) {
                     <TableCell>{user.email}</TableCell>
                     <TableCell className="capitalize">{user.role}</TableCell>
                     <TableCell className="text-right">
-                      <Button type="button" variant="ghost" size="icon" onClick={() => console.log('Edit user:', user.id)} className="mr-2">
+                      <Button variant="ghost" size="icon" onClick={() => console.log('Edit user:', user.id)} className="mr-2">
                         <Edit3 className="h-4 w-4" />
                       </Button>
-                      <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
+                      <Button variant="ghost" size="icon" onClick={() => remove(index)}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </TableCell>

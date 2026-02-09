@@ -1,13 +1,11 @@
 "use client"
 
-
-import { Users } from "lucide-react";
-import { searchUsers } from "@/lib/actions/users";
 import type React from "react"
 import { useState, useEffect } from "react"
-import { ChevronLeft, ChevronRight, MapPin } from "lucide-react"
+import { ChevronLeft, ChevronRight, MapPin, Users } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getNotes, saveNote } from "@/lib/actions/calendar"
+import { searchUsers } from "@/lib/actions/users"
 import { useMapData } from "./map/map-data-context"
 import type { CalendarNote, NewCalendarNote } from "@/lib/types"
 import { TimezoneClock } from "./timezone-clock"
@@ -76,20 +74,10 @@ export function CalendarNotepad({ chatId }: CalendarNotepadProps) {
             setNotes([savedNote, ...notes])
             setNoteContent("")
             setTaggedLocation(null)
+            setShowSuggestions(false)
         }
     }
   }
-
-  const handleTagLocation = () => {
-    if (mapData.targetPosition) {
-      setTaggedLocation({
-        type: 'Point',
-        coordinates: mapData.targetPosition
-      });
-      setNoteContent(prev => `${prev} #location`);
-    }
-  };
-
 
   const handleNoteContentChange = async (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -124,6 +112,16 @@ export function CalendarNotepad({ chatId }: CalendarNotepadProps) {
       if (part === '#location') return <span key={i} className="text-primary font-medium">{part}</span>;
       return part;
     });
+  };
+
+  const handleTagLocation = () => {
+    if (mapData.targetPosition) {
+      setTaggedLocation({
+        type: 'Point',
+        coordinates: mapData.targetPosition
+      });
+      setNoteContent(prev => `${prev} #location`);
+    }
   };
 
   const handleFlyTo = (location: any) => {
@@ -209,22 +207,24 @@ export function CalendarNotepad({ chatId }: CalendarNotepadProps) {
           notes.map((note) => (
             <div key={note.id} className="p-3 bg-muted rounded-md">
               <div className="flex justify-between items-start">
-                <div>
+                <div className="flex-1 min-w-0">
                   <p className="text-xs text-muted-foreground mb-1">
                     {new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </p>
                   <p className="text-sm whitespace-pre-wrap break-words">{renderContent(note.content)}</p>
                 </div>
-                {note.locationTags && (
-                  <button onClick={() => handleFlyTo(note.locationTags)} className="text-muted-foreground hover:text-foreground ml-2">
-                    <MapPin className="h-5 w-5" />
-                  </button>
-                )}
-                {note.userTags && note.userTags.length > 0 && (
-                  <div className="text-muted-foreground ml-2 flex items-center" title={`${note.userTags.length} user(s) tagged`}>
-                    <Users className="h-4 w-4" />
-                  </div>
-                )}
+                <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
+                  {note.locationTags && (
+                    <button onClick={() => handleFlyTo(note.locationTags)} className="text-muted-foreground hover:text-foreground" title="Fly to location">
+                      <MapPin className="h-5 w-5" />
+                    </button>
+                  )}
+                  {note.userTags && note.userTags.length > 0 && (
+                    <div className="text-muted-foreground flex items-center" title={`${note.userTags.length} user(s) tagged`}>
+                      <Users className="h-4 w-4" />
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           ))

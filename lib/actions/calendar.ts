@@ -2,7 +2,6 @@
 
 import { and, desc, eq, isNull, sql } from 'drizzle-orm'
 import { users as usersSchema } from "@/lib/db/schema";
-import { syncUserWithDatabase } from "./users";
 import { db } from '@/lib/db'
 import { calendarNotes } from '@/lib/db/schema'
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
@@ -20,11 +19,6 @@ export async function getNotes(date: Date, chatId: string | null): Promise<Calen
   if (!userId) {
     console.error('getNotes: User not authenticated')
     return []
-  }
-
-  if (!db) {
-    console.warn('getNotes: Database unavailable, returning empty list');
-    return [];
   }
 
   // Normalize date to the start of the day for consistent querying
@@ -73,13 +67,6 @@ async function extractAndValidateMentions(content: string): Promise<string[]> {
 
   if (potentialEmails.length === 0) return [];
 
-  // If no DB, we just store the strings themselves as a fallback?
-  // User asked for "tag user ... work in memory".
-  // Let's store the usernames as tags if DB is missing.
-  if (!db) {
-    return potentialEmails;
-  }
-
   try {
     const users = await db.select({ id: usersSchema.id, email: usersSchema.email })
       .from(usersSchema)
@@ -101,6 +88,8 @@ async function extractAndValidateMentions(content: string): Promise<string[]> {
 
 /**
  * Saves a new note or updates an existing one.
+ * @param noteData - The note data to save.
+ * @returns A promise that resolves to the saved note or null if an error occurs.
  */
 export async function saveNote(noteData: NewCalendarNote | CalendarNote): Promise<CalendarNote | null> {
     const userId = await getCurrentUserIdOnServer();
@@ -109,22 +98,7 @@ export async function saveNote(noteData: NewCalendarNote | CalendarNote): Promis
         return null;
     }
 
-    // Ensure current user is synced if possible
-    await syncUserWithDatabase();
-
     const userTags = await extractAndValidateMentions(noteData.content);
-
-    if (!db) {
-      console.warn('saveNote: Database unavailable, returning mock saved note');
-      return {
-        ...noteData,
-        id: ('id' in noteData) ? noteData.id : Math.random().toString(36).substr(2, 9),
-        userId,
-        userTags,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      } as CalendarNote;
-    }
 
     if ('id' in noteData) {
         // Update existing note
