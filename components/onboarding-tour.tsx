@@ -1,11 +1,11 @@
 'use client'
 
-import { driver } from "driver.js"
+import { driver, DriveStep } from "driver.js"
 import "driver.js/dist/driver.css"
 
 export const useOnboardingTour = () => {
   const startTour = (isMobile: boolean) => {
-    const desktopSteps = [
+    const desktopSteps: DriveStep[] = [
       {
         element: '[data-testid="chat-input"]',
         popover: {
@@ -86,7 +86,7 @@ export const useOnboardingTour = () => {
       }
     ];
 
-    const mobileSteps = [
+    const mobileSteps: DriveStep[] = [
       {
         element: '[data-testid="chat-input"]',
         popover: {
