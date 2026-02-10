@@ -12,13 +12,16 @@ import {
   TentTree,
   Paperclip,
   ArrowRight,
-  Plus
+  Plus,
+  HelpCircle
 } from 'lucide-react'
 import { History } from '@/components/history'
 import { MapToggle } from './map-toggle'
 import { ModeToggle } from './mode-toggle'
 import { ProfileToggle } from './profile-toggle'
 import { useCalendarToggle } from './calendar-toggle-context'
+import { useOnboardingTour } from './onboarding-tour'
+import { useUsageToggle } from './usage-toggle-context'
 
 interface MobileIconsBarProps {
   onAttachmentClick: () => void;
@@ -29,10 +32,16 @@ export const MobileIconsBar: React.FC<MobileIconsBarProps> = ({ onAttachmentClic
   const [, setMessages] = useUIState<typeof AI>()
   const { clearChat } = useActions()
   const { toggleCalendar } = useCalendarToggle()
+  const { startTour } = useOnboardingTour()
+  const { toggleUsage } = useUsageToggle()
 
   const handleNewChat = async () => {
     setMessages([])
     await clearChat()
+  }
+
+  const handleStartTour = () => {
+    startTour(true)
   }
 
   return (
@@ -48,16 +57,17 @@ export const MobileIconsBar: React.FC<MobileIconsBarProps> = ({ onAttachmentClic
       <Button variant="ghost" size="icon" data-testid="mobile-search-button">
         <Search className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>
-      <a href="https://buy.stripe.com/14A3cv7K72TR3go14Nasg02" target="_blank" rel="noopener noreferrer">
-        <Button variant="ghost" size="icon">
-          <TentTree className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
-        </Button>
-      </a>
+      <Button variant="ghost" size="icon" onClick={toggleUsage} data-testid="mobile-usage-button">
+        <TentTree className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
+      </Button>
       <Button variant="ghost" size="icon" onClick={onAttachmentClick} data-testid="mobile-attachment-button">
         <Paperclip className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>
       <Button variant="ghost" size="icon" data-testid="mobile-submit-button" onClick={onSubmitClick}>
         <ArrowRight className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
+      </Button>
+      <Button variant="ghost" size="icon" onClick={handleStartTour} data-testid="mobile-help-tour">
+        <HelpCircle className="h-[1.2rem] w-[1.2rem]" />
       </Button>
       <History location="header" />
       <ModeToggle />

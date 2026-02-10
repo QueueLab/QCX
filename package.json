@@ -61,6 +61,7 @@
     "cookie": "^0.6.0",
     "csv-parse": "^6.1.0",
     "dotenv": "^16.5.0",
+    "driver.js": "^1.4.0",
     "drizzle-kit": "^0.31.1",
     "drizzle-orm": "^0.29.0",
     "embla-carousel-react": "^8.6.0",

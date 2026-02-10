@@ -20,6 +20,7 @@ import { UsageView } from "@/components/usage-view";
 import { MapDataProvider, useMapData } from './map/map-data-context';
 import { updateDrawingContext } from '@/lib/actions/chat';
 import { HeaderSearchButton } from './header-search-button'
+import { useOnboardingTour } from './onboarding-tour'
 
 type ChatProps = {
   id?: string // This is the chatId
@@ -39,6 +40,7 @@ export function Chat({ id }: ChatProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [suggestions, setSuggestions] = useState<PartialRelated | null>(null)
   const chatPanelRef = useRef<ChatPanelRef>(null);
+  const { startTour } = useOnboardingTour()
 
   const handleAttachment = () => {
     chatPanelRef.current?.handleAttachmentClick();
@@ -101,6 +103,17 @@ export function Chat({ id }: ChatProps) {
       });
     }
   }, [id, mapData.drawnFeatures, mapData.cameraState]);
+
+  // Automatic onboarding tour trigger
+  useEffect(() => {
+    const tourCompleted = localStorage.getItem('qcx_onboarding_v1')
+    if (!tourCompleted && messages.length === 0) {
+      const timer = setTimeout(() => {
+        startTour(isMobile)
+      }, 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [isMobile, startTour, messages.length])
 
   const renderSuggestions = () => {
     if (suggestions) {

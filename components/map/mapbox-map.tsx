@@ -587,7 +587,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   return (
     <div className="relative h-full w-full">
       <div
-        ref={mapContainer}
+        ref={mapContainer} data-testid="mapbox-container"
         className="h-full w-full overflow-hidden rounded-l-lg"
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
