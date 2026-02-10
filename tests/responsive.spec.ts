@@ -1,13 +1,11 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
-test.describe('Responsive design - Desktop', () => {
+test.describe.configure({ mode: 'parallel' });
+
+test.describe('Responsive design - Desktop @smoke', () => {
   test.use({ viewport: { width: 1920, height: 1080 } });
 
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-  });
-
-  test('should display desktop layout', async ({ page }) => {
+  test('should display desktop layout', async ({ authenticatedPage: page }) => {
     // Sidebar should be visible on desktop
     const sidebar = page.locator('[data-testid="sidebar"]');
     await expect(sidebar).toBeVisible();
@@ -17,20 +15,19 @@ test.describe('Responsive design - Desktop', () => {
     await expect(mobileMenu).not.toBeVisible();
   });
 
-  test('should display full header with all elements', async ({ page }) => {
+  test('should display full header with all elements', async ({ authenticatedPage: page }) => {
     await expect(page.locator('[data-testid="theme-toggle"]')).toBeVisible();
     await expect(page.locator('[data-testid="profile-toggle"]')).toBeVisible();
     await expect(page.locator('[data-testid="calendar-toggle"]')).toBeVisible();
   });
 
-  test('should show map alongside chat', async ({ page }) => {
+  test('should show map alongside chat', async ({ authenticatedPage: page }) => {
     const chatContainer = page.locator('[data-testid="chat-container"]');
     const mapContainer = page.locator('.mapboxgl-canvas');
 
     await expect(chatContainer).toBeVisible();
     await expect(mapContainer).toBeVisible();
 
-    // Both should be visible simultaneously on desktop
     const chatBox = await chatContainer.boundingBox();
     const mapBox = await mapContainer.boundingBox();
     
@@ -42,45 +39,35 @@ test.describe('Responsive design - Desktop', () => {
 test.describe('Responsive design - Tablet', () => {
   test.use({ viewport: { width: 768, height: 1024 } });
 
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-  });
-
-  test('should display tablet layout', async ({ page }) => {
-    // Check if layout adapts to tablet size
+  test('should display tablet layout', async ({ authenticatedPage: page }) => {
     const container = page.locator('[data-testid="main-container"]');
     await expect(container).toBeVisible();
 
-    // Sidebar might be collapsible on tablet
     const sidebar = page.locator('[data-testid="sidebar"]');
     const sidebarBox = await sidebar.boundingBox();
     
     if (sidebarBox) {
-      // If visible, check it's narrower than desktop
       expect(sidebarBox.width).toBeLessThan(300);
     }
   });
 
-  test('should handle touch interactions', async ({ page }) => {
-    // Test that buttons are appropriately sized for touch
+  test('should handle touch interactions', async ({ authenticatedPage: page }) => {
     const chatSubmit = page.locator('[data-testid="chat-submit"]');
     const buttonBox = await chatSubmit.boundingBox();
     
     expect(buttonBox).toBeTruthy();
     if (buttonBox) {
-      // Touch target should be at least 44x44 pixels (iOS guideline)
       expect(buttonBox.height).toBeGreaterThanOrEqual(40);
     }
   });
 
-  test('should reflow content appropriately', async ({ page }) => {
+  test('should reflow content appropriately', async ({ authenticatedPage: page }) => {
     await page.fill('[data-testid="chat-input"]', 'Test message for tablet');
     await page.click('[data-testid="chat-submit"]');
 
     const userMessage = page.locator('[data-testid="user-message"]').last();
     await expect(userMessage).toBeVisible();
 
-    // Message should not overflow
     const messageBox = await userMessage.boundingBox();
     const viewportWidth = 768;
     
@@ -91,28 +78,21 @@ test.describe('Responsive design - Tablet', () => {
   });
 });
 
-test.describe('Responsive design - Mobile', () => {
+test.describe('Responsive design - Mobile @smoke', () => {
   test.use({ viewport: { width: 375, height: 667 } }); // iPhone SE
 
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-  });
-
-  test('should display mobile layout', async ({ page }) => {
-    // Desktop sidebar should be hidden
+  test('should display mobile layout', async ({ authenticatedPage: page }) => {
     const sidebar = page.locator('[data-testid="sidebar"]');
     await expect(sidebar).not.toBeVisible();
 
-    // Mobile navigation should be visible
     const mobileNav = page.locator('[data-testid="mobile-icons-bar"]');
     await expect(mobileNav).toBeVisible();
   });
 
-  test('should have mobile-optimized input', async ({ page }) => {
+  test('should have mobile-optimized input', async ({ authenticatedPage: page }) => {
     const chatInput = page.locator('[data-testid="chat-input"]');
     await expect(chatInput).toBeVisible();
 
-    // Input should span most of the width
     const inputBox = await chatInput.boundingBox();
     const viewportWidth = 375;
     
@@ -122,8 +102,7 @@ test.describe('Responsive design - Mobile', () => {
     }
   });
 
-  test('should toggle map view on mobile', async ({ page }) => {
-    // On mobile, map and chat might toggle
+  test('should toggle map view on mobile', async ({ authenticatedPage: page }) => {
     const mapToggle = page.locator('[data-testid="map-toggle"]');
     
     if (await mapToggle.isVisible()) {
@@ -134,7 +113,7 @@ test.describe('Responsive design - Mobile', () => {
     }
   });
 
-  test('should handle mobile menu', async ({ page }) => {
+  test('should handle mobile menu', async ({ authenticatedPage: page }) => {
     const menuButton = page.locator('[data-testid="mobile-menu-button"]');
     
     if (await menuButton.isVisible()) {
@@ -145,7 +124,7 @@ test.describe('Responsive design - Mobile', () => {
     }
   });
 
-  test('should have appropriately sized touch targets', async ({ page }) => {
+  test('should have appropriately sized touch targets', async ({ authenticatedPage: page }) => {
     const buttons = [
       '[data-testid="mobile-new-chat-button"]',
       '[data-testid="mobile-submit-button"]',
@@ -158,7 +137,6 @@ test.describe('Responsive design - Mobile', () => {
         const buttonBox = await button.boundingBox();
         expect(buttonBox).toBeTruthy();
         if (buttonBox) {
-          // Touch targets should be at least 44x44 pixels
           expect(buttonBox.height).toBeGreaterThanOrEqual(40);
           expect(buttonBox.width).toBeGreaterThanOrEqual(40);
         }
@@ -166,26 +144,24 @@ test.describe('Responsive design - Mobile', () => {
     }
   });
 
-  test('should prevent horizontal scroll', async ({ page }) => {
-    // Check that content doesn't cause horizontal overflow
+  test('should prevent horizontal scroll', async ({ authenticatedPage: page }) => {
     const bodyWidth = await page.evaluate(() => document.body.scrollWidth);
     const viewportWidth = 375;
     
-    expect(bodyWidth).toBeLessThanOrEqual(viewportWidth + 1); // +1 for rounding
+    expect(bodyWidth).toBeLessThanOrEqual(viewportWidth + 1);
   });
 
-  test('should stack elements vertically', async ({ page }) => {
+  test('should stack elements vertically', async ({ authenticatedPage: page }) => {
     await page.fill('[data-testid="chat-input"]', 'Mobile test message');
     await page.click('[data-testid="mobile-submit-button"]');
 
     const userMessage = page.locator('[data-testid="user-message"]').last();
     await expect(userMessage).toBeVisible();
 
-    // Message should take full width (minus padding)
     const messageBox = await userMessage.boundingBox();
     expect(messageBox).toBeTruthy();
     if (messageBox) {
-      expect(messageBox.width).toBeGreaterThan(300); // Most of 375px width
+      expect(messageBox.width).toBeGreaterThan(300);
     }
   });
 });
@@ -193,12 +169,7 @@ test.describe('Responsive design - Mobile', () => {
 test.describe('Responsive design - Small Mobile', () => {
   test.use({ viewport: { width: 320, height: 568 } }); // iPhone 5/SE
 
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-  });
-
-  test('should work on very small screens', async ({ page }) => {
-    // Verify basic functionality works
+  test('should work on very small screens', async ({ authenticatedPage: page }) => {
     const chatInput = page.locator('[data-testid="chat-input"]');
     await expect(chatInput).toBeVisible();
 
@@ -208,14 +179,13 @@ test.describe('Responsive design - Small Mobile', () => {
     await expect(submitButton).toBeEnabled();
   });
 
-  test('should not have text overflow', async ({ page }) => {
+  test('should not have text overflow', async ({ authenticatedPage: page }) => {
     await page.fill('[data-testid="chat-input"]', 'This is a longer message to test text wrapping on very small mobile screens');
     await page.click('[data-testid="mobile-submit-button"]');
 
     const userMessage = page.locator('[data-testid="user-message"]').last();
     await expect(userMessage).toBeVisible();
 
-    // Check that text wraps and doesn't overflow
     const messageBox = await userMessage.boundingBox();
     expect(messageBox).toBeTruthy();
     if (messageBox) {
@@ -227,12 +197,7 @@ test.describe('Responsive design - Small Mobile', () => {
 test.describe('Responsive design - Large Desktop', () => {
   test.use({ viewport: { width: 2560, height: 1440 } }); // 2K display
 
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-  });
-
-  test('should utilize large screen space', async ({ page }) => {
-    // Check that layout expands to use available space
+  test('should utilize large screen space', async ({ authenticatedPage: page }) => {
     const mainContainer = page.locator('[data-testid="main-container"]');
     const containerBox = await mainContainer.boundingBox();
     
@@ -242,36 +207,30 @@ test.describe('Responsive design - Large Desktop', () => {
     }
   });
 
-  test('should maintain readable line lengths', async ({ page }) => {
+  test('should maintain readable line lengths', async ({ authenticatedPage: page }) => {
     await page.fill('[data-testid="chat-input"]', 'Test message on large display');
     await page.click('[data-testid="chat-submit"]');
 
     const botMessage = page.locator('[data-testid="bot-message"]').last();
     await expect(botMessage).toBeVisible({ timeout: 15000 });
 
-    // Text should not span the entire width (max-width should be applied)
     const messageBox = await botMessage.boundingBox();
     expect(messageBox).toBeTruthy();
     if (messageBox) {
-      // Content should have a reasonable max-width for readability
       expect(messageBox.width).toBeLessThan(1200);
     }
   });
 });
 
 test.describe('Responsive design - Orientation changes', () => {
-  test('should handle portrait to landscape transition', async ({ page }) => {
-    // Start in portrait
+  test('should handle portrait to landscape transition', async ({ authenticatedPage: page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto('/');
     
     const chatInput = page.locator('[data-testid="chat-input"]');
     await expect(chatInput).toBeVisible();
 
-    // Switch to landscape
     await page.setViewportSize({ width: 667, height: 375 });
     
-    // UI should still be functional
     await expect(chatInput).toBeVisible();
     await chatInput.fill('Orientation test');
     
@@ -279,18 +238,14 @@ test.describe('Responsive design - Orientation changes', () => {
     await expect(submitButton).toBeEnabled();
   });
 
-  test('should handle landscape to portrait transition', async ({ page }) => {
-    // Start in landscape
+  test('should handle landscape to portrait transition', async ({ authenticatedPage: page }) => {
     await page.setViewportSize({ width: 667, height: 375 });
-    await page.goto('/');
     
     await page.fill('[data-testid="chat-input"]', 'Landscape message');
     await page.click('[data-testid="mobile-submit-button"]');
 
-    // Switch to portrait
     await page.setViewportSize({ width: 375, height: 667 });
     
-    // Message should still be visible
     const userMessage = page.locator('[data-testid="user-message"]').last();
     await expect(userMessage).toBeVisible();
   });
