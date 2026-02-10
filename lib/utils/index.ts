@@ -128,10 +128,24 @@ export async function getModel(requireVision: boolean = false) {
 
 export function getEmbeddingModel() {
   const openaiApiKey = process.env.OPENAI_API_KEY;
+  const xaiApiKey = process.env.XAI_API_KEY;
+  const xaiEmbeddingModel = process.env.XAI_EMBEDDING_MODEL;
+
+  // Use xAI if both key and model are explicitly provided
+  if (xaiApiKey && xaiEmbeddingModel) {
+    const xai = createOpenAI({
+      apiKey: xaiApiKey,
+      baseURL: 'https://api.x.ai/v1',
+    });
+    return xai.embedding(xaiEmbeddingModel);
+  }
+
+  // Fallback to OpenAI text-embedding-3-small
   if (!openaiApiKey) {
-    console.warn('OPENAI_API_KEY is not set. Embedding functionality will be unavailable.');
+    console.warn('Neither XAI_EMBEDDING_MODEL nor OPENAI_API_KEY is set. Embedding functionality will be unavailable.');
     return null;
   }
+
   const openai = createOpenAI({
     apiKey: openaiApiKey,
   });
