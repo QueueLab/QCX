@@ -109,7 +109,7 @@ export function Chat({ id }: ChatProps) {
     const tourCompleted = localStorage.getItem('qcx_onboarding_v1')
     if (!tourCompleted && messages.length === 0) {
       const timer = setTimeout(() => {
-        startTour(isMobile)
+        console.log("Starting onboarding tour..."); startTour(isMobile)
       }, 5000)
       return () => clearTimeout(timer)
     }

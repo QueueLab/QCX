@@ -1,11 +1,18 @@
 'use client'
 
 import { driver, DriveStep } from "driver.js"
-import "driver.js/dist/driver.css"
 
 export const useOnboardingTour = () => {
   const startTour = (isMobile: boolean) => {
+    const commonWelcome: DriveStep = {
+      popover: {
+        title: 'Welcome to QCX!',
+        description: 'Let us take you on a quick tour of the features available to help you explore the planet.',
+      }
+    };
+
     const desktopSteps: DriveStep[] = [
+      commonWelcome,
       {
         element: '[data-testid="chat-input"]',
         popover: {
@@ -87,6 +94,7 @@ export const useOnboardingTour = () => {
     ];
 
     const mobileSteps: DriveStep[] = [
+      commonWelcome,
       {
         element: '[data-testid="chat-input"]',
         popover: {

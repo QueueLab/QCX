@@ -165,3 +165,5 @@ https://nextjs.org/telemetry
 }
  GET / 500 in 1985ms (compile: 560ms, proxy.ts: 5ms, render: 1420ms)
 ✓ Compiled in 257ms
+✓ Compiled in 9.4s
+✓ Finished writing to filesystem cache in 11.1s
