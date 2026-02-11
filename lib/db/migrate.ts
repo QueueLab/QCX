@@ -13,7 +13,7 @@ async function runMigrations() {
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: {
-      rejectUnauthorized: false, // Ensure this is appropriate for your Supabase connection
+      rejectUnauthorized: connectionString.includes("supabase.co") ? true : false, // Ensure this is appropriate for your Supabase connection
     },
     // max: 1, // Optional: restrict to 1 connection for migration
   });

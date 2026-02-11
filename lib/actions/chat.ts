@@ -16,7 +16,7 @@ import {
   getSharedChat as supabaseGetSharedChat,
 } from '@/lib/supabase/persistence'
 import { getSupabaseServerClient } from '../supabase/client'
-import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
+import { getCurrentUserIdOnServer, getSupabaseUserAndSessionOnServer } from '@/lib/auth/get-current-user'
 import {
   getChat as dbGetChat,
   getChatsPage as dbGetChatsPage,
@@ -34,6 +34,7 @@ import { users, chats } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { embedMany } from 'ai'
 import { getEmbeddingModel } from '@/lib/utils'
+import { ensureUserExists } from './users'
 
 // Using Drizzle versions by default as per main's direction
 export async function getChats(userId?: string | null): Promise<Chat[]> {
@@ -129,6 +130,9 @@ export async function saveChat(chat: Chat, userId: string): Promise<string | nul
   }
   const effectiveUserId = userId || chat.userId
 
+  // Ensure user exists in our DB before saving anything referencing it
+  await ensureUserExists(effectiveUserId)
+
   const newChatData: DbNewChat = {
     id: chat.id,
     userId: effectiveUserId,
@@ -147,15 +151,11 @@ export async function saveChat(chat: Chat, userId: string): Promise<string | nul
     createdAt: msg.createdAt ? new Date(msg.createdAt) : new Date(),
   }));
 
-  // Attempt to generate embeddings for user and assistant messages if they don't have them
-  // For simplicity and to avoid excessive API calls, we'll only do this if the chat is being updated
-  // with a new response.
   const embeddingModel = getEmbeddingModel();
   const processedMessages: DbNewMessage[] = [];
 
   if (embeddingModel) {
     try {
-      // Filter messages that should have embeddings (user and assistant)
       const messagesNeedingEmbeddings = messagesToProcess.filter(m =>
         (m.role === 'user' || m.role === 'assistant') && m.content && m.content.length > 0
       );
@@ -166,7 +166,6 @@ export async function saveChat(chat: Chat, userId: string): Promise<string | nul
           values: messagesNeedingEmbeddings.map(m => m.content as string),
         });
 
-        // Map embeddings back to messages
         messagesToProcess.forEach(m => {
           const index = messagesNeedingEmbeddings.findIndex(nm => nm.id === m.id);
           processedMessages.push({
@@ -182,7 +181,6 @@ export async function saveChat(chat: Chat, userId: string): Promise<string | nul
       }
     } catch (error) {
       console.error('Error generating embeddings during saveChat:', error);
-      // Fallback to saving without embeddings
       messagesToProcess.forEach(m => {
         processedMessages.push({ ...m, chatId: chat.id, embedding: null });
       });
@@ -271,7 +269,6 @@ export async function shareChat(id: string): Promise<Chat | null> {
     const userId = await getCurrentUserIdOnServer();
     if (!userId) return null;
 
-    // Check if the user is the owner
     const chat = await dbGetChat(id, userId);
     if (!chat || chat.userId !== userId) {
       console.error('shareChat: Only owners can share chats');

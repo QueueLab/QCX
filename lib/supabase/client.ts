@@ -3,11 +3,18 @@ import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 
 export function getSupabaseServerClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return null
+  }
+
   const cookieStore = cookies()
 
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         async get(name: string) {
@@ -33,10 +40,9 @@ export function getSupabaseServiceClient() {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
   if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error(
-      'Missing required environment variables: NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY. ' +
-      'Service client cannot be created without these credentials.'
-    )
+    // Return null instead of throwing to avoid crashing if only using DB
+    console.warn('getSupabaseServiceClient: Missing credentials.')
+    return null
   }
 
   return createClient(

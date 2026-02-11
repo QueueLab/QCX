@@ -2,32 +2,13 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 
 export async function middleware(request: NextRequest) {
-  // 1. Normalize 'origin' and 'x-forwarded-host' to avoid "Invalid Server Actions request"
-  const xForwardedHost = request.headers.get("x-forwarded-host")
-  const originHeader = request.headers.get("origin")
-  let originHost: string | null = null
-  if (originHeader) {
-    try {
-      originHost = originHeader.startsWith("http")
-        ? new URL(originHeader).host
-        : originHeader
-    } catch {
-      originHost = originHeader
-    }
-  }
-
   let response = NextResponse.next({
     request: {
       headers: request.headers,
     },
   })
 
-  if (xForwardedHost && originHost && xForwardedHost !== originHost) {
-    response.headers.delete("x-forwarded-host")
-  }
-
-  // 2. Supabase Session Refresh
-  // Note: We only do this if we have the environment variables
+  // 1. Supabase Session Refresh
   if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -81,6 +62,25 @@ export async function middleware(request: NextRequest) {
         !request.nextUrl.pathname.startsWith('/images')) {
       await supabase.auth.getUser()
     }
+  }
+
+  // 2. Normalize 'origin' and 'x-forwarded-host' to avoid "Invalid Server Actions request"
+  // Apply this to the FINAL response we return
+  const xForwardedHost = request.headers.get("x-forwarded-host")
+  const originHeader = request.headers.get("origin")
+  let originHost: string | null = null
+  if (originHeader) {
+    try {
+      originHost = originHeader.startsWith("http")
+        ? new URL(originHeader).host
+        : originHeader
+    } catch {
+      originHost = originHeader
+    }
+  }
+
+  if (xForwardedHost && originHost && xForwardedHost !== originHost) {
+    response.headers.delete("x-forwarded-host")
   }
 
   return response
