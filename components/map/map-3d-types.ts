@@ -38,6 +38,7 @@ declare global {
 export interface Map3DProps extends google.maps.maps3d.Map3DElementOptions {
   style?: CSSProperties;
   onCameraChange?: (e: Map3DCameraChangeEvent) => void;
+  onMapReady?: () => void;
   cameraOptions?: {
     center?: { lat: number; lng: number };
     heading?: number;

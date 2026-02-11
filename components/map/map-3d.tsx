@@ -48,7 +48,13 @@ export const Map3D = forwardRef(
       props.onCameraChange(p);
     });
 
-    const {center, heading, tilt, range, roll, cameraOptions, ...map3dOptions} = props;
+    const {center, heading, tilt, range, roll, cameraOptions, onMapReady, ...map3dOptions} = props;
+
+    useEffect(() => {
+      if (map3DElement && onMapReady) {
+        onMapReady();
+      }
+    }, [map3DElement, onMapReady]);
 
     useDeepCompareEffect(() => {
       if (!map3DElement) return;
