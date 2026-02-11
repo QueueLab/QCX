@@ -25,15 +25,18 @@ export async function generateMetadata({ params }: SearchPageProps) {
 export default async function SearchPage({ params }: SearchPageProps) {
   const { id } = await params;
   const { user } = await getSupabaseUserAndSessionOnServer();
+  const guestChatEnabled = process.env.ENABLE_GUEST_CHAT === 'true';
 
-  if (!user) {
+  if (!user && !guestChatEnabled) {
     redirect('/');
   }
 
-  // Ensure user exists
-  await ensureUserExists(user.id, user.email);
+  // Ensure user exists if authenticated
+  if (user) {
+    await ensureUserExists(user.id, user.email);
+  }
 
-  const chat = await getChat(id, user.id);
+  const chat = await getChat(id, user?.id);
 
   if (!chat) {
     notFound();

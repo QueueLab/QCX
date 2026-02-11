@@ -400,9 +400,10 @@ async function submit(formData?: FormData, skip?: boolean) {
   }
 
   const userId = await getCurrentUserIdOnServer()
-  if (!userId) throw new Error('Unauthorized')
+  const guestChatEnabled = process.env.ENABLE_GUEST_CHAT === 'true';
+  if (!userId && !guestChatEnabled) throw new Error('Unauthorized')
   const userInputAction = formData?.get('input') as string;
-  const currentSystemPrompt = (await getSystemPrompt(userId)) || '';
+  const currentSystemPrompt = (userId ? (await getSystemPrompt(userId)) : '') || '';
   const retrievedContext = userInputAction ? await retrieveContext(userInput, aiState.get().chatId) : [];
   const augmentedSystemPrompt = retrievedContext.length > 0 ? `Context: ${retrievedContext.join('\n')}\n${currentSystemPrompt}` : currentSystemPrompt;
   const mapProvider = formData?.get('mapProvider') as 'mapbox' | 'google'
