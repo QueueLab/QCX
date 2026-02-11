@@ -107,15 +107,23 @@ export function Chat({ id }: ChatProps) {
   // Automatic onboarding tour trigger
   useEffect(() => {
     // Only trigger on the main landing page (no id) and when there are no messages
-    if (id) return
+    if (id || messages.length > 0) return
 
-    const tourCompleted = localStorage.getItem('qcx_onboarding_v1')
-    if (!tourCompleted && messages.length === 0) {
-      const timer = setTimeout(() => {
-        console.log("Starting onboarding tour...")
-        startTour(isMobile)
-      }, 3000)
-      return () => clearTimeout(timer)
+    let timer: ReturnType<typeof setTimeout>
+    try {
+      const tourCompleted = localStorage.getItem('qcx_onboarding_v1')
+      if (!tourCompleted) {
+        timer = setTimeout(() => {
+          console.log("Starting onboarding tour...")
+          startTour(isMobile)
+        }, 5000) // Increased delay to ensure components are mounted
+      }
+    } catch (e) {
+      console.error("LocalStorage access failed", e)
+    }
+
+    return () => {
+      if (timer) clearTimeout(timer)
     }
   }, [id, isMobile, startTour, messages.length])
 

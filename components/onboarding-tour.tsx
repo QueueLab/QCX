@@ -1,10 +1,11 @@
 'use client'
 
+import { useCallback } from 'react'
 import { driver, DriveStep } from "driver.js"
 import "driver.js/dist/driver.css"
 
 export const useOnboardingTour = () => {
-  const startTour = (isMobile: boolean) => {
+  const startTour = useCallback((isMobile: boolean) => {
     const commonWelcome: DriveStep = {
       popover: {
         title: 'Welcome to QCX!',
@@ -200,12 +201,11 @@ export const useOnboardingTour = () => {
       steps: isMobile ? mobileSteps : desktopSteps,
       onDestroyStarted: () => {
         localStorage.setItem('qcx_onboarding_v1', 'true');
-        driverObj.destroy();
       }
     });
 
     driverObj.drive();
-  };
+  }, []);
 
   return { startTour };
 };
