@@ -25,6 +25,9 @@ export async function retrieveContext(
     }
 
     const supabase = getSupabaseServerClient()
+    if (!supabase) {
+      return []
+    }
 
     // 1. Generate embedding for the query using AI SDK
     const { embedding } = await embed({

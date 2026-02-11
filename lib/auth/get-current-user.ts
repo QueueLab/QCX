@@ -33,6 +33,10 @@ export async function getSupabaseUserAndSessionOnServer(): Promise<{
 
   try {
     const supabase = getSupabaseServerClient();
+    if (!supabase) {
+       return { user: null, session: null, error: null };
+    }
+
     const {
       data: { user },
       error,

@@ -2,18 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
-import { getSupabaseServerClient } from '@/lib/supabase/client';
 import { TIER_CONFIGS, TIERS, parseTier } from '@/lib/utils/subscription';
+import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user';
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = getSupabaseServerClient();
-    const {
-      data: { user },
-      error: userError
-    } = await supabase.auth.getUser();
+    const userId = await getCurrentUserIdOnServer();
 
-    if (userError || !user) {
+    if (!userId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -41,7 +37,7 @@ export async function POST(req: NextRequest) {
 
     // Get current user from database
     const currentUser = await db.query.users.findFirst({
-      where: eq(users.id, user.id)
+      where: eq(users.id, userId)
     });
 
     if (!currentUser) {
@@ -62,7 +58,7 @@ export async function POST(req: NextRequest) {
         tier: tier,
         credits: newCreditsTotal
       })
-      .where(eq(users.id, user.id))
+      .where(eq(users.id, userId))
       .returning();
 
     return NextResponse.json({

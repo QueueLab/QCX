@@ -22,14 +22,13 @@ export const AUTH_CONFIG = {
 
 /**
  * Send magic link to email
- * Replace with your actual implementation:
- * - Supabase: supabase.auth.signInWithOtp({ email })
- * - NextAuth: signIn("email", { email })
- * - Custom: POST to your magic link endpoint
  */
 export async function sendMagicLink(email: string): Promise<MagicLinkResponse> {
   try {
-    const { error } = await getSupabase().auth.signInWithOtp({
+    const supabase = getSupabase()
+    if (!supabase) return { success: false, message: "Auth not configured" }
+
+    const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
         emailRedirectTo: `${window.location.origin}/auth/callback`,
@@ -57,14 +56,13 @@ export async function sendMagicLink(email: string): Promise<MagicLinkResponse> {
 
 /**
  * Initiate Google OAuth flow
- * Replace with your actual implementation:
- * - Supabase: supabase.auth.signInWithOAuth({ provider: 'google' })
- * - NextAuth: signIn("google")
- * - Custom: Redirect to your OAuth endpoint
  */
 export async function signInWithGoogle(): Promise<OAuthResponse> {
   try {
-    const { error } = await getSupabase().auth.signInWithOAuth({
+    const supabase = getSupabase()
+    if (!supabase) return { success: false, error: { code: "CONFIG_ERROR", message: "Auth not configured" } }
+
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
@@ -99,11 +97,13 @@ export async function signInWithGoogle(): Promise<OAuthResponse> {
 
 /**
  * Initiate GitHub OAuth flow
- * Replace with your actual implementation
  */
 export async function signInWithGitHub(): Promise<OAuthResponse> {
   try {
-    const { error } = await getSupabase().auth.signInWithOAuth({
+    const supabase = getSupabase()
+    if (!supabase) return { success: false, error: { code: "CONFIG_ERROR", message: "Auth not configured" } }
+
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: "github",
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
@@ -134,14 +134,13 @@ export async function signInWithGitHub(): Promise<OAuthResponse> {
 
 /**
  * Get current user session
- * Replace with your actual implementation:
- * - Supabase: supabase.auth.getUser()
- * - NextAuth: getSession()
- * - Custom: Fetch from your session endpoint
  */
 export async function getCurrentUser(): Promise<User | null> {
   try {
-    const { data: { user } } = await getSupabase().auth.getUser()
+    const supabase = getSupabase()
+    if (!supabase) return null
+
+    const { data: { user } } = await supabase.auth.getUser()
     if (!user) return null
     
     return {
@@ -160,11 +159,13 @@ export async function getCurrentUser(): Promise<User | null> {
 
 /**
  * Sign out the current user
- * Replace with your actual implementation
  */
 export async function signOut(): Promise<void> {
   try {
-    await getSupabase().auth.signOut()
+    const supabase = getSupabase()
+    if (supabase) {
+      await supabase.auth.signOut()
+    }
     window.location.href = "/"
   } catch (error) {
     console.error("Sign out failed:", error)

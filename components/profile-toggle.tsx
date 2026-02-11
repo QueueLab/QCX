@@ -46,7 +46,7 @@ export function ProfileToggle() {
   }
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut()
+    await supabase?.auth.signOut()
     router.refresh()
     router.push('/auth')
   }
