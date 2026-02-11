@@ -146,7 +146,7 @@ export const Copilot: React.FC<CopilotProps> = ({ inquiry }: CopilotProps) => {
                   }
                 />
                 <label
-                  className="text-sm whitespace-nowrap pr-4"
+                  className="text-sm pr-4"
                   htmlFor={option?.value}
                 >
                   {option?.label}
