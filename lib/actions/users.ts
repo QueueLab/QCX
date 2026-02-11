@@ -209,3 +209,27 @@ export async function searchUsers(query: string) {
     return [];
   }
 }
+
+/**
+ * Ensures a user exists in the public.users table.
+ * Useful for anonymous mode or syncing auth users on first access.
+ */
+export async function ensureUserExists(userId: string, email?: string) {
+  try {
+    const [existing] = await db.select({ id: users.id })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!existing) {
+      console.log(`[UserAction] Creating user record for ${userId}`);
+      await db.insert(users).values({
+        id: userId,
+        email: email || 'anonymous@example.com',
+        role: 'viewer',
+      }).onConflictDoNothing();
+    }
+  } catch (error) {
+    console.error('[Action: ensureUserExists] Error:', error);
+  }
+}

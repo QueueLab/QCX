@@ -6,6 +6,7 @@ import { PostgrestError } from '@supabase/supabase-js'
 
 export async function saveChat(chat: Chat, userId: string): Promise<{ data: string | null; error: PostgrestError | null }> {
   const supabase = getSupabaseServerClient()
+  if (!supabase) return { data: null, error: null }
   
   const { data: chatData, error: chatError } = await supabase
     .from('chats')
@@ -56,6 +57,8 @@ export async function saveChat(chat: Chat, userId: string): Promise<{ data: stri
 
 export async function getMessagesByChatId(chatId: string): Promise<{ data: any[] | null; error: PostgrestError | null }> {
   const supabase = getSupabaseServerClient()
+  if (!supabase) return { data: null, error: null }
+
   const { data, error } = await supabase
     .from('messages')
     .select('*, locations(*)')
@@ -72,6 +75,8 @@ export async function getMessagesByChatId(chatId: string): Promise<{ data: any[]
 
 export async function saveSystemPrompt(userId: string, prompt: string): Promise<{ error: PostgrestError | null }> {
   const supabase = getSupabaseServerClient()
+  if (!supabase) return { error: null }
+
   const { error } = await supabase
     .from('system_prompts')
     .upsert({ user_id: userId, prompt: prompt, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
@@ -85,6 +90,8 @@ export async function saveSystemPrompt(userId: string, prompt: string): Promise<
 
 export async function getSystemPrompt(userId: string): Promise<{ data: string | null; error: PostgrestError | null }> {
   const supabase = getSupabaseServerClient()
+  if (!supabase) return { data: null, error: null }
+
   const { data, error } = await supabase
     .from('system_prompts')
     .select('prompt')
@@ -106,6 +113,8 @@ export async function saveDrawing(
   name?: string
 ): Promise<{ data: { id: string } | null; error: PostgrestError | null }> {
   const supabase = getSupabaseServerClient()
+  if (!supabase) return { data: null, error: null }
+
   const { data, error } = await supabase
     .from('locations')
     .insert({
@@ -133,6 +142,8 @@ export async function createMessage(messageData: {
     location_id?: string
 }): Promise<{ data: AIMessage | null; error: PostgrestError | null }> {
     const supabase = getSupabaseServerClient()
+    if (!supabase) return { data: null, error: null }
+
     const { data, error } = await supabase.from('messages').insert(messageData).select().single();
     if (error) {
         console.error('Error creating message:', error);
@@ -142,6 +153,7 @@ export async function createMessage(messageData: {
 
 export async function getChat(id: string, userId: string): Promise<{ data: Chat | null; error: PostgrestError | null }> {
   const supabase = getSupabaseServerClient()
+  if (!supabase) return { data: null, error: null }
 
   const { data, error } = await supabase
     .from('chats')
@@ -167,6 +179,7 @@ export async function getChat(id: string, userId: string): Promise<{ data: Chat 
 
 export async function getChats(userId: string): Promise<{ data: Chat[] | null; error: PostgrestError | null }> {
   const supabase = getSupabaseServerClient()
+  if (!supabase) return { data: null, error: null }
 
   // Get chats where user is participant
   const { data, error } = await supabase
@@ -185,6 +198,8 @@ export async function getChats(userId: string): Promise<{ data: Chat[] | null; e
 
 export async function clearChats(userId: string): Promise<{ error: PostgrestError | null }> {
   const supabase = getSupabaseServerClient()
+  if (!supabase) return { error: null }
+
   const { error } = await supabase
     .from('chats')
     .delete()
@@ -199,6 +214,8 @@ export async function clearChats(userId: string): Promise<{ error: PostgrestErro
 
 export async function getSharedChat(id: string): Promise<{ data: Chat | null; error: PostgrestError | null }> {
   const supabase = getSupabaseServerClient()
+  if (!supabase) return { data: null, error: null }
+
   const { data, error } = await supabase
     .from('chats')
     .select('*, messages(*)')

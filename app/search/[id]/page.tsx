@@ -3,7 +3,8 @@ import { Chat } from '@/components/chat';
 import { getChat, getChatMessages } from '@/lib/actions/chat';
 import { AI } from '@/app/actions';
 import { MapDataProvider } from '@/components/map/map-data-context';
-import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user';
+import { getSupabaseUserAndSessionOnServer } from '@/lib/auth/get-current-user';
+import { ensureUserExists } from '@/lib/actions/users';
 import type { AIMessage } from '@/lib/types';
 
 export const maxDuration = 60;
@@ -14,8 +15,8 @@ export interface SearchPageProps {
 
 export async function generateMetadata({ params }: SearchPageProps) {
   const { id } = await params;
-  const userId = await getCurrentUserIdOnServer();
-  const chat = await getChat(id, userId);
+  const { user } = await getSupabaseUserAndSessionOnServer();
+  const chat = await getChat(id, user?.id);
   return {
     title: chat?.title?.toString().slice(0, 50) || 'Search',
   };
@@ -23,13 +24,19 @@ export async function generateMetadata({ params }: SearchPageProps) {
 
 export default async function SearchPage({ params }: SearchPageProps) {
   const { id } = await params;
-  const userId = await getCurrentUserIdOnServer();
+  const { user } = await getSupabaseUserAndSessionOnServer();
+  const guestChatEnabled = process.env.ENABLE_GUEST_CHAT === 'true';
 
-  if (!userId) {
+  if (!user && !guestChatEnabled) {
     redirect('/');
   }
 
-  const chat = await getChat(id, userId);
+  // Ensure user exists if authenticated
+  if (user) {
+    await ensureUserExists(user.id, user.email);
+  }
+
+  const chat = await getChat(id, user?.id);
 
   if (!chat) {
     notFound();

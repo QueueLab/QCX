@@ -7,8 +7,9 @@ export const maxDuration = 60
 export async function POST(req: Request) {
   const { messages } = await req.json()
   const userId = await getCurrentUserIdOnServer()
+  const guestChatEnabled = process.env.ENABLE_GUEST_CHAT === 'true'
 
-  if (!userId) {
+  if (!userId && !guestChatEnabled) {
     return new Response('Unauthorized', { status: 401 })
   }
 

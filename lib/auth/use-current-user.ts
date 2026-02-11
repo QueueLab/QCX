@@ -5,13 +5,26 @@ import type { User } from '@supabase/supabase-js';
 export function useCurrentUser() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const supabase = getSupabaseBrowserClient();
 
   useEffect(() => {
+    const supabase = getSupabaseBrowserClient();
+
+    // If auth is disabled or Supabase not configured, we might want to return a mock user
+    // However, the server side is the source of truth for "authenticated" status
+    // For the UI, we'll just set loading to false if no supabase client
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
+
     async function fetchUser() {
-      const { data, error } = await supabase.auth.getUser();
-      if (data?.user) {
-        setUser(data.user);
+      try {
+        const { data, error } = await supabase!.auth.getUser();
+        if (data?.user) {
+          setUser(data.user);
+        }
+      } catch (e) {
+        console.warn('[Auth] useCurrentUser: Failed to fetch user', e);
       }
       setLoading(false);
     }

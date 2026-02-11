@@ -8,7 +8,7 @@ export async function inviteUserToChat(chatId: string, email: string, role: 'own
     const supabase = getSupabaseServerClient()
     const inviterId = await getCurrentUserIdOnServer()
 
-    if (!inviterId) {
+    if (!inviterId || !supabase) {
       return { error: 'You must be logged in to invite users.' }
     }
 
@@ -31,6 +31,9 @@ export async function inviteUserToChat(chatId: string, email: string, role: 'own
 
     // Get the user ID of the person being invited using admin client
     const adminClient = getSupabaseServiceClient()
+    if (!adminClient) {
+      return { error: 'Auth system not configured.' }
+    }
     const { data: { users }, error: userError } = await adminClient.auth.admin.listUsers()
     
     if (userError) {
