@@ -106,14 +106,18 @@ export function Chat({ id }: ChatProps) {
 
   // Automatic onboarding tour trigger
   useEffect(() => {
+    // Only trigger on the main landing page (no id) and when there are no messages
+    if (id) return
+
     const tourCompleted = localStorage.getItem('qcx_onboarding_v1')
     if (!tourCompleted && messages.length === 0) {
       const timer = setTimeout(() => {
-        console.log("Starting onboarding tour..."); startTour(isMobile)
-      }, 5000)
+        console.log("Starting onboarding tour...")
+        startTour(isMobile)
+      }, 3000)
       return () => clearTimeout(timer)
     }
-  }, [isMobile, startTour, messages.length])
+  }, [id, isMobile, startTour, messages.length])
 
   const renderSuggestions = () => {
     if (suggestions) {

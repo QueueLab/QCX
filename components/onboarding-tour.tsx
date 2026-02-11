@@ -1,6 +1,7 @@
 'use client'
 
 import { driver, DriveStep } from "driver.js"
+import "driver.js/dist/driver.css"
 
 export const useOnboardingTour = () => {
   const startTour = (isMobile: boolean) => {

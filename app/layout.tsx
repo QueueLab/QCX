@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter as FontSans, Poppins } from 'next/font/google'
 import './globals.css'
-import "driver.js/dist/driver.css"
 import 'katex/dist/katex.min.css';
 import { cn } from '@/lib/utils'
 import { ThemeProvider } from '@/components/theme-provider'
