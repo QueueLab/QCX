@@ -20,6 +20,7 @@ import { UsageView } from "@/components/usage-view";
 import { MapDataProvider, useMapData } from './map/map-data-context';
 import { updateDrawingContext } from '@/lib/actions/chat';
 import { HeaderSearchButton } from './header-search-button'
+import { useOnboardingTour } from './onboarding-tour'
 
 type ChatProps = {
   id?: string // This is the chatId
@@ -39,6 +40,7 @@ export function Chat({ id }: ChatProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [suggestions, setSuggestions] = useState<PartialRelated | null>(null)
   const chatPanelRef = useRef<ChatPanelRef>(null);
+  const { startTour } = useOnboardingTour()
 
   const handleAttachment = () => {
     chatPanelRef.current?.handleAttachmentClick();
@@ -101,6 +103,29 @@ export function Chat({ id }: ChatProps) {
       });
     }
   }, [id, mapData.drawnFeatures, mapData.cameraState]);
+
+  // Automatic onboarding tour trigger
+  useEffect(() => {
+    // Only trigger on the main landing page (no id) and when there are no messages
+    if (id || messages.length > 0) return
+
+    let timer: ReturnType<typeof setTimeout>
+    try {
+      const tourCompleted = localStorage.getItem('qcx_onboarding_v1')
+      if (!tourCompleted) {
+        timer = setTimeout(() => {
+          console.log("Starting onboarding tour...")
+          startTour(isMobile)
+        }, 5000) // Increased delay to ensure components are mounted
+      }
+    } catch (e) {
+      console.error("LocalStorage access failed", e)
+    }
+
+    return () => {
+      if (timer) clearTimeout(timer)
+    }
+  }, [id, isMobile, startTour, messages.length])
 
   const renderSuggestions = () => {
     if (suggestions) {

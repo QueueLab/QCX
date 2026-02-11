@@ -12,22 +12,23 @@ import {
   Map,
   CalendarDays,
   TentTree,
-  ChevronRight
+  ChevronRight,
+  HelpCircle
 } from 'lucide-react'
 import { MapToggle } from './map-toggle'
 import { ProfileToggle } from './profile-toggle'
-import { PurchaseCreditsPopup } from './credits/purchase-credits-popup'
 import { useUsageToggle } from './usage-toggle-context'
 import { useProfileToggle } from './profile-toggle-context'
 import { useHistoryToggle } from './history-toggle-context'
+import { useOnboardingTour } from './onboarding-tour'
 import { useState, useEffect } from 'react'
 
 export const Header = () => {
   const { toggleCalendar } = useCalendarToggle()
-  const [isPurchaseOpen, setIsPurchaseOpen] = useState(false)
   const { toggleUsage, isUsageOpen } = useUsageToggle()
   const { activeView, closeProfileView } = useProfileToggle()
   const { toggleHistory } = useHistoryToggle()
+  const { startTour } = useOnboardingTour()
 
   const handleUsageToggle = () => {
     if (!isUsageOpen && activeView) {
@@ -36,13 +37,12 @@ export const Header = () => {
     toggleUsage()
   }
 
-  useEffect(() => {
-    setIsPurchaseOpen(true)
-  }, [])
+  const handleStartTour = () => {
+    const isMobile = window.innerWidth < 768
+    startTour(isMobile)
+  }
 
   return (
-    <>
-      <PurchaseCreditsPopup />
     <header className="fixed w-full p-1 md:p-2 flex justify-between items-center z-[60] backdrop-blur bg-background/95 border-b border-border/40">
       <div className="flex-1 hidden md:flex justify-start gap-10 items-center z-10 pl-4">
         <ProfileToggle/>
@@ -50,11 +50,14 @@ export const Header = () => {
         <Button variant="ghost" size="icon" onClick={toggleCalendar} title="Open Calendar" data-testid="calendar-toggle">
           <CalendarDays className="h-[1.2rem] w-[1.2rem]" />
         </Button>
-        <div id="header-search-portal" className="contents" />
-        <Button variant="ghost" size="icon" onClick={handleUsageToggle}>
+        <div id="header-search-portal" className="contents" data-testid="header-search-portal" />
+        <Button variant="ghost" size="icon" onClick={handleUsageToggle} data-testid="usage-toggle">
           <TentTree className="h-[1.2rem] w-[1.2rem]" />
         </Button>
         <ModeToggle />
+        <Button variant="ghost" size="icon" onClick={handleStartTour} title="Help Tour" data-testid="help-tour">
+          <HelpCircle className="h-[1.2rem] w-[1.2rem]" />
+        </Button>
         <HistoryContainer location="header" />
       </div>
 
@@ -78,13 +81,12 @@ export const Header = () => {
 
       {/* Mobile menu buttons (left side for mobile since logo is right) */}
       <div className="flex md:hidden gap-2">
-        <Button variant="ghost" size="icon" onClick={handleUsageToggle}>
+        <Button variant="ghost" size="icon" onClick={handleUsageToggle} data-testid="mobile-usage-button">
           <TentTree className="h-[1.2rem] w-[1.2rem]" />
         </Button>
         <ProfileToggle/>
       </div>
     </header>
-    </>
   )
 }
 
