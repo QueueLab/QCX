@@ -78,7 +78,7 @@ export default function RootLayout({
                 htmxEvents.forEach(event => {
                   const funcName = 'func ' + event;
                   if (typeof window[funcName] === 'undefined') {
-                    window[funcName] = function() { 
+                    window[funcName] = function() {
                       console.warn('HTMX event handler "' + funcName + '" was called but not defined. Providing safety fallback.');
                     };
                   }
