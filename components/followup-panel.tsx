@@ -8,6 +8,7 @@ import type { AI } from '@/app/actions'
 import { UserMessage } from './user-message'
 import { ArrowRight } from 'lucide-react'
 import { useMapData } from './map/map-data-context'
+import { nanoid } from '@/lib/utils'
 
 export function FollowupPanel() {
   const [input, setInput] = useState('')
@@ -17,10 +18,11 @@ export function FollowupPanel() {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    const formData = new FormData(event.currentTarget as HTMLFormElement)
+    const formData = new FormData()
+    formData.append("input", input)
 
     const userMessage = {
-      id: Date.now(),
+      id: nanoid(),
       isGenerating: false,
       component: <UserMessage content={input} />
     }
