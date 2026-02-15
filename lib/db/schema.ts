@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, jsonb, customType, unique } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, uuid, jsonb, customType, unique, index } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 // Custom type for PostGIS geometry
@@ -37,6 +37,10 @@ export const chats = pgTable('chats', {
   shareableLinkId: uuid('shareable_link_id').defaultRandom().unique(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => {
+  return {
+    userIdCreatedAtIdx: index('chats_user_id_created_at_idx').on(table.userId, table.createdAt),
+  }
 });
 
 export const locations = pgTable('locations', {
@@ -58,6 +62,10 @@ export const messages = pgTable('messages', {
   embedding: vector('embedding'),
   locationId: uuid('location_id').references(() => locations.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => {
+  return {
+    chatIdCreatedAtIdx: index('messages_chat_id_created_at_idx').on(table.chatId, table.createdAt),
+  }
 });
 
 export const chatParticipants = pgTable('chat_participants', {
@@ -100,6 +108,10 @@ export const calendarNotes = pgTable('calendar_notes', {
   mapFeatureId: text('map_feature_id'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => {
+  return {
+    userIdDateIdx: index('calendar_notes_user_id_date_idx').on(table.userId, table.date),
+  }
 });
 
 // Relations
