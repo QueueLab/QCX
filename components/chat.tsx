@@ -38,6 +38,7 @@ export function Chat({ id }: ChatProps) {
   const [input, setInput] = useState('')
   const [showEmptyScreen, setShowEmptyScreen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [triggerSubmit, setTriggerSubmit] = useState(0)
   const [suggestions, setSuggestions] = useState<PartialRelated | null>(null)
   const chatPanelRef = useRef<ChatPanelRef>(null);
 
@@ -86,10 +87,10 @@ export function Chat({ id }: ChatProps) {
   const { mapData } = useMapData();
 
   useEffect(() => {
-    if (isSubmitting && chatPanelRef.current) {
+    if (triggerSubmit > 0 && chatPanelRef.current) {
       chatPanelRef.current.submitForm()
     }
-  }, [isSubmitting])
+  }, [triggerSubmit])
 
   // useEffect to call the server action when drawnFeatures changes
   useEffect(() => {
@@ -112,7 +113,7 @@ export function Chat({ id }: ChatProps) {
             setInput(query)
             setSuggestions(null)
             // Use a small timeout to ensure state update before submission
-            setIsSubmitting(true)
+            setTriggerSubmit(prev => prev + 1)
           }}
           onClose={() => setSuggestions(null)}
           className="relative bottom-auto mb-0 w-full shadow-none border-none bg-transparent"
@@ -158,7 +159,7 @@ export function Chat({ id }: ChatProps) {
                   <EmptyScreen
                     submitMessage={message => {
                       setInput(message)
-                      setIsSubmitting(true)
+                      setTriggerSubmit(prev => prev + 1)
                     }}
                   />
                 ) : (
@@ -199,7 +200,7 @@ export function Chat({ id }: ChatProps) {
                   <EmptyScreen
                     submitMessage={message => {
                       setInput(message)
-                      setIsSubmitting(true)
+                      setTriggerSubmit(prev => prev + 1)
                     }}
                   />
                 ) : (

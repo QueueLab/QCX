@@ -46,6 +46,15 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const objectUrls = useRef<Set<string>>(new Set())
+
+  useEffect(() => {
+    const urls = objectUrls.current
+    return () => {
+      urls.forEach(url => URL.revokeObjectURL(url))
+      urls.clear()
+    }
+  }, [])
 
   useImperativeHandle(ref, () => ({
     handleAttachmentClick() {
@@ -96,22 +105,31 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
 
     setIsPending?.(true)
 
+    const userMessageId = nanoid()
+    const currentInput = input
+    const currentFile = selectedFile
+    const createdUrls: string[] = []
+
     try {
-      const content: ({ type: 'text'; text: string } | { type: 'image'; image: string })[] = []
+      const content: ({ type: 'text'; text: string } | { type: 'image'; image: string; isOptimistic?: boolean })[] = []
       if (input) {
         content.push({ type: 'text', text: input })
       }
       if (selectedFile && selectedFile.type.startsWith('image/')) {
+        const url = URL.createObjectURL(selectedFile)
+        createdUrls.push(url)
+        objectUrls.current.add(url)
         content.push({
           type: 'image',
-          image: URL.createObjectURL(selectedFile)
+          image: url,
+          isOptimistic: true
         })
       }
 
       setMessages(currentMessages => [
         ...currentMessages,
         {
-          id: nanoid(),
+          id: userMessageId,
           component: <UserMessage content={content} />
         }
       ])
@@ -129,6 +147,21 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
 
       const responseMessage = await submit(formData)
       setMessages(currentMessages => [...currentMessages, responseMessage as any])
+
+      // Revoke URLs after upload finishes
+      createdUrls.forEach(url => {
+        URL.revokeObjectURL(url)
+        objectUrls.current.delete(url)
+      })
+    } catch (error) {
+      console.error('Failed to submit message:', error)
+      setMessages(currentMessages => currentMessages.filter(m => m.id !== userMessageId))
+      setInput(currentInput)
+      setSelectedFile(currentFile)
+      createdUrls.forEach(url => {
+        URL.revokeObjectURL(url)
+        objectUrls.current.delete(url)
+      })
     } finally {
       setIsPending?.(false)
     }
@@ -292,7 +325,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
               'absolute top-1/2 transform -translate-y-1/2',
               isMobile ? 'right-1' : 'right-2'
             )}
-            disabled={(input.length === 0 && !selectedFile) || isPending}
+            disabled={(!input.trim() && !selectedFile) || isPending}
             aria-label="Send message"
             data-testid="chat-submit"
           >
