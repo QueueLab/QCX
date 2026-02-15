@@ -27,6 +27,7 @@ import { CopilotDisplay } from '@/components/copilot-display'
 import RetrieveSection from '@/components/retrieve-section'
 import { VideoSearchSection } from '@/components/video-search-section'
 import { MapQueryHandler } from '@/components/map/map-query-handler'
+import { geospatialTool } from '@/lib/agents/tools/geospatial'
 
 // Define the type for related queries
 type RelatedQueries = {
@@ -447,6 +448,47 @@ async function submit(formData?: FormData, skip?: boolean) {
   const userId = 'anonymous'
   const currentSystemPrompt = (await getSystemPrompt(userId)) || ''
   const mapProvider = formData?.get('mapProvider') as 'mapbox' | 'google'
+
+  // Autonomous Map Navigation: Check if input looks like an address
+  const isPotentialAddress = (text: string) => {
+    // Simple heuristic: contains numbers and multiple words, or specific keywords
+    const addressKeywords = ['palace', 'street', 'st', 'avenue', 'ave', 'road', 'rd', 'boulevard', 'blvd', 'drive', 'dr', 'lane', 'ln', 'court', 'ct', 'square', 'sq', 'parkway', 'pkwy'];
+    const words = text.toLowerCase().split(/\s+/);
+    const hasNumber = /\d+/.test(text);
+    const hasKeyword = words.some(word => addressKeywords.includes(word));
+    const isCoordinate = /^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/.test(text.trim());
+    
+    return (hasNumber && words.length >= 2) || hasKeyword || isCoordinate;
+  };
+
+  if (userInput && isPotentialAddress(userInput)) {
+    console.log('[AutonomousMap] Detected potential address:', userInput);
+    // Trigger geospatial tool directly for immediate map update
+    const geoTool = geospatialTool({ uiStream, mapProvider });
+    
+    // Run geocoding in the background or wait briefly
+    // We don't await it here to avoid blocking the main AI response, 
+    // but we want it to start immediately.
+    (async () => {
+      try {
+        const isCoordinate = /^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/.test(userInput.trim());
+        const result = await geoTool.execute(
+          isCoordinate 
+            ? { queryType: 'reverse', coordinates: { 
+                latitude: parseFloat(userInput.split(',')[0]), 
+                longitude: parseFloat(userInput.split(',')[1]) 
+              } }
+            : { queryType: 'geocode', location: userInput }
+        );
+        
+        if (result && result.type === 'MAP_QUERY_TRIGGER') {
+          uiStream.append(<MapQueryHandler toolOutput={result} />);
+        }
+      } catch (error) {
+        console.error('[AutonomousMap] Quick geocode failed:', error);
+      }
+    })();
+  }
 
   async function processEvents() {
     let action: any = { object: { next: 'proceed' } }
