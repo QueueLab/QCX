@@ -17,17 +17,17 @@ import SuggestionsDropdown from './suggestions-dropdown'
 
 interface ChatPanelProps {
   messages: UIState
-  input: string
-  setInput: (value: string) => void
   onSuggestionsChange?: (suggestions: PartialRelated | null) => void
 }
 
 export interface ChatPanelRef {
   handleAttachmentClick: () => void
-  submitForm: () => void
+  submitForm: (value?: string) => void
 }
 
-export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, input, setInput, onSuggestionsChange }, ref) => {
+export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, onSuggestionsChange }, ref) => {
+  const [input, setInput] = useState('')
+  const [triggerSubmit, setTriggerSubmit] = useState(0)
   const [, setMessages] = useUIState<typeof AI>()
   const { submit, clearChat } = useActions()
   const { mapProvider } = useSettingsStore()
@@ -48,10 +48,21 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     handleAttachmentClick() {
       fileInputRef.current?.click()
     },
-    submitForm() {
-      formRef.current?.requestSubmit()
+    submitForm(value?: string) {
+      if (value !== undefined) {
+        setInput(value)
+        setTriggerSubmit(prev => prev + 1)
+      } else {
+        formRef.current?.requestSubmit()
+      }
     }
   }));
+
+  useEffect(() => {
+    if (triggerSubmit > 0) {
+      formRef.current?.requestSubmit()
+    }
+  }, [triggerSubmit])
 
   // Detect mobile layout
   useEffect(() => {
@@ -127,6 +138,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
 
   const handleClear = async () => {
     setMessages([])
+    setInput('')
     clearAttachment()
     await clearChat()
   }
