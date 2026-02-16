@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { UserMessage } from './user-message'
 import { Button } from './ui/button'
 import { ArrowRight, Plus, Paperclip, X, Sprout } from 'lucide-react'
+import { Spinner } from './ui/spinner'
 import Textarea from 'react-textarea-autosize'
 import { nanoid } from '@/lib/utils'
 import { useSettingsStore } from '@/lib/store/settings'
@@ -20,6 +21,7 @@ interface ChatPanelProps {
   input: string
   setInput: (value: string) => void
   onSuggestionsChange?: (suggestions: PartialRelated | null) => void
+  onSubmitting?: (isSubmitting: boolean) => void
 }
 
 export interface ChatPanelRef {
@@ -27,12 +29,13 @@ export interface ChatPanelRef {
   submitForm: () => void
 }
 
-export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, input, setInput, onSuggestionsChange }, ref) => {
+export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, input, setInput, onSuggestionsChange, onSubmitting }, ref) => {
   const [, setMessages] = useUIState<typeof AI>()
   const { submit, clearChat } = useActions()
   const { mapProvider } = useSettingsStore()
   const [isMobile, setIsMobile] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [suggestions, setSuggestionsState] = useState<PartialRelated | null>(null)
   const setSuggestions = useCallback((s: PartialRelated | null) => {
     setSuggestionsState(s)
@@ -121,8 +124,15 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     setInput('')
     clearAttachment()
 
-    const responseMessage = await submit(formData)
-    setMessages(currentMessages => [...currentMessages, responseMessage as any])
+    setIsSubmitting(true)
+    onSubmitting?.(true)
+    try {
+      const responseMessage = await submit(formData)
+      setMessages(currentMessages => [...currentMessages, responseMessage as any])
+    } finally {
+      setIsSubmitting(false)
+      onSubmitting?.(false)
+    }
   }
 
   const handleClear = async () => {
@@ -177,6 +187,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
           onClick={() => handleClear()}
           data-testid="new-chat-button"
           title="New Chat"
+          aria-label="New Chat"
         >
           <Sprout size={28} className="fill-primary/20" />
         </Button>
@@ -225,6 +236,8 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
               )}
               onClick={handleAttachmentClick}
               data-testid="desktop-attachment-button"
+              aria-label="Attach File"
+              title="Attach File"
             >
               <Paperclip size={isMobile ? 18 : 20} />
             </Button>
@@ -281,11 +294,12 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
               'absolute top-1/2 transform -translate-y-1/2',
               isMobile ? 'right-1' : 'right-2'
             )}
-            disabled={input.length === 0 && !selectedFile}
+            disabled={(input.length === 0 && !selectedFile) || isSubmitting}
             aria-label="Send message"
+            title="Send Message"
             data-testid="chat-submit"
           >
-            <ArrowRight size={isMobile ? 18 : 20} />
+            {isSubmitting ? <Spinner /> : <ArrowRight size={isMobile ? 18 : 20} />}
           </Button>
         </div>
       </form>
@@ -295,7 +309,14 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
             <span className="text-sm text-muted-foreground truncate max-w-xs">
               {selectedFile.name}
             </span>
-            <Button variant="ghost" size="icon" onClick={clearAttachment} data-testid="clear-attachment-button">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={clearAttachment}
+              data-testid="clear-attachment-button"
+              aria-label="Remove Attachment"
+              title="Remove Attachment"
+            >
               <X size={16} />
             </Button>
           </div>

@@ -38,6 +38,7 @@ export function Chat({ id }: ChatProps) {
   const [input, setInput] = useState('')
   const [showEmptyScreen, setShowEmptyScreen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isSubmittingAction, setIsSubmittingAction] = useState(false)
   const [suggestions, setSuggestions] = useState<PartialRelated | null>(null)
   const chatPanelRef = useRef<ChatPanelRef>(null);
 
@@ -132,7 +133,11 @@ export function Chat({ id }: ChatProps) {
           {activeView ? <SettingsView /> : isUsageOpen ? <UsageView /> : <MapProvider />}
         </div>
         <div className="mobile-icons-bar">
-          <MobileIconsBar onAttachmentClick={handleAttachment} onSubmitClick={handleMobileSubmit} />
+          <MobileIconsBar
+            onAttachmentClick={handleAttachment}
+            onSubmitClick={handleMobileSubmit}
+            isSubmitting={isSubmittingAction}
+          />
         </div>
         <div className="mobile-chat-input-area">
           <ChatPanel 
@@ -141,6 +146,7 @@ export function Chat({ id }: ChatProps) {
             input={input} 
             setInput={setInput}
             onSuggestionsChange={setSuggestions}
+            onSubmitting={setIsSubmittingAction}
           />
         </div>
         <div className="mobile-chat-messages-area relative">
@@ -185,6 +191,7 @@ export function Chat({ id }: ChatProps) {
               input={input} 
               setInput={setInput} 
               onSuggestionsChange={setSuggestions}
+              onSubmitting={setIsSubmittingAction}
             />
             <div className="relative min-h-[100px]">
               <div className={cn("transition-all duration-300", suggestions ? "blur-md pointer-events-none" : "")}>

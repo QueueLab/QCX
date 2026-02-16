@@ -19,6 +19,8 @@ export function History({ location }: HistoryProps) {
       })}
       data-testid="history-button"
       onClick={toggleHistory}
+      aria-label="Toggle History"
+      title="Toggle History"
     >
       {location === 'header' ? <Menu /> : <ChevronLeft size={16} />}
     </Button>
