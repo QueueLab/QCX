@@ -37,26 +37,24 @@ export const MobileIconsBar: React.FC<MobileIconsBarProps> = ({ onAttachmentClic
 
   return (
     <div className="mobile-icons-bar-content">
-      <Button variant="ghost" size="icon" onClick={handleNewChat} data-testid="mobile-new-chat-button">
+      <Button variant="ghost" size="icon" onClick={handleNewChat} data-testid="mobile-new-chat-button" aria-label="New Chat">
         <Plus className="h-[1.2rem] w-[1.2rem]" />
       </Button>
       <ProfileToggle />
       <MapToggle />
-      <Button variant="ghost" size="icon" onClick={toggleCalendar} title="Open Calendar" data-testid="mobile-calendar-button">
+      <Button variant="ghost" size="icon" onClick={toggleCalendar} aria-label="Open Calendar" data-testid="mobile-calendar-button">
         <CalendarDays className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>
-      <Button variant="ghost" size="icon" data-testid="mobile-search-button">
-        <Search className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
-      </Button>
+      <div id="mobile-header-search-portal" className="contents" />
       <a href="https://buy.stripe.com/14A3cv7K72TR3go14Nasg02" target="_blank" rel="noopener noreferrer">
-        <Button variant="ghost" size="icon">
+        <Button variant="ghost" size="icon" aria-label="Usage & Credits">
           <TentTree className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
         </Button>
       </a>
-      <Button variant="ghost" size="icon" onClick={onAttachmentClick} data-testid="mobile-attachment-button">
+      <Button variant="ghost" size="icon" onClick={onAttachmentClick} data-testid="mobile-attachment-button" aria-label="Attach file">
         <Paperclip className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>
-      <Button variant="ghost" size="icon" data-testid="mobile-submit-button" onClick={onSubmitClick}>
+      <Button variant="ghost" size="icon" data-testid="mobile-submit-button" onClick={onSubmitClick} aria-label="Send message">
         <ArrowRight className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>
       <History location="header" />

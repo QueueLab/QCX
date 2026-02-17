@@ -18,6 +18,7 @@ import { HistoryToggleProvider } from '@/components/history-toggle-context'
 import { HistorySidebar } from '@/components/history-sidebar'
 import { MapLoadingProvider } from '@/components/map-loading-context';
 import ConditionalLottie from '@/components/conditional-lottie';
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { MapProvider as MapContextProvider } from '@/components/map/map-context'
 
 const fontSans = FontSans({
@@ -107,16 +108,18 @@ export default function RootLayout({
                     disableTransitionOnChange
                     themes={['light', 'dark', 'earth']}
                   >
-                    <MapContextProvider>
-                      <MapLoadingProvider>
-                        <Header />
-                        <ConditionalLottie />
-                        {children}
-                        <HistorySidebar />
-                        <Footer />
-                        <Toaster />
-                      </MapLoadingProvider>
-                    </MapContextProvider>
+                    <TooltipProvider>
+                      <MapContextProvider>
+                        <MapLoadingProvider>
+                          <Header />
+                          <ConditionalLottie />
+                          {children}
+                          <HistorySidebar />
+                          <Footer />
+                          <Toaster />
+                        </MapLoadingProvider>
+                      </MapContextProvider>
+                    </TooltipProvider>
                   </ThemeProvider>
                 </UsageToggleProvider>
               </ProfileToggleProvider>

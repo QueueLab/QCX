@@ -153,6 +153,8 @@ export function HeaderSearchButton() {
       size="icon"
       onClick={handleResolutionSearch}
       disabled={isAnalyzing || !map || !actions}
+      data-testid="resolution-search"
+      aria-label="Analyze current map view"
       title="Analyze current map view"
     >
       {isAnalyzing ? (

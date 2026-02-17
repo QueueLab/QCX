@@ -3,6 +3,11 @@ import { Button } from '@/components/ui/button'
 import { ChevronLeft, Menu } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useHistoryToggle } from './history-toggle-context'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger
+} from '@/components/ui/tooltip'
 
 type HistoryProps = {
   location: 'sidebar' | 'header'
@@ -10,7 +15,7 @@ type HistoryProps = {
 
 export function History({ location }: HistoryProps) {
   const { toggleHistory } = useHistoryToggle()
-  return (
+  const button = (
     <Button
       variant="ghost"
       size="icon"
@@ -19,8 +24,20 @@ export function History({ location }: HistoryProps) {
       })}
       data-testid="history-button"
       onClick={toggleHistory}
+      aria-label="Toggle history"
     >
       {location === 'header' ? <Menu /> : <ChevronLeft size={16} />}
     </Button>
   )
+
+  if (location === 'header') {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{button}</TooltipTrigger>
+        <TooltipContent>Toggle history</TooltipContent>
+      </Tooltip>
+    )
+  }
+
+  return button
 }
