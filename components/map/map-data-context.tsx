@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useMemo } from 'react';
 // Define the shape of the map data you want to share
 export interface CameraState {
   center: { lat: number; lng: number };
@@ -41,8 +41,13 @@ const MapDataContext = createContext<MapDataContextType | undefined>(undefined);
 export const MapDataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [mapData, setMapData] = useState<MapData>({ drawnFeatures: [], markers: [] });
 
+  const value = useMemo(() => ({
+    mapData,
+    setMapData
+  }), [mapData])
+
   return (
-    <MapDataContext.Provider value={{ mapData, setMapData }}>
+    <MapDataContext.Provider value={value}>
       {children}
     </MapDataContext.Provider>
   );

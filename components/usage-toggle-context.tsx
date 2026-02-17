@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, ReactNode } from "react"
+import { createContext, useContext, useState, ReactNode, useMemo, useCallback } from "react"
 
 interface UsageToggleContextType {
   isUsageOpen: boolean
@@ -13,11 +13,17 @@ const UsageToggleContext = createContext<UsageToggleContextType | undefined>(und
 export const UsageToggleProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isUsageOpen, setIsUsageOpen] = useState(false)
 
-  const toggleUsage = () => setIsUsageOpen(prev => !prev)
-  const closeUsage = () => setIsUsageOpen(false)
+  const toggleUsage = useCallback(() => setIsUsageOpen(prev => !prev), [])
+  const closeUsage = useCallback(() => setIsUsageOpen(false), [])
+
+  const value = useMemo(() => ({
+    isUsageOpen,
+    toggleUsage,
+    closeUsage
+  }), [isUsageOpen, toggleUsage, closeUsage])
 
   return (
-    <UsageToggleContext.Provider value={{ isUsageOpen, toggleUsage, closeUsage }}>
+    <UsageToggleContext.Provider value={value}>
       {children}
     </UsageToggleContext.Provider>
   )
