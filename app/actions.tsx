@@ -21,8 +21,10 @@ import { BotMessage } from '@/components/message'
 import { SearchSection } from '@/components/search-section'
 import SearchRelated from '@/components/search-related'
 import { GeoJsonLayer } from '@/components/map/geojson-layer'
-import { ElevationHeatmapLayer } from '@/components/map/elevation-heatmap-layer'
+import dynamic from 'next/dynamic'
 import { ResolutionCarousel } from '@/components/resolution-carousel'
+
+const ElevationHeatmapLayer = dynamic(() => import('@/components/map/elevation-heatmap-layer').then(mod => mod.ElevationHeatmapLayer), { ssr: false })
 import { ResolutionImage } from '@/components/resolution-image'
 import { CopilotDisplay } from '@/components/copilot-display'
 import RetrieveSection from '@/components/retrieve-section'

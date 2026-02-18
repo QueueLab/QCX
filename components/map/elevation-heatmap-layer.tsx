@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import mapboxgl from 'mapbox-gl'
+import type mapboxgl from 'mapbox-gl'
 import { useMap } from './map-context'
 
 interface ElevationPoint {
@@ -50,8 +50,11 @@ export function ElevationHeatmapLayer({ id, points, statistics }: ElevationHeatm
       }))
     }
 
-    const onMapLoad = () => {
+    const onMapLoad = async () => {
       if (!map.getSource(sourceId)) {
+        // Import mapboxgl dynamically to avoid server-side issues
+        const mapboxgl = (await import('mapbox-gl')).default
+
         // Add the data source
         map.addSource(sourceId, {
           type: 'geojson',
@@ -64,7 +67,6 @@ export function ElevationHeatmapLayer({ id, points, statistics }: ElevationHeatm
           type: 'heatmap',
           source: sourceId,
           paint: {
-            // Increase weight based on elevation
             'heatmap-weight': [
               'interpolate',
               ['linear'],
@@ -72,7 +74,6 @@ export function ElevationHeatmapLayer({ id, points, statistics }: ElevationHeatm
               0, 0,
               1, 1
             ],
-            // Increase intensity as zoom increases
             'heatmap-intensity': [
               'interpolate',
               ['linear'],
@@ -80,8 +81,6 @@ export function ElevationHeatmapLayer({ id, points, statistics }: ElevationHeatm
               0, 1,
               15, 3
             ],
-            // Color ramp for the heatmap (elevation-based)
-            // Blue (low) -> Cyan -> White -> Orange -> Red (high)
             'heatmap-color': [
               'interpolate',
               ['linear'],
@@ -93,7 +92,6 @@ export function ElevationHeatmapLayer({ id, points, statistics }: ElevationHeatm
               0.8, 'rgb(239,138,98)',
               1, 'rgb(178,24,43)'
             ],
-            // Adjust heatmap radius by zoom level
             'heatmap-radius': [
               'interpolate',
               ['linear'],
@@ -101,7 +99,6 @@ export function ElevationHeatmapLayer({ id, points, statistics }: ElevationHeatm
               0, 2,
               15, 20
             ],
-            // Opacity
             'heatmap-opacity': [
               'interpolate',
               ['linear'],
@@ -165,7 +162,6 @@ export function ElevationHeatmapLayer({ id, points, statistics }: ElevationHeatm
 
         map.on('click', pointsLayerId, clickHandler)
 
-        // Change cursor on hover
         const mouseEnterHandler = () => {
           map.getCanvas().style.cursor = 'pointer'
         }
@@ -184,7 +180,6 @@ export function ElevationHeatmapLayer({ id, points, statistics }: ElevationHeatm
       map.once('load', onMapLoad)
     }
 
-    // Cleanup
     return () => {
       if (map) {
         if (map.getLayer(pointsLayerId)) map.removeLayer(pointsLayerId)
