@@ -59,6 +59,7 @@ export function FollowupPanel() {
         disabled={input.length === 0}
         variant={'ghost'}
         className="absolute right-1"
+        aria-label="Send message"
       >
         <ArrowRight size={20} />
       </Button>

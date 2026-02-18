@@ -97,6 +97,7 @@ export function CalendarNotepad({ chatId }: CalendarNotepadProps) {
         <button
           onClick={() => setDateOffset(dateOffset - 7)}
           className="p-2 text-muted-foreground hover:text-foreground"
+          aria-label="Previous week"
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
@@ -124,6 +125,7 @@ export function CalendarNotepad({ chatId }: CalendarNotepadProps) {
         <button
           onClick={() => setDateOffset(dateOffset + 7)}
           className="p-2 text-muted-foreground hover:text-foreground"
+          aria-label="Next week"
         >
           <ChevronRight className="h-5 w-5" />
         </button>
@@ -138,10 +140,12 @@ export function CalendarNotepad({ chatId }: CalendarNotepadProps) {
             placeholder="Add note... (⌘+Enter to save, @mention, #location)"
             className="w-full p-2 bg-input rounded-md border focus:ring-ring focus:ring-2 focus:outline-none pr-10"
             rows={3}
+            aria-label="Add a note"
           />
           <button
             onClick={handleTagLocation}
             className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            aria-label="Tag current location"
           >
             <MapPin className="h-5 w-5" />
           </button>
@@ -160,7 +164,11 @@ export function CalendarNotepad({ chatId }: CalendarNotepadProps) {
                   <p className="text-sm whitespace-pre-wrap break-words">{note.content}</p>
                 </div>
                 {note.locationTags && (
-                  <button onClick={() => handleFlyTo(note.locationTags)} className="text-muted-foreground hover:text-foreground ml-2">
+                  <button
+                    onClick={() => handleFlyTo(note.locationTags)}
+                    className="text-muted-foreground hover:text-foreground ml-2"
+                    aria-label="Fly to tagged location"
+                  >
                     <MapPin className="h-5 w-5" />
                   </button>
                 )}
