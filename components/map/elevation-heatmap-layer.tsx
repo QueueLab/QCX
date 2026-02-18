@@ -1,7 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
-import type mapboxgl from 'mapbox-gl'
+import { useEffect, useState } from 'react'
 import { useMap } from './map-context'
 
 interface ElevationPoint {
@@ -23,16 +22,22 @@ interface ElevationHeatmapLayerProps {
 
 export function ElevationHeatmapLayer({ id, points, statistics }: ElevationHeatmapLayerProps) {
   const { map } = useMap()
+  const [mapboxgl, setMapboxgl] = useState<any>(null)
 
   useEffect(() => {
-    if (!map || !points || points.length === 0) return
+    import('mapbox-gl').then(mod => {
+      setMapboxgl(mod.default)
+    })
+  }, [])
+
+  useEffect(() => {
+    if (!map || !points || points.length === 0 || !mapboxgl) return
 
     const sourceId = `elevation-heatmap-source-${id}`
     const heatmapLayerId = `elevation-heatmap-layer-${id}`
     const pointsLayerId = `elevation-points-layer-${id}`
 
-    // Convert points to GeoJSON
-    const geojson: GeoJSON.FeatureCollection = {
+    const geojson: any = {
       type: 'FeatureCollection',
       features: points.map(point => ({
         type: 'Feature',
@@ -42,7 +47,6 @@ export function ElevationHeatmapLayer({ id, points, statistics }: ElevationHeatm
         },
         properties: {
           elevation: point.elevation,
-          // Normalize elevation for heat map intensity (0-1 scale)
           intensity: statistics && statistics.max !== statistics.min
             ? (point.elevation - statistics.min) / (statistics.max - statistics.min)
             : 0.5
@@ -50,37 +54,20 @@ export function ElevationHeatmapLayer({ id, points, statistics }: ElevationHeatm
       }))
     }
 
-    const onMapLoad = async () => {
+    const onMapLoad = () => {
       if (!map.getSource(sourceId)) {
-        // Import mapboxgl dynamically to avoid server-side issues
-        const mapboxgl = (await import('mapbox-gl')).default
-
-        // Add the data source
         map.addSource(sourceId, {
           type: 'geojson',
           data: geojson
         })
 
-        // Add heatmap layer
         map.addLayer({
           id: heatmapLayerId,
           type: 'heatmap',
           source: sourceId,
           paint: {
-            'heatmap-weight': [
-              'interpolate',
-              ['linear'],
-              ['get', 'intensity'],
-              0, 0,
-              1, 1
-            ],
-            'heatmap-intensity': [
-              'interpolate',
-              ['linear'],
-              ['zoom'],
-              0, 1,
-              15, 3
-            ],
+            'heatmap-weight': ['interpolate', ['linear'], ['get', 'intensity'], 0, 0, 1, 1],
+            'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 0, 1, 15, 3],
             'heatmap-color': [
               'interpolate',
               ['linear'],
@@ -92,37 +79,18 @@ export function ElevationHeatmapLayer({ id, points, statistics }: ElevationHeatm
               0.8, 'rgb(239,138,98)',
               1, 'rgb(178,24,43)'
             ],
-            'heatmap-radius': [
-              'interpolate',
-              ['linear'],
-              ['zoom'],
-              0, 2,
-              15, 20
-            ],
-            'heatmap-opacity': [
-              'interpolate',
-              ['linear'],
-              ['zoom'],
-              7, 0.7,
-              15, 0.5
-            ]
+            'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 0, 2, 15, 20],
+            'heatmap-opacity': ['interpolate', ['linear'], ['zoom'], 7, 0.7, 15, 0.5]
           }
         })
 
-        // Add circle layer for high zoom levels
         map.addLayer({
           id: pointsLayerId,
           type: 'circle',
           source: sourceId,
           minzoom: 14,
           paint: {
-            'circle-radius': [
-              'interpolate',
-              ['linear'],
-              ['zoom'],
-              14, 3,
-              22, 8
-            ],
+            'circle-radius': ['interpolate', ['linear'], ['zoom'], 14, 3, 22, 8],
             'circle-color': [
               'interpolate',
               ['linear'],
@@ -135,23 +103,13 @@ export function ElevationHeatmapLayer({ id, points, statistics }: ElevationHeatm
             ],
             'circle-stroke-color': 'white',
             'circle-stroke-width': 1,
-            'circle-opacity': [
-              'interpolate',
-              ['linear'],
-              ['zoom'],
-              14, 0,
-              15, 0.8
-            ]
+            'circle-opacity': ['interpolate', ['linear'], ['zoom'], 14, 0, 15, 0.8]
           }
         })
 
-        // Add click handler to show elevation value
         const clickHandler = (e: any) => {
           if (!e.features || e.features.length === 0) return
-
-          const feature = e.features[0]
-          const elevation = feature.properties?.elevation
-
+          const elevation = e.features[0].properties?.elevation
           if (elevation !== undefined) {
             new mapboxgl.Popup()
               .setLngLat(e.lngLat)
@@ -161,16 +119,8 @@ export function ElevationHeatmapLayer({ id, points, statistics }: ElevationHeatm
         }
 
         map.on('click', pointsLayerId, clickHandler)
-
-        const mouseEnterHandler = () => {
-          map.getCanvas().style.cursor = 'pointer'
-        }
-        const mouseLeaveHandler = () => {
-          map.getCanvas().style.cursor = ''
-        }
-
-        map.on('mouseenter', pointsLayerId, mouseEnterHandler)
-        map.on('mouseleave', pointsLayerId, mouseLeaveHandler)
+        map.on('mouseenter', pointsLayerId, () => { map.getCanvas().style.cursor = 'pointer' })
+        map.on('mouseleave', pointsLayerId, () => { map.getCanvas().style.cursor = '' })
       }
     }
 
@@ -187,7 +137,7 @@ export function ElevationHeatmapLayer({ id, points, statistics }: ElevationHeatm
         if (map.getSource(sourceId)) map.removeSource(sourceId)
       }
     }
-  }, [map, id, points, statistics])
+  }, [map, id, points, statistics, mapboxgl])
 
   return null
 }
