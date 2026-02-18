@@ -2,7 +2,7 @@ import { Copilot } from '@/components/copilot';
 import { createStreamableUI, createStreamableValue } from 'ai/rsc';
 import { CoreMessage, LanguageModel, streamObject } from 'ai';
 import { PartialInquiry, inquirySchema } from '@/lib/schema/inquiry';
-import { getModel } from '../utils';
+import { getModel } from '../utils/ai';
 
 // Define a plain object type for the inquiry prop
 interface InquiryProp {
