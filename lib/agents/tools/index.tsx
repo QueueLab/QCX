@@ -39,7 +39,7 @@ export const getTools = ({ uiStream, fullResponse, mapProvider, userId }: ToolPr
 
   if (process.env.SUPERMEMORY_API_KEY && userId) {
     const memoryTools = supermemoryTools(process.env.SUPERMEMORY_API_KEY, {
-      projectId: userId
+      containerTags: [userId]
     })
     tools.searchMemories = memoryTools.searchMemories
     tools.addMemory = memoryTools.addMemory

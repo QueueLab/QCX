@@ -17,7 +17,9 @@ import { DrawnFeature } from './resolution-search'
 // This magic tag lets us write raw multi-line strings with backticks, arrows, etc.
 const raw = String.raw
 
-const getDefaultSystemPrompt = (date: string, drawnFeatures?: DrawnFeature[]) => raw`
+const memoryInstructions = `6. **Long-term Memory:** You have access to the user's long-term memory. Use 'searchMemories' to retrieve past preferences, business intricacies, or context from previous yearly usage. Use 'addMemory' to save new preferences or important business details that should be remembered across sessions to improve personalized service incrementally.`
+
+const getDefaultSystemPrompt = (date: string, drawnFeatures?: DrawnFeature[], isMemoryEnabled?: boolean) => raw`
 As a comprehensive AI assistant, your primary directive is **Exploration Efficiency**. You must use the provided tools judiciously to gather information and formulate a response.
 
 Current date and time: ${date}.
@@ -32,7 +34,7 @@ Use these user-drawn areas/lines as primary areas of interest for your analysis 
 3. **Search Specificity:** When using the 'search' tool, formulate queries that are as specific as possible.
 4. **Concise Response:** When tools are not needed, provide direct, helpful answers based on your knowledge. Match the user's language.
 5. **Citations:** Always cite source URLs when using information from tools.
-6. **Long-term Memory:** You have access to the user's long-term memory. Use 'searchMemories' to retrieve past preferences, business intricacies, or context from previous yearly usage. Use 'addMemory' to save new preferences or important business details that should be remembered across sessions to improve personalized service incrementally.
+${isMemoryEnabled ? memoryInstructions : ''}
 
 ### **Tool Usage Guidelines (Mandatory)**
 
@@ -101,11 +103,12 @@ export async function researcher(
   )
 
   const currentDate = new Date().toLocaleString()
+  const isMemoryEnabled = !!(process.env.SUPERMEMORY_API_KEY && userId)
 
   const systemPromptToUse =
     dynamicSystemPrompt?.trim()
-      ? dynamicSystemPrompt
-      : getDefaultSystemPrompt(currentDate, drawnFeatures)
+      ? (isMemoryEnabled ? `${dynamicSystemPrompt}\n\n${memoryInstructions}` : dynamicSystemPrompt)
+      : getDefaultSystemPrompt(currentDate, drawnFeatures, isMemoryEnabled)
 
   // Check if any message contains an image
   const hasImage = messages.some(message =>

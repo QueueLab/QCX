@@ -7,7 +7,12 @@ import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
 import { withSupermemory } from '@supermemory/tools/ai-sdk'
 import { LanguageModel } from 'ai'
 
-export async function getModel(requireVision: boolean = false, userId?: string, chatId?: string) {
+export async function getModel(
+  requireVision: boolean = false,
+  userId?: string,
+  chatId?: string,
+  requireStructuredOutput: boolean = false
+) {
   const actualUserId = userId || await getCurrentUserIdOnServer();
 
   async function getBaseModel() {
@@ -21,76 +26,58 @@ export async function getModel(requireVision: boolean = false, userId?: string, 
     const bedrockModelId = process.env.BEDROCK_MODEL_ID || 'anthropic.claude-3-5-sonnet-20241022-v2:0';
     const openaiApiKey = process.env.OPENAI_API_KEY;
 
+    // Handle user preference first
     if (selectedModel) {
       switch (selectedModel) {
         case 'Grok 4.2':
-          if (xaiApiKey) {
+          if (xaiApiKey && !requireStructuredOutput && !requireVision) {
             const xai = createXai({
               apiKey: xaiApiKey,
               baseURL: 'https://api.x.ai/v1',
             });
-            try {
-              return xai('grok-4-fast-non-reasoning');
-            } catch (error) {
-              console.error('Selected model "Grok 4.2" is configured but failed to initialize.', error);
-              throw new Error('Failed to initialize selected model.');
-            }
-          } else {
-              console.error('User selected "Grok 4.2" but XAI_API_KEY is not set.');
-              throw new Error('Selected model is not configured.');
+            return xai('grok-4-fast-non-reasoning');
           }
+          break;
         case 'Gemini 3':
           if (gemini3ProApiKey) {
             const google = createGoogleGenerativeAI({
               apiKey: gemini3ProApiKey,
             });
-            try {
-              return google('gemini-3-pro-preview');
-            } catch (error) {
-              console.error('Selected model "Gemini 3" is configured but failed to initialize.', error);
-              throw new Error('Failed to initialize selected model.');
-            }
-          } else {
-              console.error('User selected "Gemini 3" but GEMINI_3_PRO_API_KEY is not set.');
-              throw new Error('Selected model is not configured.');
+            return google('gemini-3-pro-preview');
           }
+          break;
+        case 'GPT-4o':
         case 'GPT-5.1':
           if (openaiApiKey) {
             const openai = createOpenAI({
               apiKey: openaiApiKey,
             });
             return openai('gpt-4o');
-          } else {
-              console.error('User selected "GPT-5.1" but OPENAI_API_KEY is not set.');
-              throw new Error('Selected model is not configured.');
           }
+          break;
+        default:
+          console.warn(`Unknown model selection: ${selectedModel}. Falling back to default provider chain.`);
       }
     }
 
-    // Default behavior: Grok -> Gemini -> Bedrock -> OpenAI
-    if (xaiApiKey) {
-      const xai = createXai({
-        apiKey: xaiApiKey,
-        baseURL: 'https://api.x.ai/v1',
+    // Default provider chain: OpenAI -> Gemini -> Bedrock -> Xai
+    // OpenAI and Gemini are our primary choices for vision and structured output.
+
+    if (openaiApiKey) {
+      const openai = createOpenAI({
+        apiKey: openaiApiKey,
       });
-      try {
-        return xai('grok-4-fast-non-reasoning');
-      } catch (error) {
-        console.warn('xAI API unavailable, falling back to next provider:');
-      }
+      return openai('gpt-4o');
     }
 
     if (gemini3ProApiKey) {
       const google = createGoogleGenerativeAI({
         apiKey: gemini3ProApiKey,
       });
-      try {
-        return google('gemini-3-pro-preview');
-      } catch (error) {
-        console.warn('Gemini 3 Pro API unavailable, falling back to next provider:', error);
-      }
+      return google('gemini-3-pro-preview');
     }
 
+    // Bedrock might support vision depending on the model, but we'll assume it doesn't for now if requireVision is true and model is generic.
     if (awsAccessKeyId && awsSecretAccessKey) {
       const bedrock = createAmazonBedrock({
         bedrockOptions: {
@@ -101,25 +88,36 @@ export async function getModel(requireVision: boolean = false, userId?: string, 
           },
         },
       });
-      const model = bedrock(bedrockModelId, {
+      return bedrock(bedrockModelId, {
         additionalModelRequestFields: { top_k: 350 },
       });
-      return model;
     }
 
-    const openai = createOpenAI({
-      apiKey: openaiApiKey,
-    });
-    return openai('gpt-4o');
+    if (xaiApiKey && !requireStructuredOutput && !requireVision) {
+      const xai = createXai({
+        apiKey: xaiApiKey,
+        baseURL: 'https://api.x.ai/v1',
+      });
+      return xai('grok-4-fast-non-reasoning');
+    }
+
+    const requirements = [];
+    if (requireVision) requirements.push('vision');
+    if (requireStructuredOutput) requirements.push('structured output');
+
+    throw new Error(`No compatible AI provider configured. Missing key or provider doesn't support: ${requirements.join(', ') || 'basic completion'}.`);
   }
 
   const model = await getBaseModel();
 
   if (process.env.SUPERMEMORY_API_KEY && actualUserId) {
+    // Default to 'never' for addMemory unless explicitly opted in via env var for privacy.
+    const addMemoryMode = (process.env.SUPERMEMORY_ADD_MEMORY_MODE as 'always' | 'never' | undefined) || 'never';
+
     return withSupermemory(model as any, actualUserId, {
       conversationId: chatId,
       mode: 'full',
-      addMemory: 'always'
+      addMemory: addMemoryMode
     });
   }
 

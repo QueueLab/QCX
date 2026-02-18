@@ -25,7 +25,7 @@ export async function inquire(
 
   let finalInquiry: PartialInquiry = {};
   const result = await streamObject({
-    model: (await getModel(false, userId, chatId)) as LanguageModel,
+    model: (await getModel(false, userId, chatId, true)) as LanguageModel,
     system: `As a planet computer, your goal is to help the user narrow down their query for more efficient research.
     Ask a clear and concise question to clarify the user's intent or to get missing information.
     For geospatial queries, focus on location, time, or specific travel needs.

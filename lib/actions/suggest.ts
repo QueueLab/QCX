@@ -28,7 +28,7 @@ export async function getSuggestions(
 
   ;(async () => {
     const result = await streamObject({
-      model: (await getModel()) as LanguageModel,
+      model: (await getModel(false, undefined, undefined, true)) as LanguageModel,
       system: systemPrompt,
       messages: [{ role: 'user', content: query }],
       schema: relatedSchema

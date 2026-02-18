@@ -90,7 +90,7 @@ Analyze the user's prompt and the image to provide a holistic understanding of t
 
   // Use streamObject to get partial results.
   return streamObject({
-    model: await getModel(hasImage, userId, chatId),
+    model: await getModel(hasImage, userId, chatId, true),
     system: systemPrompt,
     messages: filteredMessages,
     schema: resolutionSearchSchema,
