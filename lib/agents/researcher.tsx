@@ -32,6 +32,7 @@ Use these user-drawn areas/lines as primary areas of interest for your analysis 
 3. **Search Specificity:** When using the 'search' tool, formulate queries that are as specific as possible.
 4. **Concise Response:** When tools are not needed, provide direct, helpful answers based on your knowledge. Match the user's language.
 5. **Citations:** Always cite source URLs when using information from tools.
+6. **Long-term Memory:** You have access to the user's long-term memory. Use 'searchMemories' to retrieve past preferences, business intricacies, or context from previous yearly usage. Use 'addMemory' to save new preferences or important business details that should be remembered across sessions to improve personalized service incrementally.
 
 ### **Tool Usage Guidelines (Mandatory)**
 
@@ -86,7 +87,9 @@ export async function researcher(
   messages: CoreMessage[],
   mapProvider: MapProvider,
   useSpecificModel?: boolean,
-  drawnFeatures?: DrawnFeature[]
+  drawnFeatures?: DrawnFeature[],
+  userId?: string,
+  chatId?: string
 ) {
   let fullResponse = ''
   let hasError = false
@@ -111,11 +114,11 @@ export async function researcher(
   )
 
   const result = await nonexperimental_streamText({
-    model: (await getModel(hasImage)) as LanguageModel,
+    model: (await getModel(hasImage, userId, chatId)) as LanguageModel,
     maxTokens: 4096,
     system: systemPromptToUse,
     messages,
-    tools: getTools({ uiStream, fullResponse, mapProvider }),
+    tools: getTools({ uiStream, fullResponse, mapProvider, userId }),
   })
 
   uiStream.update(null) // remove spinner

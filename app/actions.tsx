@@ -41,6 +41,10 @@ async function submit(formData?: FormData, skip?: boolean) {
   const isGenerating = createStreamableValue(true)
   const isCollapsed = createStreamableValue(false)
 
+  const { getCurrentUserIdOnServer } = await import('@/lib/auth/get-current-user')
+  const actualUserId = await getCurrentUserIdOnServer()
+  const userId = actualUserId || 'anonymous'
+
   const action = formData?.get('action') as string;
   const drawnFeaturesString = formData?.get('drawnFeatures') as string;
   let drawnFeatures: DrawnFeature[] = [];
@@ -101,7 +105,7 @@ async function submit(formData?: FormData, skip?: boolean) {
 
     async function processResolutionSearch() {
       try {
-        const streamResult = await resolutionSearch(messages, timezone, drawnFeatures, location);
+        const streamResult = await resolutionSearch(messages, timezone, drawnFeatures, location, userId, aiState.get().chatId);
 
         let fullSummary = '';
         for await (const partialObject of streamResult.partialObjectStream) {
@@ -147,7 +151,7 @@ async function submit(formData?: FormData, skip?: boolean) {
           }
           return m
         });
-        const relatedQueries = await querySuggestor(uiStream, sanitizedMessages);
+        const relatedQueries = await querySuggestor(uiStream, sanitizedMessages, userId, aiState.get().chatId);
         uiStream.append(
           <Section title="Follow-up">
             <FollowupPanel />
@@ -397,21 +401,20 @@ async function submit(formData?: FormData, skip?: boolean) {
     } as CoreMessage)
   }
 
-  const userId = 'anonymous'
   const currentSystemPrompt = (await getSystemPrompt(userId)) || ''
   const mapProvider = formData?.get('mapProvider') as 'mapbox' | 'google'
 
   async function processEvents() {
     let action: any = { object: { next: 'proceed' } }
     if (!skip) {
-      const taskManagerResult = await taskManager(messages)
+      const taskManagerResult = await taskManager(messages, userId, aiState.get().chatId)
       if (taskManagerResult) {
         action.object = taskManagerResult.object
       }
     }
 
     if (action.object.next === 'inquire') {
-      const inquiry = await inquire(uiStream, messages)
+      const inquiry = await inquire(uiStream, messages, userId, aiState.get().chatId)
       uiStream.done()
       isGenerating.done()
       isCollapsed.done(false)
@@ -441,15 +444,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         ? answer.length === 0
         : answer.length === 0 && !errorOccurred
     ) {
-      const { fullResponse, hasError, toolResponses } = await researcher(
-        currentSystemPrompt,
-        uiStream,
-        streamText,
-        messages,
-        mapProvider,
-        useSpecificAPI,
-        drawnFeatures
-      )
+      const { fullResponse, hasError, toolResponses } = await researcher(currentSystemPrompt, uiStream, streamText, messages, mapProvider, useSpecificAPI, drawnFeatures, userId, aiState.get().chatId)
       answer = fullResponse
       toolOutputs = toolResponses
       errorOccurred = hasError
@@ -487,18 +482,13 @@ async function submit(formData?: FormData, skip?: boolean) {
             : msg
         ) as CoreMessage[]
       const latestMessages = modifiedMessages.slice(maxMessages * -1)
-      answer = await writer(
-        currentSystemPrompt,
-        uiStream,
-        streamText,
-        latestMessages
-      )
+      answer = await writer(currentSystemPrompt, uiStream, streamText, latestMessages, userId, aiState.get().chatId)
     } else {
       streamText.done()
     }
 
     if (!errorOccurred) {
-      const relatedQueries = await querySuggestor(uiStream, messages)
+      const relatedQueries = await querySuggestor(uiStream, messages, userId, aiState.get().chatId)
       uiStream.append(
         <Section title="Follow-up">
           <FollowupPanel />

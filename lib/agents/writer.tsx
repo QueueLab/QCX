@@ -5,10 +5,12 @@ import { BotMessage } from '@/components/message'
 import { getModel } from '../utils'
 
 export async function writer(
-  dynamicSystemPrompt: string, // New parameter
+  dynamicSystemPrompt: string,
   uiStream: ReturnType<typeof createStreamableUI>,
   streamText: ReturnType<typeof createStreamableValue<string>>,
-  messages: CoreMessage[]
+  messages: CoreMessage[],
+  userId?: string,
+  chatId?: string
 ) {
   let fullResponse = ''
   const answerSection = (
@@ -18,7 +20,7 @@ export async function writer(
   )
   uiStream.append(answerSection)
 
-  // Default system prompt, used if dynamicSystemPrompt is not provided
+  // Default system prompt
   const default_system_prompt = `As a professional writer, your job is to generate a comprehensive and informative, yet concise answer of 400 words or less for the given question based solely on the provided search results (URL and content). You must only use information from the provided search results. Use an unbiased and journalistic tone. Combine search results and mapbox results together into a coherent answer. Do not repeat text. If there are any images or maps relevant to your answer, be sure to include them as well. Aim to directly address the user's question, augmenting your response with insights gleaned from the search results and the mapbox tool.
     Whenever quoting or referencing information from a specific URL, always cite the source URL explicitly. Please match the language of the response to the user's language.
     Always answer in Markdown format. Links and images must follow the correct format.
@@ -32,9 +34,9 @@ export async function writer(
   const systemToUse = dynamicSystemPrompt && dynamicSystemPrompt.trim() !== '' ? dynamicSystemPrompt : default_system_prompt;
 
   const result = await nonexperimental_streamText({
-    model: (await getModel()) as LanguageModel,
+    model: (await getModel(false, userId, chatId)) as LanguageModel,
     maxTokens: 2500,
-    system: systemToUse, // Use the dynamic or default system prompt
+    system: systemToUse,
     messages
   })
 

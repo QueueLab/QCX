@@ -38,7 +38,14 @@ export interface DrawnFeature {
   geometry: any;
 }
 
-export async function resolutionSearch(messages: CoreMessage[], timezone: string = 'UTC', drawnFeatures?: DrawnFeature[], location?: { lat: number, lng: number }) {
+export async function resolutionSearch(
+  messages: CoreMessage[],
+  timezone: string = 'UTC',
+  drawnFeatures?: DrawnFeature[],
+  location?: { lat: number, lng: number },
+  userId?: string,
+  chatId?: string
+) {
   const localTime = new Date().toLocaleString('en-US', {
     timeZone: timezone,
     hour: '2-digit',
@@ -83,7 +90,7 @@ Analyze the user's prompt and the image to provide a holistic understanding of t
 
   // Use streamObject to get partial results.
   return streamObject({
-    model: await getModel(hasImage),
+    model: await getModel(hasImage, userId, chatId),
     system: systemPrompt,
     messages: filteredMessages,
     schema: resolutionSearchSchema,
