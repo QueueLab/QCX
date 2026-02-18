@@ -16,6 +16,7 @@ import { FollowupPanel } from '@/components/followup-panel'
 import { inquire, researcher, taskManager, querySuggestor, resolutionSearch, type DrawnFeature } from '@/lib/agents'
 import { writer } from '@/lib/agents/writer'
 import { saveChat, getSystemPrompt } from '@/lib/actions/chat'
+import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
 import { Chat, AIMessage } from '@/lib/types'
 import { UserMessage } from '@/components/user-message'
 import { BotMessage } from '@/components/message'
@@ -439,7 +440,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     } as CoreMessage)
   }
 
-  const userId = 'anonymous'
+  const userId = (await getCurrentUserIdOnServer()) || 'anonymous'
   const currentSystemPrompt = (await getSystemPrompt(userId)) || ''
   const mapProvider = formData?.get('mapProvider') as 'mapbox' | 'google'
 
@@ -550,7 +551,11 @@ export const AI = createAI<AIState, UIState>({
   onSetAIState: async ({ state, done }) => {
     'use server'
     if (done) {
-      saveChat(state as Chat).catch(e => console.error('Failed to save chat:', e))
+      const userId = (await getCurrentUserIdOnServer()) || 'anonymous'
+      const { chatId, messages } = state as AIState
+      saveChat({ id: chatId, messages } as any, userId).catch(e =>
+        console.error('Failed to save chat:', e)
+      )
     }
   }
 })
@@ -566,15 +571,19 @@ export function getUIStateFromAIState(aiState: Chat) {
 
       switch (type) {
         case 'response':
+          const botMessageStream = createStreamableValue(content as string)
+          botMessageStream.done(content as string)
           return {
             id,
-            component: <BotMessage content={content as string} />
+            component: <BotMessage content={botMessageStream.value} />
           }
         case 'related':
           const relatedQueries = JSON.parse(content as string)
+          const relatedStream = createStreamableValue(relatedQueries)
+          relatedStream.done(relatedQueries)
           return {
             id,
-            component: <SearchRelated queries={relatedQueries} />,
+            component: <SearchRelated relatedQueries={relatedStream.value} />,
             isCollapsed: true
           }
         case 'followup':
@@ -589,7 +598,7 @@ export function getUIStateFromAIState(aiState: Chat) {
         case 'inquiry':
           return {
             id,
-            component: <CopilotDisplay inquiry={JSON.parse(content as string)} />
+            component: <CopilotDisplay content={content as string} />
           }
         case 'resolution_search_result': {
           const analysisResult = JSON.parse(content as string);
