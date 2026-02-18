@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Search } from 'lucide-react'
 import { useMap } from './map/map-context'
 import { useActions, useUIState } from 'ai/rsc'
-import { AI } from '@/app/actions'
+
 import { nanoid } from '@/lib/utils'
 import { UserMessage } from './user-message'
 import { toast } from 'sonner'
@@ -24,8 +24,8 @@ export function HeaderSearchButton() {
   const { mapProvider } = useSettingsStore()
   const { mapData } = useMapData()
   // Cast the actions to our defined interface to avoid build errors
-  const actions = useActions<typeof AI>() as unknown as HeaderActions
-  const [, setMessages] = useUIState<typeof AI>()
+  const actions = useActions<any>() as unknown as HeaderActions
+  const [, setMessages] = useUIState<any>()
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [desktopPortal, setDesktopPortal] = useState<HTMLElement | null>(null)
   const [mobilePortal, setMobilePortal] = useState<HTMLElement | null>(null)
