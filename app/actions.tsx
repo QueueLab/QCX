@@ -1,3 +1,4 @@
+import React from 'react'
 import {
   StreamableValue,
   createAI,
@@ -27,6 +28,18 @@ import { CopilotDisplay } from '@/components/copilot-display'
 import RetrieveSection from '@/components/retrieve-section'
 import { VideoSearchSection } from '@/components/video-search-section'
 import { MapQueryHandler } from '@/components/map/map-query-handler'
+
+export type UIState = {
+  id: string
+  component: React.ReactNode
+  isCollapsed?: StreamableValue<boolean>
+}[]
+
+export type AIState = {
+  chatId: string
+  messages: AIMessage[]
+}
+
 
 // Define the type for related queries
 type RelatedQueries = {
@@ -526,7 +539,7 @@ async function clearChat() {
   })
 }
 
-export const AI = createAI({
+export const AI = createAI<AIState, UIState>({
   actions: {
     submit,
     clearChat
@@ -683,15 +696,4 @@ export function getUIStateFromAIState(aiState: Chat) {
       }
     })
     .filter(message => message !== null) as UIState
-}
-
-export type UIState = {
-  id: string
-  component: React.ReactNode
-  isCollapsed?: StreamableValue<boolean>
-}[]
-
-export type AIState = {
-  chatId: string
-  messages: AIMessage[]
 }
