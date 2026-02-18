@@ -470,10 +470,11 @@ async function submit(formData?: FormData, skip?: boolean) {
         ]
       })
     } else {
+      const streamText = createStreamableValue('')
       const { fullResponse, hasError, toolResponses } = await researcher(
         currentSystemPrompt,
         uiStream,
-        createStreamableValue(''),
+        streamText,
         messages,
         mapProvider,
         useSpecificAPI,
@@ -486,7 +487,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         return
       }
 
-      const answer = await writer(uiStream, messages, toolResponses)
+      const answer = await writer(currentSystemPrompt, uiStream, streamText, messages)
 
       const relatedQueries = await querySuggestor(uiStream, messages)
 
