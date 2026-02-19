@@ -14,6 +14,7 @@ import { PartialRelated } from '@/lib/schema/related'
 import { getSuggestions } from '@/lib/actions/suggest'
 import { useMapData } from './map/map-data-context'
 import SuggestionsDropdown from './suggestions-dropdown'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 interface ChatPanelProps {
   messages: UIState
@@ -169,17 +170,22 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
           'fixed bottom-4 left-4 flex justify-start items-center pointer-events-none z-50'
         )}
       >
-        <Button
-          type="button"
-          variant={'ghost'}
-          size={'icon'}
-          className="rounded-full transition-all hover:scale-110 pointer-events-auto text-primary"
-          onClick={() => handleClear()}
-          data-testid="new-chat-button"
-          title="New Chat"
-        >
-          <Sprout size={28} className="fill-primary/20" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant={'ghost'}
+              size={'icon'}
+              className="rounded-full transition-all hover:scale-110 pointer-events-auto text-primary"
+              onClick={() => handleClear()}
+              data-testid="new-chat-button"
+              aria-label="New Chat"
+            >
+              <Sprout size={28} className="fill-primary/20" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>New Chat</TooltipContent>
+        </Tooltip>
       </div>
     )
   }
@@ -216,18 +222,24 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
             accept="text/plain,image/png,image/jpeg,image/webp"
           />
           {!isMobile && (
-            <Button
-              type="button"
-              variant={'ghost'}
-              size={'icon'}
-              className={cn(
-                'absolute top-1/2 transform -translate-y-1/2 left-3'
-              )}
-              onClick={handleAttachmentClick}
-              data-testid="desktop-attachment-button"
-            >
-              <Paperclip size={isMobile ? 18 : 20} />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant={'ghost'}
+                  size={'icon'}
+                  className={cn(
+                    'absolute top-1/2 transform -translate-y-1/2 left-3'
+                  )}
+                  onClick={handleAttachmentClick}
+                  data-testid="desktop-attachment-button"
+                  aria-label="Attach File"
+                >
+                  <Paperclip size={isMobile ? 18 : 20} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Attach File</TooltipContent>
+            </Tooltip>
           )}
           <Textarea
             ref={inputRef}
@@ -295,9 +307,14 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
             <span className="text-sm text-muted-foreground truncate max-w-xs">
               {selectedFile.name}
             </span>
-            <Button variant="ghost" size="icon" onClick={clearAttachment} data-testid="clear-attachment-button">
-              <X size={16} />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" onClick={clearAttachment} data-testid="clear-attachment-button" aria-label="Clear attachment">
+                  <X size={16} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Clear attachment</TooltipContent>
+            </Tooltip>
           </div>
         </div>
       )}

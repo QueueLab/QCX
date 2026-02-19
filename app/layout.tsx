@@ -19,6 +19,7 @@ import { HistorySidebar } from '@/components/history-sidebar'
 import { MapLoadingProvider } from '@/components/map-loading-context';
 import ConditionalLottie from '@/components/conditional-lottie';
 import { MapProvider as MapContextProvider } from '@/components/map/map-context'
+import { TooltipProvider } from '@/components/ui/tooltip'
 
 const fontSans = FontSans({
   subsets: ['latin'],
@@ -109,12 +110,14 @@ export default function RootLayout({
                   >
                     <MapContextProvider>
                       <MapLoadingProvider>
-                        <Header />
-                        <ConditionalLottie />
-                        {children}
-                        <HistorySidebar />
-                        <Footer />
-                        <Toaster />
+                        <TooltipProvider>
+                          <Header />
+                          <ConditionalLottie />
+                          {children}
+                          <HistorySidebar />
+                          <Footer />
+                          <Toaster />
+                        </TooltipProvider>
                       </MapLoadingProvider>
                     </MapContextProvider>
                   </ThemeProvider>
