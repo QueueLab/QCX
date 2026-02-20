@@ -1,3 +1,4 @@
+import { fetchElevationData } from '@/lib/actions/elevation';
 import {
   StreamableValue,
   createAI,
@@ -29,12 +30,14 @@ import RetrieveSection from '@/components/retrieve-section'
 import { VideoSearchSection } from '@/components/video-search-section'
 import { MapQueryHandler } from '@/components/map/map-query-handler'
 
+// Define the type for related queries
 type RelatedQueries = {
   items: { query: string }[]
 }
 
 async function submit(formData?: FormData, skip?: boolean) {
   'use server'
+
   const aiState = getMutableAIState<typeof AI>()
   const uiStream = createStreamableUI()
   const isGenerating = createStreamableValue(true)
@@ -64,8 +67,10 @@ async function submit(formData?: FormData, skip?: boolean) {
 
     const mapboxBuffer = file_mapbox ? await file_mapbox.arrayBuffer() : null;
     const mapboxDataUrl = mapboxBuffer ? `data:${file_mapbox.type};base64,${Buffer.from(mapboxBuffer).toString('base64')}` : null;
+
     const googleBuffer = file_google ? await file_google.arrayBuffer() : null;
     const googleDataUrl = googleBuffer ? `data:${file_google.type};base64,${Buffer.from(googleBuffer).toString('base64')}` : null;
+
     const buffer = await file.arrayBuffer();
     const dataUrl = `data:${file.type};base64,${Buffer.from(buffer).toString('base64')}`;
 
@@ -91,14 +96,15 @@ async function submit(formData?: FormData, skip?: boolean) {
         { id: nanoid(), role: 'user', content, type: 'input' }
       ]
     });
-
     messages.push({ role: 'user', content });
+
     const summaryStream = createStreamableValue<string>('Analyzing map view...');
     const groupeId = nanoid();
 
     async function processResolutionSearch() {
       try {
         const streamResult = await resolutionSearch(messages, timezone, drawnFeatures, location);
+
         let fullSummary = '';
         for await (const partialObject of streamResult.partialObjectStream) {
           if (partialObject.summary) {
@@ -119,19 +125,19 @@ async function submit(formData?: FormData, skip?: boolean) {
           );
         }
 
-        let elevationPoints = undefined;
-        let elevationStatistics = undefined;
+        // Handle elevation heat map if requested
         if (analysisResult.elevationData?.requested && analysisResult.elevationData.bounds) {
           try {
-            const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-            const elevationResponse = await fetch(
-              `${baseUrl}/api/elevation?bounds=${JSON.stringify(analysisResult.elevationData.bounds)}&gridSize=${analysisResult.elevationData.gridSize || 20}`
+            const elevationData = await fetchElevationData(
+              analysisResult.elevationData.bounds as [number, number, number, number],
+              analysisResult.elevationData.gridSize || 20
             );
-            if (elevationResponse.ok) {
-              const elevationData = await elevationResponse.json();
+            if (elevationData) {
+
               if (elevationData.points && elevationData.points.length > 0) {
-                elevationPoints = elevationData.points;
-                elevationStatistics = elevationData.statistics;
+                (analysisResult as any).elevationPoints = elevationData.points;
+                (analysisResult as any).elevationStatistics = elevationData.statistics;
+
                 uiStream.append(
                   <ElevationHeatmapLayer
                     id={groupeId}
@@ -145,6 +151,7 @@ async function submit(formData?: FormData, skip?: boolean) {
             console.error('Error fetching elevation data:', error);
           }
         }
+
 
         messages.push({ role: 'assistant', content: analysisResult.summary || 'Analysis complete.' });
 
@@ -170,9 +177,7 @@ async function submit(formData?: FormData, skip?: boolean) {
           }
           return m
         });
-
         const relatedQueries = await querySuggestor(uiStream, sanitizedMessages);
-
         uiStream.append(
           <Section title="Follow-up">
             <FollowupPanel />
@@ -199,8 +204,8 @@ async function submit(formData?: FormData, skip?: boolean) {
                 image: dataUrl,
                 mapboxImage: mapboxDataUrl,
                 googleImage: googleDataUrl,
-                elevationPoints,
-                elevationStatistics
+                elevationPoints: (analysisResult as any).elevationPoints,
+                elevationStatistics: (analysisResult as any).elevationStatistics
               }),
               type: 'resolution_search_result'
             },
@@ -258,7 +263,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     const definition = userInput.toLowerCase().trim() === 'what is a planet computer?'
       ? `A planet computer is a proprietary environment aware system that interoperates weather forecasting, mapping and scheduling using cutting edge multi-agents to streamline automation and exploration on a planet. Available for our Pro and Enterprise customers. [QCX Pricing](https://www.queue.cx/#pricing)`
       : `QCX-Terra is a model garden of pixel level precision geospatial foundational models for efficient land feature predictions from satellite imagery. Available for our Pro and Enterprise customers. [QCX Pricing] (https://www.queue.cx/#pricing)`;
-    
+
     const content = JSON.stringify(Object.fromEntries(formData!));
     const type = 'input';
     const groupeId = nanoid();
@@ -461,7 +466,6 @@ async function submit(formData?: FormData, skip?: boolean) {
     let toolOutputs: ToolResultPart[] = []
     let errorOccurred = false
     const streamText = createStreamableValue<string>()
-
     uiStream.update(<Spinner />)
 
     while (
@@ -532,7 +536,9 @@ async function submit(formData?: FormData, skip?: boolean) {
           <FollowupPanel />
         </Section>
       )
+
       await new Promise(resolve => setTimeout(resolve, 500))
+
       aiState.done({
         ...aiState.get(),
         messages: [
@@ -575,7 +581,9 @@ async function submit(formData?: FormData, skip?: boolean) {
 
 async function clearChat() {
   'use server'
+
   const aiState = getMutableAIState<typeof AI>()
+
   aiState.done({
     chatId: nanoid(),
     messages: []
@@ -613,12 +621,10 @@ export const AI = createAI<AIState, UIState>({
     'use server'
 
     const aiState = getAIState() as AIState
-
     if (aiState) {
       const uiState = getUIStateFromAIState(aiState)
       return uiState
     }
-
     return initialUIState
   },
   onSetAIState: async ({ state }) => {
@@ -631,8 +637,8 @@ export const AI = createAI<AIState, UIState>({
     const { chatId, messages } = state
     const createdAt = new Date()
     const path = `/search/${chatId}`
-    let title = 'Untitled Chat'
 
+    let title = 'Untitled Chat'
     if (messages.length > 0) {
       const firstMessageContent = messages[0].content
       if (typeof firstMessageContent === 'string') {
@@ -681,15 +687,13 @@ export const AI = createAI<AIState, UIState>({
       title,
       messages: updatedMessages
     }
-
     await saveChat(chat, actualUserId)
-  },
+  }
 })
 
 export const getUIStateFromAIState = (aiState: AIState): UIState => {
   const chatId = aiState.chatId
   const isSharePage = aiState.isSharePage
-
   return aiState.messages
     .map((message, index) => {
       const { role, content, id, type, name } = message
@@ -715,7 +719,6 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
               } catch (e) {
                 messageContent = content
               }
-
               return {
                 id,
                 component: (
@@ -770,20 +773,26 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
               }
             case 'resolution_search_result': {
               const analysisResult = JSON.parse(content as string);
+              const geoJson = analysisResult.geoJson as FeatureCollection;
               const image = analysisResult.image as string;
               const mapboxImage = analysisResult.mapboxImage as string;
               const googleImage = analysisResult.googleImage as string;
-              
+              const elevationPoints = analysisResult.elevationPoints;
+              const elevationStatistics = analysisResult.elevationStatistics;
+
               return {
                 id,
                 component: (
-                  <Section title="response">
+                  <>
                     <ResolutionCarousel
                       mapboxImage={mapboxImage}
                       googleImage={googleImage}
                       initialImage={image}
                     />
-                  </Section>
+                    {geoJson && (
+                      <GeoJsonLayer id={id} data={geoJson} />
+                    )}
+                  </>
                 )
               }
             }
@@ -801,6 +810,7 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
             ) {
               const mapUrl = toolOutput.mcp_response?.mapUrl;
               const placeName = toolOutput.mcp_response?.location?.place_name;
+
               return {
                 id,
                 component: (
@@ -823,7 +833,6 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
               JSON.stringify(toolOutput)
             )
             searchResults.done(JSON.stringify(toolOutput))
-
             switch (name) {
               case 'search':
                 return {
