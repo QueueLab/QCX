@@ -52,7 +52,6 @@ export function ResolutionCarousel({ mapboxImage, googleImage, initialImage }: R
       const formData = new FormData()
       formData.append('file', blob, 'google_analysis.png')
       formData.append('action', 'resolution_search')
-      formData.append('id', nanoid())
 
       const responseMessage = await actions.submit(formData)
       setMessages((currentMessages: any[]) => [...currentMessages, responseMessage as any])
