@@ -20,7 +20,7 @@ export function FollowupPanel() {
     event.preventDefault()
     const formData = new FormData()
     formData.append("input", input)
-    formData.append("action", "resolution_search")
+
     formData.append("id", nanoid())
 
     const userMessage = {
