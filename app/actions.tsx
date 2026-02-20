@@ -7,7 +7,7 @@ import {
   getMutableAIState
 } from 'ai/rsc'
 import { CoreMessage, ToolResultPart } from 'ai'
-import { nanoid } from '@/lib/utils'
+
 import type { FeatureCollection } from 'geojson'
 import { Spinner } from '@/components/ui/spinner'
 import { Section } from '@/components/section'
@@ -91,13 +91,13 @@ async function submit(formData?: FormData, skip?: boolean) {
       ...aiState.get(),
       messages: [
         ...aiState.get().messages,
-        { id: nanoid(), role: 'user', content, type: 'input' }
+        { id: (formData?.get('id') as string) || '', role: 'user', content, type: 'input' }
       ]
     });
     messages.push({ role: 'user', content });
 
     const summaryStream = createStreamableValue<string>('Analyzing map view...');
-    const groupeId = nanoid();
+    const groupeId = (formData?.get('id') as string) || '';
 
     async function processResolutionSearch() {
       try {
@@ -214,7 +214,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     );
 
     return {
-      id: nanoid(),
+      id: (formData?.get('id') as string) || '',
       isGenerating: isGenerating.value,
       component: uiStream.value,
       isCollapsed: isCollapsed.value
@@ -234,14 +234,14 @@ async function submit(formData?: FormData, skip?: boolean) {
 
     const content = JSON.stringify(Object.fromEntries(formData!));
     const type = 'input';
-    const groupeId = nanoid();
+    const groupeId = (formData?.get('id') as string) || '';
 
     aiState.update({
       ...aiState.get(),
       messages: [
         ...aiState.get().messages,
         {
-          id: nanoid(),
+          id: (formData?.get('id') as string) || '',
           role: 'user',
           content,
           type,
@@ -291,7 +291,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     uiStream.done();
 
     return {
-      id: nanoid(),
+      id: (formData?.get('id') as string) || '',
       isGenerating: isGenerating.value,
       component: uiStream.value,
       isCollapsed: isCollapsed.value
@@ -301,7 +301,7 @@ async function submit(formData?: FormData, skip?: boolean) {
   if (!userInput && !file) {
     isGenerating.done(false)
     return {
-      id: nanoid(),
+      id: (formData?.get('id') as string) || '',
       isGenerating: isGenerating.value,
       component: null,
       isCollapsed: isCollapsed.value
@@ -384,7 +384,7 @@ async function submit(formData?: FormData, skip?: boolean) {
       messages: [
         ...aiState.get().messages,
         {
-          id: nanoid(),
+          id: (formData?.get('id') as string) || '',
           role: 'user',
           content,
           type
@@ -420,7 +420,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         messages: [
           ...aiState.get().messages,
           {
-            id: nanoid(),
+            id: (formData?.get('id') as string) || '',
             role: 'assistant',
             content: `inquiry: ${inquiry?.question}`
           }
@@ -540,7 +540,7 @@ async function submit(formData?: FormData, skip?: boolean) {
   processEvents()
 
   return {
-    id: nanoid(),
+    id: (formData?.get('id') as string) || '',
     isGenerating: isGenerating.value,
     component: uiStream.value,
     isCollapsed: isCollapsed.value
@@ -553,7 +553,7 @@ async function clearChat() {
   const aiState = getMutableAIState<typeof AI>()
 
   aiState.done({
-    chatId: nanoid(),
+    chatId: '',
     messages: []
   })
 }
@@ -572,7 +572,7 @@ export type UIState = {
 }[]
 
 const initialAIState: AIState = {
-  chatId: nanoid(),
+  chatId: '',
   messages: []
 }
 
@@ -630,7 +630,7 @@ export const AI = createAI<AIState, UIState>({
     const updatedMessages: AIMessage[] = [
       ...messages,
       {
-        id: nanoid(),
+        id: (formData?.get('id') as string) || '',
         role: 'assistant',
         content: `end`,
         type: 'end'

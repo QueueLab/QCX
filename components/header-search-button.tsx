@@ -128,6 +128,7 @@ export function HeaderSearchButton() {
       formData.append('file', (mapboxBlob || googleBlob)!, 'map_capture.png')
 
       formData.append('action', 'resolution_search')
+      formData.append('id', nanoid())
       formData.append('timezone', mapData.currentTimezone || 'UTC')
       formData.append('drawnFeatures', JSON.stringify(mapData.drawnFeatures || []))
 
