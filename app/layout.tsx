@@ -17,6 +17,7 @@ import { CalendarToggleProvider } from '@/components/calendar-toggle-context'
 import { HistoryToggleProvider } from '@/components/history-toggle-context'
 import { HistorySidebar } from '@/components/history-sidebar'
 import { MapLoadingProvider } from '@/components/map-loading-context';
+import { TooltipProvider } from '@/components/ui/tooltip'
 import ConditionalLottie from '@/components/conditional-lottie';
 import { MapProvider as MapContextProvider } from '@/components/map/map-context'
 
@@ -109,12 +110,14 @@ export default function RootLayout({
                   >
                     <MapContextProvider>
                       <MapLoadingProvider>
-                        <Header />
-                        <ConditionalLottie />
-                        {children}
-                        <HistorySidebar />
-                        <Footer />
-                        <Toaster />
+                        <TooltipProvider>
+                          <Header />
+                          <ConditionalLottie />
+                          {children}
+                          <HistorySidebar />
+                          <Footer />
+                          <Toaster />
+                        </TooltipProvider>
                       </MapLoadingProvider>
                     </MapContextProvider>
                   </ThemeProvider>
