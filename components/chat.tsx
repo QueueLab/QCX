@@ -36,7 +36,7 @@ export function Chat({ id }: ChatProps) {
   const { isUsageOpen } = useUsageToggle();
   const { isCalendarOpen } = useCalendarToggle()
   const [input, setInput] = useState('')
-  const [showEmptyScreen, setShowEmptyScreen] = useState(false)
+  const showEmptyScreen = messages.length === 0
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [suggestions, setSuggestions] = useState<PartialRelated | null>(null)
   const chatPanelRef = useRef<ChatPanelRef>(null);
@@ -48,10 +48,6 @@ export function Chat({ id }: ChatProps) {
   const handleMobileSubmit = () => {
     chatPanelRef.current?.submitForm();
   };
-  
-  useEffect(() => {
-    setShowEmptyScreen(messages.length === 0)
-  }, [messages])
 
   useEffect(() => {
     // Check if device is mobile
