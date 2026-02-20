@@ -21,6 +21,7 @@ import { BotMessage } from '@/components/message'
 import { SearchSection } from '@/components/search-section'
 import SearchRelated from '@/components/search-related'
 import { GeoJsonLayer } from '@/components/map/geojson-layer'
+import { ElevationHeatmapLayer } from '@/components/map/elevation-heatmap-layer'
 import { ResolutionCarousel } from '@/components/resolution-carousel'
 import { ResolutionImage } from '@/components/resolution-image'
 import { CopilotDisplay } from '@/components/copilot-display'
@@ -123,6 +124,36 @@ async function submit(formData?: FormData, skip?: boolean) {
           );
         }
 
+        // Handle elevation heat map if requested
+        if (analysisResult.elevationData?.requested && analysisResult.elevationData.bounds) {
+          try {
+            const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+            const elevationResponse = await fetch(
+              `${baseUrl}/api/elevation?bounds=${JSON.stringify(analysisResult.elevationData.bounds)}&gridSize=${analysisResult.elevationData.gridSize || 20}`
+            );
+
+            if (elevationResponse.ok) {
+              const elevationData = await elevationResponse.json();
+
+              if (elevationData.points && elevationData.points.length > 0) {
+                (analysisResult as any).elevationPoints = elevationData.points;
+                (analysisResult as any).elevationStatistics = elevationData.statistics;
+
+                uiStream.append(
+                  <ElevationHeatmapLayer
+                    id={groupeId}
+                    points={elevationData.points}
+                    statistics={elevationData.statistics}
+                  />
+                );
+              }
+            }
+          } catch (error) {
+            console.error('Error fetching elevation data:', error);
+          }
+        }
+
+
         messages.push({ role: 'assistant', content: analysisResult.summary || 'Analysis complete.' });
 
         const sanitizedMessages: CoreMessage[] = messages.map((m: any) => {
@@ -173,7 +204,9 @@ async function submit(formData?: FormData, skip?: boolean) {
                 ...analysisResult,
                 image: dataUrl,
                 mapboxImage: mapboxDataUrl,
-                googleImage: googleDataUrl
+                googleImage: googleDataUrl,
+                elevationPoints: (analysisResult as any).elevationPoints,
+                elevationStatistics: (analysisResult as any).elevationStatistics
               }),
               type: 'resolution_search_result'
             },
@@ -745,6 +778,8 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
               const image = analysisResult.image as string;
               const mapboxImage = analysisResult.mapboxImage as string;
               const googleImage = analysisResult.googleImage as string;
+              const elevationPoints = analysisResult.elevationPoints;
+              const elevationStatistics = analysisResult.elevationStatistics;
 
               return {
                 id,
