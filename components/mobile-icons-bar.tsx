@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { useUIState, useActions } from 'ai/rsc'
-import { AI } from '@/app/actions'
+
 import { Button } from '@/components/ui/button'
 import {
   Search,
@@ -26,7 +26,7 @@ interface MobileIconsBarProps {
 }
 
 export const MobileIconsBar: React.FC<MobileIconsBarProps> = ({ onAttachmentClick, onSubmitClick }) => {
-  const [, setMessages] = useUIState<typeof AI>()
+  const [, setMessages] = useUIState<any>()
   const { clearChat } = useActions()
   const { toggleCalendar } = useCalendarToggle()
 

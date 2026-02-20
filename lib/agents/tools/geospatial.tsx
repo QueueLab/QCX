@@ -52,23 +52,8 @@ async function getConnectedMcpClient(): Promise<McpClient | null> {
     return null;
   }
 
-  // Load config from file or fallback
-  let config;
-  try {
-    // Use static import for config
-    let mapboxMcpConfig;
-    try {
-      mapboxMcpConfig = require('../../../mapbox_mcp_config.json');
-      config = { ...mapboxMcpConfig, mapboxAccessToken };
-      console.log('[GeospatialTool] Config loaded successfully');
-    } catch (configError: any) {
-      throw configError;
-    }
-  } catch (configError: any) {
-    console.error('[GeospatialTool] Failed to load mapbox config:', configError.message);
-    config = { mapboxAccessToken, version: '1.0.0', name: 'mapbox-mcp-server' };
-    console.log('[GeospatialTool] Using fallback config');
-  }
+  // Use fallback config (mapbox_mcp_config.json is optional and may be missing)
+  const config = { mapboxAccessToken, version: '1.0.0', name: 'mapbox-mcp-server' };
 
   // Build Composio MCP server URL
   // Note: This should be migrated to use Composio SDK directly instead of MCP client
