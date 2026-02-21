@@ -3,7 +3,7 @@
 # QCX  
 **Quality Computer Experience**  
 Language → Maps  
-A planet computer core
+A General Intelligence Interface, A planet computer core
 
 <br />
 
@@ -162,18 +162,4 @@ Models with reasoning / heavy tool calling can sometimes break generative UI —
 Made with curiosity by [QueueLab](https://github.com/QueueLab)
 
 </div>
-```
 
-### Key Improvements Made
-
-- Clear project tagline + one-sentence purpose at top
-- Better visual hierarchy with emoji sections, tables, code blocks
-- Fixed typos (wwww → www, inconsistent headers)
-- Modern quick-start flow (Bun emphasis)
-- More honest note about model compatibility
-- Removed redundant repetition
-- Added contributing motivation + link to deepwiki
-- Cleaner links section
-- Research / AGI flavor preserved without overhyping
-
-Feel free to copy-paste this directly into your README.md and tweak further (e.g., add badges, screenshots, more verified models later). Good luck with QCX — looks like a very interesting spatial + AI experiment! 🚀
