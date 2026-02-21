@@ -9,7 +9,16 @@
 <a href="https://www.producthunt.com/products/qcx?embed=true&utm_source=badge-featured&utm_medium=badge&utm_source=badge-qcx" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1035588&theme=light&t=1762583679476" alt="QCX - Artificial&#0032;General&#0032;Intelligence&#0046; | Product Hunt" style="width: 250px; height: 54px;" width="250" height="54" /></a>
 </div>
 
-[![Demo](https://img.youtube.com/vi/y8M6qaFeZOw/0.jpg)](https://youtu.be/y8M6qaFeZOw?si=eYMXxqh7vQ4I-Mhr)
+<div align="center">
+  <iframe width="560" height="315" 
+    src="https://www.youtube.com/embed/y8M6qaFeZOw?si=eYMXxqh7vQ4I-Mhr&autoplay=1" 
+    title="YouTube video player" 
+    frameborder="0" 
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+    allowfullscreen>
+  </iframe>
+</div>
+
 
 
 
