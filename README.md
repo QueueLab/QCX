@@ -9,7 +9,8 @@
 <a href="https://www.producthunt.com/products/qcx?embed=true&utm_source=badge-featured&utm_medium=badge&utm_source=badge-qcx" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1035588&theme=light&t=1762583679476" alt="QCX - Artificial&#0032;General&#0032;Intelligence&#0046; | Product Hunt" style="width: 250px; height: 54px;" width="250" height="54" /></a>
 </div>
 
-<img width="1277" alt="Screen Shot 2024-06-18 at 4 27 51 PM" src="https://github.com/QueueLab/MapGPT/assets/115367894/01584e12-b3f5-41c9-8009-a16642568798">
+[![Demo](https://img.youtube.com/vi/y8M6qaFeZOw/0.jpg)](https://youtu.be/y8M6qaFeZOw?si=eYMXxqh7vQ4I-Mhr)
+
 
 
 
