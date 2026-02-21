@@ -3,7 +3,7 @@
 # QCX  
 **Quality Computer Experience**  
 Language → Maps  
-AI-powered geospatial exploration & planetary assistant
+A planet computer core
 
 <br />
 
