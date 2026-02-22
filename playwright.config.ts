@@ -2,11 +2,12 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests',
+  globalSetup: require.resolve('./tests/global-setup'),
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
-  reporter: 'html',
+  workers: process.env.CI ? 2 : undefined,
+  reporter: process.env.CI ? [['list'], ['github'], ['blob']] : 'html',
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
@@ -15,28 +16,35 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+      testIgnore: /mobile\.spec\.ts/,
     },
     {
       name: 'firefox',
       use: { ...devices['Desktop Firefox'] },
+      testIgnore: /mobile\.spec\.ts/,
     },
     {
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
+      testIgnore: /mobile\.spec\.ts/,
     },
     {
       name: 'Mobile Chrome',
       use: { ...devices['Pixel 5'] },
+      testMatch: /mobile\.spec\.ts/,
     },
     {
       name: 'Mobile Safari',
       use: { ...devices['iPhone 12'] },
+      testMatch: /mobile\.spec\.ts/,
     },
   ],
-  /* webServer: {
-    command: process.env.CI ? 'npm run build && npm run start' : 'npm run dev',
+  webServer: {
+    command: process.env.CI ? 'bun run build && bun run start' : 'bun run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 600000,
-  }, */
+    stdout: 'pipe',
+    stderr: 'pipe',
+  },
 });
