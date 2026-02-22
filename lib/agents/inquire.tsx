@@ -2,7 +2,7 @@ import { Copilot } from '@/components/copilot';
 import { createStreamableUI, createStreamableValue } from 'ai/rsc';
 import { CoreMessage, LanguageModel, streamObject } from 'ai';
 import { PartialInquiry, inquirySchema } from '@/lib/schema/inquiry';
-import { getModel } from '../utils';
+import { getModel } from '../utils/ai';
 
 // Define a plain object type for the inquiry prop
 interface InquiryProp {
@@ -11,7 +11,9 @@ interface InquiryProp {
 
 export async function inquire(
   uiStream: ReturnType<typeof createStreamableUI>,
-  messages: CoreMessage[]
+  messages: CoreMessage[],
+  userId?: string,
+  chatId?: string
 ) {
   const objectStream = createStreamableValue<PartialInquiry>();
   let currentInquiry: PartialInquiry = {};
@@ -23,8 +25,11 @@ export async function inquire(
 
   let finalInquiry: PartialInquiry = {};
   const result = await streamObject({
-    model: (await getModel()) as LanguageModel,
-    system: `...`, // Your system prompt remains unchanged
+    model: (await getModel(false, userId, chatId, true)) as LanguageModel,
+    system: `As a planet computer, your goal is to help the user narrow down their query for more efficient research.
+    Ask a clear and concise question to clarify the user's intent or to get missing information.
+    For geospatial queries, focus on location, time, or specific travel needs.
+    Provide a few suggested responses to guide the user.`,
     messages,
     schema: inquirySchema,
   });

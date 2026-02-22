@@ -1,9 +1,9 @@
 import { CoreMessage, generateObject, LanguageModel } from 'ai'
 import { nextActionSchema } from '../schema/next-action'
-import { getModel } from '../utils'
+import { getModel } from '../utils/ai'
 
 // Decide whether inquiry is required for the user input
-export async function taskManager(messages: CoreMessage[]) {
+export async function taskManager(messages: CoreMessage[], userId?: string, chatId?: string) {
   try {
     // Check if the latest user message contains an image
     const lastUserMessage = messages.slice().reverse().find(m => m.role === 'user');
@@ -16,7 +16,7 @@ export async function taskManager(messages: CoreMessage[]) {
     }
 
     const result = await generateObject({
-      model: (await getModel()) as LanguageModel,
+      model: (await getModel(false, userId, chatId, true)) as LanguageModel,
       system: `As a planet computer, your primary objective is to act as an efficient **Task Manager** for the user's query. Your goal is to minimize unnecessary steps and maximize the efficiency of the subsequent exploration phase (researcher agent).
 
 	    You must first analyze the user's input and determine the optimal course of action. You have two options at your disposal:

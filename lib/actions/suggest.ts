@@ -3,7 +3,7 @@
 import { createStreamableUI, createStreamableValue } from 'ai/rsc'
 import { CoreMessage, LanguageModel, streamObject } from 'ai'
 import { PartialRelated, relatedSchema } from '@/lib/schema/related'
-import { getModel } from '../utils'
+import { getModel } from '../utils/ai'
 import { MapData } from '@/components/map/map-data-context'
 
 export async function getSuggestions(
@@ -28,7 +28,7 @@ export async function getSuggestions(
 
   ;(async () => {
     const result = await streamObject({
-      model: (await getModel()) as LanguageModel,
+      model: (await getModel(false, undefined, undefined, true)) as LanguageModel,
       system: systemPrompt,
       messages: [{ role: 'user', content: query }],
       schema: relatedSchema
