@@ -163,3 +163,14 @@ Made with curiosity by [QueueLab](https://github.com/QueueLab)
 
 </div>
 
+
+<br />
+
+## License
+
+This project is licensed under the **PolyForm Noncommercial License 1.0.0**.
+
+- **Non-commercial use:** Free for personal, educational, and non-profit use.
+- **Commercial use:** Requires a paid commercial license.
+
+[**Purchase Commercial License**](https://buy.stripe.com/14A3cv7K72TR3go14Nasg02)
