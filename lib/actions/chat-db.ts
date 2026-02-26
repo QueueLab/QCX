@@ -213,11 +213,3 @@ export async function getMessagesByChatId(chatId: string): Promise<Message[]> {
   }
 }
 
-// More granular functions might be needed based on PR #533 specifics:
-// - updateMessage(messageId: string, updates: Partial<NewMessage>): Promise<Message | null>
-// - deleteMessage(messageId: string, userId: string): Promise<boolean>
-// - deleteTrailingMessages(chatId: string, lastKeptMessageId: string): Promise<void>
-// These are placeholders for now and can be implemented if subsequent steps show they are directly part of PR #533's changes.
-// The PR mentions "feat: Add message update and trailing deletion logic" and "refactor(chat): Adjust message edit logic".
-
-console.log('Chat DB actions loaded. Ensure getCurrentUserId() is correctly implemented for server-side usage if applicable.');
