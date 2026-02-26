@@ -8,13 +8,13 @@ type HistoryListProps = {
   userId?: string;
 };
 
-const loadChats = cache(async (userId?: string): Promise<DrizzleChat[] | null> => {
-  return await getChats(userId);
+const loadChats = cache(async (): Promise<DrizzleChat[] | null> => {
+  return await getChats();
 });
 
 export async function HistoryList({ userId }: HistoryListProps) {
   try {
-    const chats = await loadChats(userId);
+    const chats = await loadChats();
 
     if (!chats) {
       return (
