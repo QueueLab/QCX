@@ -148,10 +148,10 @@ export async function updateDrawingContext(chatId: string, contextData: { drawnF
 }
 
 export async function saveSystemPrompt(
-  userId: string,
   prompt: string
 ): Promise<{ success?: boolean; error?: string }> {
-  if (!userId) return { error: 'User ID is required' }
+  const userId = await getCurrentUserIdOnServer()
+  if (!userId) return { error: 'User not authenticated' }
   if (!prompt) return { error: 'Prompt is required' }
 
   try {
@@ -166,9 +166,8 @@ export async function saveSystemPrompt(
   }
 }
 
-export async function getSystemPrompt(
-  userId: string
-): Promise<string | null> {
+export async function getSystemPrompt(): Promise<string | null> {
+  const userId = await getCurrentUserIdOnServer()
   if (!userId) return null
 
   try {
