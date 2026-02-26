@@ -39,7 +39,7 @@ export const searchTool = ({ uiStream, fullResponse }: ToolProps) => ({
     const filledQuery =
       query.length < 5 ? query + ' '.repeat(5 - query.length) : query
     let searchResult
-    const searchAPI: 'tavily' | 'exa' = 'tavily'
+    const searchAPI = process.env.SEARCH_API === 'exa' ? 'exa' : 'tavily'
     try {
       searchResult =
         searchAPI === 'tavily'
@@ -54,7 +54,7 @@ export const searchTool = ({ uiStream, fullResponse }: ToolProps) => ({
               include_image_descriptions,
               include_raw_content
             )
-          : await exaSearch(query)
+          : await exaSearch(query, max_results)
     } catch (error) {
       console.error('Search API error:', error)
       hasError = true
