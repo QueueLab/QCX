@@ -21,6 +21,43 @@ export function generateUUID(): string {
  */
 export { generateUUID as nanoid };
 
+function createGrokModel(apiKey: string) {
+  const xai = createXai({
+    apiKey,
+    baseURL: 'https://api.x.ai/v1',
+  });
+  return xai('grok-4-fast-non-reasoning');
+}
+
+function createGeminiModel(apiKey: string) {
+  const google = createGoogleGenerativeAI({
+    apiKey,
+  });
+  return google('gemini-3-pro-preview');
+}
+
+function createBedrockModel(config: { accessKeyId: string; secretAccessKey: string; region?: string; modelId: string }) {
+  const bedrock = createAmazonBedrock({
+    bedrockOptions: {
+      region: config.region,
+      credentials: {
+        accessKeyId: config.accessKeyId,
+        secretAccessKey: config.secretAccessKey,
+      },
+    },
+  });
+  return bedrock(config.modelId, {
+    additionalModelRequestFields: { top_k: 350 },
+  });
+}
+
+function createOpenAIModel(apiKey?: string) {
+  const openai = createOpenAI({
+    apiKey,
+  });
+  return openai('gpt-4o');
+}
+
 export async function getModel(requireVision: boolean = false) {
   const selectedModel = await getSelectedModel();
 
@@ -32,94 +69,73 @@ export async function getModel(requireVision: boolean = false) {
   const bedrockModelId = process.env.BEDROCK_MODEL_ID || 'anthropic.claude-3-5-sonnet-20241022-v2:0';
   const openaiApiKey = process.env.OPENAI_API_KEY;
 
+  const providers = [
+    {
+      id: 'Grok 4.2',
+      check: () => !!xaiApiKey,
+      create: () => createGrokModel(xaiApiKey!),
+    },
+    {
+      id: 'Gemini 3',
+      check: () => !!gemini3ProApiKey,
+      create: () => createGeminiModel(gemini3ProApiKey!),
+    },
+    {
+      id: 'Bedrock', // Used for fallback chain
+      check: () => !!(awsAccessKeyId && awsSecretAccessKey),
+      create: () => createBedrockModel({
+        accessKeyId: awsAccessKeyId!,
+        secretAccessKey: awsSecretAccessKey!,
+        region: awsRegion,
+        modelId: bedrockModelId
+      }),
+    },
+    {
+      id: 'GPT-5.1',
+      check: () => !!openaiApiKey,
+      create: () => createOpenAIModel(openaiApiKey),
+    }
+  ];
+
   if (selectedModel) {
-    switch (selectedModel) {
-      case 'Grok 4.2':
-        if (xaiApiKey) {
-          const xai = createXai({
-            apiKey: xaiApiKey,
-            baseURL: 'https://api.x.ai/v1',
-          });
-          try {
-            return xai('grok-4-fast-non-reasoning');
-          } catch (error) {
-            console.error('Selected model "Grok 4.2" is configured but failed to initialize.', error);
-            throw new Error('Failed to initialize selected model.');
-          }
-        } else {
-            console.error('User selected "Grok 4.2" but XAI_API_KEY is not set.');
-            throw new Error('Selected model is not configured.');
+    const provider = providers.find(p => p.id === selectedModel);
+    if (provider) {
+      if (provider.check()) {
+        try {
+          return provider.create();
+        } catch (error) {
+          console.error(`Selected model "${selectedModel}" is configured but failed to initialize.`, error);
+          throw new Error('Failed to initialize selected model.');
         }
-      case 'Gemini 3':
-        if (gemini3ProApiKey) {
-          const google = createGoogleGenerativeAI({
-            apiKey: gemini3ProApiKey,
-          });
-          try {
-            return google('gemini-3-pro-preview');
-          } catch (error) {
-            console.error('Selected model "Gemini 3" is configured but failed to initialize.', error);
-            throw new Error('Failed to initialize selected model.');
-          }
-        } else {
-            console.error('User selected "Gemini 3" but GEMINI_3_PRO_API_KEY is not set.');
-            throw new Error('Selected model is not configured.');
-        }
-      case 'GPT-5.1':
-        if (openaiApiKey) {
-          const openai = createOpenAI({
-            apiKey: openaiApiKey,
-          });
-          return openai('gpt-4o');
-        } else {
-            console.error('User selected "GPT-5.1" but OPENAI_API_KEY is not set.');
-            throw new Error('Selected model is not configured.');
-        }
+      } else {
+        console.error(`User selected "${selectedModel}" but API key is not set.`);
+        throw new Error('Selected model is not configured.');
+      }
     }
   }
 
   // Default behavior: Grok -> Gemini -> Bedrock -> OpenAI
-  if (xaiApiKey) {
-    const xai = createXai({
-      apiKey: xaiApiKey,
-      baseURL: 'https://api.x.ai/v1',
-    });
-    try {
-      return xai('grok-4-fast-non-reasoning');
-    } catch (error) {
-      console.warn('xAI API unavailable, falling back to next provider:');
+  // Iterate through providers (excluding OpenAI explicit check to fallback to default logic at end)
+  // Actually, we can just iterate the first 3. OpenAI is handled at the end.
+  // The 'GPT-5.1' entry in providers is for explicit selection matching.
+
+  for (const provider of providers) {
+    // Skip GPT-5.1 in the loop because we handle it as the final fallback
+    // and the loop only tries enabled providers.
+    // If OpenAI key is set, the loop would return it.
+    // If NOT set, loop finishes, and final line returns it (which might fail or use default).
+    // Original code falls back to OpenAI last.
+
+    if (provider.id === 'GPT-5.1') continue;
+
+    if (provider.check()) {
+      try {
+        return provider.create();
+      } catch (error) {
+        console.warn(`${provider.id} API unavailable, falling back to next provider:`, error);
+      }
     }
   }
 
-  if (gemini3ProApiKey) {
-    const google = createGoogleGenerativeAI({
-      apiKey: gemini3ProApiKey,
-    });
-    try {
-      return google('gemini-3-pro-preview');
-    } catch (error) {
-      console.warn('Gemini 3 Pro API unavailable, falling back to next provider:', error);
-    }
-  }
-
-  if (awsAccessKeyId && awsSecretAccessKey) {
-    const bedrock = createAmazonBedrock({
-      bedrockOptions: {
-        region: awsRegion,
-        credentials: {
-          accessKeyId: awsAccessKeyId,
-          secretAccessKey: awsSecretAccessKey,
-        },
-      },
-    });
-    const model = bedrock(bedrockModelId, {
-      additionalModelRequestFields: { top_k: 350 },
-    });
-    return model;
-  }
-
-  const openai = createOpenAI({
-    apiKey: openaiApiKey,
-  });
-  return openai('gpt-4o');
+  return createOpenAIModel(openaiApiKey);
 }
