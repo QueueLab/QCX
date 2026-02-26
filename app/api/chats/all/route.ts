@@ -25,6 +25,7 @@ export async function DELETE() {
     console.error('Error clearing history via API:', error);
     let errorMessage = 'Internal Server Error clearing history';
     if (error instanceof Error && error.message) {
+      errorMessage = error.message;
         // Use the error message from dbClearHistory if available (e.g., "User ID is required")
         // This depends on dbClearHistory actually throwing or returning specific error messages.
         // The current dbClearHistory in chat.ts returns {error: ...} which won't be caught here as an Error instance directly.
