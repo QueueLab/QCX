@@ -189,18 +189,26 @@ export async function searchUsers(query: string) {
   noStore();
   if (!query) return [];
 
+  // Prevent DoS and long pattern matching
+  if (query.length > 255) {
+    throw new Error('Search query too long');
+  }
+
   const userId = await getCurrentUserIdOnServer();
   if (!userId) {
     throw new Error('Unauthorized');
   }
 
   try {
+    // Escape special PostgreSQL characters to prevent wildcard enumeration
+    const escapedQuery = query.replace(/[%_\\]/g, '\\$&');
+
     const result = await db.select({
       id: users.id,
       email: users.email,
     })
     .from(users)
-    .where(ilike(users.email, `%${query}%`))
+    .where(ilike(users.email, `%${escapedQuery}%`))
     .limit(10);
 
     return result;
