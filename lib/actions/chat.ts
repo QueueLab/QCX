@@ -20,9 +20,14 @@ import { users } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
 
-export async function getChats(userId?: string | null): Promise<DrizzleChat[]> {
+/**
+ * Retrieves chats for the current authenticated user.
+ * Protected against IDOR by retrieving userId from session.
+ */
+export async function getChats(): Promise<DrizzleChat[]> {
+  const userId = await getCurrentUserIdOnServer()
   if (!userId) {
-    console.warn('getChats called without userId, returning empty array.')
+    console.warn('getChats: No authenticated user found.')
     return []
   }
 
@@ -35,13 +40,15 @@ export async function getChats(userId?: string | null): Promise<DrizzleChat[]> {
   }
 }
 
-export async function getChat(id: string, userId: string): Promise<DrizzleChat | null> {
-  if (!userId) {
-    console.warn('getChat called without userId.')
-    return null;
-  }
+/**
+ * Retrieves a specific chat, ensuring the current user has access.
+ * Protected against IDOR by retrieving userId from session.
+ */
+export async function getChat(id: string): Promise<DrizzleChat | null> {
+  const userId = await getCurrentUserIdOnServer()
   try {
-    const chat = await dbGetChat(id, userId)
+    // dbGetChat verifies ownership or public visibility
+    const chat = await dbGetChat(id, userId || 'anonymous')
     return chat
   } catch (error) {
     console.error(`Error fetching chat ${id} from DB:`, error)
@@ -50,14 +57,25 @@ export async function getChat(id: string, userId: string): Promise<DrizzleChat |
 }
 
 /**
- * Retrieves all messages for a specific chat.
+ * Retrieves all messages for a specific chat, ensuring the current user has access.
+ * Protected against IDOR by verifying chat access before fetching messages.
  */
 export async function getChatMessages(chatId: string): Promise<DrizzleMessage[]> {
   if (!chatId) {
     console.warn('getChatMessages called without chatId');
     return [];
   }
+
+  const userId = await getCurrentUserIdOnServer();
+
   try {
+    // Verify user has access to this chat before returning messages
+    const chat = await dbGetChat(chatId, userId || 'anonymous');
+    if (!chat) {
+      console.warn(`getChatMessages: Unauthorized access attempt to chat ${chatId}`);
+      return [];
+    }
+
     return dbGetMessagesByChatId(chatId);
   } catch (error) {
     console.error(`Error fetching messages for chat ${chatId} in getChatMessages:`, error);
@@ -65,17 +83,18 @@ export async function getChatMessages(chatId: string): Promise<DrizzleMessage[]>
   }
 }
 
-export async function clearChats(
-  userId?: string | null
-): Promise<{ error?: string } | void> {
-  const currentUserId = userId || (await getCurrentUserIdOnServer())
-  if (!currentUserId) {
-    console.error('clearChats: No user ID provided or found.')
-    return { error: 'User ID is required to clear chats' }
+/**
+ * Clears chat history for the current authenticated user.
+ */
+export async function clearChats(): Promise<{ error?: string } | void> {
+  const userId = await getCurrentUserIdOnServer()
+  if (!userId) {
+    console.error('clearChats: No authenticated user found.')
+    return { error: 'Authentication required to clear chats' }
   }
 
   try {
-    const success = await dbClearHistory(currentUserId)
+    const success = await dbClearHistory(userId)
     if (!success) {
       return { error: 'Failed to clear chats from database.' }
     }
@@ -87,16 +106,19 @@ export async function clearChats(
   }
 }
 
-export async function saveChat(chat: OldChatType, userId: string): Promise<string | null> {
-  if (!userId && !chat.userId) {
-    console.error('saveChat: userId is required either as a parameter or in chat object.')
-    return null;
+/**
+ * Saves a chat for the current authenticated user.
+ */
+export async function saveChat(chat: OldChatType): Promise<string | null> {
+  const userId = await getCurrentUserIdOnServer()
+  if (!userId) {
+    console.error('saveChat: User not authenticated.')
+    return null
   }
-  const effectiveUserId = userId || chat.userId;
 
   const newChatData: DbNewChat = {
     id: chat.id,
-    userId: effectiveUserId,
+    userId: userId,
     title: chat.title || 'Untitled Chat',
     createdAt: chat.createdAt ? new Date(chat.createdAt) : new Date(),
     visibility: 'private',
@@ -105,7 +127,7 @@ export async function saveChat(chat: OldChatType, userId: string): Promise<strin
 
   const newMessagesData: Omit<DbNewMessage, 'chatId'>[] = chat.messages.map(msg => ({
     id: msg.id,
-    userId: effectiveUserId,
+    userId: userId,
     role: msg.role,
     content: typeof msg.content === 'object' ? JSON.stringify(msg.content) : msg.content,
     createdAt: msg.createdAt ? new Date(msg.createdAt) : new Date(),
@@ -120,6 +142,9 @@ export async function saveChat(chat: OldChatType, userId: string): Promise<strin
   }
 }
 
+/**
+ * Updates drawing context for a chat.
+ */
 export async function updateDrawingContext(chatId: string, contextData: { drawnFeatures: any[], cameraState: any }) {
   const userId = await getCurrentUserIdOnServer();
   if (!userId) {
@@ -147,11 +172,14 @@ export async function updateDrawingContext(chatId: string, contextData: { drawnF
   }
 }
 
+/**
+ * Saves the system prompt for the current authenticated user.
+ */
 export async function saveSystemPrompt(
-  userId: string,
   prompt: string
 ): Promise<{ success?: boolean; error?: string }> {
-  if (!userId) return { error: 'User ID is required' }
+  const userId = await getCurrentUserIdOnServer()
+  if (!userId) return { error: 'Authentication required' }
   if (!prompt) return { error: 'Prompt is required' }
 
   try {
@@ -166,9 +194,11 @@ export async function saveSystemPrompt(
   }
 }
 
-export async function getSystemPrompt(
-  userId: string
-): Promise<string | null> {
+/**
+ * Retrieves the system prompt for the current authenticated user.
+ */
+export async function getSystemPrompt(): Promise<string | null> {
+  const userId = await getCurrentUserIdOnServer()
   if (!userId) return null
 
   try {

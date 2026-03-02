@@ -19,9 +19,9 @@ export type NewMessage = typeof messages.$inferInsert;
  * @param userId - The ID of the user requesting the chat.
  * @returns The chat object if found and accessible, otherwise null.
  */
-export async function getChat(id: string, userId: string): Promise<Chat | null> {
-  if (!userId) {
-    console.warn('getChat called without userId');
+export async function getChat(id: string, userId: string | null): Promise<Chat | null> {
+  if (!userId || userId === 'anonymous') {
+    console.warn('getChat called without valid userId');
     // Potentially allow fetching public chats if userId is null for anonymous users
     const result = await db.select().from(chats).where(and(eq(chats.id, id), eq(chats.visibility, 'public'))).limit(1);
     return result[0] || null;
