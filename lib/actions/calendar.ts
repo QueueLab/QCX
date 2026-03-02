@@ -73,7 +73,15 @@ export async function saveNote(noteData: NewCalendarNote | CalendarNote): Promis
         try {
             const [updatedNote] = await db
                 .update(calendarNotes)
-                .set({ ...noteData, updatedAt: new Date() })
+                .set({
+                    chatId: noteData.chatId,
+                    date: noteData.date,
+                    content: noteData.content,
+                    locationTags: noteData.locationTags,
+                    userTags: noteData.userTags,
+                    mapFeatureId: noteData.mapFeatureId,
+                    updatedAt: new Date()
+                })
                 .where(and(eq(calendarNotes.id, noteData.id), eq(calendarNotes.userId, userId)))
                 .returning();
             return updatedNote;
@@ -86,7 +94,15 @@ export async function saveNote(noteData: NewCalendarNote | CalendarNote): Promis
         try {
             const [newNote] = await db
                 .insert(calendarNotes)
-                .values({ ...noteData, userId })
+                .values({
+                    userId: userId,
+                    chatId: noteData.chatId,
+                    date: noteData.date,
+                    content: noteData.content,
+                    locationTags: noteData.locationTags,
+                    userTags: noteData.userTags,
+                    mapFeatureId: noteData.mapFeatureId,
+                })
                 .returning();
 
             if (newNote && newNote.chatId) {
