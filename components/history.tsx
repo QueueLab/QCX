@@ -19,6 +19,7 @@ export function History({ location }: HistoryProps) {
       })}
       data-testid="history-button"
       onClick={toggleHistory}
+      aria-label={location === 'header' ? "Toggle history" : "Close history"}
     >
       {location === 'header' ? <Menu /> : <ChevronLeft size={16} />}
     </Button>

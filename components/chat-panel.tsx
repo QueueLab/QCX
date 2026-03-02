@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { UserMessage } from './user-message'
 import { Button } from './ui/button'
 import { ArrowRight, Plus, Paperclip, X, Sprout } from 'lucide-react'
+import { Spinner } from './ui/spinner'
 import Textarea from 'react-textarea-autosize'
 import { nanoid } from '@/lib/utils'
 import { useSettingsStore } from '@/lib/store/settings'
@@ -20,6 +21,8 @@ interface ChatPanelProps {
   input: string
   setInput: (value: string) => void
   onSuggestionsChange?: (suggestions: PartialRelated | null) => void
+  isPending?: boolean
+  setIsPending?: (pending: boolean) => void
 }
 
 export interface ChatPanelRef {
@@ -27,7 +30,7 @@ export interface ChatPanelRef {
   submitForm: () => void
 }
 
-export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, input, setInput, onSuggestionsChange }, ref) => {
+export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, input, setInput, onSuggestionsChange, isPending, setIsPending }, ref) => {
   const [, setMessages] = useUIState<typeof AI>()
   const { submit, clearChat } = useActions()
   const { mapProvider } = useSettingsStore()
@@ -43,6 +46,15 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const objectUrls = useRef<Set<string>>(new Set())
+
+  useEffect(() => {
+    const urls = objectUrls.current
+    return () => {
+      urls.forEach(url => URL.revokeObjectURL(url))
+      urls.clear()
+    }
+  }, [])
 
   useImperativeHandle(ref, () => ({
     handleAttachmentClick() {
@@ -87,42 +99,72 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (!input.trim() && !selectedFile) {
+    if ((!input.trim() && !selectedFile) || isPending) {
       return
     }
 
-    const content: ({ type: 'text'; text: string } | { type: 'image'; image: string })[] = []
-    if (input) {
-      content.push({ type: 'text', text: input })
-    }
-    if (selectedFile && selectedFile.type.startsWith('image/')) {
-      content.push({
-        type: 'image',
-        image: URL.createObjectURL(selectedFile)
-      })
-    }
+    setIsPending?.(true)
 
-    setMessages(currentMessages => [
-      ...currentMessages,
-      {
-        id: nanoid(),
-        component: <UserMessage content={content} />
+    const userMessageId = nanoid()
+    const currentInput = input
+    const currentFile = selectedFile
+    const createdUrls: string[] = []
+
+    try {
+      const content: ({ type: 'text'; text: string } | { type: 'image'; image: string; isOptimistic?: boolean })[] = []
+      if (input) {
+        content.push({ type: 'text', text: input })
       }
-    ])
+      if (selectedFile && selectedFile.type.startsWith('image/')) {
+        const url = URL.createObjectURL(selectedFile)
+        createdUrls.push(url)
+        objectUrls.current.add(url)
+        content.push({
+          type: 'image',
+          image: url,
+          isOptimistic: true
+        })
+      }
 
-    const formData = new FormData(e.currentTarget)
-    if (selectedFile) {
-      formData.append('file', selectedFile)
+      setMessages(currentMessages => [
+        ...currentMessages,
+        {
+          id: userMessageId,
+          component: <UserMessage content={content} />
+        }
+      ])
+
+      const formData = new FormData(e.currentTarget)
+      if (selectedFile) {
+        formData.append('file', selectedFile)
+      }
+
+      // Include drawn features in the form data
+      formData.append('drawnFeatures', JSON.stringify(mapData.drawnFeatures || []))
+
+      setInput('')
+      clearAttachment()
+
+      const responseMessage = await submit(formData)
+      setMessages(currentMessages => [...currentMessages, responseMessage as any])
+
+      // Revoke URLs after upload finishes
+      createdUrls.forEach(url => {
+        URL.revokeObjectURL(url)
+        objectUrls.current.delete(url)
+      })
+    } catch (error) {
+      console.error('Failed to submit message:', error)
+      setMessages(currentMessages => currentMessages.filter(m => m.id !== userMessageId))
+      setInput(currentInput)
+      setSelectedFile(currentFile)
+      createdUrls.forEach(url => {
+        URL.revokeObjectURL(url)
+        objectUrls.current.delete(url)
+      })
+    } finally {
+      setIsPending?.(false)
     }
-
-    // Include drawn features in the form data
-    formData.append('drawnFeatures', JSON.stringify(mapData.drawnFeatures || []))
-
-    setInput('')
-    clearAttachment()
-
-    const responseMessage = await submit(formData)
-    setMessages(currentMessages => [...currentMessages, responseMessage as any])
   }
 
   const handleClear = async () => {
@@ -177,6 +219,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
           onClick={() => handleClear()}
           data-testid="new-chat-button"
           title="New Chat"
+          aria-label="Start new chat"
         >
           <Sprout size={28} className="fill-primary/20" />
         </Button>
@@ -225,6 +268,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
               )}
               onClick={handleAttachmentClick}
               data-testid="desktop-attachment-button"
+              aria-label="Attach file"
             >
               <Paperclip size={isMobile ? 18 : 20} />
             </Button>
@@ -281,11 +325,11 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
               'absolute top-1/2 transform -translate-y-1/2',
               isMobile ? 'right-1' : 'right-2'
             )}
-            disabled={input.length === 0 && !selectedFile}
+            disabled={(!input.trim() && !selectedFile) || isPending}
             aria-label="Send message"
             data-testid="chat-submit"
           >
-            <ArrowRight size={isMobile ? 18 : 20} />
+            {isPending ? <Spinner /> : <ArrowRight size={isMobile ? 18 : 20} />}
           </Button>
         </div>
       </form>
@@ -295,7 +339,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
             <span className="text-sm text-muted-foreground truncate max-w-xs">
               {selectedFile.name}
             </span>
-            <Button variant="ghost" size="icon" onClick={clearAttachment} data-testid="clear-attachment-button">
+            <Button variant="ghost" size="icon" onClick={clearAttachment} data-testid="clear-attachment-button" aria-label="Clear attachment">
               <X size={16} />
             </Button>
           </div>

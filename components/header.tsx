@@ -52,7 +52,7 @@ export const Header = () => {
       </div>
       
       <div className="absolute left-1 flex items-center">
-        <Button variant="ghost" size="icon" onClick={toggleHistory} data-testid="logo-history-toggle">
+        <Button variant="ghost" size="icon" onClick={toggleHistory} data-testid="logo-history-toggle" aria-label="Toggle history">
           <Image
             src="/images/logo.svg"
             alt="Logo"
@@ -71,13 +71,13 @@ export const Header = () => {
         
         <MapToggle />
         
-        <Button variant="ghost" size="icon" onClick={toggleCalendar} title="Open Calendar" data-testid="calendar-toggle">
+        <Button variant="ghost" size="icon" onClick={toggleCalendar} title="Open Calendar" aria-label="Open Calendar" data-testid="calendar-toggle">
           <CalendarDays className="h-[1.2rem] w-[1.2rem]" />
         </Button>
         
         <div id="header-search-portal" className="contents" />
         
-        <Button variant="ghost" size="icon" onClick={handleUsageToggle}>
+        <Button variant="ghost" size="icon" onClick={handleUsageToggle} aria-label="Toggle usage statistics">
           <TentTree className="h-[1.2rem] w-[1.2rem]" />
         </Button>
         
@@ -89,7 +89,7 @@ export const Header = () => {
       {/* Mobile menu buttons */}
       <div className="flex md:hidden gap-2">
         
-        <Button variant="ghost" size="icon" onClick={handleUsageToggle}>
+        <Button variant="ghost" size="icon" onClick={handleUsageToggle} aria-label="Toggle usage statistics">
           <TentTree className="h-[1.2rem] w-[1.2rem]" />
         </Button>
         <ProfileToggle/>

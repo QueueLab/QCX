@@ -4,7 +4,7 @@ import { ChatShare } from './chat-share'
 
 type UserMessageContentPart =
   | { type: 'text'; text: string }
-  | { type: 'image'; image: string } // data URL
+  | { type: 'image'; image: string; isOptimistic?: boolean } // data URL or blob URL
 
 type UserMessageProps = {
   content: string | UserMessageContentPart[]
