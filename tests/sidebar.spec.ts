@@ -7,7 +7,7 @@ test.describe('Sidebar and Chat History', () => {
   });
 
   test('should open the history panel', async ({ page }) => {
-    await page.click('[data-testid="history-button"]');
+    await page.click('[data-testid="logo-history-toggle"]');
     const historyPanel = page.locator('[data-testid="history-panel"]');
     await expect(historyPanel).toBeVisible();
   });
@@ -19,7 +19,7 @@ test.describe('Sidebar and Chat History', () => {
     await page.waitForSelector('[data-testid^="history-item-"]');
 
     // Now, open the history panel and clear the history
-    await page.click('[data-testid="history-button"]');
+    await page.click('[data-testid="logo-history-toggle"]');
     await page.click('[data-testid="clear-history-button"]');
     await page.click('[data-testid="clear-history-confirm"]');
 

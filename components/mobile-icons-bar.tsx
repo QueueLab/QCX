@@ -6,8 +6,6 @@ import { AI } from '@/app/actions'
 import { Button } from '@/components/ui/button'
 import {
   Search,
-  CircleUserRound,
-  Map,
   CalendarDays,
   TentTree,
   Paperclip,

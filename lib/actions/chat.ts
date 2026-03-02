@@ -101,6 +101,8 @@ export async function saveChat(chat: OldChatType, userId: string): Promise<strin
     createdAt: chat.createdAt ? new Date(chat.createdAt) : new Date(),
     visibility: 'private',
     updatedAt: new Date(),
+    path: chat.path,
+    sharePath: chat.sharePath,
   };
 
   const newMessagesData: Omit<DbNewMessage, 'chatId'>[] = chat.messages.map(msg => ({

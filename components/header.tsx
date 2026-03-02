@@ -50,8 +50,8 @@ export const Header = () => {
           <span className="sr-only">Chat</span>
         </a>
       </div>
-      
-      <div className="absolute left-1 flex items-center">
+
+      <div className="absolute left-1 flex items-center z-50">
         <Button variant="ghost" size="icon" onClick={toggleHistory} data-testid="logo-history-toggle">
           <Image
             src="/images/logo.svg"
@@ -68,27 +68,27 @@ export const Header = () => {
       
       <div className="flex-1 hidden md:flex justify-center gap-10 items-center z-10">
         <ProfileToggle/>
-        
+
         <MapToggle />
-        
+
         <Button variant="ghost" size="icon" onClick={toggleCalendar} title="Open Calendar" data-testid="calendar-toggle">
           <CalendarDays className="h-[1.2rem] w-[1.2rem]" />
         </Button>
-        
+
         <div id="header-search-portal" className="contents" />
-        
+
         <Button variant="ghost" size="icon" onClick={handleUsageToggle}>
           <TentTree className="h-[1.2rem] w-[1.2rem]" />
         </Button>
-        
+
         <ModeToggle />
-        
+
         <HistoryContainer location="header" />
       </div>
 
       {/* Mobile menu buttons */}
       <div className="flex md:hidden gap-2">
-        
+
         <Button variant="ghost" size="icon" onClick={handleUsageToggle}>
           <TentTree className="h-[1.2rem] w-[1.2rem]" />
         </Button>
