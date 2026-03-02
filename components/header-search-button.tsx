@@ -129,7 +129,6 @@ export function HeaderSearchButton() {
 
       formData.append('action', 'resolution_search')
       formData.append('timezone', mapData.currentTimezone || 'UTC')
-      formData.append('drawnFeatures', JSON.stringify(mapData.drawnFeatures || []))
 
       const center = mapProvider === 'mapbox' && map ? map.getCenter() : mapData.cameraState?.center;
       if (center) {

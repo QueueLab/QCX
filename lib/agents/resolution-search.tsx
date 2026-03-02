@@ -76,12 +76,12 @@ Analyze the user's prompt and the image to provide a holistic understanding of t
   const filteredMessages = messages.filter(msg => msg.role !== 'system');
 
   // Check if any message contains an image (resolution search is specifically for image analysis)
-  const hasImage = messages.some((message: any) =>
+  const hasImage = messages.some((message: any) => 
     Array.isArray(message.content) && 
     message.content.some((part: any) => part.type === 'image')
   )
 
-  // Use streamObject to get partial results.
+  // Use streamObject to get the partial object stream.
   return streamObject({
     model: await getModel(hasImage),
     system: systemPrompt,
