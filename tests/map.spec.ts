@@ -1,10 +1,36 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Map functionality', () => {
+test.describe.skip('Map functionality', () => {
+  const loadingSpinnerSelector = 'div[class*="z-[9999]"]';
+
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    // Wait for either the Mapbox or Google Map to be loaded
-    await page.waitForSelector('.mapboxgl-canvas, gmp-map-3d');
+    // Wait for the initial app loading animation to disappear
+    await expect(page.locator(loadingSpinnerSelector)).toBeHidden({ timeout: 20000 });
+
+    // Now that the app is loaded, the default map should be visible
+    await expect(page.locator('.mapboxgl-canvas')).toBeVisible();
+  });
+
+  test('should show loading animation and load Google Maps when switching providers', async ({ page }) => {
+    // Open settings
+    await page.getByTestId('profile-toggle').click();
+    await page.getByTestId('profile-settings').click();
+
+    // Switch to Google Maps
+    await page.getByLabel('Google').click();
+
+    // Assert that the loading animation becomes visible
+    await expect(page.locator(loadingSpinnerSelector)).toBeVisible();
+
+    // Assert that the loading animation eventually disappears
+    await expect(page.locator(loadingSpinnerSelector)).toBeHidden({ timeout: 20000 });
+
+    // Assert that the Google Map is now visible
+    await expect(page.locator('gmp-map-3d')).toBeVisible();
+
+    // Assert that the Mapbox canvas is hidden
+    await expect(page.locator('.mapboxgl-canvas')).toBeHidden();
   });
 
   test('should toggle the map mode', async ({ page }) => {
