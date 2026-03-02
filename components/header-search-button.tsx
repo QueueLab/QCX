@@ -154,6 +154,7 @@ export function HeaderSearchButton() {
       onClick={handleResolutionSearch}
       disabled={isAnalyzing || !map || !actions}
       title="Analyze current map view"
+      aria-label="Analyze current map view"
     >
       {isAnalyzing ? (
         <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-current"></div>
