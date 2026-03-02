@@ -223,6 +223,10 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
                           <RadioGroupItem value="google" id="google" />
                           <Label htmlFor="google">Google Maps</Label>
                         </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="osm" id="osm" />
+                          <Label htmlFor="osm">OpenStreetMap</Label>
+                        </div>
                       </RadioGroup>
                     </CardContent>
                   </Card>
