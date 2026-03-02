@@ -1,0 +1,3 @@
+## 2025-05-15 - [Accessibility: Icon-Only Button Labels]
+**Learning:** Icon-only buttons without explicit `aria-label` attributes are inaccessible to screen reader users, as they often lack descriptive text content. While `title` attributes provide some information on hover, they are not a substitute for `aria-label` in terms of accessibility standards.
+**Action:** Always ensure icon-only buttons have an `aria-label` or an `sr-only` span describing their action. This project now consistently uses `aria-label` for common interface actions like toggling history, opening calendars, and submitting forms.

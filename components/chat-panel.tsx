@@ -177,6 +177,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
           onClick={() => handleClear()}
           data-testid="new-chat-button"
           title="New Chat"
+          aria-label="New chat"
         >
           <Sprout size={28} className="fill-primary/20" />
         </Button>
@@ -225,6 +226,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
               )}
               onClick={handleAttachmentClick}
               data-testid="desktop-attachment-button"
+              aria-label="Attach file"
             >
               <Paperclip size={isMobile ? 18 : 20} />
             </Button>
@@ -295,7 +297,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
             <span className="text-sm text-muted-foreground truncate max-w-xs">
               {selectedFile.name}
             </span>
-            <Button variant="ghost" size="icon" onClick={clearAttachment} data-testid="clear-attachment-button">
+            <Button variant="ghost" size="icon" onClick={clearAttachment} data-testid="clear-attachment-button" aria-label="Clear attachment">
               <X size={16} />
             </Button>
           </div>
