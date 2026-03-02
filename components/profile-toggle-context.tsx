@@ -1,6 +1,6 @@
 // components/
 'use client'
-import { createContext, useContext, useState, ReactNode } from "react"
+import { createContext, useContext, useState, ReactNode, useMemo, useCallback } from "react"
 //import profile-toggle-context.tsx;
 
 export enum ProfileToggleEnum {
@@ -25,16 +25,22 @@ interface ProfileToggleProviderProps {
 export const ProfileToggleProvider: React.FC<ProfileToggleProviderProps> = ({ children }) => {
   const [activeView, setActiveView] = useState<ProfileToggleEnum | null>(null)
 
-  const toggleProfileSection = (section: ProfileToggleEnum) => {
+  const toggleProfileSection = useCallback((section: ProfileToggleEnum) => {
     setActiveView(prevView => (prevView === section ? null : section))
-  }
+  }, [])
 
-  const closeProfileView = () => {
+  const closeProfileView = useCallback(() => {
     setActiveView(null)
-  }
+  }, [])
+
+  const value = useMemo(() => ({
+    activeView,
+    toggleProfileSection,
+    closeProfileView
+  }), [activeView, toggleProfileSection, closeProfileView])
 
   return (
-    <ProfileToggleContext.Provider value={{ activeView, toggleProfileSection, closeProfileView }}>
+    <ProfileToggleContext.Provider value={value}>
       {children}
     </ProfileToggleContext.Provider>
   )

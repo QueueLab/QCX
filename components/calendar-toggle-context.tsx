@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, ReactNode, useTransition } from 'react'
+import { createContext, useContext, useState, ReactNode, useTransition, useMemo, useCallback } from 'react'
 
 interface CalendarToggleContextType {
   isCalendarOpen: boolean
@@ -21,14 +21,19 @@ export const CalendarToggleProvider = ({ children }: { children: ReactNode }) =>
   const [isPending, startTransition] = useTransition()
   const [isCalendarOpen, setIsCalendarOpen] = useState(false)
 
-  const toggleCalendar = () => {
+  const toggleCalendar = useCallback(() => {
     startTransition(() => {
       setIsCalendarOpen(prevState => !prevState)
     })
-  }
+  }, [])
+
+  const value = useMemo(() => ({
+    isCalendarOpen,
+    toggleCalendar
+  }), [isCalendarOpen, toggleCalendar])
 
   return (
-    <CalendarToggleContext.Provider value={{ isCalendarOpen, toggleCalendar }}>
+    <CalendarToggleContext.Provider value={value}>
       {children}
     </CalendarToggleContext.Provider>
   )
