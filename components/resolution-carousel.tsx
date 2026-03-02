@@ -11,7 +11,7 @@ import {
 import { ResolutionImage } from './resolution-image'
 import { Button } from './ui/button'
 import { useActions, useUIState } from 'ai/rsc'
-import { AI } from '@/app/actions'
+
 import { nanoid } from '@/lib/utils'
 import { UserMessage } from './user-message'
 import { toast } from 'sonner'
@@ -25,8 +25,8 @@ interface ResolutionCarouselProps {
 }
 
 export function ResolutionCarousel({ mapboxImage, googleImage, initialImage }: ResolutionCarouselProps) {
-  const actions = useActions<typeof AI>() as any
-  const [, setMessages] = useUIState<typeof AI>()
+  const actions = useActions<any>() as any
+  const [, setMessages] = useUIState<any>()
   const [isAnalyzing, setIsAnalyzing] = React.useState(false)
 
   const handleQCXAnalysis = async () => {
