@@ -12,7 +12,7 @@ A General Intelligence Interface, A planet computer core
 <br />
 
 [**Try Live**](https://www.queue.cx) &nbsp;•&nbsp; 
-[**Pricing / Pre-sale**](https://buy.stripe.com/14A3cv7K72TR3go14Nasg02) &nbsp;•&nbsp; 
+[**Pricing / Pre-sale**](https://www.paypal.com/ncp/payment/G82N9CZ6ZLLCQ) &nbsp;•&nbsp; 
 [**@tryqcx on X**](https://x.com/tryqcx) &nbsp;•&nbsp; 
 [**Documentation**](https://deepwiki.com/QueueLab/QCX)
 
