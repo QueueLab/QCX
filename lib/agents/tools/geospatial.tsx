@@ -25,6 +25,7 @@ interface Location {
 interface McpResponse {
   location: Location;
   mapUrl?: string;
+  routeGeoJSON?: any;
 }
 
 interface MapboxConfig {
@@ -393,13 +394,33 @@ Uses the Mapbox Search Box Text Search API endpoint to power searching for and g
       // Process results
       if (typeof content === 'object' && content !== null) {
         const parsedData = content as any;
+
+        // Extract route geometry if available (Directions tool)
+        let routeGeoJSON = undefined;
+        if (parsedData.geometry) {
+            routeGeoJSON = parsedData.geometry;
+        } else if (parsedData.routes && parsedData.routes.length > 0 && parsedData.routes[0].geometry) {
+            routeGeoJSON = parsedData.routes[0].geometry;
+        }
+
         if (parsedData.results?.length > 0) {
           const firstResult = parsedData.results[0];
-          mcpData = { location: { latitude: firstResult.coordinates?.latitude, longitude: firstResult.coordinates?.longitude, place_name: firstResult.name || firstResult.place_name, address: firstResult.full_address || firstResult.address }, mapUrl: parsedData.mapUrl };
+          mcpData = { location: { latitude: firstResult.coordinates?.latitude, longitude: firstResult.coordinates?.longitude, place_name: firstResult.name || firstResult.place_name, address: firstResult.full_address || firstResult.address }, mapUrl: parsedData.mapUrl, routeGeoJSON };
         } else if (parsedData.location) {
-          mcpData = { location: { latitude: parsedData.location.latitude, longitude: parsedData.location.longitude, place_name: parsedData.location.place_name || parsedData.location.name, address: parsedData.location.address || parsedData.location.formatted_address }, mapUrl: parsedData.mapUrl || parsedData.map_url };
+          mcpData = { location: { latitude: parsedData.location.latitude, longitude: parsedData.location.longitude, place_name: parsedData.location.place_name || parsedData.location.name, address: parsedData.location.address || parsedData.location.formatted_address }, mapUrl: parsedData.mapUrl || parsedData.map_url, routeGeoJSON };
+        } else if (parsedData.routes && parsedData.routes.length > 0) {
+          // It's a routing response, pick first route coordinates for map center
+          const route = parsedData.routes[0];
+          let lat, lng;
+          if (route.geometry && route.geometry.coordinates && route.geometry.coordinates.length > 0) {
+            // Pick a point roughly in the middle, or the start
+            const coords = route.geometry.coordinates[Math.floor(route.geometry.coordinates.length / 2)];
+            lng = coords[0];
+            lat = coords[1];
+          }
+          mcpData = { location: { latitude: lat, longitude: lng, place_name: "Route", address: "Generated Route" }, routeGeoJSON };
         } else {
-          throw new Error("Response missing required 'location' or 'results' field");
+          throw new Error("Response missing required 'location', 'results' or 'routes' field");
         }
       } else throw new Error('Unexpected response format from mapping service');
 
