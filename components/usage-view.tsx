@@ -32,7 +32,7 @@ export function UsageView() {
         <div className="p-4 border rounded-xl space-y-4">
           <div className="flex justify-between items-center">
             <span className="italic font-medium text-lg">Free</span>
-            <Button size="sm" className="rounded-full px-4" onClick={() => window.open('https://www.paypal.com/ncp/payment/G82N9CZ6ZLLCQ', '_blank')}>
+            <Button size="sm" className="rounded-full px-4" onClick={() => window.open('https://buy.stripe.com/14A3cv7K72TR3go14Nasg02', '_blank')}>
               Upgrade
             </Button>
           </div>

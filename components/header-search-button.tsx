@@ -164,9 +164,12 @@ export function HeaderSearchButton() {
   )
 
   const mobileButton = (
-    <Button variant="ghost" size="sm" onClick={handleResolutionSearch} disabled={isAnalyzing || !map || !actions}>
-      <Search className="h-4 w-4 mr-2" />
-      Search
+    <Button variant="ghost" size="icon" onClick={handleResolutionSearch} disabled={isAnalyzing || !map || !actions} data-testid="mobile-search-button">
+      {isAnalyzing ? (
+        <div className="h-[1.2rem] w-[1.2rem] animate-spin rounded-full border-b-2 border-current"></div>
+      ) : (
+        <Search className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
+      )}
     </Button>
   )
 
