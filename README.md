@@ -1,165 +1,96 @@
 <div align="center">
 
-# QCX  
-**Quality Computer Experience**  
-Language → Maps  
-A General Intelligence Interface, A planet computer core
+#  Quality  Computer  Experience
 
-<br />
 
-[![Watch the demo](https://img.youtube.com/vi/y8M6qaFeZOw/0.jpg)](https://youtu.be/y8M6qaFeZOw?si=eYMXxqh7vQ4I-Mhr)
 
-<br />
+[**Pricing**](https://buy.stripe.com/14A3cv7K72TR3go14Nasg02) &nbsp;|&nbsp; [**Land**](https://wwww.queue.cx) &nbsp;|&nbsp; [**X**](https://x.com/tryqcx)
 
-[**Try Live**](https://www.queue.cx) &nbsp;•&nbsp; 
-[**Pricing / Pre-sale**](https://www.paypal.com/ncp/payment/G82N9CZ6ZLLCQ) &nbsp;•&nbsp; 
-[**@tryqcx on X**](https://x.com/tryqcx) &nbsp;•&nbsp; 
-[**Documentation**](https://deepwiki.com/QueueLab/QCX)
-
+<a href="https://www.producthunt.com/products/qcx?embed=true&utm_source=badge-featured&utm_medium=badge&utm_source=badge-qcx" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1035588&theme=light&t=1762583679476" alt="QCX - Artificial&#0032;General&#0032;Intelligence&#0046; | Product Hunt" style="width: 250px; height: 54px;" width="250" height="54" /></a>
 </div>
 
-## What is QCX?
+<img width="1277" alt="Screen Shot 2024-06-18 at 4 27 51 PM" src="https://github.com/QueueLab/MapGPT/assets/115367894/01584e12-b3f5-41c9-8009-a16642568798">
 
-QCX is an experimental **AI-first geospatial companion** that lets you explore the planet (and beyond) through natural language + interactive maps.
 
-- Chat with AI about any location, event, or spatial question
-- Draw on the map → get measurements, analysis & AI insights
-- Real-time geolocation, 3D view, time-zone aware reasoning
-- Powered by multi-agent orchestration + generative UI
-- Currently interpolating full chat ↔ map bidirectional integration
 
-Built as a research prototype from **QueueLab** — exploring the frontier between natural language, spatial reasoning and artificial general intelligence.
 
-<br />
-
-## ✨ Features (Current & In-progress)
-
-- Conversational geospatial queries with tool-using agents
-- Interactive Mapbox map with drawing, measurements & GeoJSON
-- Generative UI via Vercel AI SDK (streaming React components)
-- Multi-model support (Grok, OpenAI, Google, Bedrock, …)
-- Efficient task routing to minimize unnecessary LLM calls
-- Persistent chat + map state (Redis + database)
-- Mobile-responsive chat + map experience
-
-<br />
-
-## Tech Stack
-
-| Category               | Technology                              |
-|------------------------|-----------------------------------------|
-| Framework              | [Next.js 15](https://nextjs.org/) (App Router + RSC) |
-| Language               | TypeScript 5.x + React 19               |
-| Runtime                | [Bun](https://bun.sh/)                  |
-| AI SDK                 | [Vercel AI SDK](https://sdk.vercel.ai/) |
-| Models                 | Grok, OpenAI, Google, Amazon Bedrock, … |
-| Search / RAG           | [Tavily](https://tavily.com/), [Exa](https://exa.ai/) |
-| Database / Cache       | [Upstash Redis](https://upstash.com/), PostgreSQL + Drizzle |
-| UI Components          | [shadcn/ui](https://ui.shadcn.com/), [Radix UI](https://www.radix-ui.com/) |
-| Styling                | [Tailwind CSS](https://tailwindcss.com/) + Framer Motion |
-| Maps                   | [Mapbox GL JS](https://www.mapbox.com/) + Mapbox Draw |
-| Alternative Maps       | Google Maps (optional)                  |
-
-<br />
-
-## Quick Start – Run Locally
-
-### 1. Prerequisites
-
-- [Bun](https://bun.sh/) ≥ 1.1
-- Node.js (only for compatibility checks — app runs on Bun)
-
-```bash
-# Install Bun (if not already installed)
-curl -fsSL https://bun.sh/install | bash
-```
-
-### 2. Clone & Install
-
-```bash
-git clone https://github.com/QueueLab/QCX.git
-cd QCX
-bun install
-```
-
-### 3. Environment Variables
-
-```bash
-cp .env.local.example .env.local
-```
-
-Fill in `.env.local`:
-
-```env
-# AI providers (at least one required)
-XAI_API_KEY=                 # https://console.x.ai
-OPENAI_API_KEY=              # optional
-GOOGLE_API_KEY=              # optional (Gemini)
-BEDROCK_ACCESS_KEY_ID=       # optional
-BEDROCK_SECRET_ACCESS_KEY=   # optional
-
-# Search
-TAVILY_API_KEY=
-# or
-EXA_API_KEY=
-
-# Upstash Redis (for rate limiting, caching, prompt storage)
-UPSTASH_REDIS_REST_URL=
-UPSTASH_REDIS_REST_TOKEN=
-
-# Mapbox (required for maps)
-NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=
-
-# Optional: database, analytics, etc.
-```
-
-> **Note**: Complex generative UI and tool calling works best with frontier models (Grok family, GPT-4o, Claude 3.5/4, Gemini 1.5/2, etc.). Smaller or local models may not format output correctly.
-
-### 4. Run
-
-```bash
-bun run dev
-# or for production build preview
-bun run build && bun run start
-```
-
-Open http://localhost:3000
-
-<br />
 
 ## Contributing
 
-We welcome contributions — especially around:
+Welcome! Please see the issues for items that need attention, and below for some tools to aid in development and debugging. We're working to interpolate chat functionality onto the map module.
 
-- Better map ↔ chat integration
-- New geospatial tools / agents
-- UI/UX polish (mobile especially)
-- Model output parsing robustness
-- Performance optimizations
+Documentation.
 
-1. See open [issues](https://github.com/QueueLab/QCX/issues)
-2. Fork & create a branch
-3. Submit a PR with clear description
+https://deepwiki.com/QueueLab/QCX
 
-Read the in-depth architecture & component docs here:  
-→ https://deepwiki.com/QueueLab/QCX
+### Running the app on your own machine
 
-<br />
 
-## Verified Models (Stable Output Formatting)
+## Stack
 
-- Grok-3-mini  
-- (add more models as tested — PRs welcome!)
+- App framework: [Next.js](https://nextjs.org/)
+- Text streaming / Generative UI: [Vercel AI SDK](https://sdk.vercel.ai/docs)
+- Generative Model [Varies](https://openai.com/)
+- Search API: [Tavily AI](https://tavily.com/) / [Exa AI](https://exa.ai/)
+- Serverless Database: [Upstash](https://upstash.com/)
+- Component library: [shadcn/ui](https://ui.shadcn.com/)
+- Headless component primitives: [Radix UI](https://www.radix-ui.com/)
+- Styling: [Tailwind CSS](https://tailwindcss.com/)
+- Mapping : [Mapbox]
+(https://www.mapbox.com/)
 
-Models with reasoning / heavy tool calling can sometimes break generative UI — test carefully.
 
-<br />
 
-<div align="center">
+### 2. Install dependencies
 
-**QCX** — Language is the new UI for exploring worlds.
+```
+install bun package manager
+bun install
+bun run build
+bun run dev
+```
 
-Made with curiosity by [QueueLab](https://github.com/QueueLab)
+### 3. Setting up Upstash Redis
 
-</div>
+Follow the guide below to set up Upstash Redis. Create a database and obtain `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`. Refer to the [Upstash guide](https://upstash.com/blog/rag-chatbot-upstash#setting-up-upstash-redis) for instructions on how to proceed.
 
+### 4. Fill out secrets
+
+```
+cp .env.local.example .env.local
+```
+
+Your .env.local file should look like this:
+
+```
+# XAI API key retrieved here: https://platform.openai.com/api-keys
+XAI_API_KEY=
+
+# Tavily API Key retrieved here: https://app.tavily.com/home
+TAVILY_API_KEY=
+
+# Upstash Redis URL and Token retrieved here: https://console.upstash.com/redis
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=
+#Mapbox access token
+NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN
+```
+
+
+
+
+
+_Note: This project focuses on Generative UI and requires complex output from LLMs. Currently, it's assumed that the official state of the art models will be used. Although it's possible to set up other models, if you use an Standard-compatible model, but we don't guarantee that it'll work._
+
+### 5. Run app locally
+
+```
+bun run dev
+```
+
+You can now visit http://localhost:3000.
+
+## Verified models
+
+List of non reasoning verified models
+Grok-3-mini
