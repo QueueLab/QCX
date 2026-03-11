@@ -1,0 +1,16 @@
+$ next dev --turbo
+   ▲ Next.js 15.3.8 (Turbopack)
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.0.2:3000
+   - Environments: .env
+
+ ✓ Starting...
+ ✓ Compiled middleware in 386ms
+ ✓ Ready in 1880ms
+ ○ Compiling / ...
+ ✓ Compiled / in 28.6s
+Chat DB actions loaded. Ensure getCurrentUserId() is correctly implemented for server-side usage if applicable.
+ GET / 200 in 33121ms
+ GET / 200 in 976ms
+[Auth] Supabase URL or Anon Key is not set for server-side auth.
+ POST / 200 in 1775ms
