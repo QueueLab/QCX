@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next'
+import Script from 'next/script'
 import { Inter as FontSans, Poppins } from 'next/font/google'
 import './globals.css'
 import 'katex/dist/katex.min.css';
@@ -66,27 +67,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                const htmxEvents = [
-                  'sseError', 'sseOpen', 'swapError', 'targetError', 'timeout',
-                  'validation:validate', 'validation:failed', 'validation:halted',
-                  'xhr:abort', 'xhr:loadend', 'xhr:loadstart'
-                ];
-                htmxEvents.forEach(event => {
-                  const funcName = 'func ' + event;
-                  if (typeof window[funcName] === 'undefined') {
-                    window[funcName] = function() { 
-                      console.warn('HTMX event handler "' + funcName + '" was called but not defined. Providing safety fallback.');
-                    };
-                  }
-                });
-              })();
-            `,
-          }}
-        />
+        <Script src="/htmx-fallback.js" strategy="beforeInteractive" />
       </head>
       <body
         className={cn(

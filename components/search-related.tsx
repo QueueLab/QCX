@@ -9,7 +9,7 @@ import {
   useUIState,
   StreamableValue
 } from 'ai/rsc'
-import { AI } from '@/app/actions'
+
 import { UserMessage } from './user-message'
 import { PartialRelated } from '@/lib/schema/related'
 import { nanoid } from '@/lib/utils'
@@ -22,7 +22,7 @@ export const SearchRelated: React.FC<SearchRelatedProps> = ({
   relatedQueries
 }) => {
   const { submit } = useActions()
-  const [, setMessages] = useUIState<typeof AI>()
+  const [, setMessages] = useUIState<any>()
   const [data] = useStreamableValue<PartialRelated>(relatedQueries)
 
   const handleRelatedClick = async (query: string) => {
@@ -35,7 +35,7 @@ export const SearchRelated: React.FC<SearchRelatedProps> = ({
     }
 
     const responseMessage = await submit(formData)
-    setMessages(currentMessages => [
+    setMessages((currentMessages: any) => [
       ...currentMessages,
       userMessage,
       responseMessage

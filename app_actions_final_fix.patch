@@ -1,0 +1,9 @@
+<<<<<<< SEARCH
+import dynamic from 'next/dynamic'
+import { ResolutionCarousel } from '@/components/resolution-carousel'
+
+const ElevationHeatmapLayer = dynamic(() => import('@/components/map/elevation-heatmap-layer').then(mod => mod.ElevationHeatmapLayer), { ssr: false })
+=======
+import { ElevationHeatmapLayer } from '@/components/map/elevation-heatmap-layer'
+import { ResolutionCarousel } from '@/components/resolution-carousel'
+>>>>>>> REPLACE
