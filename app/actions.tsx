@@ -22,6 +22,7 @@ import { SearchSection } from '@/components/search-section'
 import SearchRelated from '@/components/search-related'
 import { GeoJsonLayer } from '@/components/map/geojson-layer'
 import { ResolutionCarousel } from '@/components/resolution-carousel'
+import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
 import { ResolutionImage } from '@/components/resolution-image'
 import { CopilotDisplay } from '@/components/copilot-display'
 import RetrieveSection from '@/components/retrieve-section'
@@ -397,7 +398,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     } as CoreMessage)
   }
 
-  const userId = 'anonymous'
+  const userId = (await getCurrentUserIdOnServer()) || 'anonymous'
   const currentSystemPrompt = (await getSystemPrompt(userId)) || ''
   const mapProvider = formData?.get('mapProvider') as 'mapbox' | 'google'
 
