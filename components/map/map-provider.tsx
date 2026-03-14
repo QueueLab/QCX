@@ -13,6 +13,11 @@ const GoogleMapComponent = dynamic(
   { ssr: false, loading: () => <div className="h-full w-full bg-gray-200 animate-pulse" /> }
 )
 
+const OSMMap = dynamic(
+  () => import('./osm-map').then(mod => mod.OSMMap),
+  { ssr: false, loading: () => <div className="h-full w-full bg-gray-200 animate-pulse" /> }
+)
+
 export function MapProvider({ position }: { position?: { latitude: number; longitude: number; } }) {
   const { mapProvider } = useSettingsStore()
 
@@ -20,6 +25,8 @@ export function MapProvider({ position }: { position?: { latitude: number; longi
     <>
       {mapProvider === 'google' ? (
         <GoogleMapComponent />
+      ) : mapProvider === 'osm' ? (
+        <OSMMap />
       ) : (
         <Mapbox position={position} />
       )}
