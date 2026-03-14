@@ -35,7 +35,7 @@ export async function getChats(userId?: string | null): Promise<DrizzleChat[]> {
   }
 }
 
-export async function getChat(id: string, userId: string): Promise<DrizzleChat | null> {
+export async function getChat(id: string, userId?: string): Promise<DrizzleChat | null> {
   if (!userId) {
     console.warn('getChat called without userId.')
     return null;
@@ -148,7 +148,7 @@ export async function updateDrawingContext(chatId: string, contextData: { drawnF
 }
 
 export async function saveSystemPrompt(
-  userId: string,
+  userId: string | undefined,
   prompt: string
 ): Promise<{ success?: boolean; error?: string }> {
   if (!userId) return { error: 'User ID is required' }
@@ -167,7 +167,7 @@ export async function saveSystemPrompt(
 }
 
 export async function getSystemPrompt(
-  userId: string
+  userId?: string
 ): Promise<string | null> {
   if (!userId) return null
 

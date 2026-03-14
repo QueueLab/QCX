@@ -17,7 +17,6 @@ import { writer } from '@/lib/agents/writer'
 import { saveChat, getSystemPrompt } from '@/lib/actions/chat'
 import { Chat, AIMessage } from '@/lib/types'
 import { UserMessage } from '@/components/user-message'
-import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
 import { BotMessage } from '@/components/message'
 import { SearchSection } from '@/components/search-section'
 import SearchRelated from '@/components/search-related'
@@ -42,8 +41,9 @@ async function submit(formData?: FormData, skip?: boolean) {
   const isGenerating = createStreamableValue(true)
   const isCollapsed = createStreamableValue(false)
 
+  const { getCurrentUserIdOnServer } = await import('@/lib/auth/get-current-user')
   const actualUserId = await getCurrentUserIdOnServer()
-  const userId = actualUserId || undefined
+  const userId = actualUserId || 'anonymous'
 
   const action = formData?.get('action') as string;
   const drawnFeaturesString = formData?.get('drawnFeatures') as string;
@@ -401,7 +401,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     } as CoreMessage)
   }
 
-  const currentSystemPrompt = (userId ? await getSystemPrompt(userId) : null) || ''
+  const currentSystemPrompt = (await getSystemPrompt(userId)) || ''
   const mapProvider = formData?.get('mapProvider') as 'mapbox' | 'google'
 
   async function processEvents() {
@@ -627,6 +627,9 @@ export const AI = createAI<AIState, UIState>({
       }
     ]
 
+    const { getCurrentUserIdOnServer } = await import(
+      '@/lib/auth/get-current-user'
+    )
     const actualUserId = await getCurrentUserIdOnServer()
 
     if (!actualUserId) {
