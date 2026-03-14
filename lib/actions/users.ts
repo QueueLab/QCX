@@ -3,7 +3,7 @@
 import { revalidatePath, unstable_noStore as noStore } from 'next/cache';
 import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
-import { eq, ilike } from 'drizzle-orm';
+import { eq, ilike, sql } from 'drizzle-orm';
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user';
 
 export type UserRole = "admin" | "editor" | "viewer";
@@ -187,7 +187,8 @@ export async function saveSelectedModel(model: string): Promise<{ success: boole
  */
 export async function searchUsers(query: string) {
   noStore();
-  if (!query) return [];
+  // Enforce length limit and handle empty query to prevent DoS/enumeration
+  if (!query || query.length > 100) return [];
 
   const userId = await getCurrentUserIdOnServer();
   if (!userId) {
@@ -195,12 +196,15 @@ export async function searchUsers(query: string) {
   }
 
   try {
+    // Escape special ILIKE characters (%, _, \) to prevent wildcard enumeration
+    const escapedQuery = query.replace(/[%_\\]/g, '\\$&');
+
     const result = await db.select({
       id: users.id,
       email: users.email,
     })
     .from(users)
-    .where(ilike(users.email, `%${query}%`))
+    .where(sql`${users.email} ILIKE ${'%' + escapedQuery + '%'} ESCAPE '\\'`)
     .limit(10);
 
     return result;
