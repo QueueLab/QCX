@@ -27,7 +27,7 @@ export function ResolutionImage({ src, className, alt = 'Map Imagery' }: Resolut
       <Dialog>
         <DialogTrigger asChild>
           <motion.div
-            className="w-fit cursor-pointer relative glassmorphic overflow-hidden rounded-lg border bg-muted"
+            className="w-fit cursor-pointer relative backdrop-blur-md bg-background/30 border border-border/40 shadow-lg overflow-hidden rounded-lg"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
@@ -42,7 +42,7 @@ export function ResolutionImage({ src, className, alt = 'Map Imagery' }: Resolut
             </Card>
           </motion.div>
         </DialogTrigger>
-        <DialogContent className="sm:max-w-5xl max-h-[90vh] p-1 glassmorphic border-none">
+        <DialogContent className="sm:max-w-5xl max-h-[90vh] p-1 backdrop-blur-md bg-background/30 border border-border/40 shadow-lg">
           <DialogHeader className="sr-only">
             <DialogTitle>{alt}</DialogTitle>
           </DialogHeader>
