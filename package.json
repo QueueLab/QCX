@@ -16,6 +16,8 @@
     "test:e2e:debug": "playwright test --debug"
   },
   "dependencies": {
+    "98-components": "^0.1.1",
+    "98.css": "^0.1.21",
     "@ai-sdk/amazon-bedrock": "^1.1.6",
     "@ai-sdk/anthropic": "^1.2.12",
     "@ai-sdk/google": "^1.2.22",

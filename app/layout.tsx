@@ -4,9 +4,9 @@ import './globals.css'
 import 'katex/dist/katex.min.css';
 import { cn } from '@/lib/utils'
 import { ThemeProvider } from '@/components/theme-provider'
-import Header from '@/components/header'
-import Footer from '@/components/footer'
-import { Sidebar } from '@/components/sidebar'
+// import Header from '@/components/header'
+// import Footer from '@/components/footer'
+// import { Sidebar } from '@/components/sidebar'
 import { Analytics } from "@vercel/analytics/next"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Toaster } from '@/components/ui/sonner'
@@ -109,11 +109,11 @@ export default function RootLayout({
                   >
                     <MapContextProvider>
                       <MapLoadingProvider>
-                        <Header />
+                        {/* <Header /> */}
                         <ConditionalLottie />
                         {children}
-                        <HistorySidebar />
-                        <Footer />
+                        {/* <HistorySidebar /> */}
+                        {/* <Footer /> */}
                         <Toaster />
                       </MapLoadingProvider>
                     </MapContextProvider>

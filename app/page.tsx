@@ -1,18 +1,11 @@
-import { Chat } from '@/components/chat'
-import { nanoid } from '@/lib/utils'
-import { AI } from './actions'
+import { JSpaceUI } from '@/components/j-space-ui'
 
 export const maxDuration = 60
 
-import { MapDataProvider } from '@/components/map/map-data-context'
-
 export default function Page() {
-  const id = nanoid()
   return (
-    <AI initialAIState={{ chatId: id, messages: [] }}>
-      <MapDataProvider>
-        <Chat id={id} />
-      </MapDataProvider>
-    </AI>
+    <main>
+      <JSpaceUI />
+    </main>
   )
 }
