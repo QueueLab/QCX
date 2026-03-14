@@ -35,9 +35,7 @@ export function Chat({ id }: ChatProps) {
   const { activeView } = useProfileToggle();
   const { isUsageOpen } = useUsageToggle();
   const { isCalendarOpen } = useCalendarToggle()
-  const [input, setInput] = useState('')
   const [showEmptyScreen, setShowEmptyScreen] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [suggestions, setSuggestions] = useState<PartialRelated | null>(null)
   const chatPanelRef = useRef<ChatPanelRef>(null);
 
@@ -85,12 +83,6 @@ export function Chat({ id }: ChatProps) {
   // Get mapData to access drawnFeatures
   const { mapData } = useMapData();
 
-  useEffect(() => {
-    if (isSubmitting) {
-      chatPanelRef.current?.submitForm()
-      setIsSubmitting(false)
-    }
-  }, [isSubmitting])
 
   // useEffect to call the server action when drawnFeatures changes
   useEffect(() => {
@@ -110,10 +102,8 @@ export function Chat({ id }: ChatProps) {
         <SuggestionsDropdown
           suggestions={suggestions}
           onSelect={query => {
-            setInput(query)
+            chatPanelRef.current?.submitForm(query)
             setSuggestions(null)
-            // Use a small timeout to ensure state update before submission
-            setIsSubmitting(true)
           }}
           onClose={() => setSuggestions(null)}
           className="relative bottom-auto mb-0 w-full shadow-none border-none bg-transparent"
@@ -138,8 +128,6 @@ export function Chat({ id }: ChatProps) {
           <ChatPanel 
             ref={chatPanelRef} 
             messages={messages} 
-            input={input} 
-            setInput={setInput}
             onSuggestionsChange={setSuggestions}
           />
         </div>
@@ -152,8 +140,7 @@ export function Chat({ id }: ChatProps) {
                 {showEmptyScreen ? (
                   <EmptyScreen
                     submitMessage={message => {
-                      setInput(message)
-                      setIsSubmitting(true)
+                      chatPanelRef.current?.submitForm(message)
                     }}
                   />
                 ) : (
@@ -181,9 +168,8 @@ export function Chat({ id }: ChatProps) {
         ) : (
           <>
             <ChatPanel 
+              ref={chatPanelRef}
               messages={messages} 
-              input={input} 
-              setInput={setInput} 
               onSuggestionsChange={setSuggestions}
             />
             <div className="relative min-h-[100px]">
@@ -191,8 +177,7 @@ export function Chat({ id }: ChatProps) {
                 {showEmptyScreen ? (
                   <EmptyScreen
                     submitMessage={message => {
-                      setInput(message)
-                      setIsSubmitting(true)
+                      chatPanelRef.current?.submitForm(message)
                     }}
                   />
                 ) : (
