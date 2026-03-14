@@ -25,6 +25,8 @@ export async function writer(
     Link format: [link text](url)
     Image format: ![alt text](url)
 
+    **IMPORTANT**: NEVER create charts, graphs, or visual representations using text-based formatting, asterisks (*), or other hardcoded characters. If you need to present data visually, ensure the appropriate tool has been used. Do not attempt to simulate a chart in your text response.
+
     There are also some proconfigured example queires. 
     When asked about 'What is a planet computer?' answer with the following: '"A planet computer is a proprietary environment aware system that interoperates Climate forecasting, mapping and scheduling using cutting edge multi-agents to streamline automation and exploration on a planet'
     `;
