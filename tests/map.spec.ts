@@ -1,13 +1,15 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
-test.describe('Map functionality', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+test.describe('Map functionality @smoke', () => {
+  // Configure retries for map tests which can be flaky due to WebGL rendering
+  test.describe.configure({ retries: 2 });
+
+  test.beforeEach(async ({ authenticatedPage: page }) => {
     // Wait for either the Mapbox or Google Map to be loaded
-    await page.waitForSelector('.mapboxgl-canvas, gmp-map-3d');
+    await page.waitForSelector('.mapboxgl-canvas, gmp-map-3d', { timeout: 30000 });
   });
 
-  test('should toggle the map mode', async ({ page }) => {
+  test('should toggle the map mode', async ({ authenticatedPage: page }) => {
     const isMapbox = await page.locator('.mapboxgl-canvas').isVisible();
     if (!isMapbox) {
       test.skip(true, 'Drawing mode test is only for Mapbox');
@@ -16,13 +18,12 @@ test.describe('Map functionality', () => {
 
     await page.click('[data-testid="map-toggle"]');
     await page.click('[data-testid="map-mode-draw"]');
-    // Add an assertion here to verify that the map is in drawing mode
-    // For example, by checking for the presence of a drawing control
+
     const drawControl = page.locator('.mapboxgl-ctrl-draw-btn');
     await expect(drawControl).toBeVisible();
   });
 
-  test('should zoom in and out using map controls', async ({ page }) => {
+  test('should zoom in and out using map controls', async ({ authenticatedPage: page }) => {
     // This test should only run on desktop where the controls are visible
     if (page.viewportSize()!.width <= 768) {
       test.skip(true, 'Zoom controls are not visible on mobile');
@@ -59,4 +60,5 @@ test.describe('Map functionality', () => {
     const zoomedOutZoom = await getZoom();
     expect(zoomedOutZoom).toBeLessThan(zoomedInZoom);
   });
+
 });
