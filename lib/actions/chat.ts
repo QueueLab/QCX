@@ -57,7 +57,20 @@ export async function getChatMessages(chatId: string): Promise<DrizzleMessage[]>
     console.warn('getChatMessages called without chatId');
     return [];
   }
+
+  const userId = await getCurrentUserIdOnServer();
+  if (!userId) {
+    throw new Error('Unauthorized: Authentication required');
+  }
+
   try {
+    // Check if the user has access to this chat
+    const chat = await getChat(chatId, userId);
+    if (!chat) {
+      console.warn(`Unauthorized access attempt to chat ${chatId} by user ${userId}`);
+      return [];
+    }
+
     return dbGetMessagesByChatId(chatId);
   } catch (error) {
     console.error(`Error fetching messages for chat ${chatId} in getChatMessages:`, error);
@@ -127,15 +140,22 @@ export async function updateDrawingContext(chatId: string, contextData: { drawnF
     return { error: 'User not authenticated' };
   }
 
-  const newDrawingMessage: DbNewMessage = {
-    userId: userId,
-    chatId: chatId,
-    role: 'data',
-    content: JSON.stringify(contextData),
-    createdAt: new Date(),
-  };
-
   try {
+    // Check if the user has access to this chat and owns it
+    const chat = await getChat(chatId, userId);
+    if (!chat || chat.userId !== userId) {
+      console.warn(`Unauthorized drawing context update attempt for chat ${chatId} by user ${userId}`);
+      return { error: 'Unauthorized: Ownership required to update drawing context' };
+    }
+
+    const newDrawingMessage: DbNewMessage = {
+      userId: userId,
+      chatId: chatId,
+      role: 'data',
+      content: JSON.stringify(contextData),
+      createdAt: new Date(),
+    };
+
     const savedMessage = await dbCreateMessage(newDrawingMessage);
     if (!savedMessage) {
       throw new Error('Failed to save drawing context message.');
