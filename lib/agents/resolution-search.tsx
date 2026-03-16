@@ -28,7 +28,12 @@ const resolutionSearchSchema = z.object({
   cogInfo: z.object({
     applicable: z.boolean(),
     description: z.string().optional()
-  }).optional().describe('Information about whether Cloud Optimized GeoTIFF (COG) data is applicable or available for this area.')
+  }).optional().describe('Information about whether Cloud Optimized GeoTIFF (COG) data is applicable or available for this area.'),
+  elevationData: z.object({
+    requested: z.boolean().describe('Whether elevation heat map was requested or appropriate for this analysis'),
+    bounds: z.array(z.number()).optional().describe('Bounding box for elevation query [west, south, east, north]'),
+    gridSize: z.number().optional().describe('Grid resolution for elevation sampling'),
+  }).optional().describe('Elevation heat map configuration for the analyzed area'),
 })
 
 export interface DrawnFeature {
@@ -66,7 +71,8 @@ Your analysis should be comprehensive and include the following components:
 2.  **Points of Interest (POI):** Detect and name any significant landmarks, infrastructure (e.g., bridges, major roads), or notable buildings.
 3.  **Coordinate Extraction:** If possible, confirm or refine the geocoordinates (latitude/longitude) of the center of the image.
 4.  **COG Applicability:** Determine if this location would benefit from Cloud Optimized GeoTIFF (COG) analysis for high-precision temporal or spectral data.
-5.  **Structured Output:** Return your findings in a structured JSON format. The output must include a 'summary' (a detailed text description of your analysis) and a 'geoJson' object.
+5.  **Elevation Heat Map:** If the user has drawn polygons or if terrain analysis would be valuable, indicate that elevation data should be fetched by setting elevationData.requested to true and providing appropriate bounds.
+6.  **Structured Output:** Return your findings in a structured JSON format. The output must include a 'summary' (a detailed text description of your analysis) and a 'geoJson' object.
 
 Your analysis should be based solely on the visual information in the image and your general knowledge. Do not attempt to access external websites or perform web searches.
 
