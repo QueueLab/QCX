@@ -455,20 +455,22 @@ async function submit(formData?: FormData, skip?: boolean) {
       errorOccurred = hasError
 
       if (toolOutputs.length > 0) {
-        toolOutputs.map(output => {
-          aiState.update({
-            ...aiState.get(),
-            messages: [
-              ...aiState.get().messages,
-              {
-                id: groupeId,
-                role: 'tool',
-                content: JSON.stringify(output.result),
-                name: output.toolName,
-                type: 'tool'
-              }
-            ]
+        const currentAIState = aiState.get()
+        const toolMessages: AIMessage[] = []
+
+        for (const output of toolOutputs) {
+          toolMessages.push({
+            id: groupeId,
+            role: 'tool',
+            content: JSON.stringify(output.result),
+            name: output.toolName,
+            type: 'tool'
           })
+        }
+
+        aiState.update({
+          ...currentAIState,
+          messages: [...currentAIState.messages, ...toolMessages]
         })
       }
     }
