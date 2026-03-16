@@ -17,8 +17,8 @@ import { useProfileToggle, ProfileToggleEnum } from "@/components/profile-toggle
 import { useUsageToggle } from "@/components/usage-toggle-context";
 import SettingsView from "@/components/settings/settings-view";
 import { UsageView } from "@/components/usage-view";
-import { MapDataProvider, useMapData } from './map/map-data-context'; // Add this and useMapData
-import { updateDrawingContext } from '@/lib/actions/chat'; // Import the server action
+import { useMapData } from './map/map-data-context';
+import { updateDrawingContext } from '@/lib/actions/chat';
 import dynamic from 'next/dynamic'
 import { HeaderSearchButton } from './header-search-button'
 
@@ -36,7 +36,11 @@ export function Chat({ id }: ChatProps) {
   const { isUsageOpen } = useUsageToggle();
   const { isCalendarOpen } = useCalendarToggle()
   const [input, setInput] = useState('')
-  const [showEmptyScreen, setShowEmptyScreen] = useState(false)
+
+  // ⚡ Bolt: Use derived variables instead of useState + useEffect to reduce render cycles
+  // and state synchronization complexity.
+  const showEmptyScreen = messages.length === 0
+
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [suggestions, setSuggestions] = useState<PartialRelated | null>(null)
   const chatPanelRef = useRef<ChatPanelRef>(null);
@@ -49,10 +53,6 @@ export function Chat({ id }: ChatProps) {
     chatPanelRef.current?.submitForm();
   };
   
-  useEffect(() => {
-    setShowEmptyScreen(messages.length === 0)
-  }, [messages])
-
   useEffect(() => {
     // Check if device is mobile
     const checkMobile = () => {
@@ -125,7 +125,10 @@ export function Chat({ id }: ChatProps) {
   // Mobile layout
   if (isMobile) {
     return (
-      <MapDataProvider> {/* Add Provider */}
+      <>
+        {/* ⚡ Bolt: Removed redundant MapDataProvider here to follow the project's
+            architectural pattern of providing map data at the page level (app/page.tsx).
+            This avoids shadowing and stale state bugs. */}
         <HeaderSearchButton />
         <div className="mobile-layout-container">
           <div className="mobile-map-section">
@@ -165,13 +168,15 @@ export function Chat({ id }: ChatProps) {
           )}
         </div>
         </div>
-      </MapDataProvider>
+      </>
     );
   }
 
   // Desktop layout
   return (
-    <MapDataProvider> {/* Add Provider */}
+    <>
+      {/* ⚡ Bolt: Removed redundant MapDataProvider here to follow the project's
+          architectural pattern. */}
       <HeaderSearchButton />
       <div className="flex justify-start items-start">
         {/* This is the new div for scrolling */}
@@ -211,6 +216,6 @@ export function Chat({ id }: ChatProps) {
           {activeView ? <SettingsView /> : isUsageOpen ? <UsageView /> : <MapProvider />}
         </div>
       </div>
-    </MapDataProvider>
+    </>
   );
 }
