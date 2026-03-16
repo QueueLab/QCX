@@ -15,10 +15,8 @@ export interface SearchPageProps {
 
 export async function generateMetadata({ params }: SearchPageProps) {
   const { id } = await params; // Keep as is for now
-  // TODO: Metadata generation might need authenticated user if chats are private
-  // For now, assuming getChat can be called or it handles anon access for metadata appropriately
-  const userId = await getCurrentUserIdOnServer(); // Attempt to get user for metadata
-  const chat = await getChat(id, userId || 'anonymous'); // Pass userId or 'anonymous' if none
+  // getChat will handle authenticated or anonymous access via session
+  const chat = await getChat(id);
   return {
     title: chat?.title?.toString().slice(0, 50) || 'Search',
   };
@@ -34,14 +32,14 @@ export default async function SearchPage({ params }: SearchPageProps) {
     redirect('/');
   }
 
-  const chat = await getChat(id, userId);
+  const chat = await getChat(id);
 
   if (!chat) {
     // If chat doesn't exist or user doesn't have access (handled by getChat)
     notFound();
   }
 
-  // Fetch messages for the chat
+  // Fetch messages for the chat (verified by getChatMessages)
   const dbMessages: DrizzleMessage[] = await getChatMessages(chat.id);
 
   // Transform DrizzleMessages to AIMessages
