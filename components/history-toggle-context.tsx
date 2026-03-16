@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, ReactNode } from "react"
+import { createContext, useContext, useState, ReactNode, useMemo, useCallback } from "react"
 
 interface HistoryToggleContextType {
   isHistoryOpen: boolean
@@ -13,11 +13,17 @@ const HistoryToggleContext = createContext<HistoryToggleContextType | undefined>
 export const HistoryToggleProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false)
 
-  const toggleHistory = () => setIsHistoryOpen(prev => !prev)
-  const setHistoryOpen = (open: boolean) => setIsHistoryOpen(open)
+  const toggleHistory = useCallback(() => setIsHistoryOpen(prev => !prev), [])
+  const setHistoryOpen = useCallback((open: boolean) => setIsHistoryOpen(open), [])
+
+  const value = useMemo(() => ({
+    isHistoryOpen,
+    toggleHistory,
+    setHistoryOpen
+  }), [isHistoryOpen, toggleHistory, setHistoryOpen])
 
   return (
-    <HistoryToggleContext.Provider value={{ isHistoryOpen, toggleHistory, setHistoryOpen }}>
+    <HistoryToggleContext.Provider value={value}>
       {children}
     </HistoryToggleContext.Provider>
   )

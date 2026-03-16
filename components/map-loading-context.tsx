@@ -1,5 +1,5 @@
 'use client';
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode, useMemo, useCallback } from 'react';
 
 interface MapLoadingContextType {
   isMapLoaded: boolean;
@@ -10,8 +10,18 @@ const MapLoadingContext = createContext<MapLoadingContextType | undefined>(undef
 
 export const MapLoadingProvider = ({ children }: { children: ReactNode }) => {
   const [isMapLoaded, setIsMapLoaded] = useState(false);
+
+  const setIsMapLoadedCallback = useCallback((isLoaded: boolean) => {
+    setIsMapLoaded(isLoaded);
+  }, []);
+
+  const value = useMemo(() => ({
+    isMapLoaded,
+    setIsMapLoaded: setIsMapLoadedCallback
+  }), [isMapLoaded, setIsMapLoadedCallback]);
+
   return (
-    <MapLoadingContext.Provider value={{ isMapLoaded, setIsMapLoaded }}>
+    <MapLoadingContext.Provider value={value}>
       {children}
     </MapLoadingContext.Provider>
   );
