@@ -159,8 +159,8 @@
     .mobile-icons-bar-content {
       min-width: 0;
       width: 100%;
-      justify-content: space-between;
-      gap: 0; /* Remove gap if using space-between */
+      justify-content: center;
+      gap: 20px;
     }
   }
 
