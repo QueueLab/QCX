@@ -76,7 +76,7 @@ export function VideoSearchResults({ results }: VideoSearchResultsProps) {
         <Dialog key={index}>
           <DialogTrigger asChild>
             <div
-              className="w-1/2 md:w-1/4 p-1 cursor-pointer relative"
+              className="w-1/2 lg:w-1/4 p-1 cursor-pointer relative"
               onClick={() => setSelectedIndex(index)}
             >
               <Card className="flex-1 min-h-40 ">

@@ -10,7 +10,7 @@ export const SearchSkeleton = () => {
       <div className="flex flex-wrap gap-2">
         {Array.from({ length: 4 }).map((_, index) => (
           <div
-            className="w-[calc(50%-0.5rem)] md:w-[calc(25%-0.5rem)] p-2"
+            className="w-[calc(50%-0.5rem)] lg:w-[calc(25%-0.5rem)] p-2"
             key={index}
           >
             <div className="flex-1">
