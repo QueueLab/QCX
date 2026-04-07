@@ -91,10 +91,10 @@ export async function POST(req: NextRequest) {
       
       // Convert to data URL
       const mapboxBuffer = fileMapbox ? await fileMapbox.arrayBuffer() : null
-      const mapboxDataUrl = mapboxBuffer ? `data:${fileMapbox.type};base64,${Buffer.from(mapboxBuffer).toString('base64')}` : null
+      const mapboxDataUrl = mapboxBuffer && fileMapbox ? `data:${fileMapbox.type};base64,${Buffer.from(mapboxBuffer).toString('base64')}` : null
       
       const googleBuffer = fileGoogle ? await fileGoogle.arrayBuffer() : null
-      const googleDataUrl = googleBuffer ? `data:${fileGoogle.type};base64,${Buffer.from(googleBuffer).toString('base64')}` : null
+      const googleDataUrl = googleBuffer && fileGoogle ? `data:${fileGoogle.type};base64,${Buffer.from(googleBuffer).toString('base64')}` : null
       
       const buffer = await imageFile.arrayBuffer()
       const dataUrl = `data:${imageFile.type};base64,${Buffer.from(buffer).toString('base64')}`
