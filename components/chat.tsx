@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils'
 import { useCalendarToggle } from './calendar-toggle-context'
 import { CalendarNotepad } from './calendar-notepad'
 import { MapProvider } from './map/map-provider'
-import { useChat } from 'ai'
+import { useChat } from 'ai/react'
 import MobileIconsBar from './mobile-icons-bar'
 import { useProfileToggle, ProfileToggleEnum } from "@/components/profile-toggle-context";
 import { useUsageToggle } from "@/components/usage-toggle-context";
