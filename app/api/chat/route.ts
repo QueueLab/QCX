@@ -57,8 +57,8 @@ export async function POST(req: NextRequest) {
     } else {
       // JSON body
       try {
-        const body = await req.json()
-        messages = body.messages || []
+        const body = await req.json() as any
+        messages = (body.messages || []) as CoreMessage[]
         extraBody = body.extraBody || {}
       } catch (e) {
         isProcessing = false
@@ -167,7 +167,7 @@ export async function POST(req: NextRequest) {
     if (typeof lastMessage?.content === 'string') {
       userInput = lastMessage.content
     } else if (Array.isArray(lastMessage?.content)) {
-      const textPart = lastMessage.content.find((p: any) => p.type === 'text')
+      const textPart = lastMessage.content.find((p: any) => p.type === 'text') as any
       userInput = textPart?.text || ''
     }
 
