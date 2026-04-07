@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { ChatPanel, ChatPanelRef } from './chat-panel'
 import { ChatMessages } from './chat-messages'
@@ -11,33 +11,35 @@ import { cn } from '@/lib/utils'
 import { useCalendarToggle } from './calendar-toggle-context'
 import { CalendarNotepad } from './calendar-notepad'
 import { MapProvider } from './map/map-provider'
-import { useUIState, useAIState } from 'ai/rsc'
+import { useChat } from 'ai/react'
 import MobileIconsBar from './mobile-icons-bar'
 import { useProfileToggle, ProfileToggleEnum } from "@/components/profile-toggle-context";
 import { useUsageToggle } from "@/components/usage-toggle-context";
 import SettingsView from "@/components/settings/settings-view";
 import { UsageView } from "@/components/usage-view";
-import { MapDataProvider, useMapData } from './map/map-data-context'; // Add this and useMapData
-import { updateDrawingContext } from '@/lib/actions/chat'; // Import the server action
+import { MapDataProvider, useMapData } from './map/map-data-context';
+import { updateDrawingContext } from '@/lib/actions/chat';
 import dynamic from 'next/dynamic'
 import { HeaderSearchButton } from './header-search-button'
 
 type ChatProps = {
-  id?: string // This is the chatId
+  id?: string
 }
 
 export function Chat({ id }: ChatProps) {
   const router = useRouter()
   const path = usePathname()
-  const [messages] = useUIState()
-  const [aiState] = useAIState()
+  // Use Chat from ai/ui - handles both state and submission
+  const { messages, input, setInput, handleInputChange, handleSubmit, isLoading } = useChat({
+    api: '/api/chat',
+    id,
+  })
+  
   const [isMobile, setIsMobile] = useState(false)
   const { activeView } = useProfileToggle();
   const { isUsageOpen } = useUsageToggle();
   const { isCalendarOpen } = useCalendarToggle()
-  const [input, setInput] = useState('')
   const [showEmptyScreen, setShowEmptyScreen] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [suggestions, setSuggestions] = useState<PartialRelated | null>(null)
   const chatPanelRef = useRef<ChatPanelRef>(null);
 
@@ -75,22 +77,15 @@ export function Chat({ id }: ChatProps) {
     }
   }, [id, path, messages])
 
+  // Refresh on new messages from AI (complete response)
   useEffect(() => {
-    if (aiState.messages[aiState.messages.length - 1]?.type === 'response') {
-      // Refresh the page to chat history updates
+    if (messages.length > 0) {
       router.refresh()
     }
-  }, [aiState, router])
+  }, [messages, router])
 
   // Get mapData to access drawnFeatures
   const { mapData } = useMapData();
-
-  useEffect(() => {
-    if (isSubmitting) {
-      chatPanelRef.current?.submitForm()
-      setIsSubmitting(false)
-    }
-  }, [isSubmitting])
 
   // useEffect to call the server action when drawnFeatures changes
   useEffect(() => {
@@ -137,9 +132,10 @@ export function Chat({ id }: ChatProps) {
         <div className="mobile-chat-input-area">
           <ChatPanel 
             ref={chatPanelRef} 
-            messages={messages} 
             input={input} 
             setInput={setInput}
+            handleSubmit={handleSubmit as any}
+            isLoading={isLoading}
             onSuggestionsChange={setSuggestions}
           />
         </div>
@@ -153,7 +149,7 @@ export function Chat({ id }: ChatProps) {
                   <EmptyScreen
                     submitMessage={message => {
                       setInput(message)
-                      setIsSubmitting(true)
+                      handleSubmit(message)
                     }}
                   />
                 ) : (
@@ -181,9 +177,10 @@ export function Chat({ id }: ChatProps) {
         ) : (
           <>
             <ChatPanel 
-              messages={messages} 
               input={input} 
-              setInput={setInput} 
+              setInput={setInput}
+              handleSubmit={handleSubmit as any}
+              isLoading={isLoading}
               onSuggestionsChange={setSuggestions}
             />
             <div className="relative min-h-[100px]">
@@ -192,7 +189,7 @@ export function Chat({ id }: ChatProps) {
                   <EmptyScreen
                     submitMessage={message => {
                       setInput(message)
-                      setIsSubmitting(true)
+                      handleSubmit(message)
                     }}
                   />
                 ) : (

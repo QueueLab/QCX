@@ -1,8 +1,6 @@
 'use client'
 
 import { useEffect, useState, useRef, ChangeEvent, forwardRef, useImperativeHandle, useCallback } from 'react'
-import type { AI, UIState } from '@/app/actions'
-import { useUIState, useActions, readStreamableValue } from 'ai/rsc'
 import { cn } from '@/lib/utils'
 import { UserMessage } from './user-message'
 import { Button } from './ui/button'
@@ -16,9 +14,12 @@ import { useMapData } from './map/map-data-context'
 import SuggestionsDropdown from './suggestions-dropdown'
 
 interface ChatPanelProps {
-  messages: UIState
-  input: string
-  setInput: (value: string) => void
+  id?: string
+  input?: string
+  setInput?: (value: string) => void
+  handleSubmit?: (e: React.FormEvent) => void
+  isLoading?: boolean
+  messages?: any[]
   onSuggestionsChange?: (suggestions: PartialRelated | null) => void
 }
 
@@ -27,9 +28,7 @@ export interface ChatPanelRef {
   submitForm: () => void
 }
 
-export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, input, setInput, onSuggestionsChange }, ref) => {
-  const [, setMessages] = useUIState<typeof AI>()
-  const { submit, clearChat } = useActions()
+export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ id, input, setInput, handleSubmit: propsHandleSubmit, isLoading, messages, onSuggestionsChange }, ref) => {
   const { mapProvider } = useSettingsStore()
   const [isMobile, setIsMobile] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -85,50 +84,39 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement> | string) => {
+    // Handle string submission from EmptyScreen
+    if (typeof e === 'string') {
+      if (setInput) {
+        setInput(e)
+      }
+      return
+    }
+    
     e.preventDefault()
-    if (!input.trim() && !selectedFile) {
+    
+    // If parent provides handleSubmit, use it
+    if (propsHandleSubmit) {
+      propsHandleSubmit(e)
+      return
+    }
+    
+    const inputValue = input || ''
+    if (!inputValue.trim() && !selectedFile) {
       return
     }
 
-    const content: ({ type: 'text'; text: string } | { type: 'image'; image: string })[] = []
-    if (input) {
-      content.push({ type: 'text', text: input })
+    if (setInput) {
+      setInput('')
     }
-    if (selectedFile && selectedFile.type.startsWith('image/')) {
-      content.push({
-        type: 'image',
-        image: URL.createObjectURL(selectedFile)
-      })
-    }
-
-    setMessages(currentMessages => [
-      ...currentMessages,
-      {
-        id: nanoid(),
-        component: <UserMessage content={content} />
-      }
-    ])
-
-    const formData = new FormData(e.currentTarget)
-    if (selectedFile) {
-      formData.append('file', selectedFile)
-    }
-
-    // Include drawn features in the form data
-    formData.append('drawnFeatures', JSON.stringify(mapData.drawnFeatures || []))
-
-    setInput('')
     clearAttachment()
-
-    const responseMessage = await submit(formData)
-    setMessages(currentMessages => [...currentMessages, responseMessage as any])
   }
 
   const handleClear = async () => {
-    setMessages([])
+    if (setInput) {
+      setInput('')
+    }
     clearAttachment()
-    await clearChat()
   }
 
   const debouncedGetSuggestions = useCallback(
@@ -144,13 +132,13 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
       }
 
       debounceTimeoutRef.current = setTimeout(async () => {
-        const suggestionsStream = await getSuggestions(value, mapData)
-        for await (const partialSuggestions of readStreamableValue(
-          suggestionsStream
-        )) {
-          if (partialSuggestions) {
-            setSuggestions(partialSuggestions as PartialRelated)
+        try {
+          const suggestionsData = await getSuggestions(value, mapData)
+          if (suggestionsData) {
+            setSuggestions(suggestionsData as PartialRelated)
           }
+        } catch (e) {
+          console.error('Error getting suggestions:', e)
         }
       }, 500) // 500ms debounce delay
     },
