@@ -10,11 +10,12 @@ import type { Message as DrizzleMessage } from '@/lib/actions/chat-db'; // For D
 export const maxDuration = 60;
 
 export interface SearchPageProps {
-  params: { id: string }; // Keep as is for now
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
 export async function generateMetadata({ params }: SearchPageProps) {
-  const { id } = params;
+  const { id } = await params;
   // TODO: Metadata generation might need authenticated user if chats are private
   // For now, assuming getChat can be called or it handles anon access for metadata appropriately
   const userId = await getCurrentUserIdOnServer(); // Attempt to get user for metadata
@@ -24,8 +25,9 @@ export async function generateMetadata({ params }: SearchPageProps) {
   };
 }
 
-export default async function SearchPage({ params }: SearchPageProps) {
-  const { id } = params;
+export default async function SearchPage({ params, searchParams }: SearchPageProps) {
+  const resolvedSearchParams = await searchParams;
+  const { id } = await params;
   const userId = await getCurrentUserIdOnServer();
 
   if (!userId) {
@@ -69,7 +71,7 @@ export default async function SearchPage({ params }: SearchPageProps) {
       }}
     >
       <MapDataProvider>
-        <Chat id={id} />
+        <Chat id={id} searchParams={resolvedSearchParams} />
       </MapDataProvider>
     </AI>
   );

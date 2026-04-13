@@ -24,9 +24,10 @@ import { HeaderSearchButton } from './header-search-button'
 
 type ChatProps = {
   id?: string // This is the chatId
+  searchParams?: { [key: string]: string | string[] | undefined }
 }
 
-export function Chat({ id }: ChatProps) {
+export function Chat({ id, searchParams }: ChatProps) {
   const router = useRouter()
   const path = usePathname()
   const [messages] = useUIState()
@@ -135,13 +136,14 @@ export function Chat({ id }: ChatProps) {
           <MobileIconsBar onAttachmentClick={handleAttachment} onSubmitClick={handleMobileSubmit} />
         </div>
         <div className="mobile-chat-input-area">
-          <ChatPanel 
-            ref={chatPanelRef} 
-            messages={messages} 
-            input={input} 
-            setInput={setInput}
-            onSuggestionsChange={setSuggestions}
-          />
+	          <ChatPanel 
+	            ref={chatPanelRef} 
+	            messages={messages} 
+	            input={input} 
+	            setInput={setInput}
+	            onSuggestionsChange={setSuggestions}
+	            searchParams={searchParams}
+	          />
         </div>
         <div className="mobile-chat-messages-area relative">
           {isCalendarOpen ? (
@@ -180,12 +182,13 @@ export function Chat({ id }: ChatProps) {
           <CalendarNotepad chatId={id} />
         ) : (
           <>
-            <ChatPanel 
-              messages={messages} 
-              input={input} 
-              setInput={setInput} 
-              onSuggestionsChange={setSuggestions}
-            />
+	            <ChatPanel 
+	              messages={messages} 
+	              input={input} 
+	              setInput={setInput} 
+	              onSuggestionsChange={setSuggestions}
+	              searchParams={searchParams}
+	            />
             <div className="relative min-h-[100px]">
               <div className={cn("transition-all duration-300", suggestions ? "blur-md pointer-events-none" : "")}>
                 {showEmptyScreen ? (

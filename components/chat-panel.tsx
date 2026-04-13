@@ -20,6 +20,7 @@ interface ChatPanelProps {
   input: string
   setInput: (value: string) => void
   onSuggestionsChange?: (suggestions: PartialRelated | null) => void
+  searchParams?: { [key: string]: string | string[] | undefined }
 }
 
 export interface ChatPanelRef {
@@ -27,7 +28,7 @@ export interface ChatPanelRef {
   submitForm: () => void
 }
 
-export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, input, setInput, onSuggestionsChange }, ref) => {
+export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, input, setInput, onSuggestionsChange, searchParams }, ref) => {
   const [, setMessages] = useUIState<typeof AI>()
   const { submit, clearChat } = useActions()
   const { mapProvider } = useSettingsStore()
@@ -117,6 +118,15 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
 
     // Include drawn features in the form data
     formData.append('drawnFeatures', JSON.stringify(mapData.drawnFeatures || []))
+
+    // Include searchParams in the form data if they exist
+    if (searchParams) {
+      Object.entries(searchParams).forEach(([key, value]) => {
+        if (value !== undefined) {
+          formData.append(key, Array.isArray(value) ? value.join(',') : value);
+        }
+      });
+    }
 
     setInput('')
     clearAttachment()
