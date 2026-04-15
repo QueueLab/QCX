@@ -9,13 +9,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { searchParams } = new URL(request.url);
+    const url = new URL(request.url);
+    const searchParams = url.searchParams;
 
     const DEFAULT_LIMIT = 20;
     const MAX_LIMIT = 100;
     const DEFAULT_OFFSET = 0;
 
-    let limit = parseInt(searchParams.get('limit') || '', 10);
+    let limit = parseInt(searchParams?.get('limit') || '', 10);
     if (isNaN(limit) || limit < 1 || limit > MAX_LIMIT) {
       limit = DEFAULT_LIMIT;
     }

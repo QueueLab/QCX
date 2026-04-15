@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: SearchPageProps) {
 }
 
 export default async function SearchPage({ params, searchParams }: SearchPageProps) {
-  const resolvedSearchParams = await searchParams;
+  const resolvedSearchParams = await (searchParams || Promise.resolve({}));
   const { id } = await params;
   const userId = await getCurrentUserIdOnServer();
 
@@ -36,7 +36,7 @@ export default async function SearchPage({ params, searchParams }: SearchPagePro
     redirect('/');
   }
 
-  const chat = await getChat(id, userId);
+  const chat = await getChat(id, userId || '');
 
   if (!chat) {
     // If chat doesn't exist or user doesn't have access (handled by getChat)
