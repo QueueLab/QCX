@@ -17,7 +17,7 @@ import { useProfileToggle, ProfileToggleEnum } from "@/components/profile-toggle
 import { useUsageToggle } from "@/components/usage-toggle-context";
 import SettingsView from "@/components/settings/settings-view";
 import { UsageView } from "@/components/usage-view";
-import { MapDataProvider, useMapData } from './map/map-data-context'; // Add this and useMapData
+import { useMapData } from './map/map-data-context';
 import { updateDrawingContext } from '@/lib/actions/chat'; // Import the server action
 import dynamic from 'next/dynamic'
 import { HeaderSearchButton } from './header-search-button'
