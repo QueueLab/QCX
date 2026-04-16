@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
       limit = DEFAULT_LIMIT;
     }
 
-    let offset = parseInt(searchParams.get('offset') || '', 10);
+    let offset = parseInt(searchParams?.get('offset') || '', 10);
     if (isNaN(offset) || offset < 0) {
       offset = DEFAULT_OFFSET;
     }

@@ -3,17 +3,17 @@
 ## Issues Fixed
 
 ### 1. TypeError: Cannot read properties of undefined (reading 'searchParams')
-**Location:** `app/api/chats/route.ts` and `app/search/[id]/page.tsx`
+**Location:** `app/api/chats/route.ts`, `app/api/embeddings/route.ts`, and `app/search/[id]/page.tsx`
 
 **Root Cause:** 
-- In `app/api/chats/route.ts`, the destructuring of `searchParams` from `new URL(request.url)` was not properly handling cases where the URL object might not have the expected structure.
+- In API routes, the destructuring of `searchParams` from `new URL(request.url)` was not properly handling cases where the URL object might not have the expected structure or the environment was unstable.
 - In `app/search/[id]/page.tsx`, the `searchParams` prop could be undefined, causing issues when passed to child components.
 
 **Fix Applied:**
 - Changed from destructuring to explicit property access: `const url = new URL(request.url); const searchParams = url.searchParams;`
-- Added optional chaining: `searchParams?.get('limit')`
-- Added null coalescing for searchParams promise: `await (searchParams || Promise.resolve({}))`
-- Fixed getChat call to handle empty userId: `getChat(id, userId || '')`
+- Added optional chaining to all `searchParams.get()` calls: `searchParams?.get('limit')`
+- Added null coalescing for searchParams promise in the search page: `await (searchParams || Promise.resolve({}))`
+- Fixed `getChat` call to handle empty `userId` with a fallback empty string.
 
 ### 2. TypeError: Cannot read properties of undefined (reading 'call')
 **Location:** Webpack runtime issue in Next.js build
