@@ -5,36 +5,25 @@ import { createPortal } from 'react-dom'
 import { Button } from '@/components/ui/button'
 import { Search } from 'lucide-react'
 import { useMap } from './map/map-context'
-import { useActions, useUIState } from 'ai/rsc'
-import { AI } from '@/app/actions'
+import { useChatContext } from './chat-provider'
 import { nanoid } from '@/lib/utils'
-import { UserMessage } from './user-message'
 import { toast } from 'sonner'
 import { useSettingsStore } from '@/lib/store/settings'
 import { useMapData } from './map/map-data-context'
 import { compressImage } from '@/lib/utils/image-utils'
 
-// Define an interface for the actions to help TypeScript during build
-interface HeaderActions {
-  submit: (formData: FormData) => Promise<any>;
-}
-
 export function HeaderSearchButton() {
   const { map } = useMap()
   const { mapProvider } = useSettingsStore()
   const { mapData } = useMapData()
-  // Cast the actions to our defined interface to avoid build errors
-  const actions = useActions<typeof AI>() as unknown as HeaderActions
-  const [, setMessages] = useUIState<typeof AI>()
+  const { append } = useChatContext()
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [desktopPortal, setDesktopPortal] = useState<HTMLElement | null>(null)
   const [mobilePortal, setMobilePortal] = useState<HTMLElement | null>(null)
 
   useEffect(() => {
-    // Portals can only be used on the client-side after the DOM has mounted
     setDesktopPortal(document.getElementById('header-search-portal'))
 
-    // Mobile portal might mount later, so check periodically
     const checkMobilePortal = () => {
       const el = document.getElementById('mobile-header-search-portal')
       if (el) {
@@ -60,27 +49,14 @@ export function HeaderSearchButton() {
       toast.error('Map is not available yet. Please wait for it to load.')
       return
     }
-    if (!actions) {
-      toast.error('Search actions are not available.')
-      return
-    }
 
     setIsAnalyzing(true)
 
     try {
-      setMessages((currentMessages: any[]) => [
-        ...currentMessages,
-        {
-          id: nanoid(),
-          component: <UserMessage content={[{ type: 'text', text: 'Analyze this map view.' }]} />
-        }
-      ])
-
       let mapboxBlob: Blob | null = null;
       let googleBlob: Blob | null = null;
 
       if (mapProvider === 'mapbox' && map) {
-        // Capture Mapbox
         const canvas = map.getCanvas()
         const rawMapboxBlob = await new Promise<Blob | null>(resolve => {
           canvas.toBlob(resolve, 'image/png')
@@ -92,7 +68,6 @@ export function HeaderSearchButton() {
           });
         }
 
-        // Also fetch Google Static Map for the same view
         const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
         if (apiKey) {
           const center = map.getCenter();
@@ -139,25 +114,36 @@ export function HeaderSearchButton() {
         throw new Error('Failed to capture map image.')
       }
 
-      const formData = new FormData()
-      if (mapboxBlob) formData.append('file_mapbox', mapboxBlob, 'mapbox_capture.png')
-      if (googleBlob) formData.append('file_google', googleBlob, 'google_capture.png')
-
-      // Keep 'file' for backward compatibility if needed, or just use the first available
-      formData.append('file', (mapboxBlob || googleBlob)!, 'map_capture.png')
-
-      formData.append('action', 'resolution_search')
-      formData.append('timezone', mapData.currentTimezone || 'UTC')
-      formData.append('drawnFeatures', JSON.stringify(mapData.drawnFeatures || []))
-
-      const center = mapProvider === 'mapbox' && map ? map.getCenter() : mapData.cameraState?.center;
-      if (center) {
-        formData.append('latitude', center.lat.toString())
-        formData.append('longitude', center.lng.toString())
+      // Convert blobs to base64 for the API
+      const blobToBase64 = async (blob: Blob): Promise<string> => {
+        return new Promise((resolve) => {
+          const reader = new FileReader()
+          reader.onloadend = () => resolve(reader.result as string)
+          reader.readAsDataURL(blob)
+        })
       }
 
-      const responseMessage = await actions.submit(formData)
-      setMessages((currentMessages: any[]) => [...currentMessages, responseMessage as any])
+      const fileData = await blobToBase64((mapboxBlob || googleBlob)!)
+      const mapboxImageData = mapboxBlob ? await blobToBase64(mapboxBlob) : undefined
+      const googleImageData = googleBlob ? await blobToBase64(googleBlob) : undefined
+
+      const center = mapProvider === 'mapbox' && map ? map.getCenter() : mapData.cameraState?.center;
+
+      await append(
+        { role: 'user', content: 'Analyze this map view.' },
+        {
+          body: {
+            action: 'resolution_search',
+            fileData,
+            mapboxImageData,
+            googleImageData,
+            timezone: mapData.currentTimezone || 'UTC',
+            drawnFeatures: mapData.drawnFeatures || [],
+            latitude: center?.lat?.toString(),
+            longitude: center?.lng?.toString(),
+          }
+        }
+      )
     } catch (error) {
       console.error('Failed to perform resolution search:', error)
       toast.error('An error occurred while analyzing the map.')
@@ -171,7 +157,7 @@ export function HeaderSearchButton() {
       variant="ghost"
       size="icon"
       onClick={handleResolutionSearch}
-      disabled={isAnalyzing || !map || !actions}
+      disabled={isAnalyzing || !map}
       title="Analyze current map view"
     >
       {isAnalyzing ? (
@@ -183,7 +169,7 @@ export function HeaderSearchButton() {
   )
 
   const mobileButton = (
-    <Button variant="ghost" size="icon" onClick={handleResolutionSearch} disabled={isAnalyzing || !map || !actions} data-testid="mobile-search-button">
+    <Button variant="ghost" size="icon" onClick={handleResolutionSearch} disabled={isAnalyzing || !map} data-testid="mobile-search-button">
       {isAnalyzing ? (
         <div className="h-[1.2rem] w-[1.2rem] animate-spin rounded-full border-b-2 border-current"></div>
       ) : (

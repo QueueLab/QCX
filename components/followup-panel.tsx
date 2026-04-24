@@ -3,40 +3,26 @@
 import { useState } from 'react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
-import { useActions, useUIState } from 'ai/rsc'
-import type { AI } from '@/app/actions'
-import { UserMessage } from './user-message'
+import { useChatContext } from './chat-provider'
 import { ArrowRight } from 'lucide-react'
 import { useMapData } from './map/map-data-context'
-import { nanoid } from '@/lib/utils'
 
 export function FollowupPanel() {
   const [input, setInput] = useState('')
-  const { submit } = useActions()
-  const [, setMessages] = useUIState<typeof AI>()
+  const { append } = useChatContext()
   const { mapData } = useMapData()
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    const formData = new FormData()
-    formData.append("input", input)
-    formData.append("action", "resolution_search")
 
-    const userMessage = {
-      id: nanoid(),
-      isGenerating: false,
-      component: <UserMessage content={input} />
-    }
-
-    // Include drawn features in the form data
-    formData.append('drawnFeatures', JSON.stringify(mapData.drawnFeatures || []))
-
-    const responseMessage = await submit(formData)
-    setMessages(currentMessages => [
-      ...currentMessages,
-      userMessage,
-      responseMessage
-    ])
+    await append(
+      { role: 'user', content: input },
+      {
+        body: {
+          drawnFeatures: mapData.drawnFeatures || [],
+        }
+      }
+    )
 
     setInput('')
   }

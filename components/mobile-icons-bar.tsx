@@ -1,8 +1,7 @@
 'use client'
 
 import React from 'react'
-import { useUIState, useActions } from 'ai/rsc'
-import { AI } from '@/app/actions'
+import { useChatContext } from './chat-provider'
 import { Button } from '@/components/ui/button'
 import {
   Search,
@@ -28,14 +27,12 @@ interface MobileIconsBarProps {
 }
 
 export const MobileIconsBar: React.FC<MobileIconsBarProps> = ({ onAttachmentClick, onSubmitClick }) => {
-  const [, setMessages] = useUIState<typeof AI>()
-  const { clearChat } = useActions()
+  const { setMessages } = useChatContext()
   const { toggleCalendar } = useCalendarToggle()
   const { toggleUsage, isUsageOpen } = useUsageToggle()
   const { activeView, closeProfileView } = useProfileToggle()
 
   const handleUsageToggle = () => {
-    // If we're about to open usage and profile is open, close profile first
     if (!isUsageOpen && activeView) {
       closeProfileView()
     }
@@ -44,7 +41,6 @@ export const MobileIconsBar: React.FC<MobileIconsBarProps> = ({ onAttachmentClic
 
   const handleNewChat = async () => {
     setMessages([])
-    await clearChat()
   }
 
   return (

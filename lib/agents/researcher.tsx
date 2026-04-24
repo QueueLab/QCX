@@ -1,5 +1,3 @@
-// lib/agents/researcher.tsx
-import { createStreamableUI, createStreamableValue } from 'ai/rsc'
 import {
   CoreMessage,
   LanguageModel,
@@ -7,14 +5,11 @@ import {
   ToolResultPart,
   streamText as nonexperimental_streamText,
 } from 'ai'
-import { Section } from '@/components/section'
-import { BotMessage } from '@/components/message'
 import { getTools } from './tools'
 import { getModel } from '../utils'
 import { MapProvider } from '@/lib/store/settings'
 import { DrawnFeature } from './resolution-search'
 
-// This magic tag lets us write raw multi-line strings with backticks, arrows, etc.
 const raw = String.raw
 
 const getDefaultSystemPrompt = (date: string, drawnFeatures?: DrawnFeature[]) => raw`
@@ -36,40 +31,40 @@ Use these user-drawn areas/lines as primary areas of interest for your analysis 
 ### **Tool Usage Guidelines (Mandatory)**
 
 #### **1. General Web Search**
-- **Tool**: \`search\`
-- **When to use**:  
+- **Tool**: ${'`search`'}
+- **When to use**:
   Any query requiring up-to-date factual information, current events, statistics, product details, news, or general knowledge.
-- **Do NOT use** \`retrieve\` for URLs discovered via search results.
+- **Do NOT use** ${'`retrieve`'} for URLs discovered via search results.
 
 #### **2. Fetching Specific Web Pages**
-- **Tool**: \`retrieve\`
-- **When to use**:  
+- **Tool**: ${'`retrieve`'}
+- **When to use**:
   ONLY when the user explicitly provides one or more URLs and asks you to read, summarize, or extract content from them.
 - **Never use** this tool proactively.
 
 #### **3. Location, Geography, Navigation, and Mapping Queries**
-- **Tool**: \`geospatialQueryTool\` → **MUST be used (no exceptions)** for:
+- **Tool**: ${'`geospatialQueryTool`'} → **MUST be used (no exceptions)** for:
   • Finding places, businesses, "near me", distances, directions
   • Travel times, routes, traffic, map generation
   • Isochrones, travel-time matrices, multi-stop optimization
 
-**Examples that trigger \`geospatialQueryTool\`:**
-- “Coffee shops within 500 m of the Eiffel Tower”
-- “Driving directions from LAX to Hollywood with current traffic”
-- “Show me a map of museums in Paris”
-- “How long to walk from Central Park to Times Square?”
-- “Areas reachable in 30 minutes from downtown Portland”
+**Examples that trigger ${'`geospatialQueryTool`'}:**
+- "Coffee shops within 500 m of the Eiffel Tower"
+- "Driving directions from LAX to Hollywood with current traffic"
+- "Show me a map of museums in Paris"
+- "How long to walk from Central Park to Times Square?"
+- "Areas reachable in 30 minutes from downtown Portland"
 
-**Behavior when using \`geospatialQueryTool\`:**
+**Behavior when using ${'`geospatialQueryTool`'}:**
 - Issue the tool call immediately
 - In your final response: provide concise text only
-- → NEVER say “the map will update” or “markers are being added”
+- → NEVER say "the map will update" or "markers are being added"
 - → Trust the system handles map rendering automatically
 
 #### **Summary of Decision Flow**
-1. User gave explicit URLs? → \`retrieve\`
-2. Location/distance/direction/maps? → \`geospatialQueryTool\` (mandatory)
-3. Everything else needing external data? → \`search\`
+1. User gave explicit URLs? → ${'`retrieve`'}
+2. Location/distance/direction/maps? → ${'`geospatialQueryTool`'} (mandatory)
+3. Everything else needing external data? → ${'`search`'}
 4. Otherwise → answer from knowledge
 
 These rules override all previous instructions.
@@ -81,8 +76,6 @@ These rules override all previous instructions.
 
 export async function researcher(
   dynamicSystemPrompt: string,
-  uiStream: ReturnType<typeof createStreamableUI>,
-  streamText: ReturnType<typeof createStreamableValue<string>>,
   messages: CoreMessage[],
   mapProvider: MapProvider,
   useSpecificModel?: boolean,
@@ -91,12 +84,6 @@ export async function researcher(
   let fullResponse = ''
   let hasError = false
 
-  const answerSection = (
-    <Section title="response">
-      <BotMessage content={streamText.value} />
-    </Section>
-  )
-
   const currentDate = new Date().toLocaleString()
 
   const systemPromptToUse =
@@ -104,7 +91,6 @@ export async function researcher(
       ? dynamicSystemPrompt
       : getDefaultSystemPrompt(currentDate, drawnFeatures)
 
-  // Check if any message contains an image
   const hasImage = messages.some(message =>
     Array.isArray(message.content) &&
     message.content.some(part => part.type === 'image')
@@ -115,10 +101,8 @@ export async function researcher(
     maxTokens: 4096,
     system: systemPromptToUse,
     messages,
-    tools: getTools({ uiStream, fullResponse, mapProvider }),
+    tools: getTools({ mapProvider }),
   })
-
-  uiStream.update(null) // remove spinner
 
   const toolCalls: ToolCallPart[] = []
   const toolResponses: ToolResultPart[] = []
@@ -127,11 +111,7 @@ export async function researcher(
     switch (delta.type) {
       case 'text-delta':
         if (delta.textDelta) {
-          if (fullResponse.length === 0 && delta.textDelta.length > 0) {
-            uiStream.update(answerSection)
-          }
           fullResponse += delta.textDelta
-          streamText.update(fullResponse)
         }
         break
 
@@ -140,9 +120,6 @@ export async function researcher(
         break
 
       case 'tool-result':
-        if (!useSpecificModel && toolResponses.length === 0 && delta.result) {
-          uiStream.append(answerSection)
-        }
         if (!delta.result) hasError = true
         toolResponses.push(delta)
         break

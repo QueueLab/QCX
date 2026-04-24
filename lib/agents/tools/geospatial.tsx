@@ -1,18 +1,14 @@
 /**
  * Fixed geospatial tool with improved error handling and schema
  */
-import { createStreamableUI, createStreamableValue } from 'ai/rsc';
-import { BotMessage } from '@/components/message';
 import { geospatialQuerySchema } from '@/lib/schema/geospatial';
 import { Client as MCPClientClass } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
-// Smithery SDK removed - using direct URL construction
 import { z } from 'zod';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { getSelectedModel } from '@/lib/actions/users';
 import { MapProvider } from '@/lib/store/settings';
 
-// Types
 export type McpClient = MCPClientClass;
 
 interface Location {
@@ -33,9 +29,6 @@ interface MapboxConfig {
   name: string;
 }
 
-/**
- * Establish connection to the MCP server with proper environment validation.
- */
 async function getConnectedMcpClient(): Promise<McpClient | null> {
   const composioApiKey = process.env.COMPOSIO_API_KEY;
   const mapboxAccessToken = process.env.MAPBOX_ACCESS_TOKEN;
@@ -52,10 +45,8 @@ async function getConnectedMcpClient(): Promise<McpClient | null> {
     return null;
   }
 
-  // Load config from file or fallback
   let config;
   try {
-    // Use static import for config
     let mapboxMcpConfig;
     try {
       mapboxMcpConfig = require('../../../mapbox_mcp_config.json');
@@ -70,17 +61,13 @@ async function getConnectedMcpClient(): Promise<McpClient | null> {
     console.log('[GeospatialTool] Using fallback config');
   }
 
-  // Build Composio MCP server URL
-  // Note: This should be migrated to use Composio SDK directly instead of MCP client
-  // For now, constructing URL directly without Smithery SDK
   let serverUrlToUse: URL;
   try {
-    // Construct URL with Composio credentials
     const baseUrl = 'https://api.composio.dev/v1/mcp/mapbox';
     serverUrlToUse = new URL(baseUrl);
     serverUrlToUse.searchParams.set('api_key', composioApiKey);
     serverUrlToUse.searchParams.set('user_id', composioUserId);
-    
+
     const urlDisplay = serverUrlToUse.toString().split('?')[0];
     console.log('[GeospatialTool] Composio MCP Server URL created:', urlDisplay);
 
@@ -92,7 +79,6 @@ async function getConnectedMcpClient(): Promise<McpClient | null> {
     return null;
   }
 
-  // Create transport
   let transport;
   try {
     transport = new StreamableHTTPClientTransport(serverUrlToUse);
@@ -102,7 +88,6 @@ async function getConnectedMcpClient(): Promise<McpClient | null> {
     return null;
   }
 
-  // Create client
   let client;
   try {
     client = new MCPClientClass({ name: 'GeospatialToolClient', version: '1.0.0' });
@@ -112,7 +97,6 @@ async function getConnectedMcpClient(): Promise<McpClient | null> {
     return null;
   }
 
-  // Connect to server
   try {
     console.log('[GeospatialTool] Attempting to connect to MCP server...');
     await Promise.race([
@@ -125,7 +109,6 @@ async function getConnectedMcpClient(): Promise<McpClient | null> {
     return null;
   }
 
-  // List tools
   try {
     const tools = await client.listTools();
     console.log('[GeospatialTool] Available tools:', tools.tools?.map(t => t.name) || []);
@@ -136,9 +119,6 @@ async function getConnectedMcpClient(): Promise<McpClient | null> {
   return client;
 }
 
-/**
- * Safely close the MCP client with timeout.
- */
 async function closeClient(client: McpClient | null) {
   if (!client) return;
   try {
@@ -152,28 +132,20 @@ async function closeClient(client: McpClient | null) {
   }
 }
 
-/**
- * Helper to generate a Google Static Map URL
- */
 function getGoogleStaticMapUrl(latitude: number, longitude: number): string {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY;
   if (!apiKey) return '';
   return `https://maps.googleapis.com/maps/api/staticmap?center=${latitude},${longitude}&zoom=15&size=640x480&scale=2&markers=color:red%7C${latitude},${longitude}&key=${apiKey}`;
 }
 
-/**
- * Main geospatial tool executor.
- */
 export const geospatialTool = ({
-  uiStream,
   mapProvider
 }: {
-  uiStream: ReturnType<typeof createStreamableUI>
   mapProvider?: MapProvider
 }) => ({
-  description: `Use this tool for location-based queries including: 
+  description: `Use this tool for location-based queries including:
   There a plethora of tools inside this tool accessible on the mapbox mcp server where switch case into the tool of choice for that use case
-  If the Query is supposed to use multiple tools in a sequence you must access all the tools in the sequence and then provide a final answer based on the results of all the tools used. 
+  If the Query is supposed to use multiple tools in a sequence you must access all the tools in the sequence and then provide a final answer based on the results of all the tools used.
 
 Static image tool:
 
@@ -194,7 +166,7 @@ Customizable result limits
 Rich metadata for each result
 Support for multiple languages
 
-Reverse geocoding tool: 
+Reverse geocoding tool:
 
 Performs reverse geocoding using the Mapbox geocoding V6 API. Features include:
 Convert geographic coordinates to human-readable addresses
@@ -235,24 +207,15 @@ Optional departure or arrival time specification
 Color customization for visualization
 
 Search and geocode tool:
-Uses the Mapbox Search Box Text Search API endpoint to power searching for and geocoding POIs, addresses, places, and any other types supported by that API. This tool consolidates the functionality that was previously provided by the ForwardGeocodeTool and PoiSearchTool (from earlier versions of this MCP server) into a single tool.`
-
-
-,
+Uses the Mapbox Search Box Text Search API endpoint to power searching for and geocoding POIs, addresses, places, and any other types supported by that API. This tool consolidates the functionality that was previously provided by the ForwardGeocodeTool and PoiSearchTool (from earlier versions of this MCP server) into a single tool.`,
   parameters: geospatialQuerySchema,
   execute: async (params: z.infer<typeof geospatialQuerySchema>) => {
     const { queryType, includeMap = true } = params;
     console.log('[GeospatialTool] Execute called with:', params, 'and map provider:', mapProvider);
 
-    const uiFeedbackStream = createStreamableValue<string>();
-    uiStream.append(<BotMessage content={uiFeedbackStream.value} />);
-
     const selectedModel = await getSelectedModel();
 
     if (selectedModel?.includes('gemini') && mapProvider === 'google') {
-      let feedbackMessage = `Processing geospatial query with Gemini...`;
-      uiFeedbackStream.update(feedbackMessage);
-
       try {
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_3_PRO_API_KEY!);
         const model = genAI.getGenerativeModel({
@@ -271,52 +234,32 @@ Uses the Mapbox Search Box Text Search API endpoint to power searching for and g
 
         if (functionCalls && functionCalls.length > 0) {
           const gsr = functionCalls[0];
-          // This is a placeholder for the actual response structure,
-          // as I don't have a way to inspect it at the moment.
           const place = (gsr as any).results[0].place;
           if (place) {
             const { latitude, longitude } = place.coordinates;
             const place_name = place.displayName;
 
             const mcpData: McpResponse = {
-              location: {
-                latitude,
-                longitude,
-                place_name,
-              },
+              location: { latitude, longitude, place_name },
             };
 
             if (mapProvider === 'google') {
               mcpData.mapUrl = getGoogleStaticMapUrl(latitude, longitude);
             }
 
-            feedbackMessage = `Found location: ${place_name}`;
-            uiFeedbackStream.update(feedbackMessage);
-            uiFeedbackStream.done();
-            uiStream.update(<BotMessage content={uiFeedbackStream.value} />);
             return { type: 'MAP_QUERY_TRIGGER', originalUserInput: JSON.stringify(params), queryType, timestamp: new Date().toISOString(), mcp_response: mcpData, error: null };
           }
         }
         throw new Error('No location found by Gemini.');
       } catch (error: any) {
         const toolError = `Gemini grounding error: ${error.message}`;
-        uiFeedbackStream.update(toolError);
         console.error('[GeospatialTool] Gemini execution failed:', error);
-        uiFeedbackStream.done();
-        uiStream.update(<BotMessage content={uiFeedbackStream.value} />);
         return { type: 'MAP_QUERY_TRIGGER', originalUserInput: JSON.stringify(params), queryType, timestamp: new Date().toISOString(), mcp_response: null, error: toolError };
       }
     }
 
-    let feedbackMessage = `Processing geospatial query (type: ${queryType})... Connecting to mapping service...`;
-    uiFeedbackStream.update(feedbackMessage);
-
     const mcpClient = await getConnectedMcpClient();
     if (!mcpClient) {
-      feedbackMessage = 'Geospatial functionality is unavailable. Please check configuration.';
-      uiFeedbackStream.update(feedbackMessage);
-      uiFeedbackStream.done();
-      uiStream.update(<BotMessage content={uiFeedbackStream.value} />);
       return { type: 'MAP_QUERY_TRIGGER', originalUserInput: JSON.stringify(params), timestamp: new Date().toISOString(), mcp_response: null, error: 'MCP client initialization failed' };
     }
 
@@ -324,40 +267,34 @@ Uses the Mapbox Search Box Text Search API endpoint to power searching for and g
     let toolError: string | null = null;
 
     try {
-      feedbackMessage = `Connected to mapping service. Processing ${queryType} query...`;
-      uiFeedbackStream.update(feedbackMessage);
-
-      // Pick appropriate tool
       const toolName = await (async () => {
         const { tools } = await mcpClient.listTools().catch(() => ({ tools: [] }));
         const names = new Set(tools?.map((t: any) => t.name) || []);
         const prefer = (...cands: string[]) => cands.find(n => names.has(n));
 
         switch (queryType) {
-          case 'directions': return prefer('directions_tool') 
+          case 'directions': return prefer('directions_tool')
           case 'distance': return prefer('matrix_tool');
           case 'search': return prefer( 'isochrone_tool','category_search_tool') || 'poi_search_tool';
-          case 'map': return prefer('static_map_image_tool') 
+          case 'map': return prefer('static_map_image_tool')
           case 'reverse': return prefer('reverse_geocode_tool');
           case 'geocode': return prefer('forward_geocode_tool');
         }
       })();
 
-      // Build arguments
       const toolArgs = (() => {
         switch (queryType) {
           case 'directions': return { waypoints: [params.origin, params.destination], includeMapPreview: includeMap, profile: params.mode };
           case 'distance': return { places: [params.origin, params.destination], includeMapPreview: includeMap, mode: params.mode || 'driving' };
           case 'reverse': return { searchText: `${params.coordinates.latitude},${params.coordinates.longitude}`, includeMapPreview: includeMap, maxResults: params.maxResults || 5 };
           case 'search': return { searchText: params.query, includeMapPreview: includeMap, maxResults: params.maxResults || 5, ...(params.coordinates && { proximity: `${params.coordinates.latitude},${params.coordinates.longitude}` }), ...(params.radius && { radius: params.radius }) };
-          case 'geocode': 
+          case 'geocode':
           case 'map': return { searchText: params.location, includeMapPreview: includeMap, maxResults: queryType === 'geocode' ? params.maxResults || 5 : undefined };
         }
       })();
 
       console.log('[GeospatialTool] Calling tool:', toolName, 'with args:', toolArgs);
 
-      // Retry logic
       const MAX_RETRIES = 3;
       let retryCount = 0;
       let toolCallResult;
@@ -376,7 +313,6 @@ Uses the Mapbox Search Box Text Search API endpoint to power searching for and g
         }
       }
 
-      // Extract & parse content
       const serviceResponse = toolCallResult as { content?: Array<{ text?: string | null } | { [k: string]: any }> };
       const blocks = serviceResponse?.content || [];
       const textBlocks = blocks.map(b => (typeof b.text === 'string' ? b.text : null)).filter((t): t is string => !!t && t.trim().length > 0);
@@ -390,7 +326,6 @@ Uses the Mapbox Search Box Text Search API endpoint to power searching for and g
       try { content = JSON.parse(content); }
       catch { console.warn('[GeospatialTool] Content is not JSON, using as string:', content); }
 
-      // Process results
       if (typeof content === 'object' && content !== null) {
         const parsedData = content as any;
         if (parsedData.results?.length > 0) {
@@ -403,22 +338,15 @@ Uses the Mapbox Search Box Text Search API endpoint to power searching for and g
         }
       } else throw new Error('Unexpected response format from mapping service');
 
-      feedbackMessage = `Successfully processed ${queryType} query for: ${mcpData.location.place_name || JSON.stringify(params)}`;
-      uiFeedbackStream.update(feedbackMessage);
-
-      // Enhance with Google Static Map URL if provider is google and we have coordinates
       if (mapProvider === 'google' && mcpData.location.latitude && mcpData.location.longitude && !mcpData.mapUrl) {
         mcpData.mapUrl = getGoogleStaticMapUrl(mcpData.location.latitude, mcpData.location.longitude);
       }
 
     } catch (error: any) {
       toolError = `Mapping service error: ${error.message}`;
-      uiFeedbackStream.update(toolError);
       console.error('[GeospatialTool] Tool execution failed:', error);
     } finally {
       await closeClient(mcpClient);
-      uiFeedbackStream.done();
-      uiStream.update(<BotMessage content={uiFeedbackStream.value} />);
     }
 
     return { type: 'MAP_QUERY_TRIGGER', originalUserInput: JSON.stringify(params), queryType, timestamp: new Date().toISOString(), mcp_response: mcpData, error: toolError };

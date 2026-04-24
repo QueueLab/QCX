@@ -1,70 +1,117 @@
 'use client'
 
-import { StreamableValue, useUIState } from 'ai/rsc'
-import type { AI, UIState } from '@/app/actions'
+import type { Message } from 'ai/react'
 import { CollapsibleMessage } from './collapsible-message'
+import { Section } from './section'
+import { BotMessage } from './message'
+import { UserMessage } from './user-message'
+import { ToolResultRenderer } from './tool-result-renderer'
+import { useChatContext, type Annotation } from './chat-provider'
 
 interface ChatMessagesProps {
-  messages: UIState
+  messages: Message[]
 }
 
 export function ChatMessages({ messages }: ChatMessagesProps) {
-  if (!messages.length) {
+  const { annotations, isLoading } = useChatContext()
+
+  if (!messages.length && !annotations.length) {
     return null
   }
 
-  // Group messages based on ID, and if there are multiple messages with the same ID, combine them into one message
-  const groupedMessages = messages.reduce(
-    (acc: { [key: string]: any }, message) => {
-      if (!acc[message.id]) {
-        acc[message.id] = {
+  const renderedMessages: {
+    id: string
+    component: React.ReactNode
+    isCollapsed?: boolean
+  }[] = []
+
+  // Render tool result annotations first (they come before the text)
+  const toolAnnotations = annotations.filter((a: Annotation) => a.type === 'tool_result')
+  for (const ann of toolAnnotations) {
+    renderedMessages.push({
+      id: `tool-${ann.toolName}-${Math.random().toString(36).slice(2)}`,
+      component: <ToolResultRenderer toolName={ann.toolName} result={ann.result} />,
+      isCollapsed: true
+    })
+  }
+
+  // Render chat messages
+  for (const message of messages) {
+    if (message.role === 'user') {
+      renderedMessages.push({
+        id: message.id,
+        component: <UserMessage content={message.content} />
+      })
+    } else if (message.role === 'assistant') {
+      if (message.content) {
+        renderedMessages.push({
           id: message.id,
-          components: [],
-          isCollapsed: message.isCollapsed
+          component: (
+            <Section title="response">
+              <BotMessage content={message.content} />
+            </Section>
+          )
+        })
+      }
+
+      // Render tool invocations
+      if (message.toolInvocations) {
+        for (const invocation of message.toolInvocations) {
+          if (invocation.state === 'result') {
+            renderedMessages.push({
+              id: `${message.id}-tool-${invocation.toolCallId}`,
+              component: (
+                <ToolResultRenderer
+                  toolName={invocation.toolName}
+                  result={invocation.result}
+                />
+              ),
+              isCollapsed: true
+            })
+          }
         }
       }
-      acc[message.id].components.push(message.component)
-      return acc
-    },
-    {}
-  )
+    }
+  }
 
-  // Convert grouped messages into an array with explicit type
-  const groupedMessagesArray = Object.values(groupedMessages).map(group => ({
-    ...group,
-    components: group.components as React.ReactNode[]
-  })) as {
-    id: string
-    components: React.ReactNode[]
-    isCollapsed?: StreamableValue<boolean>
-  }[]
+  // Render inquiry annotation if present
+  const inquiry = annotations.find((a: Annotation) => a.type === 'inquiry')
+  if (inquiry) {
+    const { Copilot } = require('./copilot')
+    renderedMessages.push({
+      id: 'inquiry',
+      component: <Copilot inquiry={{ value: inquiry.data }} />
+    })
+  }
+
+  // Render related queries annotation
+  const related = annotations.findLast?.((a: Annotation) => a.type === 'related')
+  if (related && related.relatedQueries?.items?.length > 0) {
+    const SearchRelated = require('./search-related').default
+    const { Section: SectionComp } = require('./section')
+    renderedMessages.push({
+      id: 'related',
+      component: (
+        <SectionComp title="Related" separator={true}>
+          <SearchRelated relatedQueries={related.relatedQueries} />
+        </SectionComp>
+      )
+    })
+  }
 
   return (
     <>
-      {groupedMessagesArray.map(
-        (
-          groupedMessage: {
-            id: string
-            components: React.ReactNode[]
-            isCollapsed?: StreamableValue<boolean>
-          },
-          index
-        ) => (
-          <CollapsibleMessage
-            key={`${groupedMessage.id}`}
-            message={{
-              id: groupedMessage.id,
-              component: groupedMessage.components.map((component, i) => (
-                <div key={`${groupedMessage.id}-${i}`}>{component}</div>
-              )),
-              isCollapsed: groupedMessage.isCollapsed
-            }}
-            isLastMessage={
-              groupedMessage.id === messages[messages.length - 1].id
-            }
-          />
-        )
-      )}
+      {renderedMessages.map((msg, index) => (
+        <CollapsibleMessage
+          key={msg.id}
+          message={{
+            id: msg.id,
+            component: <div>{msg.component}</div>,
+            isCollapsed: msg.isCollapsed
+          }}
+          isLastMessage={index === renderedMessages.length - 1}
+        />
+      ))}
     </>
   )
 }
