@@ -5,6 +5,7 @@ import { Button } from './ui/button'
 import { ArrowRight } from 'lucide-react'
 import { useChatContext } from './chat-provider'
 import { PartialRelated } from '@/lib/schema/related'
+import { useSettingsStore } from '@/lib/store/settings'
 
 export interface SearchRelatedProps {
   relatedQueries: PartialRelated
@@ -14,9 +15,17 @@ export const SearchRelated: React.FC<SearchRelatedProps> = ({
   relatedQueries
 }) => {
   const { append } = useChatContext()
+  const { mapProvider } = useSettingsStore()
 
   const handleRelatedClick = async (query: string) => {
-    await append({ role: 'user', content: query })
+    await append(
+      { role: 'user', content: query },
+      {
+        body: {
+          mapProvider,
+        }
+      }
+    )
   }
 
   return (

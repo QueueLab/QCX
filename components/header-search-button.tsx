@@ -115,10 +115,12 @@ export function HeaderSearchButton() {
       }
 
       // Convert blobs to base64 for the API
-      const blobToBase64 = async (blob: Blob): Promise<string> => {
-        return new Promise((resolve) => {
+      const blobToBase64 = (blob: Blob): Promise<string> => {
+        return new Promise((resolve, reject) => {
           const reader = new FileReader()
           reader.onloadend = () => resolve(reader.result as string)
+          reader.onerror = () => reject(reader.error ?? new Error('FileReader failed'))
+          reader.onabort = () => reject(new Error('FileReader aborted'))
           reader.readAsDataURL(blob)
         })
       }
@@ -152,12 +154,14 @@ export function HeaderSearchButton() {
     }
   }
 
+  const isDisabled = isAnalyzing || (mapProvider === 'mapbox' ? !map : !mapData.cameraState)
+
   const desktopButton = (
     <Button
       variant="ghost"
       size="icon"
       onClick={handleResolutionSearch}
-      disabled={isAnalyzing || !map}
+      disabled={isDisabled}
       title="Analyze current map view"
     >
       {isAnalyzing ? (
@@ -169,7 +173,7 @@ export function HeaderSearchButton() {
   )
 
   const mobileButton = (
-    <Button variant="ghost" size="icon" onClick={handleResolutionSearch} disabled={isAnalyzing || !map} data-testid="mobile-search-button">
+    <Button variant="ghost" size="icon" onClick={handleResolutionSearch} disabled={isDisabled} data-testid="mobile-search-button">
       {isAnalyzing ? (
         <div className="h-[1.2rem] w-[1.2rem] animate-spin rounded-full border-b-2 border-current"></div>
       ) : (

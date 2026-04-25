@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { ChatPanel, ChatPanelRef } from './chat-panel'
 import { ChatMessages } from './chat-messages'
@@ -67,10 +67,15 @@ export function Chat({ id }: ChatProps) {
     }
   }, [id, path, messages])
 
+  const prevIsLoadingRef = useRef(false)
   useEffect(() => {
-    const lastMsg = messages[messages.length - 1]
-    if (lastMsg?.role === 'assistant' && !isLoading) {
-      router.refresh()
+    const wasLoading = prevIsLoadingRef.current
+    prevIsLoadingRef.current = isLoading
+    if (wasLoading && !isLoading) {
+      const lastMsg = messages[messages.length - 1]
+      if (lastMsg?.role === 'assistant') {
+        router.refresh()
+      }
     }
   }, [messages, isLoading, router])
 

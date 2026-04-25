@@ -131,14 +131,16 @@ export async function researcher(
     }
   }
 
-  messages.push({
-    role: 'assistant',
-    content: [{ type: 'text', text: fullResponse }, ...toolCalls],
-  })
+  const newSegments: CoreMessage[] = [
+    {
+      role: 'assistant',
+      content: [{ type: 'text', text: fullResponse }, ...toolCalls],
+    }
+  ]
 
   if (toolResponses.length > 0) {
-    messages.push({ role: 'tool', content: toolResponses })
+    newSegments.push({ role: 'tool', content: toolResponses })
   }
 
-  return { result, fullResponse, hasError, toolResponses }
+  return { result, fullResponse, hasError, toolResponses, newSegments }
 }

@@ -6,14 +6,20 @@ export const retrieveTool = () => ({
   parameters: retrieveSchema,
   execute: async ({ url }: { url: string }) => {
     let results: SearchResultsType | undefined
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 15_000)
     try {
       const response = await fetch(`https://r.jina.ai/${url}`, {
         method: 'GET',
         headers: {
           Accept: 'application/json',
           'X-With-Generated-Alt': 'true'
-        }
+        },
+        signal: controller.signal
       })
+      if (!response.ok) {
+        return { error: `Retrieve failed for "${url}" (HTTP ${response.status}).` }
+      }
       const json = await response.json()
       if (!json.data || json.data.length === 0) {
         return { error: `An error occurred while retrieving "${url}". This website may not be supported.` }
@@ -31,7 +37,10 @@ export const retrieveTool = () => ({
       }
     } catch (error) {
       console.error('Retrieve API error:', error)
-      return { error: `${error} "${url}".` }
+      const message = error instanceof Error ? error.message : String(error)
+      return { error: `Failed to retrieve "${url}": ${message}` }
+    } finally {
+      clearTimeout(timeout)
     }
 
     return results

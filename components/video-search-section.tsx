@@ -11,7 +11,15 @@ export type VideoSearchSectionProps = {
 }
 
 export function VideoSearchSection({ result }: VideoSearchSectionProps) {
-  const searchResults: SerperSearchResults | undefined = result ? JSON.parse(result) : undefined
+  let searchResults: SerperSearchResults | undefined
+  if (result) {
+    try {
+      searchResults = JSON.parse(result)
+    } catch (e) {
+      console.error('VideoSearchSection: failed to parse result JSON', e)
+    }
+  }
+
   return (
     <div>
       {searchResults ? (

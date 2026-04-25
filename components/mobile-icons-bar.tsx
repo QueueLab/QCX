@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import { useRouter } from 'next/navigation'
 import { useChatContext } from './chat-provider'
 import { Button } from '@/components/ui/button'
 import {
@@ -27,6 +28,7 @@ interface MobileIconsBarProps {
 }
 
 export const MobileIconsBar: React.FC<MobileIconsBarProps> = ({ onAttachmentClick, onSubmitClick }) => {
+  const router = useRouter()
   const { setMessages } = useChatContext()
   const { toggleCalendar } = useCalendarToggle()
   const { toggleUsage, isUsageOpen } = useUsageToggle()
@@ -39,8 +41,9 @@ export const MobileIconsBar: React.FC<MobileIconsBarProps> = ({ onAttachmentClic
     toggleUsage()
   }
 
-  const handleNewChat = async () => {
+  const handleNewChat = () => {
     setMessages([])
+    router.push('/')
   }
 
   return (

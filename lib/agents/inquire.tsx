@@ -1,12 +1,11 @@
-import { CoreMessage, LanguageModel, streamObject } from 'ai';
+import { CoreMessage, LanguageModel, generateObject } from 'ai';
 import { PartialInquiry, inquirySchema } from '@/lib/schema/inquiry';
 import { getModel } from '../utils';
 
 export async function inquire(
   messages: CoreMessage[]
 ) {
-  let finalInquiry: PartialInquiry = {};
-  const result = await streamObject({
+  const { object } = await generateObject({
     model: (await getModel()) as LanguageModel,
     system: `As a professional web researcher, your role is to deepen your understanding of the user's input by conducting further inquiries when necessary.
     After receiving an initial response from the user, carefully assess whether additional questions are needed to provide a comprehensive and accurate answer. Only ask follow-up questions that will significantly enhance your ability to address the user's needs effectively.
@@ -27,11 +26,5 @@ export async function inquire(
     schema: inquirySchema,
   });
 
-  for await (const obj of result.partialObjectStream) {
-    if (obj) {
-      finalInquiry = obj;
-    }
-  }
-
-  return finalInquiry;
+  return object as PartialInquiry;
 }

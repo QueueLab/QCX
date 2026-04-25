@@ -69,7 +69,10 @@ export const Copilot: React.FC<CopilotProps> = ({ inquiry }: CopilotProps) => {
     if (!skip) {
       await append({ role: 'user', content: updatedQuery() })
     } else {
-      await append({ role: 'user', content: '{"action": "skip"}' })
+      await append(
+        { role: 'user', content: updatedQuery() || 'Skipped' },
+        { body: { action: 'skip' } }
+      )
     }
   }
 

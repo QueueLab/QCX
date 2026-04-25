@@ -1,6 +1,6 @@
 'use server'
 
-import { CoreMessage, LanguageModel, streamObject } from 'ai'
+import { CoreMessage, LanguageModel, generateObject } from 'ai'
 import { PartialRelated, relatedSchema } from '@/lib/schema/related'
 import { getModel } from '../utils'
 import { MapData } from '@/components/map/map-data-context'
@@ -23,20 +23,12 @@ export async function getSuggestions(
 
   Generate three queries that anticipate the user's needs, offering logical next steps for their search. The suggestions should be concise and directly related to the partial query and map context.`
 
-  let finalSuggestions: PartialRelated = {}
-
-  const result = await streamObject({
+  const { object } = await generateObject({
     model: (await getModel()) as LanguageModel,
     system: systemPrompt,
     messages: [{ role: 'user', content: query }],
     schema: relatedSchema
   })
 
-  for await (const obj of result.partialObjectStream) {
-    if (obj && typeof obj === 'object' && 'items' in obj) {
-      finalSuggestions = obj as PartialRelated
-    }
-  }
-
-  return finalSuggestions
+  return object as PartialRelated
 }

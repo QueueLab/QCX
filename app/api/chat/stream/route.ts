@@ -12,10 +12,18 @@ import type { MapProvider } from '@/lib/store/settings'
 
 export const maxDuration = 60
 
+const streamHeaders = {
+  'Content-Type': 'text/plain; charset=utf-8',
+  'x-vercel-ai-data-stream': 'v1',
+}
+
 export async function POST(request: Request) {
   const userId = await getCurrentUserIdOnServer()
   if (!userId) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' }
+    })
   }
 
   const body = await request.json()
@@ -68,18 +76,16 @@ export async function POST(request: Request) {
   const lastText = typeof lastMsg?.content === 'string' ? lastMsg.content.trim().toLowerCase() : ''
   if (lastText === 'what is a planet computer?' || lastText === 'what is qcx-terra?') {
     const definition = lastText === 'what is a planet computer?'
-      ? `A planet computer is a proprietary environment aware system that interoperates weather forecasting, mapping and scheduling using cutting edge multi-agents to streamline automation and exploration on a planet. Available for our Pro and Enterprise customers. [QCX Pricing](https://www.queue.cx/#pricing)`
+      ? `A planet computer is a proprietary environment aware system that interoperates Climate forecasting, mapping and scheduling using cutting edge multi-agents to streamline automation and exploration on a planet. Available for our Pro and Enterprise customers. [QCX Pricing](https://www.queue.cx/#pricing)`
       : `QCX-Terra is a model garden of pixel level precision geospatial foundational models for efficient land feature predictions from satellite imagery. Available for our Pro and Enterprise customers. [QCX Pricing](https://www.queue.cx/#pricing)`;
 
     const encoder = new TextEncoder()
     const stream = new ReadableStream({
       start(controller) {
-        // Send text content
         controller.enqueue(encoder.encode(`0:${JSON.stringify(definition)}\n`))
-        // Send finish message
-        controller.enqueue(encoder.encode(`e:{"finishReason":"stop","usage":{"promptTokens":0,"completionTokens":0}}\n`))
-        // Send data with metadata
         controller.enqueue(encoder.encode(`2:[{"relatedQueries":{"items":[]},"type":"related"}]\n`))
+        controller.enqueue(encoder.encode(`e:{"finishReason":"stop","usage":{"promptTokens":0,"completionTokens":0}}\n`))
+        controller.enqueue(encoder.encode(`d:{"finishReason":"stop","usage":{"promptTokens":0,"completionTokens":0}}\n`))
         controller.close()
       }
     })
@@ -87,7 +93,7 @@ export async function POST(request: Request) {
     saveChatAsync(chatId, userId, messages, definition)
 
     return new Response(stream, {
-      headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+      headers: streamHeaders
     })
   }
 
@@ -110,13 +116,14 @@ export async function POST(request: Request) {
       start(controller) {
         // Send inquiry data as a data annotation
         const annotation = { type: 'inquiry', data: inquiryResult }
-        controller.enqueue(encoder.encode(`8:[${JSON.stringify(annotation)}]\n`))
+        controller.enqueue(encoder.encode(`2:[${JSON.stringify(annotation)}]\n`))
         controller.enqueue(encoder.encode(`e:{"finishReason":"stop","usage":{"promptTokens":0,"completionTokens":0}}\n`))
+        controller.enqueue(encoder.encode(`d:{"finishReason":"stop","usage":{"promptTokens":0,"completionTokens":0}}\n`))
         controller.close()
       }
     })
     return new Response(stream, {
-      headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+      headers: streamHeaders
     })
   }
 
@@ -125,13 +132,17 @@ export async function POST(request: Request) {
   let toolOutputs: ToolResultPart[] = []
   let errorOccurred = false
   const allToolOutputs: ToolResultPart[] = []
+  const maxAttempts = 3
+  let attempts = 0
 
   while (
-    useSpecificAPI
+    attempts < maxAttempts &&
+    (useSpecificAPI
       ? answer.length === 0
-      : answer.length === 0 && !errorOccurred
+      : answer.length === 0 && !errorOccurred)
   ) {
-    const { fullResponse, hasError, toolResponses } = await researcher(
+    attempts++
+    const { fullResponse, hasError, toolResponses, newSegments } = await researcher(
       currentSystemPrompt,
       messages,
       mapProvider as MapProvider,
@@ -142,6 +153,10 @@ export async function POST(request: Request) {
     toolOutputs = toolResponses
     errorOccurred = hasError
     allToolOutputs.push(...toolResponses)
+    // Only append segments to messages on success or final attempt
+    if (answer.length > 0 || errorOccurred || attempts >= maxAttempts) {
+      messages.push(...newSegments)
+    }
   }
 
   if (useSpecificAPI && answer.length === 0) {
@@ -149,10 +164,16 @@ export async function POST(request: Request) {
     answer = await writer(currentSystemPrompt, latestMessages)
   }
 
-  // Get related queries
+  // Get related queries (sanitize to remove image parts)
   let relatedQueries = {}
   if (!errorOccurred) {
-    relatedQueries = await querySuggestor(messages)
+    const sanitizedMessages: CoreMessage[] = messages.map((m: any) => {
+      if (Array.isArray(m.content)) {
+        return { ...m, content: m.content.filter((part: any) => part.type !== 'image') } as CoreMessage
+      }
+      return m
+    })
+    relatedQueries = await querySuggestor(sanitizedMessages)
   }
 
   // Build streaming response
@@ -166,7 +187,7 @@ export async function POST(request: Request) {
           toolName: toolResult.toolName,
           result: toolResult.result
         }
-        controller.enqueue(encoder.encode(`8:[${JSON.stringify(annotation)}]\n`))
+        controller.enqueue(encoder.encode(`2:[${JSON.stringify(annotation)}]\n`))
       }
 
       // Stream the text response
@@ -176,10 +197,11 @@ export async function POST(request: Request) {
 
       // Send related queries as annotation
       const relatedAnnotation = { type: 'related', relatedQueries }
-      controller.enqueue(encoder.encode(`8:[${JSON.stringify(relatedAnnotation)}]\n`))
+      controller.enqueue(encoder.encode(`2:[${JSON.stringify(relatedAnnotation)}]\n`))
 
       // Finish
       controller.enqueue(encoder.encode(`e:{"finishReason":"stop","usage":{"promptTokens":0,"completionTokens":0}}\n`))
+      controller.enqueue(encoder.encode(`d:{"finishReason":"stop","usage":{"promptTokens":0,"completionTokens":0}}\n`))
       controller.close()
     }
   })
@@ -188,7 +210,7 @@ export async function POST(request: Request) {
   saveChatAsync(chatId, userId, messages, answer, allToolOutputs, relatedQueries)
 
   return new Response(stream, {
-    headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+    headers: streamHeaders
   })
 }
 
@@ -244,7 +266,7 @@ async function handleResolutionSearch({
             googleImage: googleImageData
           }
         }
-        controller.enqueue(encoder.encode(`8:[${JSON.stringify(resAnnotation)}]\n`))
+        controller.enqueue(encoder.encode(`2:[${JSON.stringify(resAnnotation)}]\n`))
 
         // Stream summary text
         if (analysisResult.summary) {
@@ -253,9 +275,10 @@ async function handleResolutionSearch({
 
         // Related queries
         const relatedAnnotation = { type: 'related', relatedQueries }
-        controller.enqueue(encoder.encode(`8:[${JSON.stringify(relatedAnnotation)}]\n`))
+        controller.enqueue(encoder.encode(`2:[${JSON.stringify(relatedAnnotation)}]\n`))
 
         controller.enqueue(encoder.encode(`e:{"finishReason":"stop","usage":{"promptTokens":0,"completionTokens":0}}\n`))
+        controller.enqueue(encoder.encode(`d:{"finishReason":"stop","usage":{"promptTokens":0,"completionTokens":0}}\n`))
         controller.close()
       }
     })
@@ -263,11 +286,14 @@ async function handleResolutionSearch({
     saveChatAsync(chatId, userId, messages, analysisResult.summary || '')
 
     return new Response(stream, {
-      headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+      headers: streamHeaders
     })
   } catch (error) {
     console.error('Resolution search error:', error)
-    return new Response(JSON.stringify({ error: 'Resolution search failed' }), { status: 500 })
+    return new Response(JSON.stringify({ error: 'Resolution search failed' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    })
   }
 }
 
@@ -293,12 +319,15 @@ async function saveChatAsync(
 
     const aiMessages: AIMessage[] = []
 
-    // Add user messages
     for (const msg of messages) {
+      let content: CoreMessage['content'] = msg.content
+      if (Array.isArray(content)) {
+        content = (content as any[]).filter((part: any) => part.type !== 'image') as CoreMessage['content']
+      }
       aiMessages.push({
-        id: nanoid(),
+        id: (msg as any).id || nanoid(),
         role: msg.role as AIMessage['role'],
-        content: msg.content,
+        content,
         type: msg.role === 'user' ? 'input' : undefined
       })
     }

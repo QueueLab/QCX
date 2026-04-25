@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useCallback, useMemo } from 'react'
 import { useChat, type Message } from 'ai/react'
+import type { JSONValue, ChatRequestOptions, CreateMessage } from 'ai'
 import type { PartialInquiry } from '@/lib/schema/inquiry'
 import type { PartialRelated } from '@/lib/schema/related'
 
@@ -10,12 +11,16 @@ export interface Annotation {
   [key: string]: any
 }
 
+function isAnnotation(value: unknown): value is Annotation {
+  return typeof value === 'object' && value !== null && 'type' in value && typeof (value as any).type === 'string'
+}
+
 interface ChatContextValue {
   messages: Message[]
   input: string
   setInput: (value: string) => void
   handleSubmit: (e?: React.FormEvent<HTMLFormElement>, options?: any) => void
-  append: (message: { role: 'user'; content: string }, options?: any) => Promise<string | null | undefined>
+  append: (message: Message | CreateMessage, options?: ChatRequestOptions) => Promise<string | null | undefined>
   setMessages: (messages: Message[] | ((messages: Message[]) => Message[])) => void
   isLoading: boolean
   chatId: string
@@ -56,7 +61,10 @@ export function ChatProvider({ chatId, initialMessages, children }: ChatProvider
     body: { chatId },
   })
 
-  const annotations = useMemo(() => (data as Annotation[] | undefined) || [], [data])
+  const annotations = useMemo(() => {
+    if (!data) return []
+    return (data as JSONValue[]).filter(isAnnotation)
+  }, [data])
 
   const getToolResults = useCallback((toolName: string) => {
     return annotations
@@ -74,23 +82,23 @@ export function ChatProvider({ chatId, initialMessages, children }: ChatProvider
     return related?.relatedQueries || null
   }, [annotations])
 
+  const value = useMemo(() => ({
+    messages,
+    input,
+    setInput,
+    handleSubmit,
+    append,
+    setMessages,
+    isLoading,
+    chatId,
+    annotations,
+    getToolResults,
+    getInquiry,
+    getRelatedQueries,
+  }), [messages, input, setInput, handleSubmit, append, setMessages, isLoading, chatId, annotations, getToolResults, getInquiry, getRelatedQueries])
+
   return (
-    <ChatContext.Provider
-      value={{
-        messages,
-        input,
-        setInput,
-        handleSubmit,
-        append: append as any,
-        setMessages,
-        isLoading,
-        chatId,
-        annotations,
-        getToolResults,
-        getInquiry,
-        getRelatedQueries,
-      }}
-    >
+    <ChatContext.Provider value={value}>
       {children}
     </ChatContext.Provider>
   )

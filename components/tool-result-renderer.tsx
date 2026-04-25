@@ -14,6 +14,10 @@ interface ToolResultRendererProps {
 export function ToolResultRenderer({ toolName, result }: ToolResultRendererProps) {
   if (!result) return null
 
+  if (result.error) {
+    return <p className="text-sm text-muted-foreground p-2">{result.error}</p>
+  }
+
   switch (toolName) {
     case 'search':
       return <SearchSection result={JSON.stringify(result)} />

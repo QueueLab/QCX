@@ -38,8 +38,10 @@ export function ResolutionCarousel({ mapboxImage, googleImage, initialImage }: R
       });
 
       const reader = new FileReader()
-      const fileData = await new Promise<string>((resolve) => {
+      const fileData = await new Promise<string>((resolve, reject) => {
         reader.onloadend = () => resolve(reader.result as string)
+        reader.onerror = () => reject(reader.error ?? new Error('FileReader failed'))
+        reader.onabort = () => reject(new Error('FileReader aborted'))
         reader.readAsDataURL(blob)
       })
 

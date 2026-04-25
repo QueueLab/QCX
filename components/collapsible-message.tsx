@@ -30,7 +30,7 @@ export const CollapsibleMessage: React.FC<CollapsibleMessageProps> = ({
 
   useEffect(() => {
     setOpen(isLastMessage)
-  }, [isCollapsed, isLastMessage])
+  }, [isLastMessage])
 
   if (!isCollapsed) {
     return message.component

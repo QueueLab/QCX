@@ -12,10 +12,23 @@ export type SearchSectionProps = {
 }
 
 export function SearchSection({ result }: SearchSectionProps) {
-  const searchResults: TypeSearchResults | undefined = result ? JSON.parse(result) : undefined
+  let parsed: (TypeSearchResults & { error?: string }) | undefined
+  if (result) {
+    try {
+      parsed = JSON.parse(result)
+    } catch (e) {
+      console.error('SearchSection: failed to parse result JSON', e)
+    }
+  }
+  const searchResults = parsed && !('error' in parsed) ? parsed : undefined
+
   return (
     <div>
-      {searchResults ? (
+      {parsed && 'error' in parsed ? (
+        <Section className="pt-2 pb-0">
+          <p className="text-sm text-muted-foreground">{parsed.error}</p>
+        </Section>
+      ) : searchResults ? (
         <>
           <Section size="sm" className="pt-2 pb-0">
             <ToolBadge tool="search">{`${searchResults.query}`}</ToolBadge>

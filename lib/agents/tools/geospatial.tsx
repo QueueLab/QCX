@@ -35,9 +35,9 @@ async function getConnectedMcpClient(): Promise<McpClient | null> {
   const composioUserId = process.env.COMPOSIO_USER_ID;
 
   console.log('[GeospatialTool] Environment check:', {
-    composioApiKey: composioApiKey ? `${composioApiKey.substring(0, 8)}...` : 'MISSING',
-    mapboxAccessToken: mapboxAccessToken ? `${mapboxAccessToken.substring(0, 8)}...` : 'MISSING',
-    composioUserId: composioUserId ? `${composioUserId.substring(0, 8)}...` : 'MISSING',
+    composioApiKey: composioApiKey ? 'present' : 'MISSING',
+    mapboxAccessToken: mapboxAccessToken ? 'present' : 'MISSING',
+    composioUserId: composioUserId ? 'present' : 'MISSING',
   });
 
   if (!composioApiKey || !mapboxAccessToken || !composioUserId || !composioApiKey.trim() || !mapboxAccessToken.trim() || !composioUserId.trim()) {
@@ -47,14 +47,9 @@ async function getConnectedMcpClient(): Promise<McpClient | null> {
 
   let config;
   try {
-    let mapboxMcpConfig;
-    try {
-      mapboxMcpConfig = require('../../../mapbox_mcp_config.json');
-      config = { ...mapboxMcpConfig, mapboxAccessToken };
-      console.log('[GeospatialTool] Config loaded successfully');
-    } catch (configError: any) {
-      throw configError;
-    }
+    const mapboxMcpConfig = require('../../../mapbox_mcp_config.json');
+    config = { ...mapboxMcpConfig, mapboxAccessToken };
+    console.log('[GeospatialTool] Config loaded successfully');
   } catch (configError: any) {
     console.error('[GeospatialTool] Failed to load mapbox config:', configError.message);
     config = { mapboxAccessToken, version: '1.0.0', name: 'mapbox-mcp-server' };
@@ -279,6 +274,7 @@ Uses the Mapbox Search Box Text Search API endpoint to power searching for and g
           case 'map': return prefer('static_map_image_tool')
           case 'reverse': return prefer('reverse_geocode_tool');
           case 'geocode': return prefer('forward_geocode_tool');
+          default: throw new Error(`Unsupported queryType: ${queryType}`);
         }
       })();
 

@@ -38,12 +38,15 @@ export default async function SearchPage({ params }: SearchPageProps) {
 
   const dbMessages: DrizzleMessage[] = await getChatMessages(chat.id);
 
-  const initialMessages: Message[] = dbMessages.map((dbMsg): Message => ({
-    id: dbMsg.id,
-    role: dbMsg.role as Message['role'],
-    content: dbMsg.content,
-    createdAt: dbMsg.createdAt ? new Date(dbMsg.createdAt) : undefined,
-  }));
+  const validRoles = new Set(['user', 'assistant', 'system'])
+  const initialMessages: Message[] = dbMessages
+    .filter((dbMsg) => validRoles.has(dbMsg.role))
+    .map((dbMsg): Message => ({
+      id: dbMsg.id,
+      role: dbMsg.role as Message['role'],
+      content: dbMsg.content,
+      createdAt: dbMsg.createdAt ? new Date(dbMsg.createdAt) : undefined,
+    }));
 
   return (
     <ChatProvider chatId={chat.id} initialMessages={initialMessages}>

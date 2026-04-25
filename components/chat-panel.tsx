@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef, ChangeEvent, forwardRef, useImperativeHandle, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { useChatContext } from './chat-provider'
 import type { Message } from 'ai/react'
 import { cn } from '@/lib/utils'
@@ -28,6 +29,7 @@ export interface ChatPanelRef {
 }
 
 export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, input, setInput, onSuggestionsChange }, ref) => {
+  const router = useRouter()
   const { append, setMessages } = useChatContext()
   const { mapProvider } = useSettingsStore()
   const [isMobile, setIsMobile] = useState(false)
@@ -89,24 +91,47 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
       return
     }
 
-    const userContent = input.trim()
+    const userContent = input.trim() || 'Analyze this image.'
+    const file = selectedFile
     setInput('')
     clearAttachment()
 
-    await append(
-      { role: 'user', content: userContent },
-      {
-        body: {
-          mapProvider,
-          drawnFeatures: mapData.drawnFeatures || [],
+    if (file) {
+      const reader = new FileReader()
+      const fileData = await new Promise<string>((resolve, reject) => {
+        reader.onloadend = () => resolve(reader.result as string)
+        reader.onerror = () => reject(new Error('Failed to read file'))
+        reader.readAsDataURL(file)
+      })
+
+      await append(
+        { role: 'user', content: userContent },
+        {
+          body: {
+            action: 'resolution_search',
+            fileData,
+            mapProvider,
+            drawnFeatures: mapData.drawnFeatures || [],
+          }
         }
-      }
-    )
+      )
+    } else {
+      await append(
+        { role: 'user', content: userContent },
+        {
+          body: {
+            mapProvider,
+            drawnFeatures: mapData.drawnFeatures || [],
+          }
+        }
+      )
+    }
   }
 
-  const handleClear = async () => {
+  const handleClear = () => {
     setMessages([])
     clearAttachment()
+    router.push('/')
   }
 
   const debouncedGetSuggestions = useCallback(
