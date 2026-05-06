@@ -20,9 +20,17 @@ import { users } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
 
+// Helper to validate UUID format
+function isValidUUID(id: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[4][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  // Loosened regex for internal mock UUIDs or different versions
+  const looseUuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return looseUuidRegex.test(id);
+}
+
 export async function getChats(userId?: string | null): Promise<DrizzleChat[]> {
-  if (!userId) {
-    console.warn('getChats called without userId, returning empty array.')
+  if (!userId || !isValidUUID(userId)) {
+    console.warn('getChats called with invalid userId:', userId)
     return []
   }
 
@@ -36,8 +44,8 @@ export async function getChats(userId?: string | null): Promise<DrizzleChat[]> {
 }
 
 export async function getChat(id: string, userId: string): Promise<DrizzleChat | null> {
-  if (!userId) {
-    console.warn('getChat called without userId.')
+  if (!userId || !isValidUUID(userId)) {
+    console.warn('getChat called with invalid userId:', userId)
     return null;
   }
   try {
@@ -69,9 +77,9 @@ export async function clearChats(
   userId?: string | null
 ): Promise<{ error?: string } | void> {
   const currentUserId = userId || (await getCurrentUserIdOnServer())
-  if (!currentUserId) {
-    console.error('clearChats: No user ID provided or found.')
-    return { error: 'User ID is required to clear chats' }
+  if (!currentUserId || !isValidUUID(currentUserId)) {
+    console.error('clearChats: Invalid user ID:', currentUserId)
+    return { error: 'Valid User ID is required to clear chats' }
   }
 
   try {
@@ -93,6 +101,11 @@ export async function saveChat(chat: OldChatType, userId: string): Promise<strin
     return null;
   }
   const effectiveUserId = userId || chat.userId;
+
+  if (!isValidUUID(effectiveUserId)) {
+    console.error('saveChat: Invalid user ID:', effectiveUserId);
+    return null;
+  }
 
   const newChatData: DbNewChat = {
     id: chat.id,
@@ -122,9 +135,9 @@ export async function saveChat(chat: OldChatType, userId: string): Promise<strin
 
 export async function updateDrawingContext(chatId: string, contextData: { drawnFeatures: any[], cameraState: any }) {
   const userId = await getCurrentUserIdOnServer();
-  if (!userId) {
-    console.error('updateDrawingContext: Could not get current user ID.');
-    return { error: 'User not authenticated' };
+  if (!userId || !isValidUUID(userId)) {
+    console.error('updateDrawingContext: Invalid user ID:', userId);
+    return { error: 'Valid user authentication required' };
   }
 
   const newDrawingMessage: DbNewMessage = {
@@ -151,7 +164,7 @@ export async function saveSystemPrompt(
   userId: string,
   prompt: string
 ): Promise<{ success?: boolean; error?: string }> {
-  if (!userId) return { error: 'User ID is required' }
+  if (!userId || !isValidUUID(userId)) return { error: 'Valid User ID is required' }
   if (!prompt) return { error: 'Prompt is required' }
 
   try {
@@ -169,7 +182,7 @@ export async function saveSystemPrompt(
 export async function getSystemPrompt(
   userId: string
 ): Promise<string | null> {
-  if (!userId) return null
+  if (!userId || !isValidUUID(userId)) return null
 
   try {
     const result = await db.select({ systemPrompt: users.systemPrompt })

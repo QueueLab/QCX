@@ -27,6 +27,7 @@ import { CopilotDisplay } from '@/components/copilot-display'
 import RetrieveSection from '@/components/retrieve-section'
 import { VideoSearchSection } from '@/components/video-search-section'
 import { MapQueryHandler } from '@/components/map/map-query-handler'
+import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
 
 // Define the type for related queries
 type RelatedQueries = {
@@ -101,52 +102,29 @@ async function submit(formData?: FormData, skip?: boolean) {
 
     async function processResolutionSearch() {
       try {
-        const streamResult = await resolutionSearch(messages, timezone, drawnFeatures, location);
+        const analysisResult = await resolutionSearch(
+          groupeId,
+          uiStream,
+          summaryStream,
+          dataUrl,
+          userInput,
+          timezone,
+          location,
+          drawnFeatures
+        );
 
-        let fullSummary = '';
-        for await (const partialObject of streamResult.partialObjectStream) {
-          if (partialObject.summary) {
-            fullSummary = partialObject.summary;
-            summaryStream.update(fullSummary);
-          }
-        }
-
-        const analysisResult = await streamResult.object;
-        summaryStream.done(analysisResult.summary || 'Analysis complete.');
-
-        if (analysisResult.geoJson) {
-          uiStream.append(
-            <GeoJsonLayer
-              id={groupeId}
-              data={analysisResult.geoJson as FeatureCollection}
-            />
-          );
-        }
-
-        messages.push({ role: 'assistant', content: analysisResult.summary || 'Analysis complete.' });
-
-        const sanitizedMessages: CoreMessage[] = messages.map((m: any) => {
+        const sanitizedMessages = messages.map(m => {
           if (Array.isArray(m.content)) {
             return {
               ...m,
-              content: m.content.filter((part: any) => part.type !== 'image')
-            } as CoreMessage
+              content: m.content.filter(part =>
+                part.type !== "image" || (typeof part.image === "string" && part.image.startsWith("data:"))
+              )
+            } as any
           }
           return m
         })
 
-        const currentMessages = aiState.get().messages;
-        const sanitizedHistory = currentMessages.map((m: any) => {
-          if (m.role === "user" && Array.isArray(m.content)) {
-            return {
-              ...m,
-              content: m.content.map((part: any) =>
-                part.type === "image" ? { ...part, image: "IMAGE_PROCESSED" } : part
-              )
-            }
-          }
-          return m
-        });
         const relatedQueries = await querySuggestor(uiStream, sanitizedMessages);
         uiStream.append(
           <Section title="Follow-up">
@@ -348,34 +326,12 @@ async function submit(formData?: FormData, skip?: boolean) {
       const dataUrl = `data:${file.type};base64,${Buffer.from(
         buffer
       ).toString('base64')}`
-      messageParts.push({
-        type: 'image',
-        image: dataUrl,
-        mimeType: file.type
-      })
-    } else if (file.type === 'text/plain') {
-      const textContent = Buffer.from(buffer).toString('utf-8')
-      const existingTextPart = messageParts.find(p => p.type === 'text')
-      if (existingTextPart) {
-        existingTextPart.text = `${textContent}\n\n${existingTextPart.text}`
-      } else {
-        messageParts.push({ type: 'text', text: textContent })
-      }
+      messageParts.push({ type: 'image', image: dataUrl, mimeType: file.type })
     }
   }
 
-  const hasImage = messageParts.some(part => part.type === 'image')
-  const content: CoreMessage['content'] = hasImage
-    ? messageParts as CoreMessage['content']
-    : messageParts.map(part => part.text).join('\n')
-
-  const type = skip
-    ? undefined
-    : formData?.has('input') || formData?.has('file')
-    ? 'input'
-    : formData?.has('related_query')
-    ? 'input_related'
-    : 'inquiry'
+  const content = messageParts.length > 0 ? messageParts : null
+  const type = file ? 'input' : 'input_related'
 
   if (content) {
     aiState.update({
@@ -396,8 +352,8 @@ async function submit(formData?: FormData, skip?: boolean) {
     } as CoreMessage)
   }
 
-  const userId = 'anonymous'
-  const currentSystemPrompt = (await getSystemPrompt(userId)) || ''
+  const userId = await getCurrentUserIdOnServer();
+  const currentSystemPrompt = userId ? (await getSystemPrompt(userId) || '') : '';
   const mapProvider = formData?.get('mapProvider') as 'mapbox' | 'google'
 
   async function processEvents() {
@@ -546,47 +502,32 @@ async function submit(formData?: FormData, skip?: boolean) {
 }
 
 async function clearChat() {
-  'use server'
-
-  const aiState = getMutableAIState<typeof AI>()
-
-  aiState.done({
-    chatId: nanoid(),
-    messages: []
-  })
+  const userId = await getCurrentUserIdOnServer()
+  if (!userId) return;
+  const { clearChats } = await import('@/lib/actions/chat')
+  await clearChats(userId)
 }
-
-export type AIState = {
-  messages: AIMessage[]
-  chatId: string
-  isSharePage?: boolean
-}
-
-export type UIState = {
-  id: string
-  component: React.ReactNode
-  isGenerating?: StreamableValue<boolean>
-  isCollapsed?: StreamableValue<boolean>
-}[]
-
-const initialAIState: AIState = {
-  chatId: nanoid(),
-  messages: []
-}
-
-const initialUIState: UIState = []
 
 export const AI = createAI<AIState, UIState>({
   actions: {
     submit,
     clearChat
   },
-  initialUIState,
-  initialAIState,
+  initialUIState: [],
+  initialAIState: { chatId: nanoid(), messages: [] },
   onGetUIState: async () => {
     'use server'
 
-    const aiState = getAIState() as AIState
+    const { getCurrentUserIdOnServer } = await import(
+      '@/lib/auth/get-current-user'
+    )
+    const userId = await getCurrentUserIdOnServer()
+    if (!userId) {
+      return []
+    }
+
+    const aiState = getAIState<typeof AI>()
+
     if (aiState) {
       const uiState = getUIStateFromAIState(aiState)
       return uiState
