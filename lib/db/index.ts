@@ -9,6 +9,14 @@ if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL environment variable is not set for Drizzle client');
 }
 
+try {
+  new URL(process.env.DATABASE_URL);
+} catch (e) {
+  throw new Error(
+    `DATABASE_URL is not a valid URL. Expected format: postgresql://user:pass@host:port/db. Got: ${process.env.DATABASE_URL?.slice(0, 30)}...`
+  );
+}
+
 const poolConfig: PoolConfig = {
   connectionString: process.env.DATABASE_URL,
 };
