@@ -35,8 +35,8 @@ const models = [
     badgeVariant: "default" as const,
   },
   {
-    id: "Grok 4.2",
-    name: "Grok 4.2",
+    id: "Grok 4.3",
+    name: "Grok 4.3",
     description: "The latest from xAI, pushing the boundaries of reasoning and problem-solving.",
     icon: Rocket,
     badge: "New",
