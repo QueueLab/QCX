@@ -28,6 +28,7 @@ import RetrieveSection from '@/components/retrieve-section'
 import { VideoSearchSection } from '@/components/video-search-section'
 import { MapQueryHandler } from '@/components/map/map-query-handler'
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
+import { PartialRelated } from '@/lib/schema/related'
 
 // Define the type for related queries
 type RelatedQueries = {
@@ -461,13 +462,17 @@ async function submit(formData?: FormData, skip?: boolean) {
     }
 
     if (!errorOccurred) {
-      const relatedQueries = await querySuggestor(uiStream, messages)
+      let relatedQueries: PartialRelated = {}
+      try {
+        relatedQueries = await querySuggestor(uiStream, messages)
+      } catch (err) {
+        console.error('querySuggestor failed, continuing without related queries:', err)
+      }
       uiStream.append(
         <Section title="Follow-up">
           <FollowupPanel />
         </Section>
       )
-
 
       aiState.done({
         ...aiState.get(),
