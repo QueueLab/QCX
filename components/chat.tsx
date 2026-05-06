@@ -106,7 +106,7 @@ export function Chat({ id }: ChatProps) {
       const timer = setTimeout(() => {
         console.log('Chat.tsx: drawnFeatures changed, calling updateDrawingContext', mapData.drawnFeatures);
         updateDrawingContext(id, {
-          drawnFeatures: mapData.drawnFeatures,
+          drawnFeatures: mapData.drawnFeatures || [],
           cameraState: mapData.cameraState,
         });
       }, 500);
