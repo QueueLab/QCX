@@ -9,7 +9,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { searchParams } = new URL(request.url);
+    const url = new URL(request.url);
+    const { searchParams } = url;
 
     const DEFAULT_LIMIT = 20;
     const MAX_LIMIT = 100;

@@ -59,7 +59,7 @@ export async function getModel(requireVision: boolean = false, tier: 'primary' |
             apiKey: gemini3ProApiKey,
           });
           try {
-            const modelName = tier === 'auxiliary' ? 'gemini-2.0-flash-lite' : 'gemini-3.1-pro-preview';
+            const modelName = tier === 'auxiliary' ? 'gemini-1.5-flash' : 'gemini-3.1-pro-preview';
             return google(modelName);
           } catch (error) {
             console.error(`Selected model "${tier === 'auxiliary' ? 'Gemini 2.0 Flash Lite' : 'Gemini 3.1 Pro'}" is configured but failed to initialize.`, error);
@@ -88,7 +88,7 @@ export async function getModel(requireVision: boolean = false, tier: 'primary' |
       apiKey: gemini3ProApiKey,
     });
     try {
-      const modelName = tier === 'auxiliary' ? 'gemini-2.0-flash-lite' : 'gemini-3.1-pro-preview';
+      const modelName = tier === 'auxiliary' ? 'gemini-1.5-flash' : 'gemini-3.1-pro-preview';
       return google(modelName);
     } catch (error) {
       console.warn(`${tier === 'auxiliary' ? 'Gemini 2.0 Flash Lite' : 'Gemini 3.1 Pro'} API unavailable, falling back to next provider:`, error);
