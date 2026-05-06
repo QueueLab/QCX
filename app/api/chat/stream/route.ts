@@ -84,8 +84,9 @@ export async function POST(request: Request) {
       start(controller) {
         controller.enqueue(encoder.encode(`0:${JSON.stringify(definition)}\n`))
         controller.enqueue(encoder.encode(`2:[{"relatedQueries":{"items":[]},"type":"related"}]\n`))
-        controller.enqueue(encoder.encode(`e:{"finishReason":"stop","usage":{"promptTokens":0,"completionTokens":0}}\n`))
-        controller.enqueue(encoder.encode(`d:{"finishReason":"stop","usage":{"promptTokens":0,"completionTokens":0}}\n`))
+        const usage = { promptTokens: 0, completionTokens: 0 }
+        controller.enqueue(encoder.encode(`e:{"finishReason":"stop","usage":${JSON.stringify(usage)}}\n`))
+        controller.enqueue(encoder.encode(`d:{"finishReason":"stop","usage":${JSON.stringify(usage)}}\n`))
         controller.close()
       }
     })
@@ -99,8 +100,12 @@ export async function POST(request: Request) {
 
   // Task manager: decide inquire vs proceed
   let nextAction = 'proceed'
+  let taskManagerUsage = { promptTokens: 0, completionTokens: 0 }
   try {
     const taskResult = await taskManager(messages)
+    if (taskResult?.usage) {
+      taskManagerUsage = taskResult.usage
+    }
     if (taskResult?.object?.next === 'inquire') {
       nextAction = 'inquire'
     }
@@ -110,15 +115,19 @@ export async function POST(request: Request) {
 
   // Inquiry path
   if (nextAction === 'inquire') {
-    const inquiryResult = await inquire(messages)
+    const { object: inquiryResult, usage: inquiryUsage } = await inquire(messages)
+    const totalInquiryUsage = {
+      promptTokens: taskManagerUsage.promptTokens + (inquiryUsage?.promptTokens || 0),
+      completionTokens: taskManagerUsage.completionTokens + (inquiryUsage?.completionTokens || 0)
+    }
     const encoder = new TextEncoder()
     const stream = new ReadableStream({
       start(controller) {
         // Send inquiry data as a data annotation
         const annotation = { type: 'inquiry', data: inquiryResult }
         controller.enqueue(encoder.encode(`2:[${JSON.stringify(annotation)}]\n`))
-        controller.enqueue(encoder.encode(`e:{"finishReason":"stop","usage":{"promptTokens":0,"completionTokens":0}}\n`))
-        controller.enqueue(encoder.encode(`d:{"finishReason":"stop","usage":{"promptTokens":0,"completionTokens":0}}\n`))
+        controller.enqueue(encoder.encode(`e:{"finishReason":"stop","usage":${JSON.stringify(totalInquiryUsage)}}\n`))
+        controller.enqueue(encoder.encode(`d:{"finishReason":"stop","usage":${JSON.stringify(totalInquiryUsage)}}\n`))
         controller.close()
       }
     })
@@ -134,6 +143,7 @@ export async function POST(request: Request) {
   const allToolOutputs: ToolResultPart[] = []
   const maxAttempts = 3
   let attempts = 0
+  let totalUsage = { promptTokens: 0, completionTokens: 0 }
 
   while (
     attempts < maxAttempts &&
@@ -142,7 +152,7 @@ export async function POST(request: Request) {
       : answer.length === 0 && !errorOccurred)
   ) {
     attempts++
-    const { fullResponse, hasError, toolResponses, newSegments } = await researcher(
+    const { fullResponse, hasError, toolResponses, newSegments, usage } = await researcher(
       currentSystemPrompt,
       messages,
       mapProvider as MapProvider,
@@ -153,6 +163,10 @@ export async function POST(request: Request) {
     toolOutputs = toolResponses
     errorOccurred = hasError
     allToolOutputs.push(...toolResponses)
+    if (usage) {
+      totalUsage.promptTokens += usage.promptTokens
+      totalUsage.completionTokens += usage.completionTokens
+    }
     // Only append segments to messages on success or final attempt
     if (answer.length > 0 || errorOccurred || attempts >= maxAttempts) {
       messages.push(...newSegments)
@@ -161,7 +175,12 @@ export async function POST(request: Request) {
 
   if (useSpecificAPI && answer.length === 0) {
     const latestMessages = messages.slice(maxMsgs * -1)
-    answer = await writer(currentSystemPrompt, latestMessages)
+    const writerResult = await writer(currentSystemPrompt, latestMessages)
+    answer = writerResult.fullResponse
+    if (writerResult.usage) {
+      totalUsage.promptTokens += writerResult.usage.promptTokens
+      totalUsage.completionTokens += writerResult.usage.completionTokens
+    }
   }
 
   // Get related queries (sanitize to remove image parts)
@@ -173,7 +192,12 @@ export async function POST(request: Request) {
       }
       return m
     })
-    relatedQueries = await querySuggestor(sanitizedMessages)
+    const suggestorResult = await querySuggestor(sanitizedMessages)
+    relatedQueries = suggestorResult.relatedQueries
+    if (suggestorResult.usage) {
+      totalUsage.promptTokens += suggestorResult.usage.promptTokens
+      totalUsage.completionTokens += suggestorResult.usage.completionTokens
+    }
   }
 
   // Build streaming response
@@ -200,8 +224,8 @@ export async function POST(request: Request) {
       controller.enqueue(encoder.encode(`2:[${JSON.stringify(relatedAnnotation)}]\n`))
 
       // Finish
-      controller.enqueue(encoder.encode(`e:{"finishReason":"stop","usage":{"promptTokens":0,"completionTokens":0}}\n`))
-      controller.enqueue(encoder.encode(`d:{"finishReason":"stop","usage":{"promptTokens":0,"completionTokens":0}}\n`))
+      controller.enqueue(encoder.encode(`e:{"finishReason":"stop","usage":${JSON.stringify(totalUsage)}}\n`))
+      controller.enqueue(encoder.encode(`d:{"finishReason":"stop","usage":${JSON.stringify(totalUsage)}}\n`))
       controller.close()
     }
   })
@@ -243,6 +267,7 @@ async function handleResolutionSearch({
     )
 
     const analysisResult = await streamResult.object
+    const analysisUsage = await streamResult.usage
 
     // Get related queries
     const sanitizedMessages: CoreMessage[] = messages.map((m: any) => {
@@ -251,7 +276,12 @@ async function handleResolutionSearch({
       }
       return m
     })
-    const relatedQueries = await querySuggestor(sanitizedMessages)
+    const { relatedQueries, usage: relatedUsage } = await querySuggestor(sanitizedMessages)
+
+    const totalResUsage = {
+      promptTokens: (analysisUsage?.promptTokens || 0) + (relatedUsage?.promptTokens || 0),
+      completionTokens: (analysisUsage?.completionTokens || 0) + (relatedUsage?.completionTokens || 0)
+    }
 
     const encoder = new TextEncoder()
     const stream = new ReadableStream({
@@ -277,8 +307,8 @@ async function handleResolutionSearch({
         const relatedAnnotation = { type: 'related', relatedQueries }
         controller.enqueue(encoder.encode(`2:[${JSON.stringify(relatedAnnotation)}]\n`))
 
-        controller.enqueue(encoder.encode(`e:{"finishReason":"stop","usage":{"promptTokens":0,"completionTokens":0}}\n`))
-        controller.enqueue(encoder.encode(`d:{"finishReason":"stop","usage":{"promptTokens":0,"completionTokens":0}}\n`))
+        controller.enqueue(encoder.encode(`e:{"finishReason":"stop","usage":${JSON.stringify(totalResUsage)}}\n`))
+        controller.enqueue(encoder.encode(`d:{"finishReason":"stop","usage":${JSON.stringify(totalResUsage)}}\n`))
         controller.close()
       }
     })

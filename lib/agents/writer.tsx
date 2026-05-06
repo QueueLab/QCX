@@ -32,5 +32,6 @@ export async function writer(
     }
   }
 
-  return fullResponse
+  const usage = await result.usage
+  return { fullResponse, usage }
 }

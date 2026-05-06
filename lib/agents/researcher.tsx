@@ -142,5 +142,6 @@ export async function researcher(
     newSegments.push({ role: 'tool', content: toolResponses })
   }
 
-  return { result, fullResponse, hasError, toolResponses, newSegments }
+  const usage = await result.usage
+  return { result, fullResponse, hasError, toolResponses, newSegments, usage }
 }

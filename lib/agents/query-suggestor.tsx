@@ -32,5 +32,6 @@ export async function querySuggestor(
     }
   }
 
-  return finalRelatedQueries
+  const usage = await result.usage
+  return { relatedQueries: finalRelatedQueries, usage }
 }
