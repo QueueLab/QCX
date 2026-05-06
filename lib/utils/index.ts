@@ -21,7 +21,7 @@ export function generateUUID(): string {
  */
 export { generateUUID as nanoid };
 
-export async function getModel(requireVision: boolean = false) {
+export async function getModel(requireVision: boolean = false, tier: 'primary' | 'auxiliary' = 'primary') {
   const selectedModel = await getSelectedModel();
 
   const xaiApiKey = process.env.XAI_API_KEY;
@@ -29,7 +29,9 @@ export async function getModel(requireVision: boolean = false) {
   const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID;
   const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
   const awsRegion = process.env.AWS_REGION;
-  const bedrockModelId = process.env.BEDROCK_MODEL_ID || 'anthropic.claude-3-5-sonnet-20241022-v2:0';
+  const bedrockModelId = tier === 'auxiliary'
+    ? (process.env.BEDROCK_AUXILIARY_MODEL_ID || 'anthropic.claude-3-haiku-20240307-v1:0')
+    : (process.env.BEDROCK_MODEL_ID || 'anthropic.claude-3-5-sonnet-20241022-v2:0');
   const openaiApiKey = process.env.OPENAI_API_KEY;
 
   if (selectedModel) {
@@ -57,9 +59,10 @@ export async function getModel(requireVision: boolean = false) {
             apiKey: gemini3ProApiKey,
           });
           try {
-            return google('gemini-3.1-pro-preview');
+            const modelName = tier === 'auxiliary' ? 'gemini-1.5-flash' : 'gemini-3.1-pro-preview';
+            return google(modelName);
           } catch (error) {
-            console.error('Selected model "Gemini 3.1 Pro" is configured but failed to initialize.', error);
+            console.error(`Selected model "${tier === 'auxiliary' ? 'Gemini 2.0 Flash Lite' : 'Gemini 3.1 Pro'}" is configured but failed to initialize.`, error);
             throw new Error('Failed to initialize selected model.');
           }
         } else {
@@ -71,7 +74,7 @@ export async function getModel(requireVision: boolean = false) {
           const openai = createOpenAI({
             apiKey: openaiApiKey,
           });
-          return openai('gpt-4o');
+          return openai(tier === 'auxiliary' ? 'gpt-4o-mini' : 'gpt-4o');
         } else {
             console.error('User selected "GPT-5.1" but OPENAI_API_KEY is not set.');
             throw new Error('Selected model is not configured.');
@@ -85,9 +88,10 @@ export async function getModel(requireVision: boolean = false) {
       apiKey: gemini3ProApiKey,
     });
     try {
-      return google('gemini-3.1-pro-preview');
+      const modelName = tier === 'auxiliary' ? 'gemini-1.5-flash' : 'gemini-3.1-pro-preview';
+      return google(modelName);
     } catch (error) {
-      console.warn('Gemini 3.1 Pro API unavailable, falling back to next provider:', error);
+      console.warn(`${tier === 'auxiliary' ? 'Gemini 2.0 Flash Lite' : 'Gemini 3.1 Pro'} API unavailable, falling back to next provider:`, error);
     }
   }
 
@@ -122,5 +126,5 @@ export async function getModel(requireVision: boolean = false) {
   const openai = createOpenAI({
     apiKey: openaiApiKey,
   });
-  return openai('gpt-4o');
+  return openai(tier === 'auxiliary' ? 'gpt-4o-mini' : 'gpt-4o');
 }
