@@ -50,12 +50,17 @@ export async function POST(request: Request) {
   const useSpecificAPI = process.env.USE_SPECIFIC_API_FOR_WRITER === 'true'
   const maxMsgs = useSpecificAPI ? 5 : 10
 
+  // Capture the original first user message before trimming so chat title stays stable.
+  const originalFirstUserMessage = (clientMessages || []).find((m: any) => m.role === 'user')
+
   // Build core messages from client messages
   const messages: CoreMessage[] = (clientMessages || [])
-    .filter((m: any) => m.role === 'user' || m.role === 'assistant')
+    .filter((m: any) => m.role === 'user' || m.role === 'assistant' || m.role === 'tool')
     .map((m: any) => ({
       role: m.role,
-      content: m.content
+      content: m.content,
+      // preserve assistant tool calls so the model doesn't re-issue them
+      ...(m.toolInvocations ? { toolInvocations: m.toolInvocations } : {}),
     }))
 
   // Trim to max messages
@@ -173,7 +178,8 @@ export async function POST(request: Request) {
     }
   }
 
-  if (useSpecificAPI && answer.length === 0) {
+  // Always fall back to writer if researcher produced no text
+  if (answer.length === 0) {
     const latestMessages = messages.slice(maxMsgs * -1)
     const writerResult = await writer(currentSystemPrompt, latestMessages)
     answer = writerResult.fullResponse
@@ -231,7 +237,7 @@ export async function POST(request: Request) {
   })
 
   // Save chat asynchronously
-  saveChatAsync(chatId, userId, messages, answer, allToolOutputs, relatedQueries)
+  saveChatAsync(chatId, userId, messages, answer, allToolOutputs, relatedQueries, originalFirstUserMessage)
 
   return new Response(stream, {
     headers: streamHeaders
@@ -252,6 +258,9 @@ async function handleResolutionSearch({
   drawnFeatures: DrawnFeature[]
   location?: { lat: number; lng: number }
 }) {
+  // Capture original first user message
+  const originalFirstUserMessage = messages.find(m => m.role === 'user')
+
   const content: CoreMessage['content'] = [
     { type: 'text', text: 'Analyze this map view.' },
     { type: 'image', image: fileData, mimeType: 'image/png' }
@@ -313,7 +322,7 @@ async function handleResolutionSearch({
       }
     })
 
-    saveChatAsync(chatId, userId, messages, analysisResult.summary || '')
+    saveChatAsync(chatId, userId, messages, analysisResult.summary || '', undefined, relatedQueries, originalFirstUserMessage)
 
     return new Response(stream, {
       headers: streamHeaders
@@ -333,16 +342,17 @@ async function saveChatAsync(
   messages: CoreMessage[],
   answer: string,
   toolOutputs?: ToolResultPart[],
-  relatedQueries?: any
+  relatedQueries?: any,
+  originalFirstUserMessage?: any
 ) {
   try {
     let title = 'Untitled Chat'
-    const firstMsg = messages[0]
+    const firstMsg = originalFirstUserMessage || messages[0]
     if (firstMsg) {
       if (typeof firstMsg.content === 'string') {
         title = firstMsg.content.substring(0, 100)
       } else if (Array.isArray(firstMsg.content)) {
-        const textPart = (firstMsg.content as any[]).find(p => p.type === 'text')
+        const textPart = (firstMsg.content as any[]).find((p: any) => p.type === 'text')
         title = textPart?.text?.substring(0, 100) || 'Image Message'
       }
     }
