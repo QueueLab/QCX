@@ -220,4 +220,4 @@ export async function getMessagesByChatId(chatId: string): Promise<Message[]> {
 // These are placeholders for now and can be implemented if subsequent steps show they are directly part of PR #533's changes.
 // The PR mentions "feat: Add message update and trailing deletion logic" and "refactor(chat): Adjust message edit logic".
 
-console.log('Chat DB actions loaded. Ensure getCurrentUserId() is correctly implemented for server-side usage if applicable.');
+

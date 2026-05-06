@@ -3,20 +3,26 @@
 import { SearchSkeleton } from './search-skeleton'
 import { Section } from './section'
 import type { SerperSearchResults } from '@/lib/types'
-import { StreamableValue, useStreamableValue } from 'ai/rsc'
 import { VideoSearchResults } from './video-search-results'
 import { ToolBadge } from './tool-badge'
 
 export type VideoSearchSectionProps = {
-  result?: StreamableValue<string>
+  result?: string
 }
 
 export function VideoSearchSection({ result }: VideoSearchSectionProps) {
-  const [data, error, pending] = useStreamableValue(result)
-  const searchResults: SerperSearchResults = data ? JSON.parse(data) : undefined
+  let searchResults: SerperSearchResults | undefined
+  if (result) {
+    try {
+      searchResults = JSON.parse(result)
+    } catch (e) {
+      console.error('VideoSearchSection: failed to parse result JSON', e)
+    }
+  }
+
   return (
     <div>
-      {!pending && data ? (
+      {searchResults ? (
         <>
           <Section size="sm" className="pt-2 pb-0">
             <ToolBadge tool="search">{`${searchResults.searchParameters.q}`}</ToolBadge>

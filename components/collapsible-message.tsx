@@ -8,7 +8,6 @@ import {
 } from '@radix-ui/react-collapsible'
 import { Button } from './ui/button'
 import { ChevronDown } from 'lucide-react'
-import { StreamableValue, useStreamableValue } from 'ai/rsc'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { Separator } from './ui/separator'
@@ -16,7 +15,7 @@ import { Separator } from './ui/separator'
 interface CollapsibleMessageProps {
   message: {
     id: string
-    isCollapsed?: StreamableValue<boolean>
+    isCollapsed?: boolean
     component: React.ReactNode
   }
   isLastMessage?: boolean
@@ -26,15 +25,13 @@ export const CollapsibleMessage: React.FC<CollapsibleMessageProps> = ({
   message,
   isLastMessage = false
 }) => {
-  const [data] = useStreamableValue(message.isCollapsed)
-  const isCollapsed = data ?? false
+  const isCollapsed = message.isCollapsed ?? false
   const [open, setOpen] = useState(isLastMessage)
 
   useEffect(() => {
     setOpen(isLastMessage)
-  }, [isCollapsed, isLastMessage])
+  }, [isLastMessage])
 
-  // if not collapsed, return the component
   if (!isCollapsed) {
     return message.component
   }

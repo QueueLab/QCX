@@ -6,18 +6,29 @@ import { SearchResultsImageSection } from './search-results-image'
 import { Section } from './section'
 import { ToolBadge } from './tool-badge'
 import type { SearchResults as TypeSearchResults } from '@/lib/types'
-import { StreamableValue, useStreamableValue } from 'ai/rsc'
 
 export type SearchSectionProps = {
-  result?: StreamableValue<string>
+  result?: string
 }
 
 export function SearchSection({ result }: SearchSectionProps) {
-  const [data, error, pending] = useStreamableValue(result)
-  const searchResults: TypeSearchResults = data ? JSON.parse(data) : undefined
+  let parsed: (TypeSearchResults & { error?: string }) | undefined
+  if (result) {
+    try {
+      parsed = JSON.parse(result)
+    } catch (e) {
+      console.error('SearchSection: failed to parse result JSON', e)
+    }
+  }
+  const searchResults = parsed && !('error' in parsed) ? parsed : undefined
+
   return (
     <div>
-      {!pending && data ? (
+      {parsed && 'error' in parsed ? (
+        <Section className="pt-2 pb-0">
+          <p className="text-sm text-muted-foreground">{parsed.error}</p>
+        </Section>
+      ) : searchResults ? (
         <>
           <Section size="sm" className="pt-2 pb-0">
             <ToolBadge tool="search">{`${searchResults.query}`}</ToolBadge>

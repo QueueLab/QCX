@@ -11,7 +11,10 @@ export async function taskManager(messages: CoreMessage[]) {
       const hasImage = lastUserMessage.content.some(part => part.type === 'image');
       if (hasImage) {
         // If an image is present, bypass the logic and proceed directly
-        return { object: { next: 'proceed' } };
+        return { 
+          object: { next: 'proceed' },
+          usage: { promptTokens: 0, completionTokens: 0 }
+        };
       }
     }
 

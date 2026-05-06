@@ -3,48 +3,34 @@
 import React from 'react'
 import { Button } from './ui/button'
 import { ArrowRight } from 'lucide-react'
-import {
-  useActions,
-  useStreamableValue,
-  useUIState,
-  StreamableValue
-} from 'ai/rsc'
-import { AI } from '@/app/actions'
-import { UserMessage } from './user-message'
+import { useChatContext } from './chat-provider'
 import { PartialRelated } from '@/lib/schema/related'
-import { nanoid } from '@/lib/utils'
+import { useSettingsStore } from '@/lib/store/settings'
 
 export interface SearchRelatedProps {
-  relatedQueries: StreamableValue<PartialRelated, any>
+  relatedQueries: PartialRelated
 }
 
 export const SearchRelated: React.FC<SearchRelatedProps> = ({
   relatedQueries
 }) => {
-  const { submit } = useActions()
-  const [, setMessages] = useUIState<typeof AI>()
-  const [data] = useStreamableValue<PartialRelated>(relatedQueries)
+  const { append } = useChatContext()
+  const { mapProvider } = useSettingsStore()
 
   const handleRelatedClick = async (query: string) => {
-    const formData = new FormData()
-    formData.append('related_query', query)
-
-    const userMessage = {
-      id: nanoid(),
-      component: <UserMessage content={query} />
-    }
-
-    const responseMessage = await submit(formData)
-    setMessages(currentMessages => [
-      ...currentMessages,
-      userMessage,
-      responseMessage
-    ])
+    await append(
+      { role: 'user', content: query },
+      {
+        body: {
+          mapProvider,
+        }
+      }
+    )
   }
 
   return (
     <div className="flex flex-wrap">
-      {data?.items
+      {relatedQueries?.items
         ?.filter(item => item?.query !== '')
         .map((item, index) => (
           <div className="flex items-start w-full animate-in fade-in slide-in-from-bottom-2 duration-300" key={index}>

@@ -8,7 +8,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 const AUTH_DISABLED_FLAG =
   process.env.AUTH_DISABLED_FOR_DEV === 'true' &&
-  process.env.NODE_ENV !== 'production';
+  process.env.VERCEL_ENV !== 'production';
 const MOCK_USER_ID = 'dev-user-001'; // A consistent mock user ID for dev mode
 
 /**

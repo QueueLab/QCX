@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useState, useRef, ChangeEvent, forwardRef, useImperativeHandle, useCallback } from 'react'
-import type { AI, UIState } from '@/app/actions'
-import { useUIState, useActions, readStreamableValue } from 'ai/rsc'
+import { useRouter } from 'next/navigation'
+import { useChatContext } from './chat-provider'
+import type { Message } from 'ai/react'
 import { cn } from '@/lib/utils'
 import { UserMessage } from './user-message'
 import { Button } from './ui/button'
@@ -16,7 +17,7 @@ import { useMapData } from './map/map-data-context'
 import SuggestionsDropdown from './suggestions-dropdown'
 
 interface ChatPanelProps {
-  messages: UIState
+  messages: Message[]
   input: string
   setInput: (value: string) => void
   onSuggestionsChange?: (suggestions: PartialRelated | null) => void
@@ -28,8 +29,8 @@ export interface ChatPanelRef {
 }
 
 export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, input, setInput, onSuggestionsChange }, ref) => {
-  const [, setMessages] = useUIState<typeof AI>()
-  const { submit, clearChat } = useActions()
+  const router = useRouter()
+  const { append, setMessages } = useChatContext()
   const { mapProvider } = useSettingsStore()
   const [isMobile, setIsMobile] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -53,7 +54,6 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     }
   }));
 
-  // Detect mobile layout
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth <= 1024)
@@ -91,44 +91,47 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
       return
     }
 
-    const content: ({ type: 'text'; text: string } | { type: 'image'; image: string })[] = []
-    if (input) {
-      content.push({ type: 'text', text: input })
-    }
-    if (selectedFile && selectedFile.type.startsWith('image/')) {
-      content.push({
-        type: 'image',
-        image: URL.createObjectURL(selectedFile)
-      })
-    }
-
-    setMessages(currentMessages => [
-      ...currentMessages,
-      {
-        id: nanoid(),
-        component: <UserMessage content={content} />
-      }
-    ])
-
-    const formData = new FormData(e.currentTarget)
-    if (selectedFile) {
-      formData.append('file', selectedFile)
-    }
-
-    // Include drawn features in the form data
-    formData.append('drawnFeatures', JSON.stringify(mapData.drawnFeatures || []))
-
+    const userContent = input.trim() || 'Analyze this image.'
+    const file = selectedFile
     setInput('')
     clearAttachment()
 
-    const responseMessage = await submit(formData)
-    setMessages(currentMessages => [...currentMessages, responseMessage as any])
+    if (file) {
+      const reader = new FileReader()
+      const fileData = await new Promise<string>((resolve, reject) => {
+        reader.onloadend = () => resolve(reader.result as string)
+        reader.onerror = () => reject(new Error('Failed to read file'))
+        reader.readAsDataURL(file)
+      })
+
+      await append(
+        { role: 'user', content: userContent },
+        {
+          body: {
+            action: 'resolution_search',
+            fileData,
+            mapProvider,
+            drawnFeatures: mapData.drawnFeatures || [],
+          }
+        }
+      )
+    } else {
+      await append(
+        { role: 'user', content: userContent },
+        {
+          body: {
+            mapProvider,
+            drawnFeatures: mapData.drawnFeatures || [],
+          }
+        }
+      )
+    }
   }
 
-  const handleClear = async () => {
+  const handleClear = () => {
     setMessages([])
     clearAttachment()
-    await clearChat()
+    router.push('/')
   }
 
   const debouncedGetSuggestions = useCallback(
@@ -144,15 +147,11 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
       }
 
       debounceTimeoutRef.current = setTimeout(async () => {
-        const suggestionsStream = await getSuggestions(value, mapData)
-        for await (const partialSuggestions of readStreamableValue(
-          suggestionsStream
-        )) {
-          if (partialSuggestions) {
-            setSuggestions(partialSuggestions as PartialRelated)
-          }
+        const suggestions = await getSuggestions(value, mapData)
+        if (suggestions) {
+          setSuggestions(suggestions as PartialRelated)
         }
-      }, 500) // 500ms debounce delay
+      }, 500)
     },
     [mapData, setSuggestions]
   )
@@ -161,7 +160,6 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     inputRef.current?.focus()
   }, [])
 
-  // New chat button (appears when there are messages)
   if (messages.length > 0 && !isMobile) {
     return (
       <div
@@ -204,7 +202,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
         <div
           className={cn(
             'relative flex items-start w-full',
-            isMobile && 'mobile-chat-input' // Apply mobile chat input styling
+            isMobile && 'mobile-chat-input'
           )}
         >
           <input type="hidden" name="mapProvider" value={mapProvider} />
