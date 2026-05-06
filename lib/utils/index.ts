@@ -51,18 +51,19 @@ export async function getModel(requireVision: boolean = false) {
             throw new Error('Selected model is not configured.');
         }
       case 'Gemini 3':
+      case 'Gemini 3.1 Pro':
         if (gemini3ProApiKey) {
           const google = createGoogleGenerativeAI({
             apiKey: gemini3ProApiKey,
           });
           try {
-            return google('gemini-3-pro-preview');
+            return google('gemini-3.1-pro-preview');
           } catch (error) {
-            console.error('Selected model "Gemini 3" is configured but failed to initialize.', error);
+            console.error('Selected model "Gemini 3.1 Pro" is configured but failed to initialize.', error);
             throw new Error('Failed to initialize selected model.');
           }
         } else {
-            console.error('User selected "Gemini 3" but GEMINI_3_PRO_API_KEY is not set.');
+            console.error('User selected "Gemini 3.1 Pro" but GEMINI_3_PRO_API_KEY is not set.');
             throw new Error('Selected model is not configured.');
         }
       case 'GPT-5.1':
@@ -96,9 +97,9 @@ export async function getModel(requireVision: boolean = false) {
       apiKey: gemini3ProApiKey,
     });
     try {
-      return google('gemini-3-pro-preview');
+      return google('gemini-3.1-pro-preview');
     } catch (error) {
-      console.warn('Gemini 3 Pro API unavailable, falling back to next provider:', error);
+      console.warn('Gemini 3.1 Pro API unavailable, falling back to next provider:', error);
     }
   }
 
