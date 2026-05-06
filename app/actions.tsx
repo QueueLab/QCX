@@ -102,17 +102,24 @@ async function submit(formData?: FormData, skip?: boolean) {
 
     async function processResolutionSearch() {
       try {
-        const analysisResult = await resolutionSearch(
-          groupeId,
-          uiStream,
-          summaryStream,
-          dataUrl,
-          userInput,
+        const result = await resolutionSearch(
+          messages,
           timezone,
-          location,
-          drawnFeatures
+          drawnFeatures,
+          location
         );
 
+        let finalAnalysisResult: any = {};
+        for await (const obj of result.partialObjectStream) {
+          if (obj) {
+            finalAnalysisResult = obj;
+            if (obj.summary) {
+              summaryStream.update(obj.summary);
+            }
+          }
+        }
+        summaryStream.done();
+        const analysisResult = finalAnalysisResult;
         const sanitizedMessages = messages.map(m => {
           if (Array.isArray(m.content)) {
             return {
@@ -314,6 +321,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     text?: string
     image?: string
     mimeType?: string
+    data?: string
   }[] = []
 
   if (userInput) {
@@ -341,9 +349,9 @@ async function submit(formData?: FormData, skip?: boolean) {
         {
           id: nanoid(),
           role: 'user',
-          content,
+          content: content as any,
           type
-        }
+        } as any
       ]
     })
     messages.push({
@@ -431,7 +439,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     if (useSpecificAPI && answer.length === 0) {
       const modifiedMessages = aiState
         .get()
-        .messages.map(msg =>
+        .messages.map((msg: any) =>
           msg.role === 'tool'
             ? {
                 ...msg,
@@ -502,6 +510,7 @@ async function submit(formData?: FormData, skip?: boolean) {
 }
 
 async function clearChat() {
+  'use server';
   const userId = await getCurrentUserIdOnServer()
   if (!userId) return;
   const { clearChats } = await import('@/lib/actions/chat')
@@ -532,7 +541,7 @@ export const AI = createAI<AIState, UIState>({
       const uiState = getUIStateFromAIState(aiState)
       return uiState
     }
-    return initialUIState
+    return []
   },
   onSetAIState: async ({ state }) => {
     'use server'
@@ -785,3 +794,15 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
     })
     .filter(message => message !== null) as UIState
 }
+
+export type AIState = {
+  chatId: string
+  isSharePage?: boolean
+  messages: AIMessage[]
+}
+
+export type UIState = {
+  id: string
+  component: React.ReactNode
+  isCollapsed?: StreamableValue<boolean>
+}[]
