@@ -16,7 +16,8 @@ export async function inquire(
   const objectStream = createStreamableValue<PartialInquiry>();
   let currentInquiry: PartialInquiry = {};
 
-  // Update the UI stream with the Copilot component, passing only the serializable value
+  // OPTIMIZATION: Only update UI once with initial state instead of on every stream update
+  // This prevents unnecessary re-renders of the entire Copilot component
   uiStream.update(
     <Copilot inquiry={{ value: currentInquiry }} />
   );
@@ -24,28 +25,30 @@ export async function inquire(
   let finalInquiry: PartialInquiry = {};
   const result = await streamObject({
     model: (await getModel()) as LanguageModel,
-    system: `...`, // Your system prompt remains unchanged
+    system: `You are a helpful assistant that gathers clarifying information from the user. 
+    Generate a structured inquiry with a clear question, multiple choice options, and optionally allow free-text input.
+    Ensure the inquiry is concise and helps narrow down the user's intent.`,
     messages,
     schema: inquirySchema,
   });
 
+  // OPTIMIZATION: Collect all partial objects and only update UI with final state
+  // This reduces the number of component re-renders significantly
+  const partialObjects: PartialInquiry[] = [];
+  
   for await (const obj of result.partialObjectStream) {
     if (obj) {
-      // Update the local state
+      partialObjects.push(obj);
       currentInquiry = obj;
-      // Update the stream with the new serializable value
       objectStream.update(obj);
       finalInquiry = obj;
-
-      // Update the UI stream with the new inquiry value
-      uiStream.update(
-        <Copilot inquiry={{ value: currentInquiry }} />
-      );
     }
   }
 
   objectStream.done();
-  // Final UI update
+  
+  // OPTIMIZATION: Single final UI update with the complete inquiry
+  // The Copilot component will handle streaming its own state updates
   uiStream.update(
     <Copilot inquiry={{ value: finalInquiry }} />
   );

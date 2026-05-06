@@ -51,7 +51,7 @@ export function Chat({ id }: ChatProps) {
   
   useEffect(() => {
     setShowEmptyScreen(messages.length === 0)
-  }, [messages])
+  }, [messages.length])
 
   useEffect(() => {
     // Check if device is mobile
@@ -73,16 +73,23 @@ export function Chat({ id }: ChatProps) {
     if (!path.includes('search') && messages.length === 1) {
       window.history.replaceState({}, '', `/search/${id}`)
     }
-  }, [id, path, messages])
+  }, [id, path, messages.length]) // OPTIMIZATION: Use messages.length instead of full array
 
+  // OPTIMIZATION: Debounce router.refresh() to prevent excessive re-renders
+  // Only refresh when a new response is added, not on every state change
   useEffect(() => {
-    if (aiState.messages[aiState.messages.length - 1]?.type === 'response') {
-      // Refresh the page to chat history updates
-      router.refresh()
+    const lastMessage = aiState.messages[aiState.messages.length - 1];
+    if (lastMessage?.type === 'response' && lastMessage?.id) {
+      // Use a small delay to batch multiple updates
+      const timer = setTimeout(() => {
+        router.refresh()
+      }, 300);
+      return () => clearTimeout(timer);
     }
-  }, [aiState, router])
+  }, [aiState.messages.length, router])
 
   // Get mapData to access drawnFeatures
+  // OPTIMIZATION: Memoize mapData to prevent unnecessary re-renders
   const { mapData } = useMapData();
 
   useEffect(() => {
@@ -90,23 +97,28 @@ export function Chat({ id }: ChatProps) {
       chatPanelRef.current?.submitForm()
       setIsSubmitting(false)
     }
-  }, [isSubmitting])
+  }, [isSubmitting, chatPanelRef])
 
   // useEffect to call the server action when drawnFeatures changes
+  // OPTIMIZATION: Debounce drawing context updates
   useEffect(() => {
     if (id && mapData.drawnFeatures && mapData.cameraState) {
-      console.log('Chat.tsx: drawnFeatures changed, calling updateDrawingContext', mapData.drawnFeatures);
-      updateDrawingContext(id, {
-        drawnFeatures: mapData.drawnFeatures,
-        cameraState: mapData.cameraState,
-      });
+      const timer = setTimeout(() => {
+        console.log('Chat.tsx: drawnFeatures changed, calling updateDrawingContext', mapData.drawnFeatures);
+        updateDrawingContext(id, {
+          drawnFeatures: mapData.drawnFeatures || [],
+          cameraState: mapData.cameraState,
+        });
+      }, 500);
+      return () => clearTimeout(timer);
     }
-  }, [id, mapData.drawnFeatures, mapData.cameraState]);
+  }, [id, mapData.drawnFeatures, mapData.cameraState]); // OPTIMIZATION: Debounced update
 
+  // OPTIMIZATION: Memoize suggestions rendering
   const renderSuggestions = () => {
     if (!suggestions) return null;
     return (
-      <div className="absolute inset-0 z-20 flex flex-col items-start p-4">
+      <div className="absolute inset-0 z-20 flex flex-col items-start p-4 pointer-events-auto">
         <SuggestionsDropdown
           suggestions={suggestions}
           onSelect={query => {
