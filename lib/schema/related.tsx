@@ -8,7 +8,7 @@ export const relatedSchema = z.object({
         query: z.string()
       })
     )
-    .length(3)
+    .min(1).max(3)
 })
 export type PartialRelated = DeepPartial<typeof relatedSchema>
 

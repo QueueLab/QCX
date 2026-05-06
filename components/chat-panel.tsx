@@ -24,7 +24,7 @@ interface ChatPanelProps {
 
 export interface ChatPanelRef {
   handleAttachmentClick: () => void
-  submitForm: () => void
+  submitForm: (message?: string) => void
 }
 
 export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, input, setInput, onSuggestionsChange }, ref) => {
@@ -43,12 +43,16 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const pendingMessageRef = useRef<string | null>(null)
 
   useImperativeHandle(ref, () => ({
     handleAttachmentClick() {
       fileInputRef.current?.click()
     },
-    submitForm() {
+    submitForm(message?: string) {
+      if (message) {
+        pendingMessageRef.current = message
+      }
       formRef.current?.requestSubmit()
     }
   }));
@@ -87,13 +91,17 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (!input.trim() && !selectedFile) {
+
+    const messageToSubmit = pendingMessageRef.current || input
+    pendingMessageRef.current = null
+
+    if (!messageToSubmit.trim() && !selectedFile) {
       return
     }
 
     const content: ({ type: 'text'; text: string } | { type: 'image'; image: string })[] = []
-    if (input) {
-      content.push({ type: 'text', text: input })
+    if (messageToSubmit) {
+      content.push({ type: 'text', text: messageToSubmit })
     }
     if (selectedFile && selectedFile.type.startsWith('image/')) {
       content.push({
@@ -111,6 +119,9 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     ])
 
     const formData = new FormData(e.currentTarget)
+    if (messageToSubmit) {
+      formData.set('input', messageToSubmit)
+    }
     if (selectedFile) {
       formData.append('file', selectedFile)
     }
