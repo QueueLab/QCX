@@ -54,7 +54,7 @@ export type SettingsFormValues = z.infer<typeof settingsFormSchema>
 const defaultValues: Partial<SettingsFormValues> = {
   systemPrompt:
     "You are a planetary copilot, an AI assistant designed to help users with information about planets, space exploration, and astronomy. Provide accurate, educational, and engaging responses about our solar system and beyond.",
-  selectedModel: "Grok 4.2",
+  selectedModel: "Gemini 3.1 Pro",
   users: [],
 }
 
