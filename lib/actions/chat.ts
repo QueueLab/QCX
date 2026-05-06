@@ -153,6 +153,7 @@ export async function saveSystemPrompt(
 ): Promise<{ success?: boolean; error?: string }> {
   if (!userId) return { error: 'User ID is required' }
   if (!prompt) return { error: 'Prompt is required' }
+  if (!db) return { error: 'Database is not available' }
 
   try {
     await db.update(users)
@@ -170,6 +171,10 @@ export async function getSystemPrompt(
   userId: string
 ): Promise<string | null> {
   if (!userId) return null
+  if (!db) {
+    console.error('getSystemPrompt: Database is not available')
+    return null
+  }
 
   try {
     const result = await db.select({ systemPrompt: users.systemPrompt })
