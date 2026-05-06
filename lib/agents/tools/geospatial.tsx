@@ -249,14 +249,14 @@ Uses the Mapbox Search Box Text Search API endpoint to power searching for and g
 
     const selectedModel = await getSelectedModel();
 
-    if (selectedModel?.includes('gemini') && mapProvider === 'google') {
-      let feedbackMessage = `Processing geospatial query with Gemini...`;
+    if (selectedModel?.toLowerCase().includes('gemini') && mapProvider === 'google') {
+      let feedbackMessage = `Processing geospatial query with Gemini 3.1 Pro...`;
       uiFeedbackStream.update(feedbackMessage);
 
       try {
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_3_PRO_API_KEY!);
         const model = genAI.getGenerativeModel({
-          model: 'gemini-1.5-pro-latest',
+          model: 'gemini-3.1-pro-preview',
         });
 
         const searchText = (params as any).location || (params as any).query;

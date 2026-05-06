@@ -10,8 +10,8 @@ This document describes the integration of Google's Gemini 3.1 Pro model into th
 
 Added Gemini 3.1 Pro as a provider option in the `getModel()` function with the following priority order:
 
-1. **xAI (Grok)** - Primary choice if `XAI_API_KEY` is configured
-2. **Gemini 3.1 Pro** - Secondary choice if `GEMINI_3_PRO_API_KEY` is configured *(NEW)*
+1. **Gemini 3.1 Pro** - Primary choice if `GEMINI_3_PRO_API_KEY` is configured *(UPDATED PRIORITY)*
+2. **xAI (Grok)** - Secondary choice if `XAI_API_KEY` is configured
 3. **AWS Bedrock** - Tertiary choice if AWS credentials are configured
 4. **OpenAI** - Default fallback if `OPENAI_API_KEY` is configured
 
@@ -20,6 +20,7 @@ The implementation includes:
 - Creation of Google Generative AI client using `createGoogleGenerativeAI()`
 - Model identifier: `gemini-3.1-pro-preview`
 - Error handling with fallback to the next available provider
+- Support for both "Gemini 3" and "Gemini 3.1 Pro" selection identifiers for backward compatibility.
 
 ### 2. Updated `.env.local.example`
 
@@ -58,9 +59,9 @@ Gemini 3.1 Pro (`gemini-3.1-pro-preview`) supports:
 The provider selection follows this priority order:
 
 ```
-XAI_API_KEY exists? → Use Grok
-  ↓ No
 GEMINI_3_PRO_API_KEY exists? → Use Gemini 3.1 Pro
+  ↓ No
+XAI_API_KEY exists? → Use Grok
   ↓ No
 AWS credentials exist? → Use AWS Bedrock
   ↓ No
