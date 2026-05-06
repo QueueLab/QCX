@@ -5,14 +5,14 @@ import { Section } from '@/components/section'
 import SearchRelated from '@/components/search-related'
 import { getModel } from '../utils'
 
-// OPTIMIZATION: Cache for recent queries to avoid redundant API calls
-const queryCache = new Map<string, PartialRelated>();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-
 interface CacheEntry {
   data: PartialRelated;
   timestamp: number;
 }
+
+// OPTIMIZATION: Cache for recent queries to avoid redundant API calls
+const queryCache = new Map<string, CacheEntry>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 function getCacheKey(messages: CoreMessage[]): string {
   // Create a simple hash of the last few messages to use as cache key
