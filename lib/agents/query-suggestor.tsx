@@ -90,7 +90,9 @@ export async function querySuggestor(
   // OPTIMIZATION: Limit cache size to prevent memory issues
   if (queryCache.size > 50) {
     const firstKey = queryCache.keys().next().value;
-    queryCache.delete(firstKey);
+    if (firstKey) {
+      queryCache.delete(firstKey);
+    }
   }
 
   return finalRelatedQueries
