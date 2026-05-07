@@ -9,6 +9,16 @@ const nextConfig = {
       bodySizeLimit: '200mb',
     },
   },
+  
+  // turbopack root at top level in v16
+  turbopack: {
+    root: '.',
+  },
+  
+  // reactCompiler and cacheComponents moved to top level in v16
+  reactCompiler: true,
+  cacheComponents: true,
+  
   transpilePackages: ['QCX', 'mapbox_mcp'], // Added to transpile local packages
 };  
 
