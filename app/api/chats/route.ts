@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { NextResponse, NextRequest } from 'next/server';
 import { getChatsPage } from '@/lib/actions/chat-db';
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user';

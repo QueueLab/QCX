@@ -67,16 +67,14 @@ export async function getSupabaseUserAndSessionOnServer(): Promise<{
       },
       async set(name: string, value: string, options: CookieOptions): Promise<void> {
         try {
-          const store = await cookieStore;
-          store.set({ name, value, ...options }); // Set cookie with options
+          (await cookieStore).set({ name, value, ...options }); // Set cookie with options
         } catch (error) {
           // console.warn(`[Auth] Failed to set cookie ${name}:`, error);
         }
       },
       async remove(name: string, options: CookieOptions): Promise<void> {
         try {
-          const store = await cookieStore;
-          store.set({ name, value: '', ...options, maxAge: 0 }); // Delete cookie by setting maxAge to 0
+          (await cookieStore).set({ name, value: '', ...options, maxAge: 0 }); // Delete cookie by setting maxAge to 0
         } catch (error) {
           // console.warn(`[Auth] Failed to delete cookie ${name}:`, error);
         }

@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 // app/api/embeddings/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { Storage } from '@google-cloud/storage';
@@ -9,8 +10,8 @@ import proj4 from 'proj4';
 
 // Configuration from environment variables
 const GCP_PROJECT_ID = process.env.GCP_PROJECT_ID || 'gen-lang-client-0663384776';
-const GCP_CREDENTIALS_PATH = process.env.GCP_CREDENTIALS_PATH || '/home/ubuntu/gcp_credentials.json';
-const AEF_INDEX_PATH = process.env.AEF_INDEX_PATH || path.join(process.cwd(), 'aef_index.csv');
+const GCP_CREDENTIALS_PATH = process.env.GCP_CREDENTIALS_PATH || path.join(/*turbopackIgnore: true*/ process.cwd(), 'gcp_credentials.json');
+const AEF_INDEX_PATH = process.env.AEF_INDEX_PATH || path.join(/*turbopackIgnore: true*/ process.cwd(), 'aef_index.csv');
 
 // Initialize GCS client
 const storage = new Storage({
@@ -18,29 +19,35 @@ const storage = new Storage({
   projectId: GCP_PROJECT_ID,
 });
 
-// Load and parse the index file
-let indexData: any[] | null = null;
+// Load and parse the index file using a promise-based singleton to prevent redundant I/O
+let indexPromise: Promise<any[]> | null = null;
 
-function loadIndex() {
-  if (indexData) return indexData;
-  
-  if (!fs.existsSync(AEF_INDEX_PATH)) {
-    throw new Error(
-      `AlphaEarth index file not found at ${AEF_INDEX_PATH}. ` +
-      'Please run the download_index.js script to download it.'
-    );
-  }
-  
-  const fileContent = fs.readFileSync(AEF_INDEX_PATH, 'utf-8');
-  
-  indexData = parse(fileContent, {
-    columns: true,
-    skip_empty_lines: true,
-  });
-  
-  console.log(`Loaded AlphaEarth index with ${indexData.length} entries`);
-  
-  return indexData;
+async function loadIndex() {
+  if (indexPromise) return indexPromise;
+
+  indexPromise = (async () => {
+    try {
+      // Use fs.promises for non-blocking I/O
+      const fileContent = await fs.promises.readFile(AEF_INDEX_PATH, 'utf-8');
+      const parsed = parse(fileContent, {
+        columns: true,
+        skip_empty_lines: true,
+      });
+      console.log(`Loaded AlphaEarth index with ${parsed.length} entries`);
+      return parsed;
+    } catch (error) {
+      indexPromise = null; // Reset on failure so we can retry
+      if ((error as any).code === 'ENOENT') {
+        throw new Error(
+          `AlphaEarth index file not found at ${AEF_INDEX_PATH}. ` +
+          'Please run the download_index.js script to download it.'
+        );
+      }
+      throw error;
+    }
+  })();
+
+  return indexPromise;
 }
 
 // Function to check if a point is within bounds
@@ -56,8 +63,8 @@ function isPointInBounds(
 }
 
 // Function to find the file containing the given location
-function findFileForLocation(lat: number, lon: number, year: number) {
-  const index = loadIndex();
+async function findFileForLocation(lat: number, lon: number, year: number) {
+  const index = await loadIndex();
   
   for (const entry of index) {
     if (parseInt(entry.year) !== year) continue;
@@ -164,7 +171,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Find the file containing this location
-    const fileInfo = findFileForLocation(lat, lon, year);
+    const fileInfo = await findFileForLocation(lat, lon, year);
     
     if (!fileInfo) {
       return NextResponse.json(

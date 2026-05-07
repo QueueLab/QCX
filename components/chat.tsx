@@ -26,7 +26,15 @@ type ChatProps = {
   id?: string // This is the chatId
 }
 
-export function Chat({ id }: ChatProps) {
+export function Chat({ id: initialId }: ChatProps) {
+  const [id, setId] = useState(initialId || '')
+
+  useEffect(() => {
+    if (!id || id === 'new-chat') {
+      setId(crypto.randomUUID())
+    }
+  }, [id])
+
   const router = useRouter()
   const path = usePathname()
   const [messages] = useUIState()
@@ -70,7 +78,7 @@ export function Chat({ id }: ChatProps) {
   }, [])
 
   useEffect(() => {
-    if (!path.includes('search') && messages.length === 1) {
+    if (id && id !== 'new-chat' && !path.includes('search') && messages.length === 1) {
       window.history.replaceState({}, '', `/search/${id}`)
     }
   }, [id, path, messages.length]) // OPTIMIZATION: Use messages.length instead of full array

@@ -86,6 +86,11 @@ export async function saveChat(chatData: NewChat, messagesData: Omit<NewMessage,
     return null;
   }
 
+  // Handle placeholder 'new-chat' ID from client side
+  if (chatData.id === 'new-chat') {
+    delete (chatData as any).id;
+  }
+
   // Transaction to ensure atomicity
   return db.transaction(async (tx) => {
     let chatId = chatData.id;
