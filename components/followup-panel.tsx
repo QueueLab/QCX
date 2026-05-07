@@ -30,6 +30,10 @@ export function FollowupPanel() {
 
     // Include drawn features in the form data
     formData.append('drawnFeatures', JSON.stringify(mapData.drawnFeatures || []))
+    const bounds = mapData.cameraState?.bounds;
+    if (bounds) {
+      formData.append('bounds', JSON.stringify(bounds))
+    }
 
     const responseMessage = await submit(formData)
     setMessages(currentMessages => [

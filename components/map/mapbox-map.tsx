@@ -343,6 +343,8 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
       currentMapCenterRef.current = { center: [center.lng, center.lat], zoom, pitch };
 
       const timezone = tzlookup(center.lat, center.lng);
+      const bounds = map.current.getBounds();
+      if (!bounds) return;
 
       setMapData(prevData => ({
         ...prevData,
@@ -351,7 +353,11 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
           center: { lat: center.lat, lng: center.lng },
           zoom,
           pitch,
-          bearing
+          bearing,
+          bounds: {
+            sw: { lat: bounds.getSouthWest().lat, lng: bounds.getSouthWest().lng },
+            ne: { lat: bounds.getNorthEast().lat, lng: bounds.getNorthEast().lng }
+          }
         }
       }));
     }
