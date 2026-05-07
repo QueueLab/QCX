@@ -19,7 +19,7 @@ interface HeaderActions {
   submit: (formData: FormData) => Promise<any>;
 }
 
-export function HeaderSearchButton() {
+export function HeaderSearchButton({ input, setInput }: { input?: string, setInput?: (value: string) => void }) {
   const { map } = useMap()
   const { mapProvider } = useSettingsStore()
   const { mapData } = useMapData()
@@ -72,7 +72,7 @@ export function HeaderSearchButton() {
         ...currentMessages,
         {
           id: nanoid(),
-          component: <UserMessage content={[{ type: 'text', text: 'Analyze this map view.' }]} />
+          component: <UserMessage content={input || 'Analyze this map view.'} />
         }
       ])
 
@@ -146,6 +146,7 @@ export function HeaderSearchButton() {
       // Keep 'file' for backward compatibility if needed, or just use the first available
       formData.append('file', (mapboxBlob || googleBlob)!, 'map_capture.png')
 
+      if (input) formData.append('input', input)
       formData.append('action', 'resolution_search')
       formData.append('timezone', mapData.currentTimezone || 'UTC')
       formData.append('drawnFeatures', JSON.stringify(mapData.drawnFeatures || []))
@@ -154,10 +155,18 @@ export function HeaderSearchButton() {
       if (center) {
         formData.append('latitude', center.lat.toString())
         formData.append('longitude', center.lng.toString())
+        const bounds = mapProvider === 'mapbox' && map ? map.getBounds() : null;
+        if (bounds) {
+          formData.append('bounds', JSON.stringify({
+            sw: { lat: bounds.getSouthWest().lat, lng: bounds.getSouthWest().lng },
+            ne: { lat: bounds.getNorthEast().lat, lng: bounds.getNorthEast().lng }
+          }))
+        }
       }
 
       const responseMessage = await actions.submit(formData)
       setMessages((currentMessages: any[]) => [...currentMessages, responseMessage as any])
+      if (setInput) setInput('')
     } catch (error) {
       console.error('Failed to perform resolution search:', error)
       toast.error('An error occurred while analyzing the map.')

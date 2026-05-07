@@ -57,7 +57,14 @@ async function submit(formData?: FormData, skip?: boolean) {
     const timezone = (formData?.get('timezone') as string) || 'UTC';
     const lat = formData?.get('latitude') ? parseFloat(formData.get('latitude') as string) : undefined;
     const lng = formData?.get('longitude') ? parseFloat(formData.get('longitude') as string) : undefined;
-    const location = (lat !== undefined && lng !== undefined) ? { lat, lng } : undefined;
+    const boundsString = formData?.get('bounds') as string;
+    let bounds = undefined;
+    try {
+      bounds = boundsString ? JSON.parse(boundsString) : undefined;
+    } catch (e) {
+      console.error('Failed to parse bounds:', e);
+    }
+    const location = (lat !== undefined && lng !== undefined) ? { lat, lng, bounds } : undefined;
 
     if (!file) {
       throw new Error('No file provided for resolution search.');
@@ -81,7 +88,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         message.type !== 'resolution_search_result'
     );
 
-    const userInput = 'Analyze this map view.';
+    const userInput = (formData?.get('input') as string) || 'Analyze this map view.';
     const content: CoreMessage['content'] = [
       { type: 'text', text: userInput },
       { type: 'image', image: dataUrl, mimeType: file.type }
@@ -96,32 +103,43 @@ async function submit(formData?: FormData, skip?: boolean) {
     });
     messages.push({ role: 'user', content });
 
-    const summaryStream = createStreamableValue<string>('Analyzing map view...');
+    const summaryStream = createStreamableValue<string>(`Analyzing: ${userInput}`);
     const groupeId = nanoid();
 
     async function processResolutionSearch() {
       try {
         const streamResult = await resolutionSearch(messages, timezone, drawnFeatures, location);
 
+        uiStream.append(
+          <GeoJsonLayer
+            id={groupeId}
+            data={{ type: 'FeatureCollection', features: [] } as FeatureCollection}
+          />
+        );
+
         let fullSummary = '';
         for await (const partialObject of streamResult.partialObjectStream) {
           if (partialObject.summary) {
             fullSummary = partialObject.summary;
             summaryStream.update(fullSummary);
+            if (fullSummary.includes('ZOOM PASSContext') || fullSummary.includes('zoomed-in CROP')) {
+              summaryStream.update(`${fullSummary}\n\n[Zoom Pass in progress...]`);
+            }
+          }
+          if (partialObject.geoJson) {
+            uiStream.update(
+              <GeoJsonLayer
+                id={groupeId}
+                data={partialObject.geoJson as FeatureCollection}
+              />
+            );
           }
         }
 
         const analysisResult = await streamResult.object;
         summaryStream.done(analysisResult.summary || 'Analysis complete.');
 
-        if (analysisResult.geoJson) {
-          uiStream.append(
-            <GeoJsonLayer
-              id={groupeId}
-              data={analysisResult.geoJson as FeatureCollection}
-            />
-          );
-        }
+
 
         messages.push({ role: 'assistant', content: analysisResult.summary || 'Analysis complete.' });
 
