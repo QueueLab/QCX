@@ -163,9 +163,9 @@ export async function resolutionSearch(
 
   const allFeatures: any[] = [];
   let finalSummary = '';
-  let finalCogInfo = undefined;
-  let finalNewsContext = undefined;
-  let finalExtractedCoordinates = undefined;
+  let finalCogInfo: z.infer<typeof resolutionSearchSchema>['cogInfo'] = undefined;
+  let finalNewsContext: z.infer<typeof resolutionSearchSchema>['newsContext'] = undefined;
+  let finalExtractedCoordinates: z.infer<typeof resolutionSearchSchema>['extractedCoordinates'] = undefined;
 
   const MAX_PASSES = 3;
   let currentPass = 1;

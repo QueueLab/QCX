@@ -344,6 +344,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
 
       const timezone = tzlookup(center.lat, center.lng);
       const bounds = map.current.getBounds();
+      if (!bounds) return;
 
       setMapData(prevData => ({
         ...prevData,
