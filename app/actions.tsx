@@ -154,7 +154,6 @@ async function submit(formData?: FormData, skip?: boolean) {
           </Section>
         );
 
-        await new Promise(resolve => setTimeout(resolve, 500));
 
         aiState.done({
           ...aiState.get(),
@@ -506,7 +505,6 @@ async function submit(formData?: FormData, skip?: boolean) {
           </Section>
         )
 
-        await new Promise(resolve => setTimeout(resolve, 500))
 
         aiState.done({
           ...aiState.get(),
