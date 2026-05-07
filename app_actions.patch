@@ -1,0 +1,77 @@
+<<<<<<< SEARCH
+    async function processResolutionSearch() {
+      try {
+        const streamResult = await resolutionSearch(messages, timezone, drawnFeatures, location);
+=======
+    async function processResolutionSearch() {
+      try {
+        uiStream.update(
+          <Section title="response">
+            <ResolutionCarousel
+              mapboxImage={mapboxDataUrl || undefined}
+              googleImage={googleDataUrl || undefined}
+              initialImage={dataUrl}
+            />
+            <BotMessage content={summaryStream.value} />
+          </Section>
+        );
+
+        const streamResult = await resolutionSearch(messages, timezone, drawnFeatures, location);
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+      } catch (error) {
+        console.error('Error in resolution search:', error);
+        summaryStream.error(error);
+      } finally {
+        isGenerating.done(false);
+        uiStream.done();
+      }
+    }
+
+    processResolutionSearch();
+
+    uiStream.update(
+      <Section title="response">
+        <ResolutionCarousel
+          mapboxImage={mapboxDataUrl || undefined}
+          googleImage={googleDataUrl || undefined}
+          initialImage={dataUrl}
+        />
+        <BotMessage content={summaryStream.value} />
+      </Section>
+    );
+
+    return {
+=======
+      } catch (error) {
+        console.error('Error in resolution search:', error);
+        summaryStream.error(error);
+      } finally {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        isGenerating.done(false);
+        uiStream.done();
+      }
+    }
+
+    processResolutionSearch();
+
+    return {
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+    } catch (error) {
+      console.error('Error in processEvents:', error)
+    } finally {
+      isGenerating.done(false)
+      uiStream.done()
+    }
+  }
+=======
+    } catch (error) {
+      console.error('Error in processEvents:', error)
+    } finally {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      isGenerating.done(false)
+      uiStream.done()
+    }
+  }
+>>>>>>> REPLACE

@@ -100,6 +100,16 @@ async function submit(formData?: FormData, skip?: boolean) {
     const groupeId = nanoid();
 
     async function processResolutionSearch() {
+        uiStream.update(
+          <Section title="response">
+            <ResolutionCarousel
+              mapboxImage={mapboxDataUrl || undefined}
+              googleImage={googleDataUrl || undefined}
+              initialImage={dataUrl}
+            />
+            <BotMessage content={summaryStream.value} />
+          </Section>
+        );
       try {
         const streamResult = await resolutionSearch(messages, timezone, drawnFeatures, location);
 
@@ -194,6 +204,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         console.error('Error in resolution search:', error);
         summaryStream.error(error);
       } finally {
+        await new Promise(resolve => setTimeout(resolve, 100));
         isGenerating.done(false);
         uiStream.done();
       }
@@ -201,16 +212,6 @@ async function submit(formData?: FormData, skip?: boolean) {
 
     processResolutionSearch();
 
-    uiStream.update(
-      <Section title="response">
-        <ResolutionCarousel
-          mapboxImage={mapboxDataUrl || undefined}
-          googleImage={googleDataUrl || undefined}
-          initialImage={dataUrl}
-        />
-        <BotMessage content={summaryStream.value} />
-      </Section>
-    );
 
     return {
       id: nanoid(),
@@ -534,6 +535,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     } catch (error) {
       console.error('Error in processEvents:', error)
     } finally {
+      await new Promise(resolve => setTimeout(resolve, 100));
       isGenerating.done(false)
       uiStream.done()
     }
