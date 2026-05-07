@@ -19,8 +19,7 @@ export function FollowupPanel() {
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const formData = new FormData()
-    formData.append("input", input)
-    formData.append("action", "resolution_search")
+    formData.append('input', input)
 
     const userMessage = {
       id: nanoid(),
@@ -31,14 +30,17 @@ export function FollowupPanel() {
     // Include drawn features in the form data
     formData.append('drawnFeatures', JSON.stringify(mapData.drawnFeatures || []))
 
-    const responseMessage = await submit(formData)
-    setMessages(currentMessages => [
-      ...currentMessages,
-      userMessage,
-      responseMessage
-    ])
-
-    setInput('')
+    try {
+      const responseMessage = await submit(formData)
+      setMessages(currentMessages => [
+        ...currentMessages,
+        userMessage,
+        responseMessage
+      ])
+      setInput('')
+    } catch (error) {
+      console.error('Error submitting followup:', error)
+    }
   }
 
   return (

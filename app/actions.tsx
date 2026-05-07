@@ -402,139 +402,143 @@ async function submit(formData?: FormData, skip?: boolean) {
   const mapProvider = formData?.get('mapProvider') as 'mapbox' | 'google'
 
   async function processEvents() {
-    let action: any = { object: { next: 'proceed' } }
-    if (!skip) {
-      const taskManagerResult = await taskManager(messages)
-      if (taskManagerResult) {
-        action.object = taskManagerResult.object
+    try {
+      let action: any = { object: { next: 'proceed' } }
+      if (!skip) {
+        const taskManagerResult = await taskManager(messages)
+        if (taskManagerResult) {
+          action.object = taskManagerResult.object
+        }
       }
-    }
 
-    if (action.object.next === 'inquire') {
-      const inquiry = await inquire(uiStream, messages)
-      uiStream.done()
-      isGenerating.done()
-      isCollapsed.done(false)
-      aiState.done({
-        ...aiState.get(),
-        messages: [
-          ...aiState.get().messages,
-          {
-            id: nanoid(),
-            role: 'assistant',
-            content: `inquiry: ${inquiry?.question}`
-          }
-        ]
-      })
-      return
-    }
+      if (action.object.next === 'inquire') {
+        const inquiry = await inquire(uiStream, messages)
+        uiStream.done()
+        isGenerating.done()
+        isCollapsed.done(false)
+        aiState.done({
+          ...aiState.get(),
+          messages: [
+            ...aiState.get().messages,
+            {
+              id: nanoid(),
+              role: 'assistant',
+              content: `inquiry: ${inquiry?.question}`
+            }
+          ]
+        })
+        return
+      }
 
-    isCollapsed.done(true)
-    let answer = ''
-    let toolOutputs: ToolResultPart[] = []
-    let errorOccurred = false
-    const streamText = createStreamableValue<string>()
-    uiStream.update(<Spinner />)
+      isCollapsed.done(true)
+      let answer = ''
+      let toolOutputs: ToolResultPart[] = []
+      let errorOccurred = false
+      const streamText = createStreamableValue<string>()
+      uiStream.update(<Spinner />)
 
-    while (
-      useSpecificAPI
-        ? answer.length === 0
-        : answer.length === 0 && !errorOccurred
-    ) {
-      const { fullResponse, hasError, toolResponses } = await researcher(
-        currentSystemPrompt,
-        uiStream,
-        streamText,
-        messages,
-        mapProvider,
-        useSpecificAPI,
-        drawnFeatures
-      )
-      answer = fullResponse
-      toolOutputs = toolResponses
-      errorOccurred = hasError
+      while (
+        useSpecificAPI
+          ? answer.length === 0
+          : answer.length === 0 && !errorOccurred
+      ) {
+        const { fullResponse, hasError, toolResponses } = await researcher(
+          currentSystemPrompt,
+          uiStream,
+          streamText,
+          messages,
+          mapProvider,
+          useSpecificAPI,
+          drawnFeatures
+        )
+        answer = fullResponse
+        toolOutputs = toolResponses
+        errorOccurred = hasError
 
-      if (toolOutputs.length > 0) {
-        toolOutputs.map(output => {
-          aiState.update({
-            ...aiState.get(),
-            messages: [
-              ...aiState.get().messages,
-              {
-                id: groupeId,
-                role: 'tool',
-                content: JSON.stringify(output.result),
-                name: output.toolName,
-                type: 'tool'
-              }
-            ]
+        if (toolOutputs.length > 0) {
+          toolOutputs.map(output => {
+            aiState.update({
+              ...aiState.get(),
+              messages: [
+                ...aiState.get().messages,
+                {
+                  id: groupeId,
+                  role: 'tool',
+                  content: JSON.stringify(output.result),
+                  name: output.toolName,
+                  type: 'tool'
+                }
+              ]
+            })
           })
+        }
+      }
+
+      if (useSpecificAPI && answer.length === 0) {
+        const modifiedMessages = aiState
+          .get()
+          .messages.map(msg =>
+            msg.role === 'tool'
+              ? {
+                  ...msg,
+                  role: 'assistant',
+                  content: JSON.stringify(msg.content),
+                  type: 'tool'
+                }
+              : msg
+          ) as CoreMessage[]
+        const latestMessages = modifiedMessages.slice(maxMessages * -1)
+        answer = await writer(
+          currentSystemPrompt,
+          uiStream,
+          streamText,
+          latestMessages
+        )
+      } else {
+        streamText.done()
+      }
+
+      if (!errorOccurred) {
+        const relatedQueries = await querySuggestor(uiStream, messages)
+        uiStream.append(
+          <Section title="Follow-up">
+            <FollowupPanel />
+          </Section>
+        )
+
+        await new Promise(resolve => setTimeout(resolve, 500))
+
+        aiState.done({
+          ...aiState.get(),
+          messages: [
+            ...aiState.get().messages,
+            {
+              id: groupeId,
+              role: 'assistant',
+              content: answer,
+              type: 'response'
+            },
+            {
+              id: groupeId,
+              role: 'assistant',
+              content: JSON.stringify(relatedQueries),
+              type: 'related'
+            },
+            {
+              id: groupeId,
+              role: 'assistant',
+              content: 'followup',
+              type: 'followup'
+            }
+          ]
         })
       }
+    } catch (error) {
+      console.error('Error in processEvents:', error)
+    } finally {
+      isGenerating.done(false)
+      uiStream.done()
     }
-
-    if (useSpecificAPI && answer.length === 0) {
-      const modifiedMessages = aiState
-        .get()
-        .messages.map(msg =>
-          msg.role === 'tool'
-            ? {
-                ...msg,
-                role: 'assistant',
-                content: JSON.stringify(msg.content),
-                type: 'tool'
-              }
-            : msg
-        ) as CoreMessage[]
-      const latestMessages = modifiedMessages.slice(maxMessages * -1)
-      answer = await writer(
-        currentSystemPrompt,
-        uiStream,
-        streamText,
-        latestMessages
-      )
-    } else {
-      streamText.done()
-    }
-
-    if (!errorOccurred) {
-      const relatedQueries = await querySuggestor(uiStream, messages)
-      uiStream.append(
-        <Section title="Follow-up">
-          <FollowupPanel />
-        </Section>
-      )
-
-      await new Promise(resolve => setTimeout(resolve, 500))
-
-      aiState.done({
-        ...aiState.get(),
-        messages: [
-          ...aiState.get().messages,
-          {
-            id: groupeId,
-            role: 'assistant',
-            content: answer,
-            type: 'response'
-          },
-          {
-            id: groupeId,
-            role: 'assistant',
-            content: JSON.stringify(relatedQueries),
-            type: 'related'
-          },
-          {
-            id: groupeId,
-            role: 'assistant',
-            content: 'followup',
-            type: 'followup'
-          }
-        ]
-      })
-    }
-
-    isGenerating.done(false)
-    uiStream.done()
   }
 
   processEvents()
