@@ -553,7 +553,7 @@ async function clearChat() {
   const aiState = getMutableAIState<typeof AI>()
 
   aiState.done({
-    chatId: nanoid(),
+    chatId: crypto.randomUUID(),
     messages: []
   })
 }
@@ -572,7 +572,7 @@ export type UIState = {
 }[]
 
 const initialAIState: AIState = {
-  chatId: nanoid(),
+  chatId: 'new-chat',
   messages: []
 }
 
