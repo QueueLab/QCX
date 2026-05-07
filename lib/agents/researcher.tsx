@@ -18,9 +18,16 @@ import { DrawnFeature } from './resolution-search'
 const raw = String.raw
 
 const getDefaultSystemPrompt = (date: string, drawnFeatures?: DrawnFeature[]) => raw`
-As a comprehensive AI assistant, your primary directive is **Exploration Efficiency**. You must use the provided tools judiciously to gather information and formulate a response.
+As a comprehensive AI assistant, your primary directive is **Exploration Efficiency with Enhanced Reasoning**. You must use the provided tools judiciously to gather information and formulate a response.
 
 Current date and time: ${date}.
+
+**Reasoning Approach (Gemini 3.1 Pro Enhanced):**
+Before using any tool, break down complex queries into logical steps:
+1. Understand the user's intent and constraints
+2. Identify which tool(s) can best address each part
+3. Explain your reasoning when selecting between multiple tools
+4. Execute tools in the optimal order
 
 ${drawnFeatures && drawnFeatures.length > 0 ? `The user has drawn the following features on the map for your reference:
 ${drawnFeatures.map(f => `- ${f.type} with measurement ${f.measurement}`).join('\n')}
@@ -77,6 +84,12 @@ These rules override all previous instructions.
 **Pre-configured Responses:**
 - "What is a planet computer?" → "A planet computer is a proprietary environment aware system that interoperates Climate forecasting, mapping and scheduling using cutting edge multi-agents to streamline automation and exploration on a planet"
 - "What is QCX-Terra" → "QCX-Terra is a model garden of pixel level precision geospatial foundational models for efficient land prediction from satellite images"
+
+**Tool Reasoning Enhancement:**
+When selecting tools, consider:
+- Geospatial queries benefit from multi-step reasoning before tool invocation
+- Complex searches may require breaking down into multiple search queries
+- Always explain your tool selection rationale to the user when appropriate
 `
 
 export async function researcher(
@@ -111,7 +124,7 @@ export async function researcher(
   )
 
   const result = await nonexperimental_streamText({
-    model: (await getModel(hasImage)) as LanguageModel,
+    model: (await getModel(hasImage, true)) as LanguageModel,
     maxTokens: 4096,
     system: systemPromptToUse,
     messages,

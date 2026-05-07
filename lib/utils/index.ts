@@ -21,7 +21,7 @@ export function generateUUID(): string {
  */
 export { generateUUID as nanoid };
 
-export async function getModel(requireVision: boolean = false) {
+export async function getModel(requireVision: boolean = false, usesTools: boolean = false) {
   const selectedModel = await getSelectedModel();
 
   const xaiApiKey = process.env.XAI_API_KEY;
@@ -57,7 +57,8 @@ export async function getModel(requireVision: boolean = false) {
             apiKey: gemini3ProApiKey,
           });
           try {
-            return google('gemini-3.1-pro-preview');
+            const modelId = usesTools ? 'gemini-3.1-pro-preview-customtools' : 'gemini-3.1-pro-preview';
+            return google(modelId);
           } catch (error) {
             console.error('Selected model "Gemini 3.1 Pro" is configured but failed to initialize.', error);
             throw new Error('Failed to initialize selected model.');
@@ -85,7 +86,8 @@ export async function getModel(requireVision: boolean = false) {
       apiKey: gemini3ProApiKey,
     });
     try {
-      return google('gemini-3.1-pro-preview');
+      const modelId = usesTools ? 'gemini-3.1-pro-preview-customtools' : 'gemini-3.1-pro-preview';
+      return google(modelId);
     } catch (error) {
       console.warn('Gemini 3.1 Pro API unavailable, falling back to next provider:', error);
     }

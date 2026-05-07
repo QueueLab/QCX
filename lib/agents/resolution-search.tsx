@@ -134,7 +134,16 @@ export async function resolutionSearch(messages: CoreMessage[], timezone: string
   }
 
   const systemPrompt = `
-As a geospatial analyst, your task is to analyze the provided satellite image of a geographic location.
+As a geospatial analyst with advanced reasoning capabilities (Gemini 3.1 Pro), your task is to analyze the provided satellite image of a geographic location.
+
+**Reasoning Approach (Enhanced Chain-of-Thought):**
+Before providing your analysis, break down the task into logical steps:
+1. Identify visible features and patterns in the satellite image
+2. Classify land types based on spectral and spatial characteristics
+3. Extract geographic coordinates and validate against provided data
+4. Integrate temporal context (time of day, season) with visual observations
+5. Cross-reference with recent news and events for the location
+6. Synthesize findings into structured output
 
 **Temporal Context:**
 The current local time at this location is ${localTime} (timezone: ${timezone}).
@@ -154,15 +163,16 @@ The user has drawn the following features on the map for your reference:
 ${drawnFeatures.map(f => `- ${f.type} (${f.measurement}): ${JSON.stringify(f.geometry)}`).join('\n')}
 Use these user-drawn areas/lines as primary areas of interest for your analysis.` : ''}
 
-**Analysis Requirements:**
+**Multi-Step Analysis Requirements:**
 
-1. **Land Feature Classification:** Identify and describe the different types of land cover visible in the image (e.g., urban areas, forests, water bodies, agricultural fields).
-2. **Points of Interest (POI):** Detect and name any significant landmarks, infrastructure (e.g., bridges, major roads), or notable buildings.
-3. **Temporal Analysis:** Consider how the time of day and season might affect what's visible in the image.
-4. **Coordinate Extraction:** If possible, confirm or refine the geocoordinates (latitude/longitude) of the center of the image.
-5. **COG Applicability:** Determine if this location would benefit from Cloud Optimized GeoTIFF (COG) analysis for high-precision temporal or spectral data.
-6. **News Integration:** Reference any recent news or events that may be relevant to the current state of the location.
-7. **Structured Output:** Return your findings in a structured JSON format including summary, geoJson, and newsContext.
+1. **Abstract Pattern Recognition (ARC-AGI-2 Level):** Look for non-obvious patterns and relationships in the satellite imagery that indicate land use changes or unusual features.
+2. **Land Feature Classification:** Systematically identify and describe land cover types (urban, forests, water, agriculture, infrastructure).
+3. **Points of Interest (POI):** Detect and name significant landmarks, infrastructure (bridges, roads, buildings), and anomalies.
+4. **Temporal Analysis:** Explain how the time of day and season affect visibility and interpretation of features.
+5. **Coordinate Extraction:** Confirm or refine geocoordinates with reasoning about image center and reference points.
+6. **COG Applicability:** Assess whether this location would benefit from Cloud Optimized GeoTIFF analysis.
+7. **News Integration:** Explain how recent events correlate with visible landscape features.
+8. **Structured Output:** Return findings in structured JSON format with detailed reasoning.
 
 Your analysis should be based on the visual information in the image, the temporal context provided, and your general knowledge. Do not attempt to access external websites or perform web searches beyond what has been provided.
 
