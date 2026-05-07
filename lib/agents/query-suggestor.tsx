@@ -52,40 +52,50 @@ export async function querySuggestor(
     </Section>
   )
 
-  let finalRelatedQueries: PartialRelated = {}
+  let finalRelatedQueries: PartialRelated = { items: [] }
   
-  // OPTIMIZATION: Use a more concise system prompt to reduce token usage
-  const result = await streamObject({
-    model: (await getModel()) as LanguageModel,
-    system: `Generate 3 follow-up queries that explore the subject matter deeper. Format as JSON with an "items" array containing objects with "query" fields. Keep queries concise and relevant.`,
-    messages,
-    schema: relatedSchema,
-    temperature: 0.7, // Lower temperature for more consistent results
-  })
+  try {
+    // OPTIMIZATION: Use a more concise system prompt to reduce token usage
+    const result = await streamObject({
+      model: (await getModel()) as LanguageModel,
+      system: `Generate 3 follow-up queries that explore the subject matter deeper. Format as JSON with an "items" array containing objects with "query" fields. Keep queries concise and relevant.`,
+      messages,
+      schema: relatedSchema,
+      temperature: 0.7, // Lower temperature for more consistent results
+    })
 
-  // OPTIMIZATION: Stream updates but batch them to reduce re-render frequency
-  let lastUpdateTime = Date.now();
-  const UPDATE_THROTTLE = 200; // ms
+    // OPTIMIZATION: Stream updates but batch them to reduce re-render frequency
+    let lastUpdateTime = Date.now();
+    const UPDATE_THROTTLE = 100; // Reduced from 200ms to 100ms for better responsiveness
 
-  for await (const obj of result.partialObjectStream) {
-    if (obj && typeof obj === 'object' && 'items' in obj) {
-      const now = Date.now();
-      // Only update UI if enough time has passed since last update
-      if (now - lastUpdateTime > UPDATE_THROTTLE) {
-        objectStream.update(obj as PartialRelated)
-        lastUpdateTime = now;
+    for await (const obj of result.partialObjectStream) {
+      if (obj && typeof obj === 'object' && 'items' in obj) {
+        const now = Date.now();
+        // Only update UI if enough time has passed since last update
+        if (now - lastUpdateTime > UPDATE_THROTTLE) {
+          objectStream.update(obj as PartialRelated)
+          lastUpdateTime = now;
+        }
+        finalRelatedQueries = obj as PartialRelated
       }
-      finalRelatedQueries = obj as PartialRelated
     }
+  } catch (error) {
+    console.error('Error in querySuggestor:', error)
+  } finally {
+    // Ensure final state is pushed even if throttled
+    if (finalRelatedQueries.items && finalRelatedQueries.items.length > 0) {
+      objectStream.update(finalRelatedQueries)
+    }
+    objectStream.done()
   }
-
-  objectStream.done()
   
   // OPTIMIZATION: Cache the result
-  queryCache.set(cacheKey, {
-    data: finalRelatedQueries,
-    timestamp: Date.now()
-  });
+  if (finalRelatedQueries.items && finalRelatedQueries.items.length > 0) {
+    queryCache.set(cacheKey, {
+      data: finalRelatedQueries,
+      timestamp: Date.now()
+    });
+  }
   
   // OPTIMIZATION: Limit cache size to prevent memory issues
   if (queryCache.size > 50) {
