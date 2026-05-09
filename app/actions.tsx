@@ -319,13 +319,11 @@ async function submit(formData?: FormData, skip?: boolean) {
     if (Array.isArray(m.content)) {
       return {
         ...m,
-        content: m.content.filter((part: any) =>
-          part.type !== "image" || (typeof part.image === "string" && part.image.startsWith("data:"))
-        )
+        content: m.content.filter((part: any) => part.type !== "image")
       } as any
     }
     return m
-  })
+
 
   const groupeId = nanoid()
   const useSpecificAPI = process.env.USE_SPECIFIC_API_FOR_WRITER === 'true'
