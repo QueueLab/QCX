@@ -62,6 +62,7 @@ export function ChatMessages({ messages }: ChatMessagesProps) {
             isLastMessage={
               groupedMessage.id === messages[messages.length - 1].id
             }
+            index={index}
           />
         )
       )}
