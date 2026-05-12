@@ -140,7 +140,6 @@ export function Chat({ id }: ChatProps) {
     return (
       <MapDataProvider> {/* Add Provider */}
         <HeaderSearchButton />
-      <ReportButton />
         <div className="mobile-layout-container">
           <div className="mobile-map-section">
           {activeView ? <SettingsView /> : isUsageOpen ? <UsageView /> : <MapProvider />}
@@ -187,7 +186,6 @@ export function Chat({ id }: ChatProps) {
   return (
     <MapDataProvider> {/* Add Provider */}
       <HeaderSearchButton />
-      <ReportButton />
       <div className="flex justify-start items-start">
         {/* This is the new div for scrolling */}
         <div className="w-1/2 flex flex-col space-y-3 md:space-y-4 px-8 sm:px-12 pt-16 md:pt-20 pb-4 h-[calc(100vh-0.5in)] overflow-y-auto">

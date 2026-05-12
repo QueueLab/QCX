@@ -1,7 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
-import { createPortal } from 'react-dom'
+import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { FileDown, Loader2 } from 'lucide-react'
 import { useAIState } from 'ai/rsc'
@@ -19,13 +18,6 @@ export const ReportButton = ({ inline = false }: ReportButtonProps) => {
   const { mapData } = useMapData()
   const { map } = useMap()
   const [isGenerating, setIsGenerating] = useState(false)
-  const [portalNode, setPortalNode] = useState<HTMLElement | null>(null)
-
-  useEffect(() => {
-    if (!inline) {
-      setPortalNode(document.getElementById('header-report-portal'))
-    }
-  }, [inline])
 
   const handleDownloadReport = async () => {
     if (isGenerating) return
@@ -43,7 +35,7 @@ export const ReportButton = ({ inline = false }: ReportButtonProps) => {
         chatTitle
       })
 
-      toast.success('Report generated successfully')
+      // Removed success toast as per user request
     } catch (error) {
       console.error('Failed to generate report:', error)
       toast.error('Failed to generate report')
@@ -52,7 +44,7 @@ export const ReportButton = ({ inline = false }: ReportButtonProps) => {
     }
   }
 
-  const button = (
+  return (
     <Button
       variant={inline ? "default" : "ghost"}
       size={inline ? "default" : "icon"}
@@ -69,10 +61,4 @@ export const ReportButton = ({ inline = false }: ReportButtonProps) => {
       {inline && <span className="ml-2">Generate Report</span>}
     </Button>
   )
-
-  if (inline) return button
-
-  if (!portalNode) return null
-
-  return createPortal(button, portalNode)
 }
