@@ -1,13 +1,13 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Button } from '@/components/ui/button'
 import { FileDown, Loader2 } from 'lucide-react'
 import { useAIState } from 'ai/rsc'
 import { useMapData } from '@/components/map/map-data-context'
 import { useMap } from '@/components/map/map-context'
 import { generateReport } from '@/lib/utils/report-generator'
-import { useState } from 'react'
 import { toast } from 'sonner'
 
 export const ReportButton = () => {
@@ -15,6 +15,11 @@ export const ReportButton = () => {
   const { mapData } = useMapData()
   const { map } = useMap()
   const [isGenerating, setIsGenerating] = useState(false)
+  const [portalNode, setPortalNode] = useState<HTMLElement | null>(null)
+
+  useEffect(() => {
+    setPortalNode(document.getElementById('header-report-portal'))
+  }, [])
 
   const handleDownloadReport = async () => {
     if (isGenerating) return
@@ -23,7 +28,6 @@ export const ReportButton = () => {
     try {
       const mapSnapshot = map ? map.getCanvas().toDataURL('image/png') : ''
 
-      // Get chat title from AI state or default
       const chatTitle = aiState.chatId ? `Chat-${aiState.chatId.substring(0, 8)}` : 'QCX-Analysis'
 
       await generateReport({
@@ -42,7 +46,7 @@ export const ReportButton = () => {
     }
   }
 
-  return (
+  const button = (
     <Button
       variant="ghost"
       size="icon"
@@ -57,4 +61,8 @@ export const ReportButton = () => {
       )}
     </Button>
   )
+
+  if (!portalNode) return null
+
+  return createPortal(button, portalNode)
 }
