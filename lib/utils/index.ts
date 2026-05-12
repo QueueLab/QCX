@@ -33,7 +33,6 @@ export async function getModel(requireVision: boolean = false): Promise<Language
   const awsRegion = process.env.AWS_REGION;
   const bedrockModelId = process.env.BEDROCK_MODEL_ID || 'anthropic.claude-3-5-sonnet-20241022-v2:0';
   const openaiApiKey = process.env.OPENAI_API_KEY;
-  const azureResourceName = process.env.AZURE_RESOURCE_NAME;
   const azureApiKey = process.env.AZURE_API_KEY;
   const azureEndpoint = process.env.AZURE_ENDPOINT;
   const azureDeploymentName = process.env.AZURE_DEPLOYMENT_NAME || 'gpt-4o';
