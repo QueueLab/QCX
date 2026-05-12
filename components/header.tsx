@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { MapToggle } from './map-toggle'
 import { ProfileToggle } from './profile-toggle'
+import { ReportButton } from './report-button'
 import { PurchaseCreditsPopup } from './purchase-credits-popup'
 import { useUsageToggle } from './usage-toggle-context'
 import { useProfileToggle } from './profile-toggle-context'
@@ -70,6 +71,8 @@ export const Header = () => {
         <ProfileToggle/>
         
         <MapToggle />
+
+        <ReportButton />
         
         <Button variant="ghost" size="icon" onClick={toggleCalendar} title="Open Calendar" data-testid="calendar-toggle">
           <CalendarDays className="h-[1.2rem] w-[1.2rem]" />
