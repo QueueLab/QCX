@@ -35,11 +35,12 @@ export async function getModel(requireVision: boolean = false): Promise<Language
   const openaiApiKey = process.env.OPENAI_API_KEY;
   const azureApiKey = process.env.AZURE_API_KEY;
   const azureEndpoint = process.env.AZURE_ENDPOINT;
-  const azureDeploymentName = process.env.AZURE_DEPLOYMENT_NAME || 'gpt-4o';
+  const azureResourceName = process.env.AZURE_RESOURCE_NAME;
+  const azureDeploymentName = process.env.AZURE_DEPLOYMENT_NAME || 'gpt-5.5';
 
   if (selectedModel) {
     switch (selectedModel) {
-      case 'Grok 4.2':
+
         if (xaiApiKey) {
           const xai = createXai({
             apiKey: xaiApiKey,
