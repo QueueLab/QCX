@@ -35,6 +35,7 @@ export async function getModel(requireVision: boolean = false): Promise<Language
   const openaiApiKey = process.env.OPENAI_API_KEY;
   const azureResourceName = process.env.AZURE_RESOURCE_NAME;
   const azureApiKey = process.env.AZURE_API_KEY;
+  const azureEndpoint = process.env.AZURE_ENDPOINT;
   const azureDeploymentName = process.env.AZURE_DEPLOYMENT_NAME || 'gpt-4o';
 
   if (selectedModel) {
@@ -82,9 +83,10 @@ export async function getModel(requireVision: boolean = false): Promise<Language
             throw new Error('Selected model is not configured.');
         }
       case 'Azure GPT 5.5':
-        if (azureResourceName && azureApiKey) {
+        if ((azureResourceName || azureEndpoint) && azureApiKey) {
           const azure = createAzure({
             resourceName: azureResourceName,
+            baseURL: azureEndpoint,
             apiKey: azureApiKey,
           });
           try {
