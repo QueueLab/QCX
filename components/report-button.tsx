@@ -10,7 +10,11 @@ import { useMap } from '@/components/map/map-context'
 import { generateReport } from '@/lib/utils/report-generator'
 import { toast } from 'sonner'
 
-export const ReportButton = () => {
+interface ReportButtonProps {
+  inline?: boolean
+}
+
+export const ReportButton = ({ inline = false }: ReportButtonProps) => {
   const [aiState] = useAIState()
   const { mapData } = useMapData()
   const { map } = useMap()
@@ -18,8 +22,10 @@ export const ReportButton = () => {
   const [portalNode, setPortalNode] = useState<HTMLElement | null>(null)
 
   useEffect(() => {
-    setPortalNode(document.getElementById('header-report-portal'))
-  }, [])
+    if (!inline) {
+      setPortalNode(document.getElementById('header-report-portal'))
+    }
+  }, [inline])
 
   const handleDownloadReport = async () => {
     if (isGenerating) return
@@ -48,19 +54,23 @@ export const ReportButton = () => {
 
   const button = (
     <Button
-      variant="ghost"
-      size="icon"
+      variant={inline ? "default" : "ghost"}
+      size={inline ? "default" : "icon"}
       onClick={handleDownloadReport}
       title="Download PDF Report"
       disabled={isGenerating}
+      className={inline ? "w-full" : ""}
     >
       {isGenerating ? (
         <Loader2 className="h-[1.2rem] w-[1.2rem] animate-spin" />
       ) : (
         <FileDown className="h-[1.2rem] w-[1.2rem]" />
       )}
+      {inline && <span className="ml-2">Generate Report</span>}
     </Button>
   )
+
+  if (inline) return button
 
   if (!portalNode) return null
 

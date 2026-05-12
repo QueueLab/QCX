@@ -23,6 +23,7 @@ import { getSystemPrompt, saveSystemPrompt } from "../../../lib/actions/chat"
 import { getSelectedModel, saveSelectedModel } from "../../../lib/actions/users"
 import { useCurrentUser } from "@/lib/auth/use-current-user"
 import { SettingsSkeleton } from './settings-skeleton'
+import { ReportButton } from '@/components/report-button'
 
 // Define the form schema with enum validation for roles
 const settingsFormSchema = z.object({
@@ -166,7 +167,7 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
               <Tabs.Trigger value="system-prompt" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">System Prompt</Tabs.Trigger>
               <Tabs.Trigger value="model" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">Model Selection</Tabs.Trigger>
               <Tabs.Trigger value="user-management" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">User Management</Tabs.Trigger>
-              <Tabs.Trigger value="map" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">Map</Tabs.Trigger>
+              <Tabs.Trigger value="report" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">Reports</Tabs.Trigger>
             </Tabs.List>
             <AnimatePresence mode="wait">
               <motion.div
@@ -203,27 +204,37 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
                 <Tabs.Content value="user-management" className="mt-6">
                   <UserManagementForm form={form} />
                 </Tabs.Content>
-                <Tabs.Content value="map" className="mt-6">
+                <Tabs.Content value="report" className="mt-6">
                   <Card>
                     <CardHeader>
-                      <CardTitle>Map Provider</CardTitle>
-                      <CardDescription>Choose the map provider to use in the application.</CardDescription>
+                      <CardTitle>Report Generation</CardTitle>
+                      <CardDescription>Generate and download a PDF report of your current analysis.</CardDescription>
                     </CardHeader>
-                    <CardContent>
-                      <RadioGroup
-                        value={mapProvider}
-                        onValueChange={(value) => setMapProvider(value as MapProvider)}
-                        className="space-y-2"
-                      >
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="mapbox" id="mapbox" />
-                          <Label htmlFor="mapbox">Mapbox</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="google" id="google" />
-                          <Label htmlFor="google">Google Maps</Label>
-                        </div>
-                      </RadioGroup>
+                    <CardContent className="space-y-4">
+                      <div className="flex flex-col space-y-4">
+                        <p className="text-sm text-muted-foreground">
+                          Your report will include the conversation history, current map view, analysis results, and any drawn features or measurements.
+                        </p>
+                        <ReportButton inline={true} />
+                      </div>
+
+                      <div className="pt-6 border-t">
+                        <h4 className="text-sm font-medium mb-4">Map Provider Settings</h4>
+                        <RadioGroup
+                          value={mapProvider}
+                          onValueChange={(value) => setMapProvider(value as MapProvider)}
+                          className="space-y-2"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="mapbox" id="mapbox" />
+                            <Label htmlFor="mapbox">Mapbox</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="google" id="google" />
+                            <Label htmlFor="google">Google Maps</Label>
+                          </div>
+                        </RadioGroup>
+                      </div>
                     </CardContent>
                   </Card>
                 </Tabs.Content>
