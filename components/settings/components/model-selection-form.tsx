@@ -35,12 +35,20 @@ const models = [
     badgeVariant: "default" as const,
   },
   {
-    id: "Grok 4.2",
-    name: "Grok 4.2",
-    description: "The latest from xAI, pushing the boundaries of reasoning and problem-solving.",
+    id: "Grok 4.3",
+    name: "Grok 4.3",
+    description: "The latest from xAI, featuring enhanced reasoning and real-time knowledge.",
     icon: Rocket,
     badge: "New",
     badgeVariant: "secondary" as const,
+  },
+  {
+    id: "Grok 4.2",
+    name: "Grok 4.2",
+    description: "Reliable reasoning model from xAI, pushing the boundaries of problem-solving.",
+    icon: Rocket,
+    badge: "Stable",
+    badgeVariant: "outline" as const,
   },
   {
     id: "Gemini 3.1 Pro",

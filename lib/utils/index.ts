@@ -34,6 +34,22 @@ export async function getModel(requireVision: boolean = false) {
 
   if (selectedModel) {
     switch (selectedModel) {
+      case 'Grok 4.3':
+        if (xaiApiKey) {
+          const xai = createXai({
+            apiKey: xaiApiKey,
+            baseURL: 'https://api.x.ai/v1',
+          });
+          try {
+            return xai('grok-latest');
+          } catch (error) {
+            console.error('Selected model "Grok 4.3" is configured but failed to initialize.', error);
+            throw new Error('Failed to initialize selected model.');
+          }
+        } else {
+            console.error('User selected "Grok 4.3" but XAI_API_KEY is not set.');
+            throw new Error('Selected model is not configured.');
+        }
       case 'Grok 4.2':
         if (xaiApiKey) {
           const xai = createXai({
