@@ -169,7 +169,7 @@ export async function saveSystemPrompt(
 export async function getSystemPrompt(
   userId: string
 ): Promise<string | null> {
-  if (!userId) return null
+  if (!userId || userId === 'anonymous') return null
 
   try {
     const result = await db.select({ systemPrompt: users.systemPrompt })

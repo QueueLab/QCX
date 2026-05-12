@@ -397,7 +397,11 @@ async function submit(formData?: FormData, skip?: boolean) {
     } as CoreMessage)
   }
 
-  const userId = 'anonymous'
+  const { getCurrentUserIdOnServer } = await import(
+    '@/lib/auth/get-current-user'
+  )
+  const actualUserId = await getCurrentUserIdOnServer()
+  const userId = actualUserId || 'anonymous'
   const currentSystemPrompt = (await getSystemPrompt(userId)) || ''
   const mapProvider = formData?.get('mapProvider') as 'mapbox' | 'google'
 

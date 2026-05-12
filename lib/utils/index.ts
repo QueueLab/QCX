@@ -33,9 +33,10 @@ export async function getModel(requireVision: boolean = false): Promise<Language
   const awsRegion = process.env.AWS_REGION;
   const bedrockModelId = process.env.BEDROCK_MODEL_ID || 'anthropic.claude-3-5-sonnet-20241022-v2:0';
   const openaiApiKey = process.env.OPENAI_API_KEY;
+  const azureResourceName = process.env.AZURE_RESOURCE_NAME;
   const azureApiKey = process.env.AZURE_API_KEY;
   const azureEndpoint = process.env.AZURE_ENDPOINT;
-  const azureDeploymentName = process.env.AZURE_DEPLOYMENT_NAME || 'gpt-4o';
+  const azureDeploymentName = process.env.AZURE_DEPLOYMENT_NAME || 'gpt-5.5';
 
   if (selectedModel) {
     switch (selectedModel) {
@@ -101,7 +102,7 @@ export async function getModel(requireVision: boolean = false): Promise<Language
     }
   }
 
-  // Default behavior: Gemini -> Grok -> Bedrock -> OpenAI
+  // Default behavior: Gemini -> Grok -> Azure -> Bedrock -> OpenAI
   if (gemini3ProApiKey) {
     const google = createGoogleGenerativeAI({
       apiKey: gemini3ProApiKey,
@@ -122,6 +123,19 @@ export async function getModel(requireVision: boolean = false): Promise<Language
       return xai('grok-4-fast-non-reasoning');
     } catch (error) {
       console.warn('xAI API unavailable, falling back to next provider:');
+    }
+  }
+
+  if ((azureResourceName || azureEndpoint) && azureApiKey) {
+    const azure = createAzure({
+      resourceName: azureResourceName,
+      baseURL: azureEndpoint,
+      apiKey: azureApiKey,
+    });
+    try {
+      return azure(azureDeploymentName) as unknown as LanguageModel;
+    } catch (error) {
+      console.warn('Azure OpenAI API unavailable, falling back to next provider:', error);
     }
   }
 
