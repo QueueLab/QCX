@@ -5,7 +5,6 @@ import { createOpenAI } from '@ai-sdk/openai'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock'
 import { createXai } from '@ai-sdk/xai';
-import { createAzure } from '@ai-sdk/azure';
 import { v4 as uuidv4 } from 'uuid';
 import { LanguageModel } from 'ai'
 
@@ -33,9 +32,9 @@ export async function getModel(requireVision: boolean = false): Promise<Language
   const awsRegion = process.env.AWS_REGION;
   const bedrockModelId = process.env.BEDROCK_MODEL_ID || 'anthropic.claude-3-5-sonnet-20241022-v2:0';
   const openaiApiKey = process.env.OPENAI_API_KEY;
-  const azureResourceName = process.env.AZURE_RESOURCE_NAME;
+  const azureEndpoint = process.env.AZURE_ENDPOINT;
   const azureApiKey = process.env.AZURE_API_KEY;
-  const azureDeploymentName = process.env.AZURE_DEPLOYMENT_NAME || 'gpt-4o';
+  const azureDeploymentName = process.env.AZURE_DEPLOYMENT_NAME || 'gpt-5.5';
 
   if (selectedModel) {
     switch (selectedModel) {
@@ -82,13 +81,13 @@ export async function getModel(requireVision: boolean = false): Promise<Language
             throw new Error('Selected model is not configured.');
         }
       case 'Azure GPT 5.5':
-        if (azureResourceName && azureApiKey) {
-          const azure = createAzure({
-            resourceName: azureResourceName,
+        if (azureEndpoint && azureApiKey) {
+          const azure = createOpenAI({
+            baseURL: azureEndpoint,
             apiKey: azureApiKey,
           });
           try {
-            return azure(azureDeploymentName) as unknown as LanguageModel;
+            return azure(azureDeploymentName);
           } catch (error) {
             console.error('Selected model "Azure GPT 5.5" is configured but failed to initialize.', error);
             throw new Error('Failed to initialize selected model.');
