@@ -71,8 +71,6 @@ export const Header = () => {
         
         <MapToggle />
 
-        <div id="header-report-portal" className="contents" />
-        
         <Button variant="ghost" size="icon" onClick={toggleCalendar} title="Open Calendar" data-testid="calendar-toggle">
           <CalendarDays className="h-[1.2rem] w-[1.2rem]" />
         </Button>

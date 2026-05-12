@@ -8,7 +8,6 @@ import { useAIState } from 'ai/rsc'
 import { useMapData } from '@/components/map/map-data-context'
 import { useMap } from '@/components/map/map-context'
 import { generateReport } from '@/lib/utils/report-generator'
-import { toast } from 'sonner'
 
 interface ReportButtonProps {
   inline?: boolean
@@ -42,15 +41,12 @@ export const ReportButton = ({ inline = false }: ReportButtonProps) => {
         mapSnapshot,
         chatTitle
       })
-
-      toast.success('Report generated successfully')
     } catch (error) {
       console.error('Failed to generate report:', error)
-      toast.error('Failed to generate report')
     } finally {
       setIsGenerating(false)
     }
-  }
+
 
   const button = (
     <Button
