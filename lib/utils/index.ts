@@ -83,16 +83,26 @@ export async function getModel(requireVision: boolean = false): Promise<Language
             throw new Error('Selected model is not configured.');
         }
       case 'Azure GPT 5.5':
-        if ((azureResourceName || azureEndpoint) && azureApiKey) {
+        if (azureEndpoint && azureApiKey) {
+          const azureOpenAI = createOpenAI({
+            baseURL: azureEndpoint,
+            apiKey: azureApiKey,
+          });
+          try {
+            return azureOpenAI(azureDeploymentName);
+          } catch (error) {
+            console.error('Selected model "Azure GPT 5.5" (via endpoint) failed to initialize.', error);
+            throw new Error('Failed to initialize selected model.');
+          }
+        } else if (azureResourceName && azureApiKey) {
           const azure = createAzure({
             resourceName: azureResourceName,
-            baseURL: azureEndpoint?.replace(/\/v1\/?$/, ''),
             apiKey: azureApiKey,
           });
           try {
             return azure(azureDeploymentName) as unknown as LanguageModel;
           } catch (error) {
-            console.error('Selected model "Azure GPT 5.5" is configured but failed to initialize.', error);
+            console.error('Selected model "Azure GPT 5.5" (via resource) failed to initialize.', error);
             throw new Error('Failed to initialize selected model.');
           }
         } else {
@@ -102,7 +112,31 @@ export async function getModel(requireVision: boolean = false): Promise<Language
     }
   }
 
-  // Default behavior: Gemini -> Grok -> Azure -> Bedrock -> OpenAI
+  // Default behavior: Azure -> Gemini -> Grok -> Bedrock -> OpenAI
+  if (azureEndpoint && azureApiKey) {
+    const azureOpenAI = createOpenAI({
+      baseURL: azureEndpoint,
+      apiKey: azureApiKey,
+    });
+    try {
+      return azureOpenAI(azureDeploymentName);
+    } catch (error) {
+      console.warn('Azure OpenAI API (via endpoint) unavailable, falling back to next provider:', error);
+    }
+  }
+
+  if (azureResourceName && azureApiKey) {
+    const azure = createAzure({
+      resourceName: azureResourceName,
+      apiKey: azureApiKey,
+    });
+    try {
+      return azure(azureDeploymentName) as unknown as LanguageModel;
+    } catch (error) {
+      console.warn('Azure OpenAI API (via resource) unavailable, falling back to next provider:', error);
+    }
+  }
+
   if (gemini3ProApiKey) {
     const google = createGoogleGenerativeAI({
       apiKey: gemini3ProApiKey,
@@ -126,18 +160,6 @@ export async function getModel(requireVision: boolean = false): Promise<Language
     }
   }
 
-  if ((azureResourceName || azureEndpoint) && azureApiKey) {
-    const azure = createAzure({
-      resourceName: azureResourceName,
-      baseURL: azureEndpoint?.replace(/\/v1\/?$/, ''),
-      apiKey: azureApiKey,
-    });
-    try {
-      return azure(azureDeploymentName) as unknown as LanguageModel;
-    } catch (error) {
-      console.warn('Azure OpenAI API unavailable, falling back to next provider:', error);
-    }
-  }
 
   if (awsAccessKeyId && awsSecretAccessKey) {
     const bedrock = createAmazonBedrock({
