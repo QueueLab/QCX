@@ -86,7 +86,7 @@ export async function getModel(requireVision: boolean = false): Promise<Language
         if ((azureResourceName || azureEndpoint) && azureApiKey) {
           const azure = createAzure({
             resourceName: azureResourceName,
-            baseURL: azureEndpoint,
+            baseURL: azureEndpoint?.replace(/\/v1\/?$/, ''),
             apiKey: azureApiKey,
           });
           try {
@@ -129,7 +129,7 @@ export async function getModel(requireVision: boolean = false): Promise<Language
   if ((azureResourceName || azureEndpoint) && azureApiKey) {
     const azure = createAzure({
       resourceName: azureResourceName,
-      baseURL: azureEndpoint,
+      baseURL: azureEndpoint?.replace(/\/v1\/?$/, ''),
       apiKey: azureApiKey,
     });
     try {
