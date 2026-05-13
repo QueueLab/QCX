@@ -5,9 +5,7 @@ import { createOpenAI } from '@ai-sdk/openai'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock'
 import { createXai } from '@ai-sdk/xai';
-import { createAzure } from '@ai-sdk/azure';
 import { v4 as uuidv4 } from 'uuid';
-import { LanguageModel } from 'ai'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -23,7 +21,7 @@ export function generateUUID(): string {
  */
 export { generateUUID as nanoid };
 
-export async function getModel(requireVision: boolean = false): Promise<LanguageModel> {
+export async function getModel(requireVision: boolean = false) {
   const selectedModel = await getSelectedModel();
 
   const xaiApiKey = process.env.XAI_API_KEY;
@@ -33,7 +31,6 @@ export async function getModel(requireVision: boolean = false): Promise<Language
   const awsRegion = process.env.AWS_REGION;
   const bedrockModelId = process.env.BEDROCK_MODEL_ID || 'anthropic.claude-3-5-sonnet-20241022-v2:0';
   const openaiApiKey = process.env.OPENAI_API_KEY;
-  const azureResourceName = process.env.AZURE_RESOURCE_NAME;
   const azureApiKey = process.env.AZURE_API_KEY;
   const azureEndpoint = process.env.AZURE_ENDPOINT;
   const azureDeploymentName = process.env.AZURE_DEPLOYMENT_NAME || 'gpt-5.5';
@@ -83,20 +80,15 @@ export async function getModel(requireVision: boolean = false): Promise<Language
             throw new Error('Selected model is not configured.');
         }
       case 'Azure GPT 5.5':
-        if ((azureResourceName || azureEndpoint) && azureApiKey) {
-          const azure = createAzure({
-            resourceName: azureResourceName,
-            baseURL: azureEndpoint?.replace(/\/v1\/?$/, ''),
+        if (azureEndpoint && azureApiKey) {
+          const azureOpenai = createOpenAI({
             apiKey: azureApiKey,
+            baseURL: azureEndpoint,
+            compatibility: 'compatible',
           });
-          try {
-            return azure(azureDeploymentName) as unknown as LanguageModel;
-          } catch (error) {
-            console.error('Selected model "Azure GPT 5.5" is configured but failed to initialize.', error);
-            throw new Error('Failed to initialize selected model.');
-          }
+          return azureOpenai(azureDeploymentName);
         } else {
-          console.error('User selected "Azure GPT 5.5" but Azure environment variables are not set.');
+          console.error('User selected "Azure GPT 5.5" but AZURE_ENDPOINT and AZURE_API_KEY are not set.');
           throw new Error('Selected model is not configured.');
         }
     }
@@ -126,17 +118,13 @@ export async function getModel(requireVision: boolean = false): Promise<Language
     }
   }
 
-  if ((azureResourceName || azureEndpoint) && azureApiKey) {
-    const azure = createAzure({
-      resourceName: azureResourceName,
-      baseURL: azureEndpoint?.replace(/\/v1\/?$/, ''),
+  if (azureEndpoint && azureApiKey) {
+    const azureOpenai = createOpenAI({
       apiKey: azureApiKey,
+      baseURL: azureEndpoint,
+      compatibility: 'compatible',
     });
-    try {
-      return azure(azureDeploymentName) as unknown as LanguageModel;
-    } catch (error) {
-      console.warn('Azure OpenAI API unavailable, falling back to next provider:', error);
-    }
+    return azureOpenai(azureDeploymentName);
   }
 
   if (awsAccessKeyId && awsSecretAccessKey) {
