@@ -169,17 +169,21 @@ export async function saveSystemPrompt(
 export async function getSystemPrompt(
   userId: string
 ): Promise<string | null> {
-  if (!userId) return null
+  if (!userId || userId === 'anonymous') return null
 
   try {
+    // console.log(`getSystemPrompt: Fetching prompt for user: ${userId}`);
     const result = await db.select({ systemPrompt: users.systemPrompt })
       .from(users)
       .where(eq(users.id, userId))
       .limit(1);
 
     return result[0]?.systemPrompt || null;
-  } catch (error) {
-    console.error('getSystemPrompt: Error:', error)
+  } catch (error: any) {
+    console.error('getSystemPrompt: Error:', error.message || error);
+    if (error.stack) {
+      console.error('getSystemPrompt: Stack trace:', error.stack);
+    }
     return null
   }
 }

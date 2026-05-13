@@ -58,6 +58,14 @@ const models = [
     badge: "Expert",
     badgeVariant: "outline" as const,
   },
+  {
+    id: "Azure GPT 5.5",
+    name: "Azure GPT 5.5",
+    description: "Enterprise-grade intelligence powered by Azure AI Foundry, delivering high-reliability and security.",
+    icon: Cpu,
+    badge: "Enterprise",
+    badgeVariant: "outline" as const,
+  },
 ];
 
 export function ModelSelectionForm({ form }: ModelSelectionFormProps) {
