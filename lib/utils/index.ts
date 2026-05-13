@@ -5,7 +5,6 @@ import { createOpenAI } from '@ai-sdk/openai'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock'
 import { createXai } from '@ai-sdk/xai';
-import { createAzure } from '@ai-sdk/azure';
 import { v4 as uuidv4 } from 'uuid';
 import { LanguageModel } from 'ai'
 
@@ -33,7 +32,6 @@ export async function getModel(requireVision: boolean = false): Promise<Language
   const awsRegion = process.env.AWS_REGION;
   const bedrockModelId = process.env.BEDROCK_MODEL_ID || 'anthropic.claude-3-5-sonnet-20241022-v2:0';
   const openaiApiKey = process.env.OPENAI_API_KEY;
-  const azureResourceName = process.env.AZURE_RESOURCE_NAME;
   const azureApiKey = process.env.AZURE_API_KEY;
   const azureEndpoint = process.env.AZURE_ENDPOINT;
   const azureDeploymentName = process.env.AZURE_DEPLOYMENT_NAME || 'gpt-5.5';
@@ -84,59 +82,25 @@ export async function getModel(requireVision: boolean = false): Promise<Language
         }
       case 'Azure GPT 5.5':
         if (azureEndpoint && azureApiKey) {
-          const azureOpenAI = createOpenAI({
+          const azureOpenai = createOpenAI({
             baseURL: azureEndpoint,
             apiKey: azureApiKey,
+            compatibility: 'compatible',
           });
           try {
-            return azureOpenAI(azureDeploymentName);
+            return azureOpenai(azureDeploymentName);
           } catch (error) {
-            console.error('Selected model "Azure GPT 5.5" (via endpoint) failed to initialize.', error);
-            throw new Error('Failed to initialize selected model.');
-          }
-        } else if (azureResourceName && azureApiKey) {
-          const azure = createAzure({
-            resourceName: azureResourceName,
-            apiKey: azureApiKey,
-          });
-          try {
-            return azure(azureDeploymentName) as unknown as LanguageModel;
-          } catch (error) {
-            console.error('Selected model "Azure GPT 5.5" (via resource) failed to initialize.', error);
+            console.error('Selected model "Azure GPT 5.5" is configured but failed to initialize.', error);
             throw new Error('Failed to initialize selected model.');
           }
         } else {
-          console.error('User selected "Azure GPT 5.5" but Azure environment variables are not set.');
+          console.error('User selected "Azure GPT 5.5" but AZURE_ENDPOINT and AZURE_API_KEY are not set.');
           throw new Error('Selected model is not configured.');
         }
     }
   }
 
-  // Default behavior: Azure -> Gemini -> Grok -> Bedrock -> OpenAI
-  if (azureEndpoint && azureApiKey) {
-    const azureOpenAI = createOpenAI({
-      baseURL: azureEndpoint,
-      apiKey: azureApiKey,
-    });
-    try {
-      return azureOpenAI(azureDeploymentName);
-    } catch (error) {
-      console.warn('Azure OpenAI API (via endpoint) unavailable, falling back to next provider:', error);
-    }
-  }
-
-  if (azureResourceName && azureApiKey) {
-    const azure = createAzure({
-      resourceName: azureResourceName,
-      apiKey: azureApiKey,
-    });
-    try {
-      return azure(azureDeploymentName) as unknown as LanguageModel;
-    } catch (error) {
-      console.warn('Azure OpenAI API (via resource) unavailable, falling back to next provider:', error);
-    }
-  }
-
+  // Default behavior: Gemini -> Grok -> Azure -> Bedrock -> OpenAI
   if (gemini3ProApiKey) {
     const google = createGoogleGenerativeAI({
       apiKey: gemini3ProApiKey,
@@ -160,6 +124,18 @@ export async function getModel(requireVision: boolean = false): Promise<Language
     }
   }
 
+  if (azureEndpoint && azureApiKey) {
+    const azureOpenai = createOpenAI({
+      baseURL: azureEndpoint,
+      apiKey: azureApiKey,
+      compatibility: 'compatible',
+    });
+    try {
+      return azureOpenai(azureDeploymentName);
+    } catch (error) {
+      console.warn('Azure OpenAI API unavailable, falling back to next provider:', error);
+    }
+  }
 
   if (awsAccessKeyId && awsSecretAccessKey) {
     const bedrock = createAmazonBedrock({
