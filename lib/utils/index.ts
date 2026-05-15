@@ -99,6 +99,25 @@ export async function getModel(requireVision: boolean = false) {
   }
 
   // Default behavior: Gemini -> Grok -> Bedrock -> OpenAI
+
+   if (azureApiKey && azureEndpoint) {
+          const azure = createOpenAI({
+            baseURL: azureEndpoint,
+            apiKey: azureApiKey,
+          });
+          try {
+            return azure(azureDeploymentName);
+          } catch (error) {
+            console.error('Selected model "GPT-5.5" (Azure) is configured but failed to initialize.', error);
+            throw new Error('Failed to initialize selected model.');
+          }
+        } else {
+            console.error('User selected "GPT-5.5" but AZURE_API_KEY or AZURE_ENDPOINT is not set.');
+            throw new Error('Selected model is not configured.');
+        }
+    }
+  }
+
   if (gemini3ProApiKey) {
     const google = createGoogleGenerativeAI({
       apiKey: gemini3ProApiKey,
