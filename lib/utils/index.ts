@@ -43,83 +43,64 @@ export async function getModel(requireVision: boolean = false) {
             apiKey: xaiApiKey,
             baseURL: 'https://api.x.ai/v1',
           });
-          try {
-            return xai('grok-4-fast-non-reasoning');
-          } catch (error) {
-            console.error('Selected model "Grok 4.2" is configured but failed to initialize.', error);
-            throw new Error('Failed to initialize selected model.');
-          }
+          return xai('grok-4-fast-non-reasoning');
         } else {
-            console.error('User selected "Grok 4.2" but XAI_API_KEY is not set.');
-            throw new Error('Selected model is not configured.');
+          console.error('User selected "Grok 4.2" but XAI_API_KEY is not set.');
+          throw new Error('Selected model is not configured.');
         }
+
       case 'Gemini 3':
       case 'Gemini 3.1 Pro':
         if (gemini3ProApiKey) {
           const google = createGoogleGenerativeAI({
             apiKey: gemini3ProApiKey,
           });
-          try {
-            return google('gemini-3.1-pro-preview');
-          } catch (error) {
-            console.error('Selected model "Gemini 3.1 Pro" is configured but failed to initialize.', error);
-            throw new Error('Failed to initialize selected model.');
-          }
+          return google('gemini-3.1-pro-preview');
         } else {
-            console.error('User selected "Gemini 3.1 Pro" but GEMINI_3_PRO_API_KEY is not set.');
-            throw new Error('Selected model is not configured.');
+          console.error('User selected "Gemini 3.1 Pro" but GEMINI_3_PRO_API_KEY is not set.');
+          throw new Error('Selected model is not configured.');
         }
+
       case 'GPT-5.1':
         if (openaiApiKey) {
-          const openai = createOpenAI({
-            apiKey: openaiApiKey,
-          });
+          const openai = createOpenAI({ apiKey: openaiApiKey });
           return openai('gpt-4o');
         } else {
-            console.error('User selected "GPT-5.1" but OPENAI_API_KEY is not set.');
-            throw new Error('Selected model is not configured.');
+          console.error('User selected "GPT-5.1" but OPENAI_API_KEY is not set.');
+          throw new Error('Selected model is not configured.');
         }
+
       case 'GPT-5.5':
         if (azureApiKey && azureEndpoint) {
           const azure = createOpenAI({
             baseURL: azureEndpoint,
             apiKey: azureApiKey,
           });
-          try {
-            return azure(azureDeploymentName);
-          } catch (error) {
-            console.error('Selected model "GPT-5.5" (Azure) is configured but failed to initialize.', error);
-            throw new Error('Failed to initialize selected model.');
-          }
+          return azure(azureDeploymentName);
         } else {
-            console.error('User selected "GPT-5.5" but AZURE_API_KEY or AZURE_ENDPOINT is not set.');
-            throw new Error('Selected model is not configured.');
+          console.error('User selected "GPT-5.5" but AZURE_API_KEY or AZURE_ENDPOINT is not set.');
+          throw new Error('Selected model is not configured.');
         }
+
+      default:
+        console.warn(`Unknown selected model: ${selectedModel}, falling back to default.`);
     }
   }
 
-  // Default behavior: Azure -> Gemini -> Grok -> Bedrock -> OpenAI
+  // === Default fallback order: Azure → Gemini → Grok → Bedrock → OpenAI ===
   if (azureApiKey && azureEndpoint) {
     const azure = createOpenAI({
       baseURL: azureEndpoint,
       apiKey: azureApiKey,
     });
-    try {
-      return azure(azureDeploymentName);
-    } catch (error) {
-      console.warn('Azure GPT-5.5 unavailable, falling back to next provider:', error);
-    }
+    return azure(azureDeploymentName);
   }
 
   if (gemini3ProApiKey) {
     const google = createGoogleGenerativeAI({
       apiKey: gemini3ProApiKey,
     });
-    try {
-      return google('gemini-3.1-pro-preview');
-    } catch (error) {
-      console.warn('Gemini 3.1 Pro API unavailable, falling back to next provider:', error);
-    }
+    return google('gemini-3.1-pro-preview');
   }
 
   if (xaiApiKey) {
@@ -127,11 +108,7 @@ export async function getModel(requireVision: boolean = false) {
       apiKey: xaiApiKey,
       baseURL: 'https://api.x.ai/v1',
     });
-    try {
-      return xai('grok-4-fast-non-reasoning');
-    } catch (error) {
-      console.warn('xAI API unavailable, falling back to next provider:');
-    }
+    return xai('grok-4-fast-non-reasoning');
   }
 
   if (awsAccessKeyId && awsSecretAccessKey) {
@@ -144,14 +121,16 @@ export async function getModel(requireVision: boolean = false) {
         },
       },
     });
-    const model = bedrock(bedrockModelId, {
+    return bedrock(bedrockModelId, {
       additionalModelRequestFields: { top_k: 350 },
     });
-    return model;
   }
 
-  const openai = createOpenAI({
-    apiKey: openaiApiKey,
-  });
+  // Final fallback
+  if (!openaiApiKey) {
+    throw new Error('No model providers are configured. Please set at least one API key.');
+  }
+
+  const openai = createOpenAI({ apiKey: openaiApiKey });
   return openai('gpt-4o');
 }
