@@ -58,25 +58,23 @@ export async function getSupabaseUserAndSessionOnServer(): Promise<{
     return { user: null, session: null, error: new Error('Missing Supabase environment variables') };
   }
 
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       async get(name: string): Promise<string | undefined> {
-        const cookie = (await cookieStore).get(name); // Use the correct get method
-        return cookie?.value; // Return the value or undefined
+        const cookie = cookieStore.get(name);
+        return cookie?.value;
       },
       async set(name: string, value: string, options: CookieOptions): Promise<void> {
         try {
-          const store = await cookieStore;
-          store.set({ name, value, ...options }); // Set cookie with options
+          cookieStore.set({ name, value, ...options });
         } catch (error) {
           // console.warn(`[Auth] Failed to set cookie ${name}:`, error);
         }
       },
       async remove(name: string, options: CookieOptions): Promise<void> {
         try {
-          const store = await cookieStore;
-          store.set({ name, value: '', ...options, maxAge: 0 }); // Delete cookie by setting maxAge to 0
+          cookieStore.set({ name, value: '', ...options, maxAge: 0 });
         } catch (error) {
           // console.warn(`[Auth] Failed to delete cookie ${name}:`, error);
         }
