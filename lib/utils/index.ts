@@ -81,15 +81,16 @@ export async function getModel(requireVision: boolean = false) {
         }
       case 'GPT-5.5':
         if (azureApiKey && azureEndpoint) {
-          const azure = createOpenAI({
-            baseURL: azureEndpoint,
-            apiKey: azureApiKey,
-          });
           try {
+            const azure = createOpenAI({
+              baseURL: azureEndpoint,
+              apiKey: azureApiKey,
+              compatibility: 'compatible',
+            });
             return azure(azureDeploymentName);
           } catch (error) {
             console.error('Selected model "GPT-5.5" (Azure) is configured but failed to initialize.', error);
-            throw new Error('Failed to initialize selected model.');
+
           }
         } else {
             console.error('User selected "GPT-5.5" but AZURE_API_KEY or AZURE_ENDPOINT is not set.');
