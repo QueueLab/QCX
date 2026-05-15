@@ -58,6 +58,14 @@ const models = [
     badge: "Expert",
     badgeVariant: "outline" as const,
   },
+  {
+    id: "GPT-5.5",
+    name: "GPT-5.5",
+    description: "The next generation of OpenAI models, exclusively via Azure Foundry, delivering superior reasoning and efficiency.",
+    icon: Cpu,
+    badge: "Premium",
+    badgeVariant: "default" as const,
+  },
 ];
 
 export function ModelSelectionForm({ form }: ModelSelectionFormProps) {

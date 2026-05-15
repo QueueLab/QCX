@@ -31,6 +31,9 @@ export async function getModel(requireVision: boolean = false) {
   const awsRegion = process.env.AWS_REGION;
   const bedrockModelId = process.env.BEDROCK_MODEL_ID || 'anthropic.claude-3-5-sonnet-20241022-v2:0';
   const openaiApiKey = process.env.OPENAI_API_KEY;
+  const azureEndpoint = process.env.AZURE_ENDPOINT;
+  const azureApiKey = process.env.AZURE_API_KEY;
+  const azureDeploymentName = process.env.AZURE_DEPLOYMENT_NAME || 'gpt-5.5';
 
   if (selectedModel) {
     switch (selectedModel) {
@@ -74,6 +77,22 @@ export async function getModel(requireVision: boolean = false) {
           return openai('gpt-4o');
         } else {
             console.error('User selected "GPT-5.1" but OPENAI_API_KEY is not set.');
+            throw new Error('Selected model is not configured.');
+        }
+      case 'GPT-5.5':
+        if (azureApiKey && azureEndpoint) {
+          const azure = createOpenAI({
+            baseURL: azureEndpoint,
+            apiKey: azureApiKey,
+          });
+          try {
+            return azure(azureDeploymentName);
+          } catch (error) {
+            console.error('Selected model "GPT-5.5" (Azure) is configured but failed to initialize.', error);
+            throw new Error('Failed to initialize selected model.');
+          }
+        } else {
+            console.error('User selected "GPT-5.5" but AZURE_API_KEY or AZURE_ENDPOINT is not set.');
             throw new Error('Selected model is not configured.');
         }
     }
