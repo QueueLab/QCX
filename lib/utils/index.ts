@@ -21,6 +21,16 @@ export function generateUUID(): string {
  */
 export { generateUUID as nanoid };
 
+function isValidHttpsUrl(value: string | undefined): value is string {
+  if (!value) return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 export async function getModel(requireVision: boolean = false) {
   const selectedModel = await getSelectedModel();
 
@@ -71,14 +81,14 @@ export async function getModel(requireVision: boolean = false) {
         }
 
       case 'GPT-5.5':
-        if (azureApiKey && azureEndpoint) {
+        if (azureApiKey && isValidHttpsUrl(azureEndpoint)) {
           const azure = createOpenAI({
             baseURL: azureEndpoint,
             apiKey: azureApiKey,
           });
           return azure(azureDeploymentName);
         } else {
-          console.error('User selected "GPT-5.5" but AZURE_API_KEY or AZURE_ENDPOINT is not set.');
+          console.error('User selected "GPT-5.5" but AZURE_API_KEY or AZURE_ENDPOINT is not set or is not a valid HTTPS URL.');
           throw new Error('Selected model is not configured.');
         }
 
@@ -87,14 +97,9 @@ export async function getModel(requireVision: boolean = false) {
     }
   }
 
-  // === Default fallback order: Azure → Gemini → Grok → Bedrock → OpenAI ===
-  if (azureApiKey && azureEndpoint) {
-    const azure = createOpenAI({
-      baseURL: azureEndpoint,
-      apiKey: azureApiKey,
-    });
-    return azure(azureDeploymentName);
-  }
+  // === Default fallback order: Gemini → Grok → Bedrock → OpenAI → Azure ===
+  // Azure is last in the automatic fallback to avoid accidental use of placeholder credentials.
+  // It is still the primary provider when explicitly selected via the model picker.
 
   if (gemini3ProApiKey) {
     const google = createGoogleGenerativeAI({
@@ -126,10 +131,18 @@ export async function getModel(requireVision: boolean = false) {
     });
   }
 
+  if (azureApiKey && isValidHttpsUrl(azureEndpoint)) {
+    const azure = createOpenAI({
+      baseURL: azureEndpoint,
+      apiKey: azureApiKey,
+    });
+    return azure(azureDeploymentName);
+  }
+
   // Final fallback
   if (!openaiApiKey) {
     throw new Error('No model providers are configured. Please set at least one API key.');
-  }
+
 
   const openai = createOpenAI({ apiKey: openaiApiKey });
   return openai('gpt-4o');
