@@ -1,5 +1,5 @@
 import { CoreMessage, streamObject } from 'ai'
-import { getModel } from '@/lib/utils'
+import { getModel } from '@/lib/utils/model'
 import { z } from 'zod'
 import { tavily } from '@tavily/core'
 
