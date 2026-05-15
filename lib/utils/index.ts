@@ -98,7 +98,19 @@ export async function getModel(requireVision: boolean = false) {
     }
   }
 
-  // Default behavior: Gemini -> Grok -> Bedrock -> OpenAI
+  // Default behavior: Azure -> Gemini -> Grok -> Bedrock -> OpenAI
+  if (azureApiKey && azureEndpoint) {
+    const azure = createOpenAI({
+      baseURL: azureEndpoint,
+      apiKey: azureApiKey,
+    });
+    try {
+      return azure(azureDeploymentName);
+    } catch (error) {
+      console.warn('Azure GPT-5.5 unavailable, falling back to next provider:', error);
+    }
+  }
+
   if (gemini3ProApiKey) {
     const google = createGoogleGenerativeAI({
       apiKey: gemini3ProApiKey,
