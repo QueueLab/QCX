@@ -50,14 +50,24 @@ export async function getChat(id: string, userId: string): Promise<DrizzleChat |
 }
 
 /**
- * Retrieves all messages for a specific chat.
+ * Retrieves all messages for a specific chat, ensuring authorization.
  */
 export async function getChatMessages(chatId: string): Promise<DrizzleMessage[]> {
   if (!chatId) {
     console.warn('getChatMessages called without chatId');
     return [];
   }
+
+  const userId = await getCurrentUserIdOnServer();
+
   try {
+    // Verify user has access to this chat (either as owner or if it's public)
+    const chat = await dbGetChat(chatId, userId || '');
+    if (!chat) {
+      console.warn(`Unauthorized access attempt to messages for chat ${chatId} by user ${userId}`);
+      return [];
+    }
+
     return dbGetMessagesByChatId(chatId);
   } catch (error) {
     console.error(`Error fetching messages for chat ${chatId} in getChatMessages:`, error);
