@@ -24,7 +24,7 @@ export function HistorySidebar() {
             History
           </SheetTitle>
         </SheetHeader>
-        <div className="my-2 h-full pb-12 md:pb-10">
+        <div className="my-2 h-full pb-12 lg:pb-10">
           <Suspense fallback={<HistorySkeleton />}>
             <ChatHistoryClient />
           </Suspense>

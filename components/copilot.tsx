@@ -115,7 +115,7 @@ export const Copilot: React.FC<CopilotProps> = React.memo(({ inquiry }: CopilotP
   const completedCard = useMemo(() => {
     if (!completed) return null;
     return (
-      <Card className="p-3 md:p-4 w-full flex justify-between items-center">
+      <Card className="p-3 lg:p-4 w-full flex justify-between items-center">
         <div className="flex items-center space-x-2 flex-1 min-w-0">
           <h5 className="text-muted-foreground text-xs truncate">
             {updatedQuery}

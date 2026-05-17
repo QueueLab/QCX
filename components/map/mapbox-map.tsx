@@ -285,7 +285,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     map.current.addControl(drawRef.current, 'top-right')
 
     // Add navigation control only on desktop
-    if (window.innerWidth > 768) {
+    if (window.innerWidth > 1024) {
       navControlRef.current = new mapboxgl.NavigationControl()
       map.current.addControl(navControlRef.current, 'top-left')
     }
@@ -387,7 +387,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         }
         initialPitch = pitch ?? tilt ?? 0;
         initialBearing = bearing ?? heading ?? 0;
-      } else if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      } else if (typeof window !== 'undefined' && window.innerWidth < 1024) {
         initialZoom = 1.3;
       }
 

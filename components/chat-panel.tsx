@@ -190,7 +190,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
         'flex flex-col items-start',
         isMobile
           ? 'w-full h-full'
-          : 'sticky bottom-0 bg-background z-10 w-full border-t border-border px-2 py-3 md:px-4'
+          : 'sticky bottom-0 bg-background z-10 w-full border-t border-border px-2 py-3 lg:px-4'
       )}
     >
       <form

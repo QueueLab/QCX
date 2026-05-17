@@ -19,7 +19,7 @@ export function CopilotDisplay({ content }: CopilotDisplayProps) {
       .join(', ')
 
     return (
-      <Card className="p-3 md:p-4 w-full flex justify-between items-center">
+      <Card className="p-3 lg:p-4 w-full flex justify-between items-center">
         <h5 className="text-muted-foreground text-xs truncate">{query}</h5>
         <Check size={16} className="text-green-500 w-4 h-4" />
       </Card>

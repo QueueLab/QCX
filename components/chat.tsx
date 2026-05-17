@@ -56,7 +56,7 @@ export function Chat({ id }: ChatProps) {
   useEffect(() => {
     // Check if device is mobile
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768)
+      setIsMobile(window.innerWidth < 1024)
     }
     
     // Initial check
@@ -187,7 +187,7 @@ export function Chat({ id }: ChatProps) {
       <HeaderSearchButton />
       <div className="flex justify-start items-start">
         {/* This is the new div for scrolling */}
-        <div className="w-1/2 flex flex-col space-y-3 md:space-y-4 px-8 sm:px-12 pt-16 md:pt-20 pb-4 h-[calc(100vh-0.5in)] overflow-y-auto">
+        <div className="w-1/2 flex flex-col space-y-3 lg:space-y-4 px-8 sm:px-12 pt-16 lg:pt-20 pb-4 h-[calc(100vh-0.5in)] overflow-y-auto">
         {isCalendarOpen ? (
           <CalendarNotepad chatId={id} />
         ) : (

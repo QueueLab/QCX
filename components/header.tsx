@@ -44,7 +44,7 @@ export const Header = () => {
   return (
     <>
       <PurchaseCreditsPopup isOpen={isPurchaseOpen} onClose={() => setIsPurchaseOpen(false)} />
-    <header className="fixed w-full p-1 md:p-2 hidden md:flex justify-between items-center z-[60] backdrop-blur bg-background/95 border-b border-border/40">
+    <header className="fixed w-full p-1 lg:p-2 hidden lg:flex justify-between items-center z-[60] backdrop-blur bg-background/95 border-b border-border/40">
       <div>
         <a href="/">
           <span className="sr-only">Chat</span>
@@ -66,7 +66,7 @@ export const Header = () => {
         </h1>
       </div>
       
-      <div className="flex-1 hidden md:flex justify-center gap-10 items-center z-10">
+      <div className="flex-1 hidden lg:flex justify-center gap-10 items-center z-10">
         <ProfileToggle/>
         
         <MapToggle />
@@ -87,7 +87,7 @@ export const Header = () => {
       </div>
 
       {/* Mobile menu buttons */}
-      <div className="flex md:hidden gap-2">
+      <div className="flex lg:hidden gap-2">
         
         <Button variant="ghost" size="icon" onClick={handleUsageToggle}>
           <TentTree className="h-[1.2rem] w-[1.2rem]" />
