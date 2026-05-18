@@ -113,7 +113,7 @@ export function HeaderSearchButton() {
           }
         }
       } else if (mapProvider === 'google') {
-        const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+        const apiKey = (window as any).process?.env?.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
         if (!apiKey || !mapData.cameraState) {
           toast.error('Google Maps API key or camera state is not available.')
           setIsAnalyzing(false)
@@ -171,7 +171,7 @@ export function HeaderSearchButton() {
       variant="ghost"
       size="icon"
       onClick={handleResolutionSearch}
-      disabled={isAnalyzing || !map || !actions}
+      disabled={isAnalyzing || (mapProvider === 'mapbox' && !map) || !actions}
       title="Analyze current map view"
     >
       {isAnalyzing ? (
@@ -183,7 +183,7 @@ export function HeaderSearchButton() {
   )
 
   const mobileButton = (
-    <Button variant="ghost" size="icon" onClick={handleResolutionSearch} disabled={isAnalyzing || !map || !actions} data-testid="mobile-search-button">
+    <Button variant="ghost" size="icon" onClick={handleResolutionSearch} disabled={isAnalyzing || (mapProvider === 'mapbox' && !map) || !actions} data-testid="mobile-search-button">
       {isAnalyzing ? (
         <div className="h-[1.2rem] w-[1.2rem] animate-spin rounded-full border-b-2 border-current"></div>
       ) : (
