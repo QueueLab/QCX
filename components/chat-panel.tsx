@@ -33,6 +33,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
   const { mapProvider } = useSettingsStore()
   const [isMobile, setIsMobile] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [suggestions, setSuggestionsState] = useState<PartialRelated | null>(null)
   const setSuggestions = useCallback((s: PartialRelated | null) => {
     setSuggestionsState(s)
@@ -156,6 +157,16 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     },
     [mapData, setSuggestions]
   )
+  useEffect(() => {
+    if (selectedFile && selectedFile.type.startsWith("image/")) {
+      const url = URL.createObjectURL(selectedFile)
+      setPreviewUrl(url)
+      return () => URL.revokeObjectURL(url)
+    } else {
+      setPreviewUrl(null)
+    }
+  }, [selectedFile])
+
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -290,9 +301,20 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
         </div>
       </form>
       {selectedFile && (
-        <div className="w-full px-4 pb-2 mb-2">
-          <div className="flex items-center justify-between p-2 bg-muted rounded-lg">
-            <span className="text-sm text-muted-foreground truncate max-w-xs">
+        <div className="w-full px-4 pb-2 mb-2" data-testid="attached-image">
+          <div className="relative flex items-center justify-between p-2 bg-muted rounded-lg group">
+            {previewUrl ? (
+              <div className="relative mr-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={previewUrl}
+                  alt="Preview"
+                  className="h-16 w-16 object-cover rounded-md border border-border"
+                  data-testid="image-preview"
+                />
+              </div>
+            ) : null}
+            <span className="text-sm text-muted-foreground truncate max-w-xs flex-1">
               {selectedFile.name}
             </span>
             <Button variant="ghost" size="icon" onClick={clearAttachment} data-testid="clear-attachment-button">
