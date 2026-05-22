@@ -20,6 +20,11 @@ import { useUsageToggle } from './usage-toggle-context'
 import { useProfileToggle } from './profile-toggle-context'
 import { useHistoryToggle } from './history-toggle-context'
 import { useState, useEffect } from 'react'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger
+} from '@/components/ui/tooltip'
 
 export const Header = () => {
   const { toggleCalendar } = useCalendarToggle()
@@ -52,15 +57,26 @@ export const Header = () => {
       </div>
       
       <div className="absolute left-1 flex items-center">
-        <Button variant="ghost" size="icon" onClick={toggleHistory} data-testid="logo-history-toggle">
-          <Image
-            src="/images/logo.svg"
-            alt="Logo"
-            width={20}
-            height={20}
-            className="h-5 w-auto"
-          />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleHistory}
+              data-testid="logo-history-toggle"
+              aria-label="Toggle history"
+            >
+              <Image
+                src="/images/logo.svg"
+                alt="Logo"
+                width={20}
+                height={20}
+                className="h-5 w-auto"
+              />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Toggle history</TooltipContent>
+        </Tooltip>
         <h1 className="text-2xl font-poppins font-semibold text-primary">
           QCX
         </h1>
@@ -71,15 +87,36 @@ export const Header = () => {
         
         <MapToggle />
         
-        <Button variant="ghost" size="icon" onClick={toggleCalendar} title="Open Calendar" data-testid="calendar-toggle">
-          <CalendarDays className="h-[1.2rem] w-[1.2rem]" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleCalendar}
+              data-testid="calendar-toggle"
+              aria-label="Open calendar"
+            >
+              <CalendarDays className="h-[1.2rem] w-[1.2rem]" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Open calendar</TooltipContent>
+        </Tooltip>
         
         <div id="header-search-portal" className="contents" />
         
-        <Button variant="ghost" size="icon" onClick={handleUsageToggle}>
-          <TentTree className="h-[1.2rem] w-[1.2rem]" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleUsageToggle}
+              aria-label="Open usage"
+            >
+              <TentTree className="h-[1.2rem] w-[1.2rem]" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Open usage</TooltipContent>
+        </Tooltip>
         
         <ModeToggle />
         
@@ -88,10 +125,19 @@ export const Header = () => {
 
       {/* Mobile menu buttons */}
       <div className="flex md:hidden gap-2">
-        
-        <Button variant="ghost" size="icon" onClick={handleUsageToggle}>
-          <TentTree className="h-[1.2rem] w-[1.2rem]" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleUsageToggle}
+              aria-label="Open usage"
+            >
+              <TentTree className="h-[1.2rem] w-[1.2rem]" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Open usage</TooltipContent>
+        </Tooltip>
         <ProfileToggle/>
       </div>
     </header>
