@@ -14,10 +14,6 @@ export interface ToolProps {
 
 export const getTools = ({ uiStream, fullResponse, mapProvider }: ToolProps) => {
   const tools: any = {
-    search: searchTool({
-      uiStream,
-      fullResponse
-    }),
     retrieve: retrieveTool({
       uiStream,
       fullResponse
@@ -25,6 +21,13 @@ export const getTools = ({ uiStream, fullResponse, mapProvider }: ToolProps) => 
     geospatialQueryTool: geospatialTool({
       uiStream,
       mapProvider
+    })
+  }
+
+  if (process.env.TAVILY_API_KEY) {
+    tools.search = searchTool({
+      uiStream,
+      fullResponse
     })
   }
 
