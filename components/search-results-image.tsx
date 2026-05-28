@@ -21,7 +21,6 @@ import {
 import { useEffect, useState } from 'react'
 import { PlusCircle } from 'lucide-react'
 import { motion } from 'framer-motion'
-import 'glassmorphic/glassmorphic.css'
 
 interface SearchResultsImageSectionProps {
   images: string[]
@@ -67,7 +66,7 @@ export const SearchResultsImageSection: React.FC<
         <Dialog key={index}>
           <DialogTrigger asChild>
             <motion.div
-              className="w-[calc(50%-0.5rem)] md:w-[calc(25%-0.5rem)] aspect-video cursor-pointer relative glassmorphic"
+              className="w-[calc(50%-0.5rem)] md:w-[calc(25%-0.5rem)] aspect-video cursor-pointer relative bg-background/80 backdrop-blur-md border border-border/30"
               onClick={() => setSelectedIndex(index)}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -95,7 +94,7 @@ export const SearchResultsImageSection: React.FC<
               )}
             </motion.div>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-3xl max-h-[80vh] overflow-auto glassmorphic">
+          <DialogContent className="sm:max-w-3xl max-h-[80vh] overflow-auto z-[70] bg-background/80 backdrop-blur-md border border-border/30">
             <DialogHeader>
               <DialogTitle>Search Images</DialogTitle>
               <DialogDescription className="text-sm">{query}</DialogDescription>
