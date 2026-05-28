@@ -32,6 +32,7 @@ https://deepwiki.com/QueueLab/QCX
 - Text streaming / Generative UI: [Vercel AI SDK](https://sdk.vercel.ai/docs)
 - Generative Model [Varies](https://openai.com/)
 - Search API: [Tavily AI](https://tavily.com/) / [Exa AI](https://exa.ai/)
+- Serverless Database: [Upstash](https://upstash.com/)
 - Component library: [shadcn/ui](https://ui.shadcn.com/)
 - Headless component primitives: [Radix UI](https://www.radix-ui.com/)
 - Styling: [Tailwind CSS](https://tailwindcss.com/)
@@ -49,32 +50,31 @@ bun run build
 bun run dev
 ```
 
-### 3. Fill out secrets
+### 3. Setting up Upstash Redis
+
+Follow the guide below to set up Upstash Redis. Create a database and obtain `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`. Refer to the [Upstash guide](https://upstash.com/blog/rag-chatbot-upstash#setting-up-upstash-redis) for instructions on how to proceed.
+
+### 4. Fill out secrets
 
 ```
 cp .env.local.example .env.local
 ```
 
-Your `.env.local` file should look like this:
+Your .env.local file should look like this:
 
 ```
-# xAI API key retrieved here: https://console.x.ai/
+# XAI API key retrieved here: https://platform.openai.com/api-keys
 XAI_API_KEY=
 
 # Tavily API Key retrieved here: https://app.tavily.com/home
 TAVILY_API_KEY=
 
-# Mapbox access token
-NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=
-
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-DATABASE_URL=
+# Upstash Redis URL and Token retrieved here: https://console.upstash.com/redis
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=
+#Mapbox access token
+NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN
 ```
-
-See `.env.local.example` for the full list of variables including optional providers (OpenAI, AWS Bedrock, Google Maps, Serper, Exa, GCP).
 
 
 
@@ -82,7 +82,7 @@ See `.env.local.example` for the full list of variables including optional provi
 
 _Note: This project focuses on Generative UI and requires complex output from LLMs. Currently, it's assumed that the official state of the art models will be used. Although it's possible to set up other models, if you use an Standard-compatible model, but we don't guarantee that it'll work._
 
-### 4. Run app locally
+### 5. Run app locally
 
 ```
 bun run dev

@@ -50,6 +50,7 @@
     "@turf/turf": "^7.2.0",
     "@types/mapbox__mapbox-gl-draw": "^1.4.8",
     "@types/pg": "^8.15.4",
+    "@upstash/redis": "^1.35.0",
     "@vercel/analytics": "^1.5.0",
     "@vercel/speed-insights": "^1.2.0",
     "@vis.gl/react-google-maps": "^1.7.1",
