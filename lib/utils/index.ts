@@ -79,18 +79,7 @@ export async function getModel(requireVision: boolean = false) {
     }
   }
 
-  // Default behavior: Gemini -> Grok -> Bedrock -> OpenAI
-  if (gemini3ProApiKey) {
-    const google = createGoogleGenerativeAI({
-      apiKey: gemini3ProApiKey,
-    });
-    try {
-      return google('gemini-3.1-pro-preview');
-    } catch (error) {
-      console.warn('Gemini 3.1 Pro API unavailable, falling back to next provider:', error);
-    }
-  }
-
+  // Default behavior: Grok -> Gemini -> Bedrock -> OpenAI
   if (xaiApiKey) {
     const xai = createXai({
       apiKey: xaiApiKey,
@@ -100,6 +89,17 @@ export async function getModel(requireVision: boolean = false) {
       return xai('grok-4-fast-non-reasoning');
     } catch (error) {
       console.warn('xAI API unavailable, falling back to next provider:');
+    }
+  }
+
+  if (gemini3ProApiKey) {
+    const google = createGoogleGenerativeAI({
+      apiKey: gemini3ProApiKey,
+    });
+    try {
+      return google('gemini-3.1-pro-preview');
+    } catch (error) {
+      console.warn('Gemini 3.1 Pro API unavailable, falling back to next provider:', error);
     }
   }
 
