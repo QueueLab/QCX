@@ -1,5 +1,4 @@
 import { createStreamableValue } from 'ai/rsc'
-import Exa from 'exa-js'
 import { tavily } from '@tavily/core'
 import { searchSchema } from '@/lib/schema/search'
 import { Card } from '@/components/ui/card'
@@ -39,22 +38,18 @@ export const searchTool = ({ uiStream, fullResponse }: ToolProps) => ({
     const filledQuery =
       query.length < 5 ? query + ' '.repeat(5 - query.length) : query
     let searchResult
-    const searchAPI: 'tavily' | 'exa' = 'tavily'
     try {
-      searchResult =
-        searchAPI === 'tavily'
-          ? await tavilySearch(
-              filledQuery,
-              max_results,
-              search_depth,
-              include_answer,
-              topic,
-              time_range,
-              include_images,
-              include_image_descriptions,
-              include_raw_content
-            )
-          : await exaSearch(query)
+      searchResult = await tavilySearch(
+        filledQuery,
+        max_results,
+        search_depth,
+        include_answer,
+        topic,
+        time_range,
+        include_images,
+        include_image_descriptions,
+        include_raw_content
+      )
     } catch (error) {
       console.error('Search API error:', error)
       hasError = true
@@ -100,13 +95,4 @@ async function tavilySearch(
   })
 
   return { ...response, results: response.results.reverse() }
-}
-
-async function exaSearch(query: string, maxResults: number = 10): Promise<any> {
-  const apiKey = process.env.EXA_API_KEY
-  const exa = new Exa(apiKey)
-  return exa.searchAndContents(query, {
-    highlights: true,
-    numResults: maxResults
-  })
 }
