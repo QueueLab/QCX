@@ -5,16 +5,18 @@ import * as schema from './schema';
 
 dotenv.config({ path: '.env.local' });
 
-if (!process.env.DATABASE_URL) {
-  throw new Error('DATABASE_URL environment variable is not set for Drizzle client');
+const databaseUrl = process.env.DATABASE_URL;
+
+if (!databaseUrl) {
+  console.warn('Warning: DATABASE_URL environment variable is not set for Drizzle client.');
 }
 
 const poolConfig: PoolConfig = {
-  connectionString: process.env.DATABASE_URL,
+  connectionString: databaseUrl,
 };
 
 // Conditionally apply SSL for Supabase URLs
-if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('supabase.co')) {
+if (databaseUrl && databaseUrl.includes('supabase.co')) {
   poolConfig.ssl = {
     rejectUnauthorized: false,
   };
