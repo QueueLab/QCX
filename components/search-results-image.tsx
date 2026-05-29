@@ -66,7 +66,7 @@ export const SearchResultsImageSection: React.FC<
         <Dialog key={index}>
           <DialogTrigger asChild>
             <motion.div
-              className="w-[calc(50%-0.5rem)] md:w-[calc(25%-0.5rem)] aspect-video cursor-pointer relative bg-background/80 backdrop-blur-md border border-border/30"
+              className="w-[calc(50%_-_0.5rem)] md:w-[calc(25%_-_0.5rem)] aspect-video cursor-pointer relative bg-background/80 backdrop-blur-md border border-border/30"
               onClick={() => setSelectedIndex(index)}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
