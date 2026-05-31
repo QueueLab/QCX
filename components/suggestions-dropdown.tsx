@@ -23,7 +23,7 @@ export const SuggestionsDropdown: React.FC<SuggestionsDropdownProps> = ({
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   const suggestionItems = useMemo(
-    () => suggestions?.items?.filter(item => item?.query) || [],
+    () => (suggestions?.items?.filter(query => query) as string[]) || [],
     [suggestions]
   )
 
@@ -47,7 +47,7 @@ export const SuggestionsDropdown: React.FC<SuggestionsDropdownProps> = ({
       } else if (e.key === 'Enter') {
         e.preventDefault()
         if (selectedIndex >= 0 && suggestionItems[selectedIndex]) {
-          onSelect(suggestionItems[selectedIndex].query!)
+          onSelect(suggestionItems[selectedIndex])
         }
       } else if (e.key === 'Escape') {
         onClose()
@@ -92,8 +92,8 @@ export const SuggestionsDropdown: React.FC<SuggestionsDropdownProps> = ({
     >
       <div className="p-2">
         <p className="text-sm text-muted-foreground px-2 pb-1">Suggestions</p>
-        {suggestionItems.map((item, index) => {
-          if (!item?.query) return null
+        {suggestionItems.map((query, index) => {
+          if (!query) return null
           return (
             <Button
               key={index}
@@ -102,11 +102,11 @@ export const SuggestionsDropdown: React.FC<SuggestionsDropdownProps> = ({
                 'w-full justify-start px-2 py-1 h-fit font-normal text-accent-foreground whitespace-normal text-left',
                 selectedIndex === index && 'bg-accent'
               )}
-              onClick={() => onSelect(item.query!)}
+              onClick={() => onSelect(query)}
               onMouseEnter={() => setSelectedIndex(index)}
             >
               <ArrowRight className="h-4 w-4 mr-2 flex-shrink-0" />
-              {item.query}
+              {query}
             </Button>
           )
         })}

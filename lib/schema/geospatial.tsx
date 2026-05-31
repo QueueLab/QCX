@@ -5,14 +5,18 @@ import { z } from 'zod';
 // queryType are conveyed to the LLM via the queryType description; runtime
 // behavior in the tool's execute() already tolerates missing fields per
 // queryType, so loosening the schema introduces no new failure modes.
+//
+// Compatibility Note: Following the established flattening pattern,
+// nested 'coordinates' object has been replaced with top-level 'latitude'
+// and 'longitude' fields.
 
 export const geospatialQuerySchema = z.object({
   queryType: z.enum(['search', 'geocode', 'reverse', 'directions', 'distance', 'map'])
     .describe(
       "Type of geospatial query. Set the corresponding fields: " +
-      "'search' → query (optionally coordinates, radius, maxResults); " +
+      "'search' → query (optionally latitude/longitude, radius, maxResults); " +
       "'geocode' → location (optionally maxResults); " +
-      "'reverse' → coordinates (optionally maxResults); " +
+      "'reverse' → latitude + longitude (optionally maxResults); " +
       "'directions' → origin + destination (optionally mode); " +
       "'distance' → origin + destination (optionally mode); " +
       "'map' → location."
@@ -25,12 +29,10 @@ export const geospatialQuerySchema = z.object({
     .min(1)
     .optional()
     .describe("Location to geocode or render as a map (used by 'geocode' and 'map')"),
-  coordinates: z.object({
-    latitude: z.number().min(-90).max(90),
-    longitude: z.number().min(-180).max(180)
-  })
-    .optional()
-    .describe("Coordinates (required for 'reverse', optional proximity hint for 'search')"),
+  latitude: z.number().min(-90).max(90).optional()
+    .describe("Latitude for reverse geocoding or map centering (used by 'reverse', optional for 'search')"),
+  longitude: z.number().min(-180).max(180).optional()
+    .describe("Longitude for reverse geocoding or map centering (used by 'reverse', optional for 'search')"),
   origin: z.string()
     .min(1)
     .optional()

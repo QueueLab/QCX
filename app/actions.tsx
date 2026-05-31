@@ -30,7 +30,7 @@ import { MapQueryHandler } from '@/components/map/map-query-handler'
 
 // Define the type for related queries
 type RelatedQueries = {
-  items: { query: string }[]
+  items: string[]
 }
 
 async function submit(formData?: FormData, skip?: boolean) {

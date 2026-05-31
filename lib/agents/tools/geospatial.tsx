@@ -241,7 +241,7 @@ Uses the Mapbox Search Box Text Search API endpoint to power searching for and g
 ,
   parameters: geospatialQuerySchema,
   execute: async (params: z.infer<typeof geospatialQuerySchema>) => {
-    const { queryType, includeMap = true } = params;
+    const { queryType, includeMap = true, latitude, longitude } = params;
     console.log('[GeospatialTool] Execute called with:', params, 'and map provider:', mapProvider);
 
     const uiFeedbackStream = createStreamableValue<string>();
@@ -275,19 +275,19 @@ Uses the Mapbox Search Box Text Search API endpoint to power searching for and g
           // as I don't have a way to inspect it at the moment.
           const place = (gsr as any).results[0].place;
           if (place) {
-            const { latitude, longitude } = place.coordinates;
+            const { latitude: lat, longitude: lng } = place.coordinates;
             const place_name = place.displayName;
 
             const mcpData: McpResponse = {
               location: {
-                latitude,
-                longitude,
+                latitude: lat,
+                longitude: lng,
                 place_name,
               },
             };
 
             if (mapProvider === 'google') {
-              mcpData.mapUrl = getGoogleStaticMapUrl(latitude, longitude);
+              mcpData.mapUrl = getGoogleStaticMapUrl(lat, lng);
             }
 
             feedbackMessage = `Found location: ${place_name}`;
@@ -355,12 +355,18 @@ Uses the Mapbox Search Box Text Search API endpoint to power searching for and g
             return { places: [params.origin, params.destination], includeMapPreview: includeMap, mode: params.mode || 'driving' };
           }
           case 'reverse': { 
-            if (!params.coordinates) throw new Error("'reverse' query requires coordinates");
-            return { searchText: `${params.coordinates.latitude},${params.coordinates.longitude}`, includeMapPreview: includeMap, maxResults: params.maxResults || 5 };
+            if (latitude === undefined || longitude === undefined) throw new Error("'reverse' query requires latitude and longitude");
+            return { searchText: `${latitude},${longitude}`, includeMapPreview: includeMap, maxResults: params.maxResults || 5 };
           }
           case 'search': {
             if (!params.query) throw new Error("'search' query requires query");
-            return { searchText: params.query, includeMapPreview: includeMap, maxResults: params.maxResults || 5, ...(params.coordinates && { proximity: `${params.coordinates.latitude},${params.coordinates.longitude}` }), ...(params.radius && { radius: params.radius }) };
+            return {
+              searchText: params.query,
+              includeMapPreview: includeMap,
+              maxResults: params.maxResults || 5,
+              ...(latitude !== undefined && longitude !== undefined && { proximity: `${latitude},${longitude}` }),
+              ...(params.radius && { radius: params.radius })
+            };
           }
           case 'geocode':
           case 'map': {

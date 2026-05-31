@@ -50,8 +50,8 @@ export const SearchRelated: React.FC<SearchRelatedProps> = React.memo(({
   // OPTIMIZATION: Memoize filtered and mapped items
   const relatedItems = useMemo(() => {
     return data?.items
-      ?.filter(item => item?.query !== '')
-      .map((item, index) => (
+      ?.filter(query => query !== '')
+      .map((query, index) => (
         <div 
           key={`related-${index}`}
           className="flex items-start w-full animate-in fade-in slide-in-from-bottom-2 duration-300"
@@ -60,9 +60,9 @@ export const SearchRelated: React.FC<SearchRelatedProps> = React.memo(({
           <Button
             variant="link"
             className="flex-1 justify-start px-0 py-1 h-fit font-semibold text-accent-foreground/50 whitespace-normal text-left"
-            onClick={() => handleRelatedClick(item?.query || '')}
+            onClick={() => handleRelatedClick(query || '')}
           >
-            {item?.query}
+            {query}
           </Button>
         </div>
       )) || []
