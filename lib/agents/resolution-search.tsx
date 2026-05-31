@@ -1,44 +1,9 @@
 import { CoreMessage, streamObject } from 'ai'
 import { getModel } from '@/lib/utils'
-import { z } from 'zod'
 import { tavily } from '@tavily/core'
+import { resolutionSearchSchema } from '@/lib/schema/resolution-search'
 
 // This agent is now a pure data-processing module, with no UI dependencies.
-
-// Define the schema for the structured response from the AI.
-const resolutionSearchSchema = z.object({
-  summary: z.string().describe('A detailed text summary of the analysis, including land feature classification, points of interest, relevant current news, and temporal context.'),
-  geoJson: z.object({
-    type: z.literal('FeatureCollection'),
-    features: z.array(z.object({
-      type: z.literal('Feature'),
-      geometry: z.object({
-        type: z.string(), // e.g., 'Point', 'Polygon'
-        coordinates: z.any(),
-      }),
-      properties: z.object({
-        name: z.string(),
-        description: z.string().optional(),
-      }),
-    })),
-  }).describe('A GeoJSON object containing points of interest and classified land features to be overlaid on the map.'),
-  extractedCoordinates: z.object({
-    latitude: z.number(),
-    longitude: z.number()
-  }).optional().describe('The extracted geocoordinates of the center of the image.'),
-  cogInfo: z.object({
-    applicable: z.boolean(),
-    description: z.string().optional()
-  }).optional().describe('Information about whether Cloud Optimized GeoTIFF (COG) data is applicable or available for this area.'),
-  newsContext: z.object({
-    hasRecentNews: z.boolean(),
-    newsItems: z.array(z.object({
-      title: z.string(),
-      summary: z.string(),
-      relevance: z.string()
-    })).optional()
-  }).optional().describe('Recent news and events relevant to the analyzed location.')
-})
 
 export interface DrawnFeature {
   id: string;
@@ -162,7 +127,7 @@ Use these user-drawn areas/lines as primary areas of interest for your analysis.
 4. **Coordinate Extraction:** If possible, confirm or refine the geocoordinates (latitude/longitude) of the center of the image.
 5. **COG Applicability:** Determine if this location would benefit from Cloud Optimized GeoTIFF (COG) analysis for high-precision temporal or spectral data.
 6. **News Integration:** Reference any recent news or events that may be relevant to the current state of the location.
-7. **Structured Output:** Return your findings in a structured JSON format including summary, geoJson, and newsContext.
+7. **Structured Output:** Return your findings in a structured JSON format including summary, geoJson (if any), news context, and any extracted coordinates or COG information. Use the provided schema.
 
 Your analysis should be based on the visual information in the image, the temporal context provided, and your general knowledge. Do not attempt to access external websites or perform web searches beyond what has been provided.
 
