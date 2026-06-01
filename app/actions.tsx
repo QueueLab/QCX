@@ -114,11 +114,30 @@ async function submit(formData?: FormData, skip?: boolean) {
         const analysisResult = await streamResult.object;
         summaryStream.done(analysisResult.summary || 'Analysis complete.');
 
-        if (analysisResult.geoJson) {
+        // Reconstruct standard GeoJSON from flattened schema if present
+        let geoJson: FeatureCollection | null = null;
+        if (analysisResult.geoJson && analysisResult.geoJson.features) {
+          geoJson = {
+            type: 'FeatureCollection',
+            features: analysisResult.geoJson.features.map(f => ({
+              type: 'Feature',
+              geometry: {
+                type: f.geometryType as any,
+                coordinates: f.coordinates as any
+              },
+              properties: {
+                name: f.name,
+                description: f.description
+              }
+            }))
+          };
+        }
+
+        if (geoJson) {
           uiStream.append(
             <GeoJsonLayer
               id={groupeId}
-              data={analysisResult.geoJson as FeatureCollection}
+              data={geoJson}
             />
           );
         }
@@ -171,6 +190,7 @@ async function submit(formData?: FormData, skip?: boolean) {
               role: 'assistant',
               content: JSON.stringify({
                 ...analysisResult,
+                geoJson: geoJson, // Use reconstructed GeoJSON for storage/UI
                 image: dataUrl,
                 mapboxImage: mapboxDataUrl,
                 googleImage: googleDataUrl

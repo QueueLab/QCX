@@ -346,12 +346,27 @@ Uses the Mapbox Search Box Text Search API endpoint to power searching for and g
       // Build arguments
       const toolArgs = (() => {
         switch (queryType) {
-          case 'directions': return { waypoints: [params.origin, params.destination], includeMapPreview: includeMap, profile: params.mode };
-          case 'distance': return { places: [params.origin, params.destination], includeMapPreview: includeMap, mode: params.mode || 'driving' };
-          case 'reverse': return { searchText: `${params.coordinates.latitude},${params.coordinates.longitude}`, includeMapPreview: includeMap, maxResults: params.maxResults || 5 };
-          case 'search': return { searchText: params.query, includeMapPreview: includeMap, maxResults: params.maxResults || 5, ...(params.coordinates && { proximity: `${params.coordinates.latitude},${params.coordinates.longitude}` }), ...(params.radius && { radius: params.radius }) };
-          case 'geocode': 
-          case 'map': return { searchText: params.location, includeMapPreview: includeMap, maxResults: queryType === 'geocode' ? params.maxResults || 5 : undefined };
+          case 'directions': {
+            if (!params.origin || !params.destination) throw new Error("'directions' query requires origin and destination");
+            return { waypoints: [params.origin, params.destination], includeMapPreview: includeMap, profile: params.mode };
+          }
+          case 'distance': {
+            if (!params.origin || !params.destination) throw new Error("'distance' query requires origin and destination");
+            return { places: [params.origin, params.destination], includeMapPreview: includeMap, mode: params.mode || 'driving' };
+          }
+          case 'reverse': {
+            if (!params.coordinates) throw new Error("'reverse' query requires coordinates");
+            return { searchText: `${params.coordinates.latitude},${params.coordinates.longitude}`, includeMapPreview: includeMap, maxResults: params.maxResults || 5 };
+          }
+          case 'search': {
+            if (!params.query) throw new Error("'search' query requires query");
+            return { searchText: params.query, includeMapPreview: includeMap, maxResults: params.maxResults || 5, ...(params.coordinates && { proximity: `${params.coordinates.latitude},${params.coordinates.longitude}` }), ...(params.radius && { radius: params.radius }) };
+          }
+          case 'geocode':
+          case 'map': {
+            if (!params.location) throw new Error(`'${queryType}' query requires location`);
+            return { searchText: params.location, includeMapPreview: includeMap, maxResults: queryType === 'geocode' ? params.maxResults || 5 : undefined };
+          }
         }
       })();
 
