@@ -3,6 +3,7 @@ import { retrieveTool } from './retrieve'
 import { searchTool } from './search'
 import { videoSearchTool } from './video-search'
 import { geospatialTool } from './geospatial' // Removed useGeospatialToolMcp import
+import { sandboxTool } from './sandbox'
 
 import { MapProvider } from '@/lib/store/settings'
 
@@ -33,6 +34,13 @@ export const getTools = ({ uiStream, fullResponse, mapProvider }: ToolProps) => 
 
   if (process.env.SERPER_API_KEY) {
     tools.videoSearch = videoSearchTool({
+      uiStream,
+      fullResponse
+    })
+  }
+
+  if (process.env.VERCEL_TOKEN && process.env.VERCEL_TEAM_ID && process.env.VERCEL_PROJECT_ID) {
+    tools.sandbox = sandboxTool({
       uiStream,
       fullResponse
     })

@@ -74,6 +74,14 @@ export type AIMessage = {
     | 'end'
     | 'drawing_context' // Added custom type for drawing context messages
     | 'resolution_search_result'
+    | 'sandbox_result'
+}
+
+export type SandboxResult = {
+  logs: { type: 'stdout' | 'stderr'; content: string }[]
+  exitCode: number
+  previewUrl?: string
+  error?: string
 }
 
 export type CalendarNote = {
