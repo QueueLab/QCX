@@ -36,8 +36,20 @@ export const DownloadReportButton = () => {
 
       setShowTemplate(true)
 
-      // Wait for React to render the template
-      await new Promise(resolve => setTimeout(resolve, 500))
+      // Poll until the portal has committed to the DOM, up to 3 seconds
+      await new Promise<void>((resolve, reject) => {
+        const start = Date.now()
+        const check = () => {
+          if (document.getElementById('report-template')) {
+            resolve()
+          } else if (Date.now() - start > 3000) {
+            reject(new Error('Element with id report-template not found'))
+          } else {
+            requestAnimationFrame(check)
+          }
+        }
+        requestAnimationFrame(check)
+      })
 
       let chatTitle = 'Untitled Chat'
       if (aiState.messages.length > 0) {

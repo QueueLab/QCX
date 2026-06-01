@@ -3,6 +3,20 @@ import { AIMessage } from '@/lib/types'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
+// AIMessage content can be a string or an array of content parts ({type, text} | {type, image, ...})
+function getContentString(content: AIMessage['content']): string {
+  if (typeof content === 'string') {
+    return content
+  }
+  if (Array.isArray(content)) {
+    return content
+      .filter((part: any) => part.type === 'text')
+      .map((part: any) => part.text ?? '')
+      .join('\n')
+  }
+  return ''
+}
+
 export interface ReportTemplateProps {
   messages: AIMessage[]
   drawnFeatures?: Array<{
@@ -50,11 +64,12 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({
           {filteredMessages.map((message, index) => {
             if (message.type === 'input' || message.type === 'input_related') {
               let content = ''
+              const rawContent = getContentString(message.content)
               try {
-                const json = JSON.parse(message.content as string)
-                content = message.type === 'input' ? json.input : json.related_query
+                const json = JSON.parse(rawContent)
+                content = message.type === 'input' ? (json.input ?? rawContent) : (json.related_query ?? rawContent)
               } catch (e) {
-                content = message.content as string
+                content = rawContent
               }
               return (
                 <div key={index} className="bg-gray-50 p-4 rounded-lg border-l-4 border-blue-500">
@@ -67,17 +82,17 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({
                 <div key={index} className="prose prose-sm max-w-none">
                   <p className="text-sm font-bold text-green-600 mb-1">AI Response</p>
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {message.content as string}
+                    {getContentString(message.content)}
                   </ReactMarkdown>
                 </div>
               )
             } else if (message.type === 'resolution_search_result') {
               try {
-                const result = JSON.parse(message.content as string)
+                const result = JSON.parse(getContentString(message.content))
                 return (
                   <div key={index} className="space-y-4">
                     <p className="text-sm font-bold text-purple-600 mb-1">Analysis Result</p>
-                    {result.summary && (
+
                       <div className="bg-purple-50 p-4 rounded-lg text-gray-800">
                         {result.summary}
                       </div>
