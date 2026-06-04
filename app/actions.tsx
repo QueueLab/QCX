@@ -409,7 +409,7 @@ async function submit(formData?: FormData, skip?: boolean) {
           }
           console.log('Pushing image part (debug shape):', {
             ...imagePart,
-            image: imagePart.image.substring(0, 50) + '...'
+            image: dataUrl.substring(0, 50) + '...'
           })
           messageParts.push(imagePart)
         } else if (file.type === 'text/plain') {
