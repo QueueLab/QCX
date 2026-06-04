@@ -171,7 +171,7 @@ export function HeaderSearchButton() {
       variant="ghost"
       size="icon"
       onClick={handleResolutionSearch}
-      disabled={isAnalyzing || !map || !actions}
+      disabled={isAnalyzing || (mapProvider === "mapbox" && !map) || !actions}
       title="Analyze current map view"
     >
       {isAnalyzing ? (
@@ -183,7 +183,7 @@ export function HeaderSearchButton() {
   )
 
   const mobileButton = (
-    <Button variant="ghost" size="icon" onClick={handleResolutionSearch} disabled={isAnalyzing || !map || !actions} data-testid="mobile-search-button">
+    <Button variant="ghost" size="icon" onClick={handleResolutionSearch} disabled={isAnalyzing || (mapProvider === "mapbox" && !map) || !actions} data-testid="mobile-search-button">
       {isAnalyzing ? (
         <div className="h-[1.2rem] w-[1.2rem] animate-spin rounded-full border-b-2 border-current"></div>
       ) : (
