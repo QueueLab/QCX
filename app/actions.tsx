@@ -6,7 +6,7 @@ import {
   getAIState,
   getMutableAIState
 } from 'ai/rsc'
-import { CoreMessage, ToolResultPart } from 'ai'
+import { CoreMessage, ToolResultPart, TextPart, ImagePart } from 'ai'
 import { nanoid } from '@/lib/utils'
 import type { FeatureCollection } from 'geojson'
 import { Spinner } from '@/components/ui/spinner'
@@ -242,6 +242,12 @@ async function submit(formData?: FormData, skip?: boolean) {
   }
 
   const file = !skip ? (formData?.get('file') as File) : undefined
+  console.log('File extraction:', {
+    exists: !!file,
+    name: file?.name,
+    type: file?.type,
+    size: file?.size
+  })
   const userInput = skip
     ? `{"action": "skip"}`
     : ((formData?.get('related_query') as string) ||
@@ -328,23 +334,45 @@ async function submit(formData?: FormData, skip?: boolean) {
     }
   }
 
-  const messages: CoreMessage[] = [...(aiState.get().messages as any[])].filter(
-    (message: any) =>
-      message.role !== 'tool' &&
-      message.type !== 'followup' &&
-      message.type !== 'related' &&
-      message.type !== 'end' &&
-      message.type !== 'resolution_search_result'
-  ).map((m: any) => {
-    if (Array.isArray(m.content)) {
-      return {
-        ...m,
-        content: m.content.filter((part: any) =>
-          part.type !== "image" || (typeof part.image === "string" && part.image.startsWith("data:"))
-        )
-      } as any
-    }
-    return m
+  let filteredImagesCount = 0
+  let retainedImagesCount = 0
+  const messages: CoreMessage[] = [...(aiState.get().messages as any[])]
+    .filter(
+      (message: any) =>
+        message.role !== 'tool' &&
+        message.type !== 'followup' &&
+        message.type !== 'related' &&
+        message.type !== 'end' &&
+        message.type !== 'resolution_search_result'
+    )
+    .map((m: any) => {
+      if (Array.isArray(m.content)) {
+        const filteredContent = m.content.filter((part: any) => {
+          if (part.type === 'image') {
+            const isValid =
+              typeof part.image === 'string' &&
+              (part.image.startsWith('data:') ||
+                part.image === 'IMAGE_PROCESSED')
+            if (isValid) {
+              retainedImagesCount++
+            } else {
+              filteredImagesCount++
+            }
+            return isValid
+          }
+          return true
+        })
+        return {
+          ...m,
+          content: filteredContent
+        } as any
+      }
+      return m
+    })
+  console.log('Historical messages image filter:', {
+    filteredImagesCount,
+    retainedImagesCount,
+    totalMessages: messages.length
   })
 
   const groupeId = nanoid()
@@ -352,43 +380,72 @@ async function submit(formData?: FormData, skip?: boolean) {
   const maxMessages = useSpecificAPI ? 5 : 10
   messages.splice(0, Math.max(messages.length - maxMessages, 0))
 
-  const messageParts: {
-    type: 'text' | 'image'
-    text?: string
-    image?: string
-    mimeType?: string
-  }[] = []
+  const messageParts: (TextPart | ImagePart)[] = []
 
   if (userInput) {
     messageParts.push({ type: 'text', text: userInput })
   }
 
   if (file) {
-    const buffer = await file.arrayBuffer()
-    if (file.type.startsWith('image/')) {
-      const dataUrl = `data:${file.type};base64,${Buffer.from(
-        buffer
-      ).toString('base64')}`
-      messageParts.push({
-        type: 'image',
-        image: dataUrl,
-        mimeType: file.type
-      })
-    } else if (file.type === 'text/plain') {
-      const textContent = Buffer.from(buffer).toString('utf-8')
-      const existingTextPart = messageParts.find(p => p.type === 'text')
-      if (existingTextPart) {
-        existingTextPart.text = `${textContent}\n\n${existingTextPart.text}`
-      } else {
-        messageParts.push({ type: 'text', text: textContent })
+    const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+    if (file.size > MAX_FILE_SIZE) {
+      console.error('File size exceeds 10MB limit:', file.size)
+    } else {
+      try {
+        const buffer = await file.arrayBuffer()
+        console.log('File buffer loaded:', { size: buffer.byteLength })
+        if (file.type.startsWith('image/')) {
+          const dataUrl = `data:${file.type};base64,${Buffer.from(
+            buffer
+          ).toString('base64')}`
+          console.log('Image processed:', {
+            dataUrlPrefix: dataUrl.substring(0, 50),
+            totalLength: dataUrl.length
+          })
+          const imagePart: ImagePart = {
+            type: 'image',
+            image: dataUrl,
+            mimeType: file.type
+          }
+          console.log('Pushing image part (debug shape):', {
+            ...imagePart,
+            image: imagePart.image.substring(0, 50) + '...'
+          })
+          messageParts.push(imagePart)
+        } else if (file.type === 'text/plain') {
+          const textContent = Buffer.from(buffer).toString('utf-8')
+          const existingTextPart = messageParts.find(
+            (p): p is TextPart => p.type === 'text'
+          )
+          if (existingTextPart) {
+            existingTextPart.text = `${textContent}\n\n${existingTextPart.text}`
+          } else {
+            messageParts.push({ type: 'text', text: textContent })
+          }
+        }
+      } catch (error) {
+        console.error('Error processing file:', error)
       }
     }
   }
 
   const hasImage = messageParts.some(part => part.type === 'image')
+  console.log('messageParts structure:', {
+    parts: messageParts.map(p => ({
+      type: p.type,
+      length: p.type === 'text' ? p.text.length : undefined
+    })),
+    hasImage
+  })
   const content: CoreMessage['content'] = hasImage
-    ? messageParts as CoreMessage['content']
-    : messageParts.map(part => part.text).join('\n')
+    ? messageParts
+    : messageParts.map(part => (part.type === 'text' ? part.text : '')).join('\n')
+  console.log('Final content structure:', {
+    hasImage,
+    contentType: typeof content,
+    isArray: Array.isArray(content),
+    partsCount: Array.isArray(content) ? content.length : 'N/A'
+  })
 
   const type = skip
     ? undefined
