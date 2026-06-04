@@ -134,7 +134,7 @@ export function ModelSelectionForm({ form }: ModelSelectionFormProps) {
             </RadioGroup>
           </FormControl>
           <FormDescription>
-            Select the AI model that will power your planetary copilot.
+            Select the AI model that will power your planet computer.
             Different models have different capabilities and performance
             characteristics.
           </FormDescription>
