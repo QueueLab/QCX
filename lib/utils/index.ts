@@ -34,6 +34,7 @@ export async function getModel(requireVision: boolean = false) {
 
   if (selectedModel) {
     switch (selectedModel) {
+      case 'QCX-Terra':
       case 'Grok 4.2':
         if (xaiApiKey) {
           const xai = createXai({
@@ -41,7 +42,7 @@ export async function getModel(requireVision: boolean = false) {
             baseURL: 'https://api.x.ai/v1',
           });
           try {
-            return xai('grok-4-fast-non-reasoning');
+            return xai(requireVision ? "grok-vision-beta" : "grok-4-fast-non-reasoning");
           } catch (error) {
             console.error('Selected model "Grok 4.2" is configured but failed to initialize.', error);
             throw new Error('Failed to initialize selected model.');
@@ -57,7 +58,7 @@ export async function getModel(requireVision: boolean = false) {
             apiKey: gemini3ProApiKey,
           });
           try {
-            return google('gemini-3.1-pro-preview');
+            return google(requireVision ? "gemini-1.5-pro" : "gemini-3.1-pro-preview");
           } catch (error) {
             console.error('Selected model "Gemini 3.1 Pro" is configured but failed to initialize.', error);
             throw new Error('Failed to initialize selected model.');
@@ -86,7 +87,7 @@ export async function getModel(requireVision: boolean = false) {
       baseURL: 'https://api.x.ai/v1',
     });
     try {
-      return xai('grok-4-fast-non-reasoning');
+      return xai(requireVision ? "grok-vision-beta" : "grok-4-fast-non-reasoning");
     } catch (error) {
       console.warn('xAI API unavailable, falling back to next provider:');
     }
@@ -97,7 +98,7 @@ export async function getModel(requireVision: boolean = false) {
       apiKey: gemini3ProApiKey,
     });
     try {
-      return google('gemini-3.1-pro-preview');
+      return google(requireVision ? "gemini-1.5-pro" : "gemini-3.1-pro-preview");
     } catch (error) {
       console.warn('Gemini 3.1 Pro API unavailable, falling back to next provider:', error);
     }
