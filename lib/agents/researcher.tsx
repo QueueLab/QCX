@@ -110,6 +110,28 @@ export async function researcher(
     message.content.some(part => part.type === 'image')
   )
 
+  const lastUserMessage = [...messages].reverse().find(m => m.role === 'user')
+  console.log('Researcher - Image pipeline trace:', {
+    hasImage,
+    totalMessages: messages.length,
+    messagesWithImages: messages.filter(
+      m =>
+        Array.isArray(m.content) && m.content.some(p => p.type === 'image')
+    ).length,
+    lastUserMessageContentStructure: lastUserMessage
+      ? {
+          type: typeof lastUserMessage.content,
+          isArray: Array.isArray(lastUserMessage.content),
+          parts: Array.isArray(lastUserMessage.content)
+            ? lastUserMessage.content.map(p => ({
+                type: p.type,
+                hasImage: p.type === 'image'
+              }))
+            : 'string'
+        }
+      : 'none'
+  })
+
   const result = await nonexperimental_streamText({
     model: (await getModel(hasImage)) as LanguageModel,
     maxTokens: 4096,
