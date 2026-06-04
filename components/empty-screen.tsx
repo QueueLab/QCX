@@ -1,28 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Globe, Thermometer, Laptop, HelpCircle } from 'lucide-react';
 
-const exampleMessages = [
-  {
-    heading: 'What is a planet computer?',
-    message: 'What is a planet computer?',
-    icon: Globe
-  },
-  {
-    heading: 'How does climate change affect our experience?',
-    message: 'How does climate change affect our experience?',
-    icon: Thermometer
-  },
-  {
-    heading: 'What is QCX-Terra?',
-    message: 'What is QCX-Terra?',
-    icon: Laptop,
-  },
-  {
-    heading: 'How do I use the computer?',
-    message: 'How do I use the computer?',
-    icon: HelpCircle,
-  },
-];
+const exampleMessages = [];
 
 export function EmptyScreen({
   submitMessage,
