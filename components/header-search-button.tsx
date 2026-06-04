@@ -85,6 +85,9 @@ export function HeaderSearchButton() {
         const rawMapboxBlob = await new Promise<Blob | null>(resolve => {
           canvas.toBlob(resolve, 'image/png')
         })
+        if (!rawMapboxBlob) {
+          console.warn('Mapbox canvas capture returned null blob. Possible WebGL context loss or tainted canvas.');
+        }
         if (rawMapboxBlob) {
           mapboxBlob = await compressImage(rawMapboxBlob).catch(e => {
             console.error('Failed to compress Mapbox image:', e);
@@ -107,9 +110,11 @@ export function HeaderSearchButton() {
                 console.error('Failed to compress Google image:', e);
                 return rawGoogleBlob;
               });
+            } else {
+              console.warn(`Google Static Maps fetch failed with status ${response.status}: ${staticMapUrl}`);
             }
           } catch (e) {
-            console.error('Failed to fetch Google static map during Mapbox session:', e);
+            console.warn(`Failed to fetch Google static map during Mapbox session: ${e instanceof Error ? e.message : String(e)}. URL: ${staticMapUrl}`);
           }
         }
       } else if (mapProvider === 'google') {
@@ -126,6 +131,7 @@ export function HeaderSearchButton() {
 
         const response = await fetch(staticMapUrl);
         if (!response.ok) {
+          console.warn(`Google Static Maps fetch failed with status ${response.status}: ${staticMapUrl}`);
           throw new Error('Failed to fetch static map image.');
         }
         const rawGoogleBlob = await response.blob();
@@ -136,7 +142,9 @@ export function HeaderSearchButton() {
       }
 
       if (!mapboxBlob && !googleBlob) {
-        throw new Error('Failed to capture map image.')
+        const errorMsg = 'Failed to capture map images from both Mapbox and Google. Try refreshing the page.'
+        toast.error(errorMsg)
+        throw new Error(errorMsg)
       }
 
       const formData = new FormData()
@@ -160,7 +168,11 @@ export function HeaderSearchButton() {
       setMessages((currentMessages: any[]) => [...currentMessages, responseMessage as any])
     } catch (error) {
       console.error('Failed to perform resolution search:', error)
-      toast.error('An error occurred while analyzing the map.')
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred while analyzing the map.'
+      // Avoid duplicate toast if it was already shown in the capture check
+      if (errorMessage !== 'Failed to capture map images from both Mapbox and Google. Try refreshing the page.') {
+        toast.error(errorMessage)
+      }
     } finally {
       setIsAnalyzing(false)
     }
