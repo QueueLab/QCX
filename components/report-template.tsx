@@ -15,6 +15,27 @@ export interface ReportTemplateProps {
   chatTitle: string
 }
 
+/**
+ * Normalises a message's content field to a plain string.
+ * The AI SDK can return content as a string or as an array of content-part
+ * objects like { type: 'text', text: '...' } | { type: 'image', ... }.
+ * Passing an object directly to React causes the "Objects are not valid as a
+ * React child" error, so we always extract the text before rendering.
+ */
+function getContentString(content: unknown): string {
+  if (typeof content === 'string') return content
+  if (Array.isArray(content)) {
+    return content
+      .map((part: any) => {
+        if (typeof part === 'string') return part
+        if (part && typeof part === 'object' && part.type === 'text') return part.text ?? ''
+        return ''
+      })
+      .join(' ')
+  }
+  return ''
+}
+
 export const ReportTemplate: React.FC<ReportTemplateProps> = ({
   messages,
   drawnFeatures,
@@ -49,12 +70,15 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({
         <div className="space-y-8">
           {filteredMessages.map((message, index) => {
             if (message.type === 'input' || message.type === 'input_related') {
-              let content = ''
+              const rawContent = getContentString(message.content)
+              let content = rawContent
               try {
-                const json = JSON.parse(message.content as string)
-                content = message.type === 'input' ? json.input : json.related_query
+                const json = JSON.parse(rawContent)
+                content = message.type === 'input'
+                  ? (json.input ?? rawContent)
+                  : (json.related_query ?? rawContent)
               } catch (e) {
-                content = message.content as string
+                // rawContent is already a plain string
               }
               return (
                 <div key={index} className="bg-gray-50 p-4 rounded-lg border-l-4 border-blue-500">
@@ -63,17 +87,19 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({
                 </div>
               )
             } else if (message.type === 'response') {
+              const rawContent = getContentString(message.content)
               return (
                 <div key={index} className="prose prose-sm max-w-none">
                   <p className="text-sm font-bold text-green-600 mb-1">AI Response</p>
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {message.content as string}
+                    {rawContent}
                   </ReactMarkdown>
                 </div>
               )
             } else if (message.type === 'resolution_search_result') {
+              const rawContent = getContentString(message.content)
               try {
-                const result = JSON.parse(message.content as string)
+                const result = JSON.parse(rawContent)
                 return (
                   <div key={index} className="space-y-4">
                     <p className="text-sm font-bold text-purple-600 mb-1">Analysis Result</p>
@@ -99,6 +125,15 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({
                   </div>
                 )
               } catch (e) {
+                // If content is not JSON, show it as plain text
+                if (rawContent) {
+                  return (
+                    <div key={index} className="bg-purple-50 p-4 rounded-lg text-gray-800">
+                      <p className="text-sm font-bold text-purple-600 mb-1">Analysis Result</p>
+                      <p>{rawContent}</p>
+                    </div>
+                  )
+                }
                 return null
               }
             }
@@ -120,11 +155,11 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {drawnFeatures.map((feature, i) => (
+                {drawnFeatures.map((feature) => (
                   <tr key={feature.id}>
                     <td className="px-4 py-2 whitespace-nowrap text-gray-900">{feature.type}</td>
                     <td className="px-4 py-2 whitespace-nowrap text-gray-900">{feature.measurement}</td>
-                    <td className="px-4 py-2 text-gray-500 break-all font-mono text-[10px]">
+
                       {JSON.stringify(feature.geometry.coordinates).substring(0, 100)}...
                     </td>
                   </tr>
