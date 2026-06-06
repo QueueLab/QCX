@@ -33,17 +33,21 @@ export const DownloadReportButton = () => {
     }
 
     setIsGenerating(true)
-    const toastId = toast.loading('Generating report...')
+    const toastId = toast.loading('Preparing report generation...')
 
     try {
       let snapshot: string | undefined
       if (map) {
-        // Use a smaller snapshot if possible, or just the current canvas
-        snapshot = map.getCanvas().toDataURL('image/jpeg', 0.5)
-        setMapSnapshot(snapshot)
+        try {
+          // Use JPEG to keep the data URL smaller and potentially avoid context loss
+          snapshot = map.getCanvas().toDataURL('image/jpeg', 0.6)
+          setMapSnapshot(snapshot)
+        } catch (e) {
+          console.warn('Failed to capture map snapshot', e)
+        }
       }
 
-      // Extract title
+      // Extract title more robustly
       let chatTitle = 'Untitled Chat'
       if (aiState.messages.length > 0) {
         const firstMessage = aiState.messages[0]
@@ -63,21 +67,26 @@ export const DownloadReportButton = () => {
       const finalTitle = (chatTitle || 'QCX Analysis Report').substring(0, 50)
       setReportTitle(finalTitle)
 
+      // Step 1: Render template in portal
       setShowTemplate(true)
 
-      // Short delay for React portal to mount
-      await new Promise(resolve => setTimeout(resolve, 800))
+      // Step 2: Wait for DOM and React to synchronize
+      // Using a longer timeout to ensure large images and complex content are rendered
+      toast.loading('Rendering report elements...', { id: toastId })
+      await new Promise(resolve => setTimeout(resolve, 1500))
 
+      // Step 3: Capture and Generate
+      toast.loading('Capturing styled report...', { id: toastId })
       await generatePDFReport('report-template', finalTitle)
 
       toast.success('Report generated successfully', { id: toastId })
     } catch (error) {
       console.error('Failed to generate report:', error)
-      toast.error('Failed to generate report', { id: toastId })
+      toast.error(`Report generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`, { id: toastId })
     } finally {
       setIsGenerating(false)
       setShowTemplate(false)
-      setMapSnapshot(undefined) // Clear snapshot memory
+      setMapSnapshot(undefined)
     }
   }
 
@@ -101,16 +110,20 @@ export const DownloadReportButton = () => {
         <span className="sr-only">Download Report</span>
       </Button>
 
+      {/* Hidden container for PDF rendering - ensure it's in the DOM with appropriate styles */}
       {showTemplate && createPortal(
         <div
+          id="pdf-render-container"
           style={{
-            position: 'absolute',
-            left: '-9999px',
+            position: 'fixed',
+            left: '-10000px',
             top: 0,
             width: '800px',
-            zIndex: -1,
+            zIndex: -9999,
             backgroundColor: 'white',
-            color: 'black'
+            color: 'black',
+            visibility: 'visible',
+            pointerEvents: 'none'
           }}
         >
           <ReportTemplate

@@ -28,71 +28,91 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({
     m.type === 'resolution_search_result'
   )
 
+  const renderMessageContent = (content: any): string => {
+    if (typeof content === 'string') {
+      return content
+    }
+    if (Array.isArray(content)) {
+      return content
+        .map(part => {
+          if (typeof part === 'string') return part
+          if (part && typeof part === 'object' && part.type === 'text') return part.text
+          return ''
+        })
+        .join('\n')
+    }
+    return ''
+  }
+
   return (
     <div id="report-template" className="p-8 bg-white text-black font-sans max-w-4xl mx-auto border border-gray-200">
-      <header className="mb-8 border-b-2 border-primary pb-4">
-        <h1 className="text-3xl font-bold text-primary mb-2">{chatTitle}</h1>
+      <header className="mb-8 border-b-2 border-[#1a1a1a] pb-4">
+        <h1 className="text-3xl font-bold mb-2">{chatTitle}</h1>
         <p className="text-gray-600">Generated on: {new Date().toLocaleString()}</p>
       </header>
 
       {mapSnapshot && (
         <section className="mb-10">
-          <h2 className="text-xl font-semibold mb-4 border-l-4 border-primary pl-2">Live Map View</h2>
-          <div className="border rounded-lg overflow-hidden shadow-sm">
-            <img src={mapSnapshot} alt="Map Snapshot" className="w-full h-auto" />
+          <h2 className="text-xl font-semibold mb-4 border-l-4 border-blue-600 pl-2">Live Map View</h2>
+          <div className="border rounded-lg overflow-hidden shadow-sm bg-gray-100 min-h-[200px] flex items-center justify-center">
+            <img src={mapSnapshot} alt="Map Snapshot" className="w-full h-auto block" crossOrigin="anonymous" />
           </div>
         </section>
       )}
 
       <section className="mb-10">
-        <h2 className="text-xl font-semibold mb-6 border-l-4 border-primary pl-2">Conversation History</h2>
+        <h2 className="text-xl font-semibold mb-6 border-l-4 border-blue-600 pl-2">Conversation History</h2>
         <div className="space-y-8">
           {filteredMessages.map((message, index) => {
+            const contentString = renderMessageContent(message.content)
+
             if (message.type === 'input' || message.type === 'input_related') {
               let content = ''
               try {
-                const json = JSON.parse(message.content as string)
-                content = message.type === 'input' ? json.input : json.related_query
+                const json = JSON.parse(contentString)
+                content = message.type === 'input' ? (json.input || contentString) : (json.related_query || contentString)
               } catch (e) {
-                content = message.content as string
+                content = contentString
               }
               return (
-                <div key={index} className="bg-gray-50 p-4 rounded-lg border-l-4 border-blue-500">
+                <div key={index} className="bg-gray-50 p-4 rounded-lg border-l-4 border-blue-400">
                   <p className="text-sm font-bold text-blue-600 mb-1">User Question</p>
                   <p className="text-gray-800 italic">{content}</p>
                 </div>
               )
             } else if (message.type === 'response') {
               return (
-                <div key={index} className="prose prose-sm max-w-none">
+                <div key={index} className="prose prose-sm max-w-none border-b border-gray-100 pb-4">
                   <p className="text-sm font-bold text-green-600 mb-1">AI Response</p>
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {message.content as string}
-                  </ReactMarkdown>
+                  <div className="text-gray-800">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {contentString}
+                    </ReactMarkdown>
+                  </div>
                 </div>
               )
             } else if (message.type === 'resolution_search_result') {
               try {
-                const result = JSON.parse(message.content as string)
+                const result = JSON.parse(contentString)
                 return (
-                  <div key={index} className="space-y-4">
+                  <div key={index} className="space-y-4 bg-purple-50 p-4 rounded-lg">
                     <p className="text-sm font-bold text-purple-600 mb-1">Analysis Result</p>
                     {result.summary && (
-                      <div className="bg-purple-50 p-4 rounded-lg text-gray-800">
+                      <div className="text-gray-800 mb-4">
                         {result.summary}
                       </div>
                     )}
                     <div className="grid grid-cols-2 gap-4">
                       {result.mapboxImage && (
                         <div className="space-y-1">
-                          <p className="text-xs text-gray-500">Mapbox View</p>
-                          <img src={result.mapboxImage} alt="Mapbox View" className="rounded border w-full" />
+                          <p className="text-[10px] text-gray-500 font-semibold uppercase">Mapbox View</p>
+                          <img src={result.mapboxImage} alt="Mapbox View" className="rounded border border-purple-200 w-full block" crossOrigin="anonymous" />
                         </div>
                       )}
                       {result.googleImage && (
                         <div className="space-y-1">
-                          <p className="text-xs text-gray-500">Google Satellite</p>
-                          <img src={result.googleImage} alt="Google Satellite" className="rounded border w-full" />
+                          <p className="text-[10px] text-gray-500 font-semibold uppercase">Google Satellite</p>
+                          <img src={result.googleImage} alt="Google Satellite" className="rounded border border-purple-200 w-full block" crossOrigin="anonymous" />
                         </div>
                       )}
                     </div>
@@ -120,7 +140,7 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {drawnFeatures.map((feature, i) => (
+                {drawnFeatures.map((feature) => (
                   <tr key={feature.id}>
                     <td className="px-4 py-2 whitespace-nowrap text-gray-900">{feature.type}</td>
                     <td className="px-4 py-2 whitespace-nowrap text-gray-900">{feature.measurement}</td>
