@@ -66,14 +66,14 @@ export const DownloadReportButton = () => {
       setShowTemplate(true)
 
       // Short delay for React portal to mount
-      await new Promise(resolve => setTimeout(resolve, 800))
+      await new Promise(resolve => setTimeout(resolve, 1200))
 
       await generatePDFReport('report-template', finalTitle)
 
       toast.success('Report generated successfully', { id: toastId })
     } catch (error) {
       console.error('Failed to generate report:', error)
-      toast.error('Failed to generate report', { id: toastId })
+      toast.error(`Failed to generate report: ${error instanceof Error ? error.message : 'Unknown error'}`, { id: toastId })
     } finally {
       setIsGenerating(false)
       setShowTemplate(false)

@@ -12,7 +12,7 @@ export const generatePDFReport = async (elementId: string, fileName: string) => 
     ])
 
     const images = Array.from(element.getElementsByTagName('img'))
-    const imageLoadTimeout = 3000 // 3 seconds timeout
+    const imageLoadTimeout = 10000 // 10 seconds timeout
 
     await Promise.race([
       Promise.all(
@@ -30,16 +30,17 @@ export const generatePDFReport = async (elementId: string, fileName: string) => 
     ])
 
     const canvas = await html2canvas(element, {
-      scale: 1, // Reduced scale for speed
+      scale: 2.5,
+      letterRendering: true,
       useCORS: true,
       logging: false,
       allowTaint: true,
       backgroundColor: '#ffffff',
-      imageTimeout: 5000,
+      imageTimeout: 10000,
       removeContainer: true
     })
 
-    const imgData = canvas.toDataURL('image/jpeg', 0.7)
+    const imgData = canvas.toDataURL('image/jpeg', 0.98)
     const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'px',
