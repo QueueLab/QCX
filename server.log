@@ -1,11 +1,17 @@
 $ next dev --turbo
- ⚠ Port 3000 is in use, using available port 3003 instead.
-   ▲ Next.js 15.3.6 (Turbopack)
-   - Local:        http://localhost:3003
-   - Network:      http://192.168.0.2:3003
-   - Environments: .env.local, .env
+   ▲ Next.js 15.3.8 (Turbopack)
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.0.2:3000
+   - Environments: .env
 
  ✓ Starting...
- ○ Compiling middleware ...
- ✓ Compiled middleware in 648ms
- ✓ Ready in 2.5s
+ ✓ Compiled middleware in 433ms
+ ✓ Ready in 1802ms
+ ○ Compiling / ...
+ ✓ Compiled / in 27.9s
+Chat DB actions loaded. Ensure getCurrentUserId() is correctly implemented for server-side usage if applicable.
+ GET / 200 in 30481ms
+ HEAD / 200 in 1010ms
+ GET / 200 in 986ms
+ GET / 200 in 1129ms
+[?25h
