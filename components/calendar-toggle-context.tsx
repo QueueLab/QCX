@@ -22,9 +22,7 @@ export const CalendarToggleProvider = ({ children }: { children: ReactNode }) =>
   const [isCalendarOpen, setIsCalendarOpen] = useState(false)
 
   const toggleCalendar = () => {
-    startTransition(() => {
-      setIsCalendarOpen(prevState => !prevState)
-    })
+    setIsCalendarOpen(prevState => !prevState)
   }
 
   return (
