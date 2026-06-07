@@ -24,7 +24,7 @@ export async function inquire(
 
   let finalInquiry: PartialInquiry = {};
   const result = await streamObject({
-    model: (await getModel()) as LanguageModel,
+    model: (await getModel()) as any,
     system: `You are a helpful assistant that gathers clarifying information from the user. 
     Generate a structured inquiry with a clear question, multiple choice options, and optionally allow free-text input.
     Ensure the inquiry is concise and helps narrow down the user's intent.`,

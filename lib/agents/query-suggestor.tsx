@@ -56,7 +56,7 @@ export async function querySuggestor(
   
   // OPTIMIZATION: Use a more concise system prompt to reduce token usage
   const result = await streamObject({
-    model: (await getModel()) as LanguageModel,
+    model: (await getModel()) as any,
     system: `Generate 3 follow-up queries that explore the subject matter deeper. Format as JSON with an "items" array containing objects with "query" fields. Keep queries concise and relevant.`,
     messages,
     schema: relatedSchema,

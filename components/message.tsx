@@ -19,13 +19,14 @@ export function BotMessage({ content }: { content: StreamableValue<string> }) {
 
   return (
     <div className="overflow-x-auto">
+      <div className="prose-sm prose-neutral prose-a:text-accent-foreground/50">
       <MemoizedReactMarkdown
         rehypePlugins={[[rehypeExternalLinks, { target: '_blank' }], rehypeKatex]}
         remarkPlugins={[remarkGfm, remarkMath]}
-        className="prose-sm prose-neutral prose-a:text-accent-foreground/50"
       >
         {processedData}
       </MemoizedReactMarkdown>
+      </div>
     </div>
   )
 }

@@ -105,6 +105,7 @@ export async function getModel(requireVision: boolean = false) {
 
   if (awsAccessKeyId && awsSecretAccessKey) {
     const bedrock = createAmazonBedrock({
+      // @ts-ignore
       bedrockOptions: {
         region: awsRegion,
         credentials: {
@@ -113,7 +114,7 @@ export async function getModel(requireVision: boolean = false) {
         },
       },
     });
-    const model = bedrock(bedrockModelId, {
+    const model = (bedrock as any)(bedrockModelId, {
       additionalModelRequestFields: { top_k: 350 },
     });
     return model;

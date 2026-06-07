@@ -103,15 +103,16 @@ async function submit(formData?: FormData, skip?: boolean) {
       try {
         const streamResult = await resolutionSearch(messages, timezone, drawnFeatures, location);
 
+        let partialObject: any;
         let fullSummary = '';
-        for await (const partialObject of streamResult.partialObjectStream) {
+        for await (partialObject of streamResult.partialObjectStream) {
           if (partialObject.summary) {
             fullSummary = partialObject.summary;
             summaryStream.update(fullSummary);
           }
         }
 
-        const analysisResult = await streamResult.object;
+        const analysisResult: any = await streamResult.object;
         summaryStream.done(analysisResult.summary || 'Analysis complete.');
 
         // Reconstruct standard GeoJSON from flattened schema if present
@@ -119,7 +120,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         if (analysisResult.geoJson && analysisResult.geoJson.features) {
           geoJson = {
             type: 'FeatureCollection',
-            features: analysisResult.geoJson.features.map(f => ({
+            features: analysisResult.geoJson.features.map( (f: any) => ({
               type: 'Feature',
               geometry: {
                 type: f.geometryType as any,

@@ -246,7 +246,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         map.current.off('draw.create', updateMeasurementLabels)
         map.current.off('draw.delete', updateMeasurementLabels)
         map.current.off('draw.update', updateMeasurementLabels)
-        map.current.removeControl(drawRef.current)
+        map.current.removeControl(drawRef.current as any)
         drawRef.current = null
         
         // Clean up any existing labels
@@ -282,7 +282,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     })
     
     // Add control to map
-    map.current.addControl(drawRef.current, 'top-right')
+    map.current.addControl(drawRef.current as any, 'top-right')
 
     // Add navigation control only on desktop
     if (window.innerWidth > 768) {
@@ -509,7 +509,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
             map.current.off('draw.create', updateMeasurementLabels)
             map.current.off('draw.delete', updateMeasurementLabels)
             map.current.off('draw.update', updateMeasurementLabels)
-            map.current.removeControl(drawRef.current)
+            map.current.removeControl(drawRef.current as any)
             drawRef.current = null
 
             // Clean up any existing labels
