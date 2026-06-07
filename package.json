@@ -16,11 +16,11 @@
     "test:e2e:debug": "playwright test --debug"
   },
   "dependencies": {
-    "@ai-sdk/amazon-bedrock": "^4.0.113",
-    "@ai-sdk/anthropic": "^3.0.81",
-    "@ai-sdk/google": "^3.0.80",
-    "@ai-sdk/openai": "^3.0.68",
-    "@ai-sdk/xai": "^3.0.93",
+    "@ai-sdk/amazon-bedrock": "2.0.0",
+    "@ai-sdk/anthropic": "2.0.0",
+    "@ai-sdk/google": "2.0.0",
+    "@ai-sdk/openai": "2.0.0",
+    "@ai-sdk/xai": "2.0.0",
     "@composio/core": "^0.10.0",
     "@google-cloud/storage": "^7.19.0",
     "@google/generative-ai": "^0.24.1",
