@@ -57,6 +57,33 @@ export async function getNotes(date: Date, chatId: string | null): Promise<Calen
 }
 
 /**
+ * Retrieves all notes for a specific chat session.
+ * @param chatId - The ID of the chat session.
+ * @returns A promise that resolves to an array of notes.
+ */
+export async function getChatNotes(chatId: string): Promise<CalendarNote[]> {
+  const userId = await getCurrentUserIdOnServer()
+  if (!userId) {
+    console.error('getChatNotes: User not authenticated')
+    return []
+  }
+
+  try {
+    const notes = await db
+      .select()
+      .from(calendarNotes)
+      .where(and(eq(calendarNotes.userId, userId), eq(calendarNotes.chatId, chatId)))
+      .orderBy(desc(calendarNotes.date))
+      .execute()
+
+    return notes
+  } catch (error) {
+    console.error('Error fetching chat notes:', error)
+    return []
+  }
+}
+
+/**
  * Saves a new note or updates an existing one.
  * @param noteData - The note data to save.
  * @returns A promise that resolves to the saved note or null if an error occurs.

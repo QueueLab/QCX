@@ -533,7 +533,26 @@ async function submit(formData?: FormData, skip?: boolean) {
       errorOccurred = hasError
 
       if (toolOutputs.length > 0) {
-        toolOutputs.map(output => {
+        await Promise.all(toolOutputs.map(async output => {
+          const result = output.result as any
+
+          if (output.toolName === 'calendarTool' && result.type === 'CALENDAR_ACTION') {
+             const { saveNote, getChatNotes } = await import('@/lib/actions/calendar')
+             if (result.action === 'create') {
+                const saved = await saveNote({
+                  ...result.note,
+                  chatId: aiState.get().chatId,
+                  userId: '', // set in saveNote
+                  userTags: null,
+                  mapFeatureId: null
+                })
+                output.result = { success: true, note: saved }
+             } else if (result.action === 'list') {
+                const notes = await getChatNotes(aiState.get().chatId)
+                output.result = { success: true, notes }
+             }
+          }
+
           aiState.update({
             ...aiState.get(),
             messages: [
@@ -547,7 +566,7 @@ async function submit(formData?: FormData, skip?: boolean) {
               }
             ]
           })
-        })
+        }))
       }
     }
 
