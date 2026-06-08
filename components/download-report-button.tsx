@@ -8,6 +8,7 @@ import { useMap } from './map/map-context'
 import { useMapData } from './map/map-data-context'
 import { generatePDFReport } from '@/lib/utils/report-generator'
 import { AI } from '@/app/actions'
+import { useActions } from 'ai/rsc'
 import { toast } from 'sonner'
 import { ReportTemplate } from './report-template'
 import { createPortal } from 'react-dom'
@@ -16,10 +17,12 @@ export const DownloadReportButton = () => {
   const [aiState] = useAIState<typeof AI>()
   const { map } = useMap()
   const { mapData } = useMapData()
+  const actions = useActions<typeof AI>()
   const [isGenerating, setIsGenerating] = useState(false)
   const [showTemplate, setShowTemplate] = useState(false)
   const [mapSnapshot, setMapSnapshot] = useState<string | undefined>()
   const [reportTitle, setReportTitle] = useState('QCX Analysis Report')
+  const [reportSummary, setReportSummary] = useState<string | undefined>()
   const [isMounted, setIsMounted] = useState(false)
 
   useEffect(() => {
@@ -39,33 +42,26 @@ export const DownloadReportButton = () => {
       let snapshot: string | undefined
       if (map) {
         try {
-          // Use JPEG to keep the data URL smaller and potentially avoid context loss
-          snapshot = map.getCanvas().toDataURL('image/jpeg', 0.6)
+          // preserveDrawingBuffer is true, so we can capture the canvas
+          snapshot = map.getCanvas().toDataURL('image/png')
           setMapSnapshot(snapshot)
         } catch (e) {
           console.warn('Failed to capture map snapshot', e)
         }
       }
 
-      // Extract title more robustly
-      let chatTitle = 'Untitled Chat'
-      if (aiState.messages.length > 0) {
-        const firstMessage = aiState.messages[0]
-        const content = typeof firstMessage.content === 'string'
-          ? firstMessage.content
-          : Array.isArray(firstMessage.content)
-            ? (firstMessage.content as any[]).map(p => p.type === 'text' ? p.text : '').join(' ')
-            : ''
+      // Generate AI summary and title
+      toast.loading('Synthesizing intelligence findings...', { id: toastId })
 
-        try {
-          const parsed = JSON.parse(content)
-          chatTitle = parsed.input || content
-        } catch (e) {
-          chatTitle = content
-        }
-      }
-      const finalTitle = (chatTitle || 'QCX Analysis Report').substring(0, 50)
+      const formData = new FormData();
+      formData.append('action', 'generate_report_context');
+      formData.append('messages', JSON.stringify(aiState.messages));
+
+      const { title, summary } = await (actions as any).submit(formData);
+
+      const finalTitle = title || 'QCX Intelligence Analysis'
       setReportTitle(finalTitle)
+      setReportSummary(summary)
 
       // Step 1: Render template in portal
       setShowTemplate(true)
@@ -131,6 +127,7 @@ export const DownloadReportButton = () => {
             drawnFeatures={mapData?.drawnFeatures}
             mapSnapshot={mapSnapshot}
             chatTitle={reportTitle}
+            aiSummary={reportSummary}
           />
         </div>,
         document.body

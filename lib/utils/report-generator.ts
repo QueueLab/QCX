@@ -31,7 +31,7 @@ export const generatePDFReport = async (elementId: string, fileName: string) => 
     ])
 
     const canvas = await html2canvas(element, {
-      scale: 2, // Increase scale for higher DPI/sharpness
+      scale: 3, // Increased scale for ultra-sharp text and images
       useCORS: true,
       logging: false,
       allowTaint: true,
@@ -49,7 +49,7 @@ export const generatePDFReport = async (elementId: string, fileName: string) => 
       }
     })
 
-    const imgData = canvas.toDataURL('image/jpeg', 1.0) // Maximum quality
+    const imgData = canvas.toDataURL('image/png') // Use PNG for lossless quality and sharper text
 
     // A4 dimensions in px at 72 DPI are roughly 595 x 842
     // But we use the internal pageSize values for flexibility
@@ -70,14 +70,14 @@ export const generatePDFReport = async (elementId: string, fileName: string) => 
     let position = 0
 
     // Add first page
-    pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, scaledHeight, undefined, 'FAST')
+    pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, scaledHeight, undefined, 'FAST')
     heightLeft -= pdfHeight
 
     // Add subsequent pages if content overflows
     while (heightLeft > 0) {
       position = heightLeft - scaledHeight
       pdf.addPage()
-      pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, scaledHeight, undefined, 'FAST')
+      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, scaledHeight, undefined, 'FAST')
       heightLeft -= pdfHeight
     }
 
