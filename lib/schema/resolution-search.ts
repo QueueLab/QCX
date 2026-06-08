@@ -21,7 +21,7 @@ export const resolutionSearchSchema = z.object({
       name: z.string().describe('Name of the feature or point of interest'),
       description: z.string().optional().describe('Description of the feature')
     }))
-  }).optional().describe('A collection of points of interest and classified land features to be overlaid on the map.'),
+  }).optional().describe('A collection of HIGH-CONFIDENCE points of interest and classified land features to be overlaid on the map. ONLY include features that are clearly identifiable and highly relevant to the analysis focus or user-drawn areas.'),
 
   // Flattened top-level fields for better xAI compatibility
   extractedLatitude: z.number().optional().describe('The extracted latitude of the center of the image.'),

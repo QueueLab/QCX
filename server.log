@@ -69,3 +69,5 @@ Chat DB actions loaded. Ensure getCurrentUserId() is correctly implemented for s
  GET /test-carousel 500 in 7348ms
  ✓ Compiled middleware in 38ms
  ✓ Compiled in 1094ms
+ ✓ Compiled in 1332ms
+ ✓ Compiled in 215ms
