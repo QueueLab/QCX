@@ -20,7 +20,6 @@ export function FollowupPanel() {
     event.preventDefault()
     const formData = new FormData()
     formData.append("input", input)
-    formData.append("action", "resolution_search")
 
     const userMessage = {
       id: nanoid(),
@@ -31,14 +30,18 @@ export function FollowupPanel() {
     // Include drawn features in the form data
     formData.append('drawnFeatures', JSON.stringify(mapData.drawnFeatures || []))
 
-    const responseMessage = await submit(formData)
-    setMessages(currentMessages => [
-      ...currentMessages,
-      userMessage,
-      responseMessage
-    ])
-
-    setInput('')
+    try {
+      const responseMessage = await submit(formData)
+      setMessages(currentMessages => [
+        ...currentMessages,
+        userMessage,
+        responseMessage
+      ])
+    } catch (error) {
+      console.error('Error submitting followup:', error)
+    } finally {
+      setInput('')
+    }
   }
 
   return (
