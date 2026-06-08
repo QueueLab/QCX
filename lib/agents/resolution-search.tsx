@@ -101,6 +101,11 @@ export async function resolutionSearch(messages: CoreMessage[], timezone: string
   const systemPrompt = `
 As a geospatial analyst, your task is to analyze the provided satellite image of a geographic location.
 
+**CRITICAL GUIDELINES:**
+- **ACCURACY:** Your analysis must be grounded strictly in the visual evidence of the image. Avoid hallucinations or "random" classifications.
+- **CONTEXT:** Prioritize any user-drawn features as the primary subjects of analysis.
+- **RELEVANCE:** Only generate GeoJSON features for identifiable landmarks or land cover types that are clearly visible and relevant to the user's query or the drawn features.
+
 **Temporal Context:**
 The current local time at this location is ${localTime} (timezone: ${timezone}).
 This temporal information is important for understanding the current state and any time-sensitive features visible in the image.
@@ -129,11 +134,10 @@ IMPORTANT: In your summary, explicitly state what features you are analyzing and
 5. **COG Applicability:** Determine if this location would benefit from Cloud Optimized GeoTIFF (COG) analysis for high-precision temporal or spectral data.
 6. **News Integration:** Reference any recent news or events that may be relevant to the current state of the location.
 7. **Structured Output:** Return your findings in a structured JSON format including summary, geoJson (if any), news context, and any extracted coordinates or COG information. Use the provided schema.
-8. **Contextual Labeling:** Generate descriptive labels for the map images that reflect the analysis focus. If user-drawn features are present, reference them in the labels. For example:
-   - If analyzing a drawn polygon: "Analysis of drawn area: [feature type]"
-   - If analyzing a specific location: "[Location name] satellite view"
-   - If general analysis: "[Primary feature type] analysis"
-   Provide these in the mapboxImageLabel, googleImageLabel, and analysisFocus fields.
+8. **Contextual Labeling:** Generate highly specific, descriptive labels for the map images that reflect the primary analysis focus. Avoid generic labels like "Mapbox" or "Google".
+   - If user-drawn features are present, the labels MUST reference them (e.g., "Analysis of drawn ${drawnFeatures?.[0]?.type || 'area'}: [feature type]").
+   - If a specific location is known, include it (e.g., "[${locationName}] satellite view - [Focus Area]").
+   - The 'analysisFocus' field should capture the specific theme of this analysis (e.g., "Coastal erosion assessment", "Industrial zone monitoring").
 
 Your analysis should be based on the visual information in the image, the temporal context provided, and your general knowledge. Do not attempt to access external websites or perform web searches beyond what has been provided.
 
