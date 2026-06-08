@@ -335,6 +335,9 @@ async function submit(formData?: FormData, skip?: boolean) {
     }
   }
 
+  const { getChatNotes } = await import('@/lib/actions/calendar')
+  const calendarNotes = await getChatNotes(aiState.get().chatId)
+
   let filteredImagesCount = 0
   let retainedImagesCount = 0
   const messages: CoreMessage[] = [...(aiState.get().messages as any[])]
@@ -526,7 +529,8 @@ async function submit(formData?: FormData, skip?: boolean) {
         messages,
         mapProvider,
         useSpecificAPI,
-        drawnFeatures
+        drawnFeatures,
+        calendarNotes
       )
       answer = fullResponse
       toolOutputs = toolResponses

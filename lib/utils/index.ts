@@ -67,13 +67,14 @@ export async function getModel(requireVision: boolean = false) {
             throw new Error('Selected model is not configured.');
         }
       case 'GPT-5.1':
+      case 'QCX-Terra':
         if (openaiApiKey) {
           const openai = createOpenAI({
             apiKey: openaiApiKey,
           });
           return openai('gpt-4o');
         } else {
-            console.error('User selected "GPT-5.1" but OPENAI_API_KEY is not set.');
+            console.error(`User selected "${selectedModel}" but OPENAI_API_KEY is not set.`);
             throw new Error('Selected model is not configured.');
         }
     }

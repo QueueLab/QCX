@@ -111,9 +111,16 @@ export async function saveNote(noteData: NewCalendarNote | CalendarNote): Promis
     } else {
         // Create new note
         try {
+            // Parse @mentions from content
+            const mentions = noteData.content.match(/@(\w+)/g)?.map(m => m.substring(1)) || null;
+            const updatedNoteData = {
+                ...noteData,
+                userTags: mentions
+            };
+
             const [newNote] = await db
                 .insert(calendarNotes)
-                .values({ ...noteData, userId })
+                .values({ ...updatedNoteData, userId })
                 .returning();
 
             if (newNote && newNote.chatId) {

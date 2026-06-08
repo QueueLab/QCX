@@ -13,11 +13,12 @@ import { getTools } from './tools'
 import { getModel } from '../utils'
 import { MapProvider } from '@/lib/store/settings'
 import { DrawnFeature } from './resolution-search'
+import { CalendarNote } from '@/lib/types'
 
 // This magic tag lets us write raw multi-line strings with backticks, arrows, etc.
 const raw = String.raw
 
-const getDefaultSystemPrompt = (date: string, drawnFeatures?: DrawnFeature[]) => raw`
+const getDefaultSystemPrompt = (date: string, drawnFeatures?: DrawnFeature[], calendarNotes?: CalendarNote[]) => raw`
 As a comprehensive AI assistant, your primary directive is **Exploration Efficiency**. You must use the provided tools judiciously to gather information and formulate a response.
 
 Current date and time: ${date}.
@@ -25,6 +26,11 @@ Current date and time: ${date}.
 ${drawnFeatures && drawnFeatures.length > 0 ? `The user has drawn the following features on the map for your reference:
 ${drawnFeatures.map(f => `- ${f.type} with measurement ${f.measurement}`).join('\n')}
 Use these user-drawn areas/lines as primary areas of interest for your analysis if applicable to the query.` : ''}
+
+${calendarNotes && calendarNotes.length > 0 ? `### **Calendar Context**
+The following notes are relevant to this session:
+${calendarNotes.map(n => `- [${new Date(n.date).toLocaleDateString()}]: ${n.content}`).join('\n')}
+` : ''}
 
 **Exploration Efficiency Directives:**
 1. **Tool First:** Always check if a tool can directly or partially answer the user's query. Use the most specific tool available.
@@ -86,7 +92,8 @@ export async function researcher(
   messages: CoreMessage[],
   mapProvider: MapProvider,
   useSpecificModel?: boolean,
-  drawnFeatures?: DrawnFeature[]
+  drawnFeatures?: DrawnFeature[],
+  calendarNotes?: CalendarNote[]
 ) {
   let fullResponse = ''
   let hasError = false
@@ -102,7 +109,7 @@ export async function researcher(
   const systemPromptToUse =
     dynamicSystemPrompt?.trim()
       ? dynamicSystemPrompt
-      : getDefaultSystemPrompt(currentDate, drawnFeatures)
+      : getDefaultSystemPrompt(currentDate, drawnFeatures, calendarNotes)
 
   // Check if any message contains an image
   const hasImage = messages.some(message =>
@@ -184,6 +191,10 @@ export async function researcher(
   if (toolResponses.length > 0) {
     messages.push({ role: 'tool', content: toolResponses })
   }
+
+  // Log token usage
+  const usage = await result.usage;
+  console.log('AI Generation Usage:', usage);
 
   return { result, fullResponse, hasError, toolResponses }
 }
