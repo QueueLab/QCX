@@ -15,6 +15,8 @@ import { FollowupPanel } from '@/components/followup-panel'
 import { inquire, researcher, taskManager, querySuggestor, resolutionSearch, type DrawnFeature } from '@/lib/agents'
 import { writer } from '@/lib/agents/writer'
 import { saveChat, getSystemPrompt, generateReportContext } from '@/lib/actions/chat'
+import { enqueueJob } from '@/lib/actions/jobs'
+import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
 import { Chat, AIMessage } from '@/lib/types'
 import { UserMessage } from '@/components/user-message'
 import { BotMessage } from '@/components/message'
@@ -57,9 +59,14 @@ async function submit(formData?: FormData, skip?: boolean) {
     }
     try {
       const messages = JSON.parse(messagesString) as AIMessage[];
-      return await generateReportContext(messages);
+      const userId = await getCurrentUserIdOnServer() || 'anonymous';
+
+      // Enqueue job for asynchronous processing
+      const jobId = await enqueueJob(userId, 'generate_report_context', { messages });
+
+      return { jobId, status: 'processing' };
     } catch (e) {
-      console.error('Failed to parse messages for report context:', e);
+      console.error('Failed to enqueue report context job:', e);
       return { title: 'QCX Intelligence Analysis', summary: 'Automated executive summary is currently unavailable.' };
     }
   }
