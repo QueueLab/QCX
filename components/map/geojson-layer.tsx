@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect } from 'react'
-import type mapboxgl from 'mapbox-gl'
+import { useEffect, useRef } from 'react'
+import mapboxgl from 'mapbox-gl'
 import { useMap } from './map-context'
 import type { FeatureCollection } from 'geojson'
 
@@ -12,6 +12,7 @@ interface GeoJsonLayerProps {
 
 export function GeoJsonLayer({ id, data }: GeoJsonLayerProps) {
   const { map } = useMap()
+  const popupRef = useRef<mapboxgl.Popup | null>(null)
 
   useEffect(() => {
     if (!map || !data) return
@@ -20,6 +21,7 @@ export function GeoJsonLayer({ id, data }: GeoJsonLayerProps) {
     const pointLayerId = `geojson-point-layer-${id}`
     const polygonLayerId = `geojson-polygon-layer-${id}`
     const polygonOutlineLayerId = `geojson-polygon-outline-layer-${id}`
+    const labelLayerId = `geojson-label-layer-${id}`
 
     const onMapLoad = () => {
       // Add source if it doesn't exist
@@ -77,6 +79,68 @@ export function GeoJsonLayer({ id, data }: GeoJsonLayerProps) {
           }
         })
       }
+
+      // Add persistent text label layer for all feature types
+      if (!map.getLayer(labelLayerId)) {
+        map.addLayer({
+          id: labelLayerId,
+          type: 'symbol',
+          source: sourceId,
+          layout: {
+            'text-field': ['get', 'name'],
+            'text-size': 11,
+            'text-anchor': 'top',
+            'text-offset': [0, 0.8],
+            'text-max-width': 12,
+            'text-allow-overlap': false,
+            'text-ignore-placement': false,
+          },
+          paint: {
+            'text-color': '#ffffff',
+            'text-halo-color': '#000000',
+            'text-halo-width': 1.5,
+          }
+        })
+      }
+
+      // Show popup with name + description on click (points and polygons)
+      const handleFeatureClick = (e: mapboxgl.MapMouseEvent & { features?: mapboxgl.MapboxGeoJSONFeature[] }) => {
+        const feature = e.features?.[0]
+        if (!feature) return
+
+        const props = feature.properties as { name?: string; description?: string } | null
+        if (!props?.name) return
+
+        const coordinates = e.lngLat
+
+        const html = `
+          <div style="font-family: sans-serif; max-width: 220px;">
+            <strong style="font-size: 13px; display: block; margin-bottom: 4px;">${props.name}</strong>
+            ${props.description ? `<span style="font-size: 12px; color: #555;">${props.description}</span>` : ''}
+          </div>
+        `
+
+        if (popupRef.current) {
+          popupRef.current.remove()
+        }
+
+        popupRef.current = new mapboxgl.Popup({ closeButton: true, maxWidth: '260px' })
+          .setLngLat(coordinates)
+          .setHTML(html)
+          .addTo(map)
+      }
+
+      map.on('click', pointLayerId, handleFeatureClick)
+      map.on('click', polygonLayerId, handleFeatureClick)
+
+      // Pointer cursor on hover
+      const setCursorPointer = () => { map.getCanvas().style.cursor = 'pointer' }
+      const setCursorDefault = () => { map.getCanvas().style.cursor = '' }
+
+      map.on('mouseenter', pointLayerId, setCursorPointer)
+      map.on('mouseleave', pointLayerId, setCursorDefault)
+      map.on('mouseenter', polygonLayerId, setCursorPointer)
+      map.on('mouseleave', polygonLayerId, setCursorDefault)
     }
 
     if (map.isStyleLoaded()) {
@@ -87,11 +151,16 @@ export function GeoJsonLayer({ id, data }: GeoJsonLayerProps) {
 
     // Cleanup function
     return () => {
+      if (popupRef.current) {
+        popupRef.current.remove()
+        popupRef.current = null
+      }
       if (map.isStyleLoaded()) {
+        if (map.getLayer(labelLayerId)) map.removeLayer(labelLayerId)
         if (map.getLayer(pointLayerId)) map.removeLayer(pointLayerId)
         if (map.getLayer(polygonLayerId)) map.removeLayer(polygonLayerId)
         if (map.getLayer(polygonOutlineLayerId)) map.removeLayer(polygonOutlineLayerId)
-        if (map.getSource(sourceId)) map.removeSource(sourceId)
+
       }
     }
   }, [map, id, data])
