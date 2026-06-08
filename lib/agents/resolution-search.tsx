@@ -128,8 +128,12 @@ Use these user-drawn areas/lines as primary areas of interest for your analysis.
 5. **COG Applicability:** Determine if this location would benefit from Cloud Optimized GeoTIFF (COG) analysis for high-precision temporal or spectral data.
 6. **News Integration:** Reference any recent news or events that may be relevant to the current state of the location.
 7. **Structured Output:** Return your findings in a structured JSON format including summary, geoJson (if any), news context, and any extracted coordinates or COG information. Use the provided schema.
+8. **Contextual Labeling:** Produce location-specific and feature-aware labels for the images (\`mapboxImageLabel\`, \`googleImageLabel\`, \`analysisFocus\`). Reference user-drawn features in these labels when they are present. Labels should be concise, uppercase-friendly, and descriptive of the analysis focus. Examples: "Analysis of drawn area: [feature type]", "[Location name] satellite view".
+9. **Semantic Annotations:** When creating \`geoJson\` features, use Point features for POIs and landmarks, and Polygon features for land areas or regions of interest. Each feature must have a \`name\`, \`featureCategory\`, and \`displayLabel\` matching findings in your summary. Example: Create a Point for identified bridges with name 'Main Street Bridge', category 'infrastructure'.
 
 Your analysis should be based on the visual information in the image, the temporal context provided, and your general knowledge. Do not attempt to access external websites or perform web searches beyond what has been provided.
+
+In your summary, reference annotated features by name (e.g., "I've marked the identified commercial district as a polygon", "The red marker indicates the location of...").
 
 Analyze the user's prompt and the image to provide a holistic understanding of the location with full temporal and contextual awareness.
 `;
