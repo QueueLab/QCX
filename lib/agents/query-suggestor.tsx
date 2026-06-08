@@ -14,23 +14,27 @@ interface CacheEntry {
 const queryCache = new Map<string, CacheEntry>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-function getCacheKey(messages: CoreMessage[]): string {
-  // Create a simple hash of the last few messages to use as cache key
+function getCacheKey(messages: CoreMessage[], detectedFeatures?: string): string {
+  // Create a simple hash of the last few messages and detected features to use as cache key
   const recentMessages = messages.slice(-3);
-  return JSON.stringify(recentMessages.map(m => ({
-    role: m.role,
-    content: typeof m.content === 'string' ? m.content : '[complex content]'
-  })));
+  return JSON.stringify({
+    messages: recentMessages.map(m => ({
+      role: m.role,
+      content: typeof m.content === 'string' ? m.content : '[complex content]'
+    })),
+    detectedFeatures
+  });
 }
 
 export async function querySuggestor(
   uiStream: ReturnType<typeof createStreamableUI>,
-  messages: CoreMessage[]
+  messages: CoreMessage[],
+  detectedFeatures?: string
 ) {
   const objectStream = createStreamableValue<PartialRelated>()
   
   // OPTIMIZATION: Check cache first
-  const cacheKey = getCacheKey(messages);
+  const cacheKey = getCacheKey(messages, detectedFeatures);
   const cachedEntry = queryCache.get(cacheKey) as CacheEntry | undefined;
   
   if (cachedEntry && Date.now() - cachedEntry.timestamp < CACHE_TTL) {
@@ -54,10 +58,12 @@ export async function querySuggestor(
 
   let finalRelatedQueries: PartialRelated = {}
   
+  const systemPrompt = `Generate 3 follow-up queries that explore the subject matter deeper. Format as JSON with an "items" array containing objects with "query" fields. Keep queries concise and relevant.${detectedFeatures ? `\n\nContext - Detected Features: ${detectedFeatures}. Incorporate these features into the suggested queries (e.g., "Tell me more about [Feature Name]" or "What is the significance of [Feature Name]?").` : ''}`;
+
   // OPTIMIZATION: Use a more concise system prompt to reduce token usage
   const result = await streamObject({
     model: (await getModel()) as LanguageModel,
-    system: `Generate 3 follow-up queries that explore the subject matter deeper. Format as JSON with an "items" array containing objects with "query" fields. Keep queries concise and relevant.`,
+    system: systemPrompt,
     messages,
     schema: relatedSchema,
     temperature: 0.7, // Lower temperature for more consistent results

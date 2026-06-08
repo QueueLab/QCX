@@ -7,9 +7,11 @@ interface CompareSliderProps {
   leftImage: string
   rightImage: string
   className?: string
+  leftLabel?: string
+  rightLabel?: string
 }
 
-export function CompareSlider({ leftImage, rightImage, className }: CompareSliderProps) {
+export function CompareSlider({ leftImage, rightImage, className, leftLabel, rightLabel }: CompareSliderProps) {
   const [sliderPosition, setSliderPosition] = useState(50)
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerWidth, setContainerWidth] = useState(0)
@@ -80,11 +82,11 @@ export function CompareSlider({ leftImage, rightImage, className }: CompareSlide
       </div>
 
       {/* Labels */}
-      <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/50 text-white text-[10px] rounded pointer-events-none">
-        MAPBOX
+      <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/50 text-white text-[10px] rounded pointer-events-none uppercase">
+        {leftLabel || 'MAPBOX'}
       </div>
-      <div className="absolute bottom-2 right-2 px-2 py-1 bg-black/50 text-white text-[10px] rounded pointer-events-none">
-        GOOGLE SATELLITE
+      <div className="absolute bottom-2 right-2 px-2 py-1 bg-black/50 text-white text-[10px] rounded pointer-events-none uppercase">
+        {rightLabel || 'GOOGLE SATELLITE'}
       </div>
     </div>
   )
