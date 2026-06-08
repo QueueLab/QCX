@@ -26,14 +26,25 @@ export async function generateReportContext(messages: AIMessage[]) {
   try {
     const model = await getModel()
 
-    const promptMessages = messages.map(msg => ({
-      role: msg.role === 'user' ? 'user' as const : 'assistant' as const,
-      content: typeof msg.content === 'string'
-        ? msg.content
-        : Array.isArray(msg.content)
-          ? msg.content.map(p => p.type === 'text' ? p.text : '').join('\n')
-          : JSON.stringify(msg.content)
-    })).filter(msg => msg.role === 'user' || msg.role === 'assistant')
+    const promptMessages = messages
+      .filter(msg => msg.role === 'user' || (msg.role === 'assistant' && msg.type === 'response'))
+      .map(msg => {
+        const role = msg.role === 'user' ? 'user' as const : 'assistant' as const
+        const rawContent =
+          typeof msg.content === 'string'
+            ? msg.content
+            : Array.isArray(msg.content)
+              ? msg.content.map(p => (p && typeof p === 'object' && 'type' in p && p.type === 'text') ? p.text : '').join('\n')
+              : JSON.stringify(msg.content)
+
+        // Sanitize: strip huge base64 images if any are still in there
+        const content = rawContent
+          .replace(/data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+/g, '[image omitted]')
+          .trim()
+
+        return { role, content }
+      })
+      .filter(msg => msg.content.length > 0)
 
     const { text } = await generateText({
       model,
@@ -53,7 +64,10 @@ export async function generateReportContext(messages: AIMessage[]) {
     try {
       return JSON.parse(text) as { title: string; summary: string }
     } catch (e) {
-      console.error('Failed to parse AI response for report context:', text)
+      console.error('Failed to parse AI response for report context', {
+        error: e instanceof Error ? e.message : String(e),
+        preview: text.slice(0, 200)
+      })
       // Fallback
       return {
         title: 'QCX Intelligence Analysis',

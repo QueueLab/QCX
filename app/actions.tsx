@@ -14,7 +14,7 @@ import { Section } from '@/components/section'
 import { FollowupPanel } from '@/components/followup-panel'
 import { inquire, researcher, taskManager, querySuggestor, resolutionSearch, type DrawnFeature } from '@/lib/agents'
 import { writer } from '@/lib/agents/writer'
-import { saveChat, getSystemPrompt } from '@/lib/actions/chat'
+import { saveChat, getSystemPrompt, generateReportContext } from '@/lib/actions/chat'
 import { Chat, AIMessage } from '@/lib/types'
 import { UserMessage } from '@/components/user-message'
 import { BotMessage } from '@/components/message'
@@ -51,9 +51,17 @@ async function submit(formData?: FormData, skip?: boolean) {
   }
 
   if (action === 'generate_report_context') {
-    const messagesString = formData?.get('messages') as string;
-    const messages = JSON.parse(messagesString) as AIMessage[];
-    return await generateReportContext(messages);
+    const messagesString = formData?.get('messages');
+    if (typeof messagesString !== 'string') {
+      return { title: 'QCX Intelligence Analysis', summary: 'Automated executive summary is currently unavailable.' };
+    }
+    try {
+      const messages = JSON.parse(messagesString) as AIMessage[];
+      return await generateReportContext(messages);
+    } catch (e) {
+      console.error('Failed to parse messages for report context:', e);
+      return { title: 'QCX Intelligence Analysis', summary: 'Automated executive summary is currently unavailable.' };
+    }
   }
 
   if (action === 'resolution_search') {
