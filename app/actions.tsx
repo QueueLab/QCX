@@ -822,6 +822,9 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
               const image = analysisResult.image as string;
               const mapboxImage = analysisResult.mapboxImage as string;
               const googleImage = analysisResult.googleImage as string;
+              const mapboxImageLabel = analysisResult.mapboxImageLabel as string;
+              const googleImageLabel = analysisResult.googleImageLabel as string;
+              const analysisFocus = analysisResult.analysisFocus as string;
 
               return {
                 id,
@@ -831,6 +834,9 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                       mapboxImage={mapboxImage}
                       googleImage={googleImage}
                       initialImage={image}
+                      mapboxImageLabel={mapboxImageLabel}
+                      googleImageLabel={googleImageLabel}
+                      analysisFocus={analysisFocus}
                     />
                     {geoJson && (
                       <GeoJsonLayer id={id} data={geoJson} />

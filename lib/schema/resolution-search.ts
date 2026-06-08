@@ -21,7 +21,7 @@ export const resolutionSearchSchema = z.object({
       name: z.string().describe('Name of the feature or point of interest'),
       description: z.string().optional().describe('Description of the feature')
     }))
-  }).optional().describe('A collection of points of interest and classified land features to be overlaid on the map.'),
+  }).optional().describe('A collection of HIGH-CONFIDENCE points of interest and classified land features to be overlaid on the map. ONLY include features that are clearly identifiable and highly relevant to the analysis focus or user-drawn areas.'),
 
   // Flattened top-level fields for better xAI compatibility
   extractedLatitude: z.number().optional().describe('The extracted latitude of the center of the image.'),
@@ -35,7 +35,12 @@ export const resolutionSearchSchema = z.object({
     title: z.string(),
     summary: z.string(),
     relevance: z.string()
-  })).optional().describe('List of recent news items relevant to the location.')
+  })).optional().describe('List of recent news items relevant to the location.'),
+
+  // New fields for contextual labels
+  mapboxImageLabel: z.string().optional().describe('A contextual label describing what the Mapbox image shows, based on the analysis focus.'),
+  googleImageLabel: z.string().optional().describe('A contextual label describing what the Google Satellite image shows, based on the analysis focus.'),
+  analysisFocus: z.string().optional().describe('A brief phrase describing the primary focus of the analysis (e.g., "Urban infrastructure analysis", "Forest coverage assessment").')
 })
 
 export type ResolutionSearch = z.infer<typeof resolutionSearchSchema>;
