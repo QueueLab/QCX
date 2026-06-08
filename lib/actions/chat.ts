@@ -19,6 +19,55 @@ import { db } from '@/lib/db'
 import { users } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
+import { generateText } from 'ai'
+import { getModel } from '../utils'
+
+export async function generateReportContext(messages: AIMessage[]) {
+  try {
+    const model = await getModel()
+
+    const promptMessages = messages.map(msg => ({
+      role: msg.role === 'user' ? 'user' as const : 'assistant' as const,
+      content: typeof msg.content === 'string'
+        ? msg.content
+        : Array.isArray(msg.content)
+          ? msg.content.map(p => p.type === 'text' ? p.text : '').join('\n')
+          : JSON.stringify(msg.content)
+    })).filter(msg => msg.role === 'user' || msg.role === 'assistant')
+
+    const { text } = await generateText({
+      model,
+      system: `You are a high-level geospatial intelligence analyst. Based on the provided conversation, generate:
+      1. A professional, concise report title (max 60 characters).
+      2. A 150-200 word executive summary that synthesizes the intelligence findings, observations, and spatial analysis discussed.
+
+      Format your response as a JSON object:
+      {
+        "title": "The Title Here",
+        "summary": "The executive summary here..."
+      }
+      Do not include any other text or markdown formatting in your response.`,
+      messages: promptMessages as any,
+    })
+
+    try {
+      return JSON.parse(text) as { title: string; summary: string }
+    } catch (e) {
+      console.error('Failed to parse AI response for report context:', text)
+      // Fallback
+      return {
+        title: 'QCX Intelligence Analysis',
+        summary: 'Executive summary generation failed, but manual review of the intelligence assessment is recommended.'
+      }
+    }
+  } catch (error) {
+    console.error('Error generating report context:', error)
+    return {
+      title: 'QCX Intelligence Analysis',
+      summary: 'Automated executive summary is currently unavailable.'
+    }
+  }
+}
 
 export async function getChats(userId?: string | null): Promise<DrizzleChat[]> {
   if (!userId) {

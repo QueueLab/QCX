@@ -50,6 +50,12 @@ async function submit(formData?: FormData, skip?: boolean) {
     console.error('Failed to parse drawnFeatures:', e);
   }
 
+  if (action === 'generate_report_context') {
+    const messagesString = formData?.get('messages') as string;
+    const messages = JSON.parse(messagesString) as AIMessage[];
+    return await generateReportContext(messages);
+  }
+
   if (action === 'resolution_search') {
     const file_mapbox = formData?.get('file_mapbox') as File;
     const file_google = formData?.get('file_google') as File;
