@@ -117,7 +117,8 @@ Please incorporate this recent news context into your analysis where relevant.` 
 ${drawnFeatures && drawnFeatures.length > 0 ? `**User-Drawn Features:**
 The user has drawn the following features on the map for your reference:
 ${drawnFeatures.map(f => `- ${f.type} (${f.measurement}): ${JSON.stringify(f.geometry)}`).join('\n')}
-Use these user-drawn areas/lines as primary areas of interest for your analysis.` : ''}
+Use these user-drawn areas/lines as primary areas of interest for your analysis.
+IMPORTANT: In your summary, explicitly state what features you are analyzing and why.` : ''}
 
 **Analysis Requirements:**
 
@@ -128,6 +129,11 @@ Use these user-drawn areas/lines as primary areas of interest for your analysis.
 5. **COG Applicability:** Determine if this location would benefit from Cloud Optimized GeoTIFF (COG) analysis for high-precision temporal or spectral data.
 6. **News Integration:** Reference any recent news or events that may be relevant to the current state of the location.
 7. **Structured Output:** Return your findings in a structured JSON format including summary, geoJson (if any), news context, and any extracted coordinates or COG information. Use the provided schema.
+8. **Contextual Labeling:** Generate descriptive labels for the map images that reflect the analysis focus. If user-drawn features are present, reference them in the labels. For example:
+   - If analyzing a drawn polygon: "Analysis of drawn area: [feature type]"
+   - If analyzing a specific location: "[Location name] satellite view"
+   - If general analysis: "[Primary feature type] analysis"
+   Provide these in the mapboxImageLabel, googleImageLabel, and analysisFocus fields.
 
 Your analysis should be based on the visual information in the image, the temporal context provided, and your general knowledge. Do not attempt to access external websites or perform web searches beyond what has been provided.
 

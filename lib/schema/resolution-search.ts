@@ -35,7 +35,12 @@ export const resolutionSearchSchema = z.object({
     title: z.string(),
     summary: z.string(),
     relevance: z.string()
-  })).optional().describe('List of recent news items relevant to the location.')
+  })).optional().describe('List of recent news items relevant to the location.'),
+
+  // New fields for contextual labels
+  mapboxImageLabel: z.string().optional().describe('A contextual label describing what the Mapbox image shows, based on the analysis focus.'),
+  googleImageLabel: z.string().optional().describe('A contextual label describing what the Google Satellite image shows, based on the analysis focus.'),
+  analysisFocus: z.string().optional().describe('A brief phrase describing the primary focus of the analysis (e.g., "Urban infrastructure analysis", "Forest coverage assessment").')
 })
 
 export type ResolutionSearch = z.infer<typeof resolutionSearchSchema>;

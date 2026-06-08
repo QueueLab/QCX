@@ -5,13 +5,66 @@ $ next dev --turbo
    - Environments: .env
 
  ✓ Starting...
- ✓ Compiled middleware in 433ms
- ✓ Ready in 1802ms
+Attention: Next.js now collects completely anonymous telemetry regarding usage.
+This information is used to shape Next.js' roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://nextjs.org/telemetry
+
+ ✓ Compiled middleware in 363ms
+ ✓ Ready in 1710ms
  ○ Compiling / ...
- ✓ Compiled / in 27.9s
+ ✓ Compiled / in 29.3s
 Chat DB actions loaded. Ensure getCurrentUserId() is correctly implemented for server-side usage if applicable.
- GET / 200 in 30481ms
- HEAD / 200 in 1010ms
- GET / 200 in 986ms
- GET / 200 in 1129ms
-[?25h
+ GET / 200 in 34985ms
+ GET / 200 in 35005ms
+ GET / 200 in 1472ms
+ GET / 200 in 2734ms
+ GET / 200 in 1145ms
+ GET / 200 in 1843ms
+ GET / 200 in 1137ms
+ GET / 200 in 1370ms
+ GET / 200 in 1107ms
+ GET / 200 in 1355ms
+ HEAD / 200 in 995ms
+ GET / 200 in 1896ms
+ GET / 200 in 1894ms
+ GET / 200 in 2017ms
+ GET / 200 in 2021ms
+ GET / 200 in 2087ms
+ GET / 200 in 2246ms
+ GET / 200 in 2268ms
+ GET / 200 in 2245ms
+[Auth] Supabase URL or Anon Key is not set for server-side auth.
+ POST / 200 in 1605ms
+ GET / 200 in 1178ms
+ GET / 200 in 2469ms
+ GET / 200 in 2179ms
+ GET / 200 in 2328ms
+ GET / 200 in 1137ms
+[Auth] Supabase URL or Anon Key is not set for server-side auth.
+ POST / 200 in 2000ms
+[Auth] Supabase URL or Anon Key is not set for server-side auth.
+ POST / 200 in 1989ms
+ GET / 200 in 1181ms
+[Auth] Supabase URL or Anon Key is not set for server-side auth.
+ POST / 200 in 1073ms
+ GET / 200 in 1048ms
+ GET / 200 in 1104ms
+[Auth] Supabase URL or Anon Key is not set for server-side auth.
+ POST / 200 in 1055ms
+ ✓ Compiled middleware in 2ms
+ ○ Compiling /test-carousel ...
+ ✓ Compiled /test-carousel in 6.1s
+ ⨯ Error: `useUIState` must be used inside an <AI> provider.
+    at ResolutionCarousel (components/resolution-carousel.tsx:39:35)
+  37 | }: ResolutionCarouselProps) {
+  38 |   const actions = useActions<typeof AI>() as any
+> 39 |   const [, setMessages] = useUIState<typeof AI>()
+     |                                   ^
+  40 |   const [isAnalyzing, setIsAnalyzing] = React.useState(false)
+  41 |
+  42 |   const handleQCXAnalysis = async () => { {
+  digest: '3019542783'
+}
+ GET /test-carousel 500 in 7348ms
+ ✓ Compiled middleware in 38ms
