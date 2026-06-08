@@ -85,7 +85,7 @@ export const Map3D = forwardRef(
       <div style={props.style}>
         <gmp-map-3d
           ref={map3dRef}
-          center={center}
+          center={center && typeof center === 'object' && 'lat' in center ? { lat: center.lat, lng: center.lng, altitude: 0 } : center}
           range={range}
           heading={heading}
           tilt={tilt}
