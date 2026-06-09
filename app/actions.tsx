@@ -17,6 +17,7 @@ import { writer } from '@/lib/agents/writer'
 import { saveChat, getSystemPrompt, generateReportContext } from '@/lib/actions/chat'
 import { enqueueJob } from '@/lib/actions/jobs'
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
+import { send } from '@vercel/queue'
 import { Chat, AIMessage } from '@/lib/types'
 import { UserMessage } from '@/components/user-message'
 import { BotMessage } from '@/components/message'
@@ -63,6 +64,15 @@ async function submit(formData?: FormData, skip?: boolean) {
 
       // Enqueue job for asynchronous processing
       const jobId = await enqueueJob(userId, 'generate_report_context', { messages });
+
+      // Send to Vercel Queue
+      try {
+        await send('report-generation', { jobId });
+      } catch (queueError) {
+        console.error('Failed to send to Vercel Queue:', queueError);
+        // We continue because the worker might still poll if it's running,
+        // but ideally Vercel Queue handles the trigger.
+      }
 
       return { jobId, status: 'processing' };
     } catch (e) {
