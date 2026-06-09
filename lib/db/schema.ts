@@ -102,6 +102,18 @@ export const calendarNotes = pgTable('calendar_notes', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
+export const jobs = pgTable('jobs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  type: text('type').notNull(),
+  status: text('status').notNull().default('pending'),
+  payload: jsonb('payload'),
+  result: jsonb('result'),
+  error: text('error'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   chats: many(chats),
@@ -111,6 +123,14 @@ export const usersRelations = relations(users, ({ many }) => ({
   systemPrompts: many(systemPrompts),
   locations: many(locations),
   visualizations: many(visualizations),
+  jobs: many(jobs),
+}));
+
+export const jobsRelations = relations(jobs, ({ one }) => ({
+  user: one(users, {
+    fields: [jobs.userId],
+    references: [users.id],
+  }),
 }));
 
 export const chatsRelations = relations(chats, ({ one, many }) => ({

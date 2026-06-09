@@ -11,6 +11,7 @@ import { AI } from '@/app/actions'
 import { useActions } from 'ai/rsc'
 import { toast } from 'sonner'
 import { ReportTemplate } from './report-template'
+import { getJobStatus } from '@/lib/actions/jobs-client'
 import { createPortal } from 'react-dom'
 
 export const DownloadReportButton = () => {
@@ -57,7 +58,34 @@ export const DownloadReportButton = () => {
       formData.append('action', 'generate_report_context');
       formData.append('messages', JSON.stringify(aiState.messages));
 
-      const { title, summary } = await (actions as any).submit(formData);
+      const { jobId } = await (actions as any).submit(formData);
+
+      if (!jobId) {
+        throw new Error('Failed to start report generation job');
+      }
+
+      // Polling for job completion
+      let jobResult = null;
+      let attempts = 0;
+      const maxAttempts = 60; // 60 seconds
+
+      while (attempts < maxAttempts) {
+        const { status, result, error } = await getJobStatus(jobId);
+        if (status === 'completed') {
+          jobResult = result;
+          break;
+        } else if (status === 'failed') {
+          throw new Error(error || 'Job failed');
+        }
+        attempts++;
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+
+      if (!jobResult) {
+        throw new Error('Report generation timed out');
+      }
+
+      const { title, summary } = jobResult as { title: string, summary: string };
 
       const finalTitle = title || 'QCX Intelligence Analysis'
       setReportTitle(finalTitle)
