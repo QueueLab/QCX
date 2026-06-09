@@ -1,8 +1,9 @@
 import { handleCallback } from '@vercel/queue';
 import { generateReportContext } from '@/lib/actions/chat';
 import { updateJob, getJob } from '@/lib/actions/jobs';
+import { NextRequest } from 'next/server';
 
-export const POST = handleCallback(async (payload: any) => {
+const queueHandler = handleCallback(async (payload: any) => {
   const { jobId } = payload;
   if (!jobId) {
     console.error('No jobId in queue payload');
@@ -36,3 +37,7 @@ export const POST = handleCallback(async (payload: any) => {
     });
   }
 });
+
+export async function POST(request: NextRequest) {
+  return queueHandler(request);
+}
