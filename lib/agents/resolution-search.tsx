@@ -25,7 +25,7 @@ const resolutionSearchSchema = z.object({
 
 export interface DrawnFeature {
   id: string;
-  type: 'Polygon' | 'LineString';
+  type: 'Polygon' | 'LineString' | 'Circle';
   measurement: string;
   geometry: any;
 }
@@ -47,7 +47,10 @@ As a geospatial analyst, your task is to analyze the provided satellite image of
 The current local time at this location is ${localTime}.
 
 ${drawnFeatures && drawnFeatures.length > 0 ? `The user has drawn the following features on the map for your reference:
-${drawnFeatures.map(f => `- ${f.type} (${f.measurement}): ${JSON.stringify(f.geometry)}`).join('\n')}
+${drawnFeatures.map(f => {
+  if (f.type === 'Circle') return `- Circle (Radius/Area: ${f.measurement}): ${JSON.stringify(f.geometry)}`;
+  return `- ${f.type} (${f.measurement}): ${JSON.stringify(f.geometry)}`;
+}).join('\n')}
 Use these user-drawn areas/lines as primary areas of interest for your analysis.` : ''}
 
 Your analysis should be comprehensive and include the following components:

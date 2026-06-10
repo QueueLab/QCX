@@ -66,25 +66,25 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     lineLabelsRef.current = {}
 
     const features = drawRef.current.getAll().features
-    const currentDrawnFeatures: Array<{ id: string; type: 'Polygon' | 'LineString'; measurement: string; geometry: any }> = []
+    const currentDrawnFeatures: Array<{ id: string; type: 'Polygon' | 'LineString' | 'Circle'; measurement: string; geometry: any }> = []
 
     features.forEach(feature => {
       const id = feature.id as string
-      let featureType: 'Polygon' | 'LineString' | null = null;
+      let featureType: 'Polygon' | 'LineString' | 'Circle' | null = null;
       let measurement = '';
 
-      if (feature.geometry.type === 'Polygon') {
-        featureType = 'Polygon';
-        const area = turf.area(feature)
-        const formattedArea = formatMeasurement(area, true)
-        
+      if (feature.geometry.type === "Polygon") {
         const isCircle = feature.properties?.user_isCircle;
         const radiusInKm = feature.properties?.user_radiusInKm;
+        const area = turf.area(feature);
+        const formattedArea = formatMeasurement(area, true);
 
         if (isCircle && radiusInKm) {
+          featureType = "Circle";
           const formattedRadius = formatMeasurement(radiusInKm * 1000, false);
-          measurement = `R: ${formattedRadius}, A: ${formattedArea}`;
+          measurement = `Radius: ${formattedRadius}, Area: ${formattedArea}`;
         } else {
+          featureType = "Polygon";
           measurement = formattedArea;
         }
 
