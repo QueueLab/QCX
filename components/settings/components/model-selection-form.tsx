@@ -43,11 +43,11 @@ const models = [
     badgeVariant: "secondary" as const,
   },
   {
-    id: "Gemini 3",
-    name: "Gemini 3",
-    description: "Google's next-generation multimodal model, excelling at understanding and processing diverse information.",
+    id: "Gemini 3.1 Pro",
+    name: "Gemini 3.1 Pro",
+    description: "Google's latest reasoning model, excelling at multimodal understanding and complex agentic tasks.",
     icon: Sparkles,
-    badge: "Multimodal",
+    badge: "Advanced",
     badgeVariant: "outline" as const,
   },
   {
@@ -55,7 +55,7 @@ const models = [
     name: "GPT-5.1",
     description: "The cutting-edge of language models, offering unparalleled performance in creative and analytical tasks.",
     icon: Zap,
-    badge: "Advanced",
+    badge: "Expert",
     badgeVariant: "outline" as const,
   },
 ];

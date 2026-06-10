@@ -1,0 +1,8 @@
+<<<<<<< SEARCH
+                        {children}
+                        <Sidebar />
+                        <HistorySidebar />
+=======
+                        {children}
+                        <HistorySidebar />
+>>>>>>> REPLACE

@@ -6,9 +6,9 @@ import { useUIState, useActions, readStreamableValue } from 'ai/rsc'
 import { cn } from '@/lib/utils'
 import { UserMessage } from './user-message'
 import { Button } from './ui/button'
-import { ArrowRight, Plus, Paperclip, X } from 'lucide-react'
+import { ArrowRight, Plus, Paperclip, X, Sprout } from 'lucide-react'
 import Textarea from 'react-textarea-autosize'
-import { nanoid } from 'nanoid'
+import { nanoid } from '@/lib/utils'
 import { useSettingsStore } from '@/lib/store/settings'
 import { PartialRelated } from '@/lib/schema/related'
 import { getSuggestions } from '@/lib/actions/suggest'
@@ -166,21 +166,19 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     return (
       <div
         className={cn(
-          'fixed bottom-2 left-2 flex justify-start items-center pointer-events-none',
-          isMobile ? 'w-full px-2' : 'md:bottom-8'
+          'fixed bottom-4 left-4 flex justify-start items-center pointer-events-none z-50'
         )}
       >
         <Button
           type="button"
-          variant={'secondary'}
-          className="rounded-full bg-secondary/80 group transition-all hover:scale-105 pointer-events-auto"
+          variant={'ghost'}
+          size={'icon'}
+          className="rounded-full transition-all hover:scale-110 pointer-events-auto text-primary"
           onClick={() => handleClear()}
           data-testid="new-chat-button"
+          title="New Chat"
         >
-          <span className="text-sm mr-2 group-hover:block hidden animate-in fade-in duration-300">
-            New
-          </span>
-          <Plus size={18} className="group-hover:rotate-90 transition-all" />
+          <Sprout size={28} className="fill-primary/20" />
         </Button>
       </div>
     )

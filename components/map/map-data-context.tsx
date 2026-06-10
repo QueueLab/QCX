@@ -24,7 +24,6 @@ export interface MapData {
     measurement: string;
     geometry: any;
   }>;
-  pendingFeatures?: any[]; // For programmatic drawing commands
   markers?: Array<{
     latitude: number;
     longitude: number;
@@ -40,7 +39,7 @@ interface MapDataContextType {
 const MapDataContext = createContext<MapDataContextType | undefined>(undefined);
 
 export const MapDataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [mapData, setMapData] = useState<MapData>({ drawnFeatures: [], pendingFeatures: [], markers: [] });
+  const [mapData, setMapData] = useState<MapData>({ drawnFeatures: [], markers: [] });
 
   return (
     <MapDataContext.Provider value={{ mapData, setMapData }}>

@@ -1,42 +1,94 @@
-import { pgTable, text, timestamp, uuid, varchar, jsonb, boolean } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, uuid, jsonb, customType, unique } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
-// Users Table (assuming Supabase Auth uses its own users table,
-// but a local reference might be used or this could be a public profile table)
-// For now, let's assume a simple users table if PR #533 implies one in schema.ts
-// If PR #533 relies purely on Supabase Auth's user IDs without a separate 'users' table managed by Drizzle for chat context,
-// then this table might be simpler or not needed. Given the PR title focuses on chat migration,
-// we'll include a basic one that can be referenced by chats and messages.
+// Custom type for PostGIS geometry
+const geometry = customType<{ data: string }>({
+  dataType() {
+    return 'geometry(GEOMETRY, 4326)';
+  },
+});
+
+/**
+ * Custom type for vector embeddings.
+ * Currently assumed to use text-embedding-ada-002 => 1536 dimensions.
+ * Switching to models like text-embedding-3-large (3072) requires a migration.
+ */
+const vector = customType<{ data: number[] }>({
+  dataType() {
+    return 'vector(1536)';
+  },
+});
+
 export const users = pgTable('users', {
-  id: uuid('id').primaryKey().defaultRandom(), // Assuming Supabase user IDs are UUIDs
-  // email: text('email'), // Supabase handles this in auth.users
-  // Other profile fields if necessary
+  id: uuid('id').primaryKey().defaultRandom(),
+  email: text('email').unique(), // Enforced unique for user identity
+  role: text('role').default('viewer'),
+  selectedModel: text('selected_model'),
+  systemPrompt: text('system_prompt'),
 });
 
 export const chats = pgTable('chats', {
   id: uuid('id').primaryKey().defaultRandom(),
-  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }), // References a user ID
-  title: varchar('title', { length: 256 }).notNull().default('Untitled Chat'),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  title: text('title').notNull().default('Untitled Chat'),
+  visibility: text('visibility').default('private'),
+  path: text('path'),
+  sharePath: text('share_path'),
+  shareableLinkId: uuid('shareable_link_id').defaultRandom().unique(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  // RLS in Supabase will use policies, but marking public visibility can be a column
-  visibility: varchar('visibility', { length: 50 }).default('private'), // e.g., 'private', 'public'
-  // any other metadata for the chat
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const locations = pgTable('locations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  chatId: uuid('chat_id').references(() => chats.id, { onDelete: 'cascade' }),
+  geojson: jsonb('geojson').notNull(),
+  geometry: geometry('geometry'),
+  name: text('name'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
 export const messages = pgTable('messages', {
   id: uuid('id').primaryKey().defaultRandom(),
   chatId: uuid('chat_id').notNull().references(() => chats.id, { onDelete: 'cascade' }),
-  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }), // Who sent the message
-  role: varchar('role', { length: 50 }).notNull(), // e.g., 'user', 'assistant', 'system', 'tool'
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  role: text('role').notNull(),
   content: text('content').notNull(),
+  embedding: vector('embedding'),
+  locationId: uuid('location_id').references(() => locations.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  // attachments: jsonb('attachments'), // As per PR commit: "feat: remove updatedAt and add attachments field to messages"
-  // toolName: varchar('tool_name', { length: 100 }), // If messages can be from tools
-  // toolCallId: varchar('tool_call_id', {length: 100}), // if tracking specific tool calls
-  // type: varchar('type', { length: 50 }) // As per app/actions.tsx AIMessage type
 });
 
-// Calendar Notes Table
+export const chatParticipants = pgTable('chat_participants', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  chatId: uuid('chat_id').notNull().references(() => chats.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  role: text('role').notNull().default('collaborator'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  // Prevent duplicate participants in the same chat
+  chatUserUnique: unique('chat_participants_chat_user_unique').on(t.chatId, t.userId),
+}));
+
+export const systemPrompts = pgTable('system_prompts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  prompt: text('prompt').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const visualizations = pgTable('visualizations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  chatId: uuid('chat_id').references(() => chats.id, { onDelete: 'cascade' }),
+  type: text('type').notNull().default('map_layer'),
+  data: jsonb('data').notNull(),
+  geometry: geometry('geometry'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
 export const calendarNotes = pgTable('calendar_notes', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
@@ -55,6 +107,10 @@ export const usersRelations = relations(users, ({ many }) => ({
   chats: many(chats),
   messages: many(messages),
   calendarNotes: many(calendarNotes),
+  chatParticipants: many(chatParticipants),
+  systemPrompts: many(systemPrompts),
+  locations: many(locations),
+  visualizations: many(visualizations),
 }));
 
 export const chatsRelations = relations(chats, ({ one, many }) => ({
@@ -64,6 +120,9 @@ export const chatsRelations = relations(chats, ({ one, many }) => ({
   }),
   messages: many(messages),
   calendarNotes: many(calendarNotes),
+  participants: many(chatParticipants),
+  locations: many(locations),
+  visualizations: many(visualizations),
 }));
 
 export const messagesRelations = relations(messages, ({ one }) => ({
@@ -74,6 +133,51 @@ export const messagesRelations = relations(messages, ({ one }) => ({
   user: one(users, {
     fields: [messages.userId],
     references: [users.id],
+  }),
+  location: one(locations, {
+    fields: [messages.locationId],
+    references: [locations.id],
+  }),
+}));
+
+export const chatParticipantsRelations = relations(chatParticipants, ({ one }) => ({
+  chat: one(chats, {
+    fields: [chatParticipants.chatId],
+    references: [chats.id],
+  }),
+  user: one(users, {
+    fields: [chatParticipants.userId],
+    references: [users.id],
+  }),
+}));
+
+export const systemPromptsRelations = relations(systemPrompts, ({ one }) => ({
+  user: one(users, {
+    fields: [systemPrompts.userId],
+    references: [users.id],
+  }),
+}));
+
+export const locationsRelations = relations(locations, ({ one, many }) => ({
+  user: one(users, {
+    fields: [locations.userId],
+    references: [users.id],
+  }),
+  chat: one(chats, {
+    fields: [locations.chatId],
+    references: [chats.id],
+  }),
+  messages: many(messages),
+}));
+
+export const visualizationsRelations = relations(visualizations, ({ one }) => ({
+  user: one(users, {
+    fields: [visualizations.userId],
+    references: [users.id],
+  }),
+  chat: one(chats, {
+    fields: [visualizations.chatId],
+    references: [chats.id],
   }),
 }));
 
