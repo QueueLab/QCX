@@ -20,7 +20,7 @@ export interface MapData {
   mapFeature?: any | null; // Generic feature from MCP hook's processLocationQuery
   drawnFeatures?: Array<{ // Added to store drawn features and their measurements
     id: string;
-    type: 'Polygon' | 'LineString';
+    type: 'Polygon' | 'LineString' | 'Circle';
     measurement: string;
     geometry: any;
   }>;
