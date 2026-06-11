@@ -4,14 +4,17 @@
 import { createStreamableUI, createStreamableValue } from 'ai/rsc';
 import { BotMessage } from '@/components/message';
 import { geospatialQuerySchema } from '@/lib/schema/geospatial';
+import { Client as MCPClientClass } from '@modelcontextprotocol/sdk/client/index.js';
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+// Smithery SDK removed - using direct URL construction
 import { z } from 'zod';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { getSelectedModel } from '@/lib/actions/users';
 import { MapProvider } from '@/lib/store/settings';
-import { getConnectedMcpClient, closeClient, McpClient } from '@/lib/utils/mcp';
-import { getGoogleStaticMapUrl } from '@/lib/utils';
 
 // Types
+export type McpClient = MCPClientClass;
+
 interface Location {
   latitude?: number;
   longitude?: number;
@@ -24,6 +27,143 @@ interface McpResponse {
   mapUrl?: string;
 }
 
+interface MapboxConfig {
+  mapboxAccessToken: string;
+  version: string;
+  name: string;
+}
+
+/**
+ * Establish connection to the MCP server with proper environment validation.
+ */
+async function getConnectedMcpClient(): Promise<McpClient | null> {
+  const composioApiKey = process.env.COMPOSIO_API_KEY;
+  const mapboxAccessToken = process.env.MAPBOX_ACCESS_TOKEN;
+  const composioUserId = process.env.COMPOSIO_USER_ID;
+
+  console.log('[GeospatialTool] Environment check:', {
+    composioApiKey: composioApiKey ? `${composioApiKey.substring(0, 8)}...` : 'MISSING',
+    mapboxAccessToken: mapboxAccessToken ? `${mapboxAccessToken.substring(0, 8)}...` : 'MISSING',
+    composioUserId: composioUserId ? `${composioUserId.substring(0, 8)}...` : 'MISSING',
+  });
+
+  if (!composioApiKey || !mapboxAccessToken || !composioUserId || !composioApiKey.trim() || !mapboxAccessToken.trim() || !composioUserId.trim()) {
+    console.error('[GeospatialTool] Missing or empty required environment variables');
+    return null;
+  }
+
+  // Load config from file or fallback
+  let config;
+  try {
+    // Use static import for config
+    let mapboxMcpConfig;
+    try {
+      mapboxMcpConfig = require('../../../mapbox_mcp_config.json');
+      config = { ...mapboxMcpConfig, mapboxAccessToken };
+      console.log('[GeospatialTool] Config loaded successfully');
+    } catch (configError: any) {
+      throw configError;
+    }
+  } catch (configError: any) {
+    console.error('[GeospatialTool] Failed to load mapbox config:', configError.message);
+    config = { mapboxAccessToken, version: '1.0.0', name: 'mapbox-mcp-server' };
+    console.log('[GeospatialTool] Using fallback config');
+  }
+
+  // Build Composio MCP server URL
+  // Note: This should be migrated to use Composio SDK directly instead of MCP client
+  // For now, constructing URL directly without Smithery SDK
+  let serverUrlToUse: URL;
+  try {
+    // Construct URL with Composio credentials
+    const baseUrl = 'https://api.composio.dev/v1/mcp/mapbox';
+    serverUrlToUse = new URL(baseUrl);
+    serverUrlToUse.searchParams.set('api_key', composioApiKey);
+    serverUrlToUse.searchParams.set('user_id', composioUserId);
+
+    const urlDisplay = serverUrlToUse.toString().split('?')[0];
+    console.log('[GeospatialTool] Composio MCP Server URL created:', urlDisplay);
+
+    if (!serverUrlToUse.href || !serverUrlToUse.href.startsWith('https://')) {
+      throw new Error('Invalid server URL generated');
+    }
+  } catch (urlError: any) {
+    console.error('[GeospatialTool] Error creating Composio URL:', urlError.message);
+    return null;
+  }
+
+  // Create transport
+  let transport;
+  try {
+    transport = new StreamableHTTPClientTransport(serverUrlToUse);
+    console.log('[GeospatialTool] Transport created successfully');
+  } catch (transportError: any) {
+    console.error('[GeospatialTool] Failed to create transport:', transportError.message);
+    return null;
+  }
+
+  // Create client
+  let client;
+  try {
+    client = new MCPClientClass({ name: 'GeospatialToolClient', version: '1.0.0' });
+    console.log('[GeospatialTool] MCP Client instance created');
+  } catch (clientError: any) {
+    console.error('[GeospatialTool] Failed to create MCP client:', clientError.message);
+    return null;
+  }
+
+  // Connect to server
+  try {
+    console.log('[GeospatialTool] Attempting to connect to MCP server...');
+    await Promise.race([
+      client.connect(transport),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timeout after 15 seconds')), 15000)),
+    ]);
+    console.log('[GeospatialTool] Successfully connected to MCP server');
+  } catch (connectError: any) {
+    console.error('[GeospatialTool] MCP connection failed:', connectError.message);
+    return null;
+  }
+
+  // List tools
+  try {
+    const tools = await client.listTools();
+    console.log('[GeospatialTool] Available tools:', tools.tools?.map(t => t.name) || []);
+  } catch (listError: any) {
+    console.warn('[GeospatialTool] Could not list tools:', listError.message);
+  }
+
+  return client;
+}
+
+/**
+ * Safely close the MCP client with timeout.
+ */
+async function closeClient(client: McpClient | null) {
+  if (!client) return;
+  try {
+    await Promise.race([
+      client.close(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Close timeout after 5 seconds')), 5000)),
+    ]);
+    console.log('[GeospatialTool] MCP client closed successfully');
+  } catch (error: any) {
+    console.error('[GeospatialTool] Error closing MCP client:', error.message);
+  }
+}
+
+/**
+ * Helper to generate a Google Static Map URL
+ */
+function getGoogleStaticMapUrl(latitude: number, longitude: number): string {
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY;
+  if (!apiKey) return '';
+  return `https://maps.googleapis.com/maps/api/staticmap?center=${latitude},${longitude}&zoom=15&size=640x480&scale=2&markers=color:red%7C${latitude},${longitude}&key=${apiKey}`;
+}
+
+/**
+ * Main geospatial tool executor.
+ */
 export const geospatialTool = ({
   uiStream,
   mapProvider
@@ -109,14 +249,14 @@ Uses the Mapbox Search Box Text Search API endpoint to power searching for and g
 
     const selectedModel = await getSelectedModel();
 
-    if (selectedModel?.includes('gemini') && mapProvider === 'google') {
-      let feedbackMessage = `Processing geospatial query with Gemini...`;
+    if (selectedModel?.toLowerCase().includes('gemini') && mapProvider === 'google') {
+      let feedbackMessage = `Processing geospatial query with Gemini 3.1 Pro...`;
       uiFeedbackStream.update(feedbackMessage);
 
       try {
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_3_PRO_API_KEY!);
         const model = genAI.getGenerativeModel({
-          model: 'gemini-1.5-pro-latest',
+          model: 'gemini-3.1-pro-preview',
         });
 
         const searchText = (params as any).location || (params as any).query;
@@ -131,6 +271,8 @@ Uses the Mapbox Search Box Text Search API endpoint to power searching for and g
 
         if (functionCalls && functionCalls.length > 0) {
           const gsr = functionCalls[0];
+          // This is a placeholder for the actual response structure,
+          // as I don't have a way to inspect it at the moment.
           const place = (gsr as any).results[0].place;
           if (place) {
             const { latitude, longitude } = place.coordinates;
@@ -204,12 +346,27 @@ Uses the Mapbox Search Box Text Search API endpoint to power searching for and g
       // Build arguments
       const toolArgs = (() => {
         switch (queryType) {
-          case 'directions': return { waypoints: [params.origin, params.destination], includeMapPreview: includeMap, profile: params.mode };
-          case 'distance': return { places: [params.origin, params.destination], includeMapPreview: includeMap, mode: params.mode || 'driving' };
-          case 'reverse': return { searchText: `${params.coordinates.latitude},${params.coordinates.longitude}`, includeMapPreview: includeMap, maxResults: params.maxResults || 5 };
-          case 'search': return { searchText: params.query, includeMapPreview: includeMap, maxResults: params.maxResults || 5, ...(params.coordinates && { proximity: `${params.coordinates.latitude},${params.coordinates.longitude}` }), ...(params.radius && { radius: params.radius }) };
-          case 'geocode': 
-          case 'map': return { searchText: params.location, includeMapPreview: includeMap, maxResults: queryType === 'geocode' ? params.maxResults || 5 : undefined };
+          case 'directions': {
+            if (!params.origin || !params.destination) throw new Error("'directions' query requires origin and destination");
+            return { waypoints: [params.origin, params.destination], includeMapPreview: includeMap, profile: params.mode };
+          }
+          case 'distance': {
+            if (!params.origin || !params.destination) throw new Error("'distance' query requires origin and destination");
+            return { places: [params.origin, params.destination], includeMapPreview: includeMap, mode: params.mode || 'driving' };
+          }
+          case 'reverse': {
+            if (!params.coordinates) throw new Error("'reverse' query requires coordinates");
+            return { searchText: `${params.coordinates.latitude},${params.coordinates.longitude}`, includeMapPreview: includeMap, maxResults: params.maxResults || 5 };
+          }
+          case 'search': {
+            if (!params.query) throw new Error("'search' query requires query");
+            return { searchText: params.query, includeMapPreview: includeMap, maxResults: params.maxResults || 5, ...(params.coordinates && { proximity: `${params.coordinates.latitude},${params.coordinates.longitude}` }), ...(params.radius && { radius: params.radius }) };
+          }
+          case 'geocode':
+          case 'map': {
+            if (!params.location) throw new Error(`'${queryType}' query requires location`);
+            return { searchText: params.location, includeMapPreview: includeMap, maxResults: queryType === 'geocode' ? params.maxResults || 5 : undefined };
+          }
         }
       })();
 

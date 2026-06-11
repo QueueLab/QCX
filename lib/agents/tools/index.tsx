@@ -1,9 +1,9 @@
 import { createStreamableUI } from 'ai/rsc'
 import { retrieveTool } from './retrieve'
 import { searchTool } from './search'
+import { drawingTool } from './drawing'
 import { videoSearchTool } from './video-search'
 import { geospatialTool } from './geospatial'
-import { drawingTool } from './drawing'
 
 import { MapProvider } from '@/lib/store/settings'
 
@@ -15,10 +15,6 @@ export interface ToolProps {
 
 export const getTools = ({ uiStream, fullResponse, mapProvider }: ToolProps) => {
   const tools: any = {
-    search: searchTool({
-      uiStream,
-      fullResponse
-    }),
     retrieve: retrieveTool({
       uiStream,
       fullResponse
@@ -29,6 +25,13 @@ export const getTools = ({ uiStream, fullResponse, mapProvider }: ToolProps) => 
     }),
     drawingQueryTool: drawingTool({
       uiStream
+    })
+  }
+
+  if (process.env.TAVILY_API_KEY) {
+    tools.search = searchTool({
+      uiStream,
+      fullResponse
     })
   }
 

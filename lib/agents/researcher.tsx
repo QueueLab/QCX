@@ -47,20 +47,7 @@ Use these user-drawn areas/lines as primary areas of interest for your analysis 
   ONLY when the user explicitly provides one or more URLs and asks you to read, summarize, or extract content from them.
 - **Never use** this tool proactively.
 
-#### **3. Map Drawing and Annotation**
-- **Tool**: \`drawingQueryTool\` → **MUST be used** for:
-  • Drawing shapes (circles, polygons, lines) on the map
-  • Highlighting areas or marking specific routes/boundaries
-  • Responding to requests like "Draw a 1km circle around...", "Highlight this area", etc.
-  • **Priority**: If a query involves both drawing and geospatial lookup (e.g., "Draw a circle around Eiffel Tower"), use this tool. It will geocode the location internally.
-
-**Behavior when using \`drawingQueryTool\`:**
-- Geocode the location internally if a place name is provided.
-- In your final response: provide concise text only.
-- → NEVER say "drawing shape" or "highlighting area".
-- → Trust the system handles the visual drawing automatically.
-
-#### **4. Location, Geography, Navigation, and Mapping Queries**
+#### **3. Location, Geography, Navigation, and Mapping Queries**
 - **Tool**: \`geospatialQueryTool\` → **MUST be used (no exceptions)** for:
   • Finding places, businesses, "near me", distances, directions
   • Travel times, routes, traffic, map generation
@@ -81,10 +68,9 @@ Use these user-drawn areas/lines as primary areas of interest for your analysis 
 
 #### **Summary of Decision Flow**
 1. User gave explicit URLs? → \`retrieve\`
-2. Draw shapes, highlight areas, or circle locations? → \`drawingQueryTool\` (mandatory)
-3. Location/distance/direction/maps? → \`geospatialQueryTool\` (mandatory)
-4. Everything else needing external data? → \`search\`
-5. Otherwise → answer from knowledge
+2. Location/distance/direction/maps? → \`geospatialQueryTool\` (mandatory)
+3. Everything else needing external data? → \`search\`
+4. Otherwise → answer from knowledge
 
 These rules override all previous instructions.
 
@@ -118,10 +104,33 @@ export async function researcher(
       ? dynamicSystemPrompt
       : getDefaultSystemPrompt(currentDate, drawnFeatures)
 
+  // Check if any message contains an image
   const hasImage = messages.some(message =>
     Array.isArray(message.content) &&
     message.content.some(part => part.type === 'image')
   )
+
+  const lastUserMessage = [...messages].reverse().find(m => m.role === 'user')
+  console.log('Researcher - Image pipeline trace:', {
+    hasImage,
+    totalMessages: messages.length,
+    messagesWithImages: messages.filter(
+      m =>
+        Array.isArray(m.content) && m.content.some(p => p.type === 'image')
+    ).length,
+    lastUserMessageContentStructure: lastUserMessage
+      ? {
+          type: typeof lastUserMessage.content,
+          isArray: Array.isArray(lastUserMessage.content),
+          parts: Array.isArray(lastUserMessage.content)
+            ? lastUserMessage.content.map(p => ({
+                type: p.type,
+                hasImage: p.type === 'image'
+              }))
+            : 'string'
+        }
+      : 'none'
+  })
 
   const result = await nonexperimental_streamText({
     model: (await getModel(hasImage)) as LanguageModel,
@@ -131,7 +140,7 @@ export async function researcher(
     tools: getTools({ uiStream, fullResponse, mapProvider }),
   })
 
-  uiStream.update(null)
+  uiStream.update(null) // remove spinner
 
   const toolCalls: ToolCallPart[] = []
   const toolResponses: ToolResultPart[] = []

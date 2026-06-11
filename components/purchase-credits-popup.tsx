@@ -24,7 +24,7 @@ export function PurchaseCreditsPopup({ isOpen, onClose }: PurchaseCreditsPopupPr
   };
 
   const features = [
-    'Internet Search',
+    'Resolution Search',
     'Upload and analyze unlimited files',
     'Mapping tools',
     'Location Intelligence',
