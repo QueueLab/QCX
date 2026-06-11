@@ -555,7 +555,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         }
       }
     }
-  }, [mapType, isMapReady, updateMeasurementLabels, setupGeolocationWatcher, captureMapCenter, setupDrawingTools, startRotation, stopRotation])
+  }, [mapType, isMapReady, updateMeasurementLabels, setupGeolocationWatcher, captureMapCenter, setupDrawingTools, startRotation, stopRotation, mapData.cameraState, position?.latitude, position?.longitude])
 
   // Handle position updates from props
   useEffect(() => {
