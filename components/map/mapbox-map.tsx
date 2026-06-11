@@ -280,14 +280,14 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     // Create new draw control with both polygon and line tools
     drawRef.current = new MapboxDraw({
       displayControlsDefault: false,
-      modes: {
-        ...MapboxDraw.modes,
-        draw_circle: CircleMode
-      },
       controls: {
         polygon: true,
         trash: true,
         line_string: true
+      },
+      modes: {
+        ...MapboxDraw.modes,
+        draw_circle: CircleMode
       },
       // Start in polygon mode by default
       defaultMode: 'draw_polygon'
