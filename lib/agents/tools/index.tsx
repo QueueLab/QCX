@@ -3,7 +3,7 @@ import { retrieveTool } from './retrieve'
 import { searchTool } from './search'
 import { drawingTool } from './drawing'
 import { videoSearchTool } from './video-search'
-import { geospatialTool } from './geospatial' // Removed useGeospatialToolMcp import
+import { geospatialTool } from './geospatial'
 
 import { MapProvider } from '@/lib/store/settings'
 
@@ -20,11 +20,11 @@ export const getTools = ({ uiStream, fullResponse, mapProvider }: ToolProps) => 
       fullResponse
     }),
     geospatialQueryTool: geospatialTool({
-    drawingQueryTool: drawingTool({
-      uiStream
-    }),
       uiStream,
       mapProvider
+    }),
+    drawingQueryTool: drawingTool({
+      uiStream
     })
   }
 
