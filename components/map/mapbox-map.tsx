@@ -75,7 +75,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     lineLabelsRef.current = {}
 
     const features = drawRef.current.getAll().features
-    const currentDrawnFeatures: Array<{ id: string; type: 'Polygon' | 'LineString'; measurement: string; geometry: any }> = []
+    const currentDrawnFeatures: Array<{ id: string; type: 'Polygon' | 'LineString' | 'Circle'; measurement: string; geometry: any }> = []
 
     features.forEach(feature => {
       const id = feature.id as string

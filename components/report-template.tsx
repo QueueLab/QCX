@@ -7,7 +7,7 @@ export interface ReportTemplateProps {
   messages: AIMessage[]
   drawnFeatures?: Array<{
     id: string
-    type: 'Polygon' | 'LineString'
+    type: 'Polygon' | 'LineString' | 'Circle'
     measurement: string
     geometry: any
   }>
