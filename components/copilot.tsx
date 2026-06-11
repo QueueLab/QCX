@@ -67,7 +67,7 @@ export const Copilot: React.FC<CopilotProps> = React.memo(({ inquiry }: CopilotP
   useEffect(() => {
     const anyCheckboxChecked = Object.values(checkedOptions).some(checked => checked)
     setIsButtonDisabled(!(anyCheckboxChecked || query))
-  }, [])
+  }, [checkedOptions, query])
 
   // OPTIMIZATION: Memoize form submission handler
   const onFormSubmit = useCallback(async (

@@ -86,7 +86,7 @@ export function Chat({ id }: ChatProps) {
       }, 300);
       return () => clearTimeout(timer);
     }
-  }, [aiState.messages.length, router])
+  }, [aiState.messages, router])
 
   // Get mapData to access drawnFeatures
   // OPTIMIZATION: Memoize mapData to prevent unnecessary re-renders
