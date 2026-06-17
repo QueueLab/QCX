@@ -10,6 +10,8 @@ import { Sidebar } from '@/components/sidebar'
 import { Analytics } from "@vercel/analytics/next"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Toaster } from '@/components/ui/sonner'
+import { Suspense } from 'react'
+import { VercelToolbarWrapper } from '@/components/vercel-toolbar'
 import { MapToggleProvider } from '@/components/map-toggle-context'
 import { ProfileToggleProvider } from '@/components/profile-toggle-context'
 import { UsageToggleProvider } from '@/components/usage-toggle-context'
@@ -125,6 +127,9 @@ export default function RootLayout({
         </CalendarToggleProvider>
         <Analytics />
         <SpeedInsights />
+        <Suspense fallback={null}>
+          <VercelToolbarWrapper />
+        </Suspense>
       </body>
     </html>
   )
