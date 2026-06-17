@@ -20,6 +20,7 @@ export function GeoJsonLayer({ id, data }: GeoJsonLayerProps) {
     const pointLayerId = `geojson-point-layer-${id}`
     const polygonLayerId = `geojson-polygon-layer-${id}`
     const polygonOutlineLayerId = `geojson-polygon-outline-layer-${id}`
+    const lineStringLayerId = `geojson-linestring-layer-${id}`
 
     const onMapLoad = () => {
       // Add source if it doesn't exist
@@ -62,6 +63,25 @@ export function GeoJsonLayer({ id, data }: GeoJsonLayerProps) {
         })
       }
 
+      // Add linestring layer for routes
+      if (!map.getLayer(lineStringLayerId)) {
+        map.addLayer({
+          id: lineStringLayerId,
+          type: 'line',
+          source: sourceId,
+          filter: ['any', ['==', '$type', 'LineString'], ['==', '$type', 'MultiLineString']],
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round'
+          },
+          paint: {
+            'line-color': '#3b82f6', // blue-500
+            'line-width': 4,
+            'line-opacity': 0.8
+          }
+        })
+      }
+
       // Add point layer for circles
       if (!map.getLayer(pointLayerId)) {
         map.addLayer({
@@ -91,6 +111,7 @@ export function GeoJsonLayer({ id, data }: GeoJsonLayerProps) {
         if (map.getLayer(pointLayerId)) map.removeLayer(pointLayerId)
         if (map.getLayer(polygonLayerId)) map.removeLayer(polygonLayerId)
         if (map.getLayer(polygonOutlineLayerId)) map.removeLayer(polygonOutlineLayerId)
+        if (map.getLayer(lineStringLayerId)) map.removeLayer(lineStringLayerId)
         if (map.getSource(sourceId)) map.removeSource(sourceId)
       }
     }
