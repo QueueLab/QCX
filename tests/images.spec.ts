@@ -1,47 +1,26 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import * as path from 'path';
 import * as fs from 'fs';
 
-test.describe('Image attachment and response functionality', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    await page.waitForSelector('[data-testid="chat-input"]');
-  });
+test.describe('Image attachment and response functionality @smoke', () => {
 
-  test('should attach an image file', async ({ page }, testInfo) => {
-    // Create a test image file
-    const imagePath = testInfo.outputPath('test-image.png');
-    
-    // Create a simple 1x1 PNG image
-    const pngBuffer = Buffer.from(
-      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-      'base64'
-    );
-    await fs.promises.writeFile(imagePath, pngBuffer);
-
+  test('should attach an image file', async ({ authenticatedPage: page, testImage }) => {
     // Attach the image
     const fileChooserPromise = page.waitForEvent('filechooser');
     await page.click('[data-testid="attachment-button"]');
     const fileChooser = await fileChooserPromise;
-    await fileChooser.setFiles(imagePath);
+    await fileChooser.setFiles(testImage);
 
     // Verify the image is attached
     await expect(page.locator('[data-testid="attached-image"]')).toBeVisible();
     await expect(page.locator('text=test-image.png')).toBeVisible();
   });
 
-  test('should preview attached image', async ({ page }, testInfo) => {
-    const imagePath = testInfo.outputPath('preview-test.jpg');
-    const pngBuffer = Buffer.from(
-      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-      'base64'
-    );
-    await fs.promises.writeFile(imagePath, pngBuffer);
-
+  test('should preview attached image', async ({ authenticatedPage: page, testImage }) => {
     const fileChooserPromise = page.waitForEvent('filechooser');
     await page.click('[data-testid="attachment-button"]');
     const fileChooser = await fileChooserPromise;
-    await fileChooser.setFiles(imagePath);
+    await fileChooser.setFiles(testImage);
 
     // Check for image preview
     const imagePreview = page.locator('[data-testid="image-preview"]');
@@ -52,18 +31,11 @@ test.describe('Image attachment and response functionality', () => {
     expect(imgSrc).toBeTruthy();
   });
 
-  test('should remove attached image', async ({ page }, testInfo) => {
-    const imagePath = testInfo.outputPath('remove-test.png');
-    const pngBuffer = Buffer.from(
-      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-      'base64'
-    );
-    await fs.promises.writeFile(imagePath, pngBuffer);
-
+  test('should remove attached image', async ({ authenticatedPage: page, testImage }) => {
     const fileChooserPromise = page.waitForEvent('filechooser');
     await page.click('[data-testid="attachment-button"]');
     const fileChooser = await fileChooserPromise;
-    await fileChooser.setFiles(imagePath);
+    await fileChooser.setFiles(testImage);
 
     // Verify image is attached
     await expect(page.locator('[data-testid="attached-image"]')).toBeVisible();
@@ -75,19 +47,12 @@ test.describe('Image attachment and response functionality', () => {
     await expect(page.locator('[data-testid="attached-image"]')).not.toBeVisible();
   });
 
-  test('should send message with attached image', async ({ page }, testInfo) => {
-    const imagePath = testInfo.outputPath('send-test.png');
-    const pngBuffer = Buffer.from(
-      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-      'base64'
-    );
-    await fs.promises.writeFile(imagePath, pngBuffer);
-
+  test('should send message with attached image', async ({ authenticatedPage: page, testImage }) => {
     // Attach image
     const fileChooserPromise = page.waitForEvent('filechooser');
     await page.click('[data-testid="attachment-button"]');
     const fileChooser = await fileChooserPromise;
-    await fileChooser.setFiles(imagePath);
+    await fileChooser.setFiles(testImage);
 
     // Type a message
     await page.fill('[data-testid="chat-input"]', 'What is in this image?');
@@ -105,7 +70,7 @@ test.describe('Image attachment and response functionality', () => {
     await expect(messageImage).toBeVisible();
   });
 
-  test('should reject non-image files', async ({ page }, testInfo) => {
+  test('should reject non-image files', async ({ authenticatedPage: page }, testInfo) => {
     // Create a text file
     const textPath = testInfo.outputPath('test.txt');
     await fs.promises.writeFile(textPath, 'This is not an image');
@@ -121,7 +86,7 @@ test.describe('Image attachment and response functionality', () => {
     await expect(errorMessage).toContainText(/only.*image.*allowed|invalid.*file.*type/i);
   });
 
-  test('should reject oversized images', async ({ page }, testInfo) => {
+  test('should reject oversized images', async ({ authenticatedPage: page }, testInfo) => {
     // Create a large file (simulating a large image)
     const largePath = testInfo.outputPath('large-image.png');
     const largeBuffer = Buffer.alloc(20 * 1024 * 1024); // 20MB
@@ -138,7 +103,7 @@ test.describe('Image attachment and response functionality', () => {
     await expect(errorMessage).toContainText(/too.*large|file.*size|exceed/i);
   });
 
-  test('should display image in bot response', async ({ page }) => {
+  test('should display image in bot response', async ({ authenticatedPage: page }) => {
     // Send a message that would generate an image response
     await page.fill('[data-testid="chat-input"]', 'Generate an image of a sunset');
     await page.click('[data-testid="chat-submit"]');
@@ -157,19 +122,12 @@ test.describe('Image attachment and response functionality', () => {
     expect(imgSrc).toMatch(/^(http|https|data:image)/);
   });
 
-  test('should allow clicking on image to view full size', async ({ page }, testInfo) => {
-    const imagePath = testInfo.outputPath('fullsize-test.png');
-    const pngBuffer = Buffer.from(
-      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-      'base64'
-    );
-    await fs.promises.writeFile(imagePath, pngBuffer);
-
+  test('should allow clicking on image to view full size', async ({ authenticatedPage: page, testImage }) => {
     // Attach and send image
     const fileChooserPromise = page.waitForEvent('filechooser');
     await page.click('[data-testid="attachment-button"]');
     const fileChooser = await fileChooserPromise;
-    await fileChooser.setFiles(imagePath);
+    await fileChooser.setFiles(testImage);
     
     await page.fill('[data-testid="chat-input"]', 'Test image');
     await page.click('[data-testid="chat-submit"]');
@@ -183,7 +141,7 @@ test.describe('Image attachment and response functionality', () => {
     await expect(imageModal).toBeVisible();
   });
 
-  test('should support multiple image formats', async ({ page }, testInfo) => {
+  test('should support multiple image formats', async ({ authenticatedPage: page }, testInfo) => {
     const formats = ['png', 'jpg', 'jpeg', 'gif', 'webp'];
     
     for (const format of formats) {
@@ -207,22 +165,14 @@ test.describe('Image attachment and response functionality', () => {
     }
   });
 
-  test('should show loading state while uploading image', async ({ page }, testInfo) => {
-    const imagePath = testInfo.outputPath('loading-test.png');
-    const pngBuffer = Buffer.from(
-      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-      'base64'
-    );
-    await fs.promises.writeFile(imagePath, pngBuffer);
-
+  test('should show loading state while uploading image', async ({ authenticatedPage: page, testImage }) => {
     const fileChooserPromise = page.waitForEvent('filechooser');
     await page.click('[data-testid="attachment-button"]');
     const fileChooser = await fileChooserPromise;
-    await fileChooser.setFiles(imagePath);
+    await fileChooser.setFiles(testImage);
 
     // Check for loading indicator (might be brief)
     const loadingIndicator = page.locator('[data-testid="image-uploading"]');
-    // Loading state might be too fast to catch, so we use waitFor with a short timeout
     try {
       await expect(loadingIndicator).toBeVisible({ timeout: 1000 });
     } catch {
@@ -232,4 +182,5 @@ test.describe('Image attachment and response functionality', () => {
     // Verify final state shows the image
     await expect(page.locator('[data-testid="attached-image"]')).toBeVisible();
   });
+
 });
