@@ -43,6 +43,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const activeSuggestionRef = useRef<string>('')
 
   useImperativeHandle(ref, () => ({
     handleAttachmentClick() {
@@ -91,6 +92,12 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
       return
     }
 
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current)
+    }
+    activeSuggestionRef.current = ''
+    setSuggestions(null)
+
     const content: ({ type: 'text'; text: string } | { type: 'image'; image: string })[] = []
     if (input) {
       content.push({ type: 'text', text: input })
@@ -119,6 +126,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     formData.append('drawnFeatures', JSON.stringify(mapData.drawnFeatures || []))
 
     setInput('')
+    setSuggestions(null)
     clearAttachment()
 
     const responseMessage = await submit(formData)
@@ -126,7 +134,12 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
   }
 
   const handleClear = async () => {
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current)
+    }
+    activeSuggestionRef.current = ''
     setMessages([])
+    setSuggestions(null)
     clearAttachment()
     await clearChat()
   }
@@ -140,17 +153,27 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
       const wordCount = value.trim().split(/\s+/).filter(Boolean).length
       if (wordCount < 2) {
         setSuggestions(null)
+        activeSuggestionRef.current = ''
         return
       }
 
+      const currentQuery = value
+      activeSuggestionRef.current = currentQuery
+
       debounceTimeoutRef.current = setTimeout(async () => {
-        const suggestionsStream = await getSuggestions(value, mapData)
-        for await (const partialSuggestions of readStreamableValue(
-          suggestionsStream
-        )) {
-          if (partialSuggestions) {
-            setSuggestions(partialSuggestions as PartialRelated)
+        if (activeSuggestionRef.current !== currentQuery) return
+        try {
+          const suggestionsStream = await getSuggestions(value, mapData)
+          for await (const partialSuggestions of readStreamableValue(
+            suggestionsStream
+          )) {
+            if (activeSuggestionRef.current !== currentQuery) break
+            if (partialSuggestions) {
+              setSuggestions(partialSuggestions as PartialRelated)
+            }
           }
+        } catch (error) {
+          console.error(error)
         }
       }, 500) // 500ms debounce delay
     },
