@@ -184,10 +184,14 @@ export async function saveSelectedModel(model: string): Promise<{ success: boole
 /**
  * Searches users by email.
  * Restricted to authenticated users.
+ * Sanitized to prevent wildcard enumeration.
  */
 export async function searchUsers(query: string) {
   noStore();
   if (!query) return [];
+
+  // Enforce input length limit to mitigate DoS/resource exhaustion
+  const sanitizedQuery = query.slice(0, 255);
 
   const userId = await getCurrentUserIdOnServer();
   if (!userId) {
@@ -195,12 +199,15 @@ export async function searchUsers(query: string) {
   }
 
   try {
+    // Escape special characters (%, _, \) to prevent wildcard enumeration
+    const escapedQuery = sanitizedQuery.replace(/[%_\\]/g, '\\$&');
+
     const result = await db.select({
       id: users.id,
       email: users.email,
     })
     .from(users)
-    .where(ilike(users.email, `%${query}%`))
+    .where(ilike(users.email, `%${escapedQuery}%`))
     .limit(10);
 
     return result;
