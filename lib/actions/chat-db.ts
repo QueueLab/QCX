@@ -20,22 +20,21 @@ export type NewMessage = typeof messages.$inferInsert;
  * @returns The chat object if found and accessible, otherwise null.
  */
 export async function getChat(id: string, userId: string): Promise<Chat | null> {
-  if (!userId) {
+  const conditions = [eq(chats.id, id)];
+
+  if (userId) {
+    conditions.push(sql`(${chats.userId} = ${userId} OR ${chats.visibility} = 'public')`);
+  } else {
     console.warn('getChat called without userId');
     // Potentially allow fetching public chats if userId is null for anonymous users
-    const result = await db.select().from(chats).where(and(eq(chats.id, id), eq(chats.visibility, 'public'))).limit(1);
-    return result[0] || null;
+    conditions.push(eq(chats.visibility, 'public'));
   }
 
   const result = await db.select()
     .from(chats)
-    .where(
-      and(
-        eq(chats.id, id),
-        sql`${chats.userId} = ${userId} OR ${chats.visibility} = 'public'`
-      )
-    )
+    .where(and(...conditions))
     .limit(1);
+
   return result[0] || null;
 }
 
