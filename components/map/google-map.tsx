@@ -1,11 +1,11 @@
 'use client'
 
 import { APIProvider } from '@vis.gl/react-google-maps'
-import { useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { useToast } from '@/components/ui/hooks/use-toast'
 import { useMapData } from './map-data-context'
 import { useSettingsStore } from '@/lib/store/settings'
-import { useMapLoading } from '../map-loading-context';
+import { useMapLoading } from '../map-loading-context'
 import { Map3D } from './map-3d'
 import { GoogleGeoJsonLayer } from './google-geojson-layer'
 
@@ -13,27 +13,32 @@ export function GoogleMapComponent() {
   const { toast } = useToast()
   const { mapData } = useMapData()
   const { setMapProvider } = useSettingsStore()
-  const { setIsMapLoaded } = useMapLoading();
+  const { setIsMapLoaded } = useMapLoading()
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+
+  const onMapReady = useCallback(() => {
+    setIsMapLoaded(true)
+  }, [setIsMapLoaded])
 
   useEffect(() => {
     if (!apiKey) {
       toast({
         title: 'Google Maps API Key Missing',
-        description: 'The Google Maps API key is not configured. Falling back to Mapbox.',
-        variant: 'destructive',
+        description:
+          'The Google Maps API key is not configured. Falling back to Mapbox.',
+        variant: 'destructive'
       })
       setMapProvider('mapbox')
     }
   }, [apiKey, setMapProvider, toast])
 
   useEffect(() => {
-    setIsMapLoaded(true);
+    setIsMapLoaded(false)
     return () => {
-      setIsMapLoaded(false);
-    };
-  }, [setIsMapLoaded]);
+      setIsMapLoaded(false)
+    }
+  }, [setIsMapLoaded])
 
   const featureCollection = useMemo(() => {
     const features = mapData.drawnFeatures?.map(df => ({
@@ -79,6 +84,7 @@ export function GoogleMapComponent() {
         style={{ width: '100%', height: '100%' }}
         cameraOptions={cameraOptions}
         mode="SATELLITE"
+        onMapReady={onMapReady}
       />
       <GoogleGeoJsonLayer data={featureCollection} />
     </APIProvider>
