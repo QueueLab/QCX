@@ -17,16 +17,17 @@ import { useProfileToggle, ProfileToggleEnum } from "@/components/profile-toggle
 import { useUsageToggle } from "@/components/usage-toggle-context";
 import SettingsView from "@/components/settings/settings-view";
 import { UsageView } from "@/components/usage-view";
-import { MapDataProvider, useMapData } from './map/map-data-context'; // Add this and useMapData
+import { useMapData } from './map/map-data-context';
 import { updateDrawingContext } from '@/lib/actions/chat'; // Import the server action
 import dynamic from 'next/dynamic'
 import { HeaderSearchButton } from './header-search-button'
 
 type ChatProps = {
   id?: string // This is the chatId
+  searchParams?: { [key: string]: string | string[] | undefined }
 }
 
-export function Chat({ id }: ChatProps) {
+export function Chat({ id, searchParams }: ChatProps) {
   const router = useRouter()
   const path = usePathname()
   const [messages] = useUIState()
@@ -137,7 +138,7 @@ export function Chat({ id }: ChatProps) {
   // Mobile layout
   if (isMobile) {
     return (
-      <MapDataProvider> {/* Add Provider */}
+      <>
         <HeaderSearchButton />
         <div className="mobile-layout-container">
           <div className="mobile-map-section">
@@ -147,13 +148,14 @@ export function Chat({ id }: ChatProps) {
           <MobileIconsBar onAttachmentClick={handleAttachment} onSubmitClick={handleMobileSubmit} />
         </div>
         <div className="mobile-chat-input-area">
-          <ChatPanel 
-            ref={chatPanelRef} 
-            messages={messages} 
-            input={input} 
-            setInput={setInput}
-            onSuggestionsChange={setSuggestions}
-          />
+	          <ChatPanel 
+	            ref={chatPanelRef} 
+	            messages={messages} 
+	            input={input} 
+	            setInput={setInput}
+	            onSuggestionsChange={setSuggestions}
+	            searchParams={searchParams}
+	          />
         </div>
         <div className="mobile-chat-messages-area relative">
           {isCalendarOpen ? (
@@ -177,13 +179,13 @@ export function Chat({ id }: ChatProps) {
           )}
         </div>
         </div>
-      </MapDataProvider>
+      </>
     );
   }
 
   // Desktop layout
   return (
-    <MapDataProvider> {/* Add Provider */}
+    <>
       <HeaderSearchButton />
       <div className="flex justify-start items-start">
         {/* This is the new div for scrolling */}
@@ -192,12 +194,13 @@ export function Chat({ id }: ChatProps) {
           <CalendarNotepad chatId={id} />
         ) : (
           <>
-            <ChatPanel 
-              messages={messages} 
-              input={input} 
-              setInput={setInput} 
-              onSuggestionsChange={setSuggestions}
-            />
+	            <ChatPanel 
+	              messages={messages} 
+	              input={input} 
+	              setInput={setInput} 
+	              onSuggestionsChange={setSuggestions}
+	              searchParams={searchParams}
+	            />
             <div className="relative min-h-[100px]">
               <div className={cn("transition-all duration-300", suggestions ? "blur-md pointer-events-none" : "")}>
                 {showEmptyScreen ? (
@@ -223,6 +226,6 @@ export function Chat({ id }: ChatProps) {
           {activeView ? <SettingsView /> : isUsageOpen ? <UsageView /> : <MapProvider />}
         </div>
       </div>
-    </MapDataProvider>
+    </>
   );
 }
