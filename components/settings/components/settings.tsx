@@ -53,7 +53,7 @@ export type SettingsFormValues = z.infer<typeof settingsFormSchema>
 // Default values
 const defaultValues: Partial<SettingsFormValues> = {
   systemPrompt:
-    "You are a planetary copilot, an AI assistant designed to help users with information about planets, space exploration, and astronomy. Provide accurate, educational, and engaging responses about our solar system and beyond.",
+    "You are a planet computer, an AI assistant designed to help users with information about planets, space exploration, and astronomy. Provide accurate, educational, and engaging responses about our solar system and beyond.",
   selectedModel: "Gemini 3.1 Pro",
   users: [],
 }
@@ -180,7 +180,7 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
                   <Card>
                     <CardHeader>
                       <CardTitle>System Prompt</CardTitle>
-                      <CardDescription>Customize the behavior and persona of your planetary copilot</CardDescription>
+                      <CardDescription>Customize the behavior and persona of your planet computer</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <SystemPromptForm form={form} />
@@ -192,7 +192,7 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
                   <Card>
                     <CardHeader>
                       <CardTitle>Model Selection</CardTitle>
-                      <CardDescription>Choose the AI model that powers your planetary copilot</CardDescription>
+                      <CardDescription>Choose the AI model that powers your planet computer</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <ModelSelectionForm form={form} />

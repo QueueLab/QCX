@@ -19,13 +19,13 @@ export function SystemPromptForm({ form }: SystemPromptFormProps) {
           <FormLabel>System Prompt</FormLabel>
           <FormControl>
             <Textarea
-              placeholder="Enter the system prompt for your planetary copilot..."
+              placeholder="Enter the system prompt for your planet computer..."
               className="min-h-[200px] resize-y"
               {...field}
             />
           </FormControl>
           <FormDescription className="flex justify-between">
-            <span>Define how your copilot should behave and respond to user queries.</span>
+            <span>Define how your planet computer should behave and respond to user queries.</span>
             <span className={characterCount > 1800 ? "text-amber-500" : ""}>{characterCount}/2000</span>
           </FormDescription>
           <FormMessage />
