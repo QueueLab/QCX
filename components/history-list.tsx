@@ -5,16 +5,16 @@ import { getChats } from '@/lib/actions/chat';
 import type { Chat as DrizzleChat } from '@/lib/actions/chat-db';
 
 type HistoryListProps = {
-  userId?: string;
+  // userId is no longer used here as getChats() retrieves it from the session
 };
 
-const loadChats = cache(async (userId?: string): Promise<DrizzleChat[] | null> => {
-  return await getChats(userId);
+const loadChats = cache(async (): Promise<DrizzleChat[] | null> => {
+  return await getChats();
 });
 
-export async function HistoryList({ userId }: HistoryListProps) {
+export async function HistoryList({}: HistoryListProps) {
   try {
-    const chats = await loadChats(userId);
+    const chats = await loadChats();
 
     if (!chats) {
       return (
