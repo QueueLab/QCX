@@ -222,6 +222,43 @@ test.describe('Responsive design - Small Mobile', () => {
       expect(messageBox.width).toBeLessThanOrEqual(320);
     }
   });
+
+  test('should not overflow with long attached file name', async ({ page }) => {
+    const attachmentButton = page.locator('[data-testid="mobile-attachment-button"]');
+    if (await attachmentButton.isVisible()) {
+      await page.locator('input[type="file"]').setInputFiles({
+        name: 'this-is-a-very-long-filename-that-should-not-overflow-the-container-on-small-screens.pdf',
+        mimeType: 'application/pdf',
+        buffer: Buffer.from('test')
+      });
+
+      const fileContainer = page.locator('[data-testid="clear-attachment-button"]').locator('..');
+      if (await fileContainer.isVisible()) {
+        const containerBox = await fileContainer.boundingBox();
+        expect(containerBox).toBeTruthy();
+        if (containerBox) {
+          expect(containerBox.width).toBeLessThanOrEqual(320);
+        }
+
+        const bodyWidth = await page.evaluate(() => document.body.scrollWidth);
+        expect(bodyWidth).toBeLessThanOrEqual(321);
+      }
+    }
+  });
+
+  test('should not cause horizontal scroll with long query in search dialog', async ({ page }) => {
+    const dialogDesc = page.locator('[role="dialog"] p.line-clamp-2');
+    if (await dialogDesc.isVisible()) {
+      const descBox = await dialogDesc.boundingBox();
+      expect(descBox).toBeTruthy();
+      if (descBox) {
+        expect(descBox.width).toBeLessThanOrEqual(320);
+      }
+
+      const bodyWidth = await page.evaluate(() => document.body.scrollWidth);
+      expect(bodyWidth).toBeLessThanOrEqual(321);
+    }
+  });
 });
 
 test.describe('Responsive design - Large Desktop', () => {

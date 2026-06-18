@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Inter as FontSans, Poppins } from 'next/font/google'
 import './globals.css'
 import 'katex/dist/katex.min.css';
+import 'glassmorphic/glassmorphic.css';
 import { cn } from '@/lib/utils'
 import { ThemeProvider } from '@/components/theme-provider'
 import Header from '@/components/header'
