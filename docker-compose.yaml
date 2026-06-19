@@ -2,16 +2,32 @@ name: qcx-stack
 
 services:
   db:
-    image: postgres:16-alpine
+    build:
+      context: .
+      dockerfile: Dockerfile.db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: qcxuser
-      POSTGRES_PASSWORD: qcxpassword
-      POSTGRES_DB: qcxdb
+      POSTGRES_USER: ${POSTGRES_USER:-qcxuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-qcxpassword}
+      POSTGRES_DB: ${POSTGRES_DB:-qcxdb}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U qcxuser -d qcxdb"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-qcxuser} -d ${POSTGRES_DB:-qcxdb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -27,8 +43,10 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - HOSTNAME=0.0.0.0
-      - DATABASE_URL=postgres://qcxuser:qcxpassword@db:5432/qcxdb
+      - DATABASE_URL=postgres://${POSTGRES_USER:-qcxuser}:${POSTGRES_PASSWORD:-qcxpassword}@db:5432/${POSTGRES_DB:-qcxdb}
+      - QDRANT_URL=http://qdrant:6333
       - EXECUTE_MIGRATIONS=true
+      # Add other necessary env vars here or use an .env file
     depends_on:
       db:
         condition: service_healthy
@@ -52,10 +70,13 @@ services:
     environment:
       - NODE_ENV=development
       - PORT=3000
-      - DATABASE_URL=postgres://qcxuser:qcxpassword@db:5432/qcxdb
+      - DATABASE_URL=postgres://${POSTGRES_USER:-qcxuser}:${POSTGRES_PASSWORD:-qcxpassword}@db:5432/${POSTGRES_DB:-qcxdb}
+      - QDRANT_URL=http://qdrant:6333
     depends_on:
       db:
         condition: service_healthy
+      qdrant:
+        condition: service_started
     volumes:
       - .:/app
       - node_modules:/app/node_modules
@@ -66,5 +87,6 @@ services:
 
 volumes:
   postgres_data:
+  qdrant_data:
   node_modules:
   next_build:

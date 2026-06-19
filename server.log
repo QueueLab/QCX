@@ -1,17 +1,23 @@
-$ next dev --turbo
-   ▲ Next.js 15.3.8 (Turbopack)
+$ next start
+   ▲ Next.js 15.3.8
    - Local:        http://localhost:3000
    - Network:      http://192.168.0.2:3000
-   - Environments: .env
 
  ✓ Starting...
- ✓ Compiled middleware in 433ms
- ✓ Ready in 1802ms
- ○ Compiling / ...
- ✓ Compiled / in 27.9s
+ ⚠ "next start" does not work with "output: standalone" configuration. Use "node .next/standalone/server.js" instead.
+ ✓ Ready in 504ms
 Chat DB actions loaded. Ensure getCurrentUserId() is correctly implemented for server-side usage if applicable.
- GET / 200 in 30481ms
- HEAD / 200 in 1010ms
- GET / 200 in 986ms
- GET / 200 in 1129ms
-[?25h
+Chat DB actions loaded. Ensure getCurrentUserId() is correctly implemented for server-side usage if applicable.
+[Auth] Supabase URL or Anon Key is not set for server-side auth.
+[Auth] Supabase URL or Anon Key is not set for server-side auth.
+[Auth] Supabase URL or Anon Key is not set for server-side auth.
+[Auth] Supabase URL or Anon Key is not set for server-side auth.
+[Auth] Supabase URL or Anon Key is not set for server-side auth.
+[Auth] Supabase URL or Anon Key is not set for server-side auth.
+[Auth] Supabase URL or Anon Key is not set for server-side auth.
+[Auth] Supabase URL or Anon Key is not set for server-side auth.
+[Auth] Supabase URL or Anon Key is not set for server-side auth.
+[Auth] Supabase URL or Anon Key is not set for server-side auth.
+[Auth] Supabase URL or Anon Key is not set for server-side auth.
+[Auth] Supabase URL or Anon Key is not set for server-side auth.
+[Auth] Supabase URL or Anon Key is not set for server-side auth.

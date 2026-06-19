@@ -1,0 +1,21 @@
+FROM postgres:16-alpine
+
+# Install build dependencies and pgvector
+RUN apk add --no-cache --virtual .build-deps \
+    git \
+    build-base \
+    clang15 \
+    llvm15-dev \
+    postgis-dev \
+    postgresql-dev \
+    && git clone --branch v0.8.0 https://github.com/pgvector/pgvector.git /tmp/pgvector \
+    && cd /tmp/pgvector \
+    && make \
+    && make install \
+    && apk add --no-cache postgis \
+    && rm -rf /tmp/pgvector \
+    && apk del .build-deps
+
+# Use the default entrypoint
+ENTRYPOINT ["docker-entrypoint.sh"]
+CMD ["postgres"]
