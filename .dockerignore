@@ -80,7 +80,6 @@ docker-compose*.yml
 cloudbuild.yaml
 
 # Drizzle
-drizzle/
 
 # Scripts
 install.sh
