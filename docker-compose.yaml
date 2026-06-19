@@ -1,49 +1,70 @@
 name: qcx-stack
 
 services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: qcxuser
+      POSTGRES_PASSWORD: qcxpassword
+      POSTGRES_DB: qcxdb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qcxuser -d qcxdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   qcx:
     build:
       context: .
       dockerfile: Dockerfile
-      target: runner  # Use the production stage
+      target: runner
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
       - PORT=3000
       - HOSTNAME=0.0.0.0
-    env_file:
-      - .env.local  # Load environment variables from .env.local if it exists
+      - DATABASE_URL=postgres://qcxuser:qcxpassword@db:5432/qcxdb
+      - EXECUTE_MIGRATIONS=true
+    depends_on:
+      db:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      test: ["CMD", "bun", "--eval", "fetch('http://localhost:3000/api/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
 
-  # Development service (optional - for local development with hot reload)
+  # Development service
   qcx-dev:
     build:
       context: .
       dockerfile: Dockerfile
-      target: builder  # Use the builder stage for development
+      target: builder
     command: bun dev
     ports:
       - "3001:3000"
     environment:
       - NODE_ENV=development
       - PORT=3000
-    env_file:
-      - .env.local
+      - DATABASE_URL=postgres://qcxuser:qcxpassword@db:5432/qcxdb
+    depends_on:
+      db:
+        condition: service_healthy
     volumes:
       - .:/app
       - node_modules:/app/node_modules
       - next_build:/app/.next
     restart: unless-stopped
     profiles:
-      - dev  # Only start this service when explicitly requested with --profile dev
+      - dev
 
 volumes:
+  postgres_data:
   node_modules:
   next_build:
