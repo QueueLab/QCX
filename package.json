@@ -9,7 +9,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "db:migrate": "cross-env EXECUTE_MIGRATIONS=true bun lib/db/migrate.ts",
+    "db:migrate": "bun lib/db/migrate.ts",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
@@ -63,7 +63,7 @@
     "csv-parse": "^6.1.0",
     "dotenv": "^16.5.0",
     "drizzle-kit": "^0.31.1",
-    "drizzle-orm": "^0.29.0",
+    "drizzle-orm": "^0.45.2",
     "embla-carousel-react": "^8.6.0",
     "exa-js": "^1.6.13",
     "framer-motion": "^12.23.24",
@@ -103,7 +103,7 @@
     "zustand": "^5.0.9"
   },
   "devDependencies": {
-    "@playwright/test": "^1.56.1",
+    "@playwright/test": "^1.60.0",
     "@types/cookie": "^0.6.0",
     "@types/lodash": "^4.17.21",
     "@types/mapbox-gl": "^3.4.1",

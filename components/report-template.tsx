@@ -13,13 +13,15 @@ export interface ReportTemplateProps {
   }>
   mapSnapshot?: string
   chatTitle: string
+  aiSummary?: string
 }
 
 export const ReportTemplate: React.FC<ReportTemplateProps> = ({
   messages,
   drawnFeatures,
   mapSnapshot,
-  chatTitle
+  chatTitle,
+  aiSummary
 }) => {
   const renderMessageContent = (content: any): string => {
     if (typeof content === 'string') {
@@ -50,9 +52,10 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({
     // and the response is relatively short (likely a transition/redundant summary), filter it out.
     if (message.type === 'response' && index + 1 < rawFiltered.length) {
       const nextMessage = rawFiltered[index + 1]
-      if (nextMessage.type === 'resolution_search_result') {
+      if (nextMessage.role === 'assistant' && (nextMessage.type === 'resolution_search_result' || nextMessage.type === 'response')) {
         const content = renderMessageContent(message.content)
-        if (content.length < 300) {
+        // Filter out short transition messages or duplicated high-level summaries
+        if (content.length < 500) {
           return false
         }
       }
@@ -103,6 +106,22 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({
 
       {/* Main Content Container */}
       <div className="p-16 space-y-20">
+        {aiSummary && (
+          <section className="break-inside-avoid">
+            <div className="flex items-baseline gap-4 mb-8 border-b border-slate-100 pb-4">
+              <span className="text-4xl font-black text-slate-200">00</span>
+              <h2 className="text-2xl font-black text-[#003366] uppercase tracking-tight">Intelligence Executive Summary</h2>
+            </div>
+            <div className="bg-slate-50 p-10 rounded-2xl border-l-8 border-[#003366] shadow-inner">
+              <div className="prose prose-slate prose-lg max-w-none text-slate-800 font-medium leading-relaxed">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {aiSummary}
+                </ReactMarkdown>
+              </div>
+            </div>
+          </section>
+        )}
+
         {mapSnapshot && (
           <section className="break-inside-avoid">
             <div className="flex items-baseline gap-4 mb-8 border-b border-slate-100 pb-4">
@@ -174,23 +193,23 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({
                           {result.summary}
                         </div>
                       )}
-                      <div className="grid grid-cols-2 gap-10">
+                      <div className="flex flex-col items-center gap-12">
                         {result.mapboxImage && (
-                          <div className="space-y-4">
-                            <div className="flex items-center gap-2">
+                          <div className="space-y-4 w-full max-w-2xl">
+                            <div className="flex items-center justify-center gap-2">
                               <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
-                              <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Spectral RGB</p>
+                              <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Spectral RGB Analysis View</p>
                             </div>
-                            <img src={result.mapboxImage} alt="Mapbox View" className="rounded-xl border-4 border-white shadow-xl w-full block" crossOrigin="anonymous" />
+                            <img src={result.mapboxImage} alt="Mapbox View" className="rounded-xl border-4 border-white shadow-xl w-full block mx-auto" crossOrigin="anonymous" />
                           </div>
                         )}
                         {result.googleImage && (
-                          <div className="space-y-4">
-                            <div className="flex items-center gap-2">
+                          <div className="space-y-4 w-full max-w-2xl">
+                            <div className="flex items-center justify-center gap-2">
                               <div className="w-2 h-2 rounded-full bg-orange-500"></div>
-                              <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">High-Res Panchro</p>
+                              <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">High-Resolution Panchromatic Satellite</p>
                             </div>
-                            <img src={result.googleImage} alt="Google Satellite" className="rounded-xl border-4 border-white shadow-xl w-full block" crossOrigin="anonymous" />
+                            <img src={result.googleImage} alt="Google Satellite" className="rounded-xl border-4 border-white shadow-xl w-full block mx-auto" crossOrigin="anonymous" />
                           </div>
                         )}
                       </div>
