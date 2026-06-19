@@ -8,7 +8,8 @@ import {
   MessageCircleMore,
   Newspaper,
   Repeat2,
-  Search
+  Search,
+  Terminal
 } from 'lucide-react'
 import React from 'react'
 import { Separator } from './ui/separator'
@@ -19,6 +20,7 @@ type SectionProps = {
   size?: 'sm' | 'md' | 'lg'
   title?: string
   separator?: boolean
+  isCollapsed?: boolean
 }
 
 export const Section: React.FC<SectionProps> = ({
@@ -48,6 +50,9 @@ export const Section: React.FC<SectionProps> = ({
       break
     case 'Follow-up':
       icon = <MessageCircleMore size={18} className="mr-2" />
+      break
+    case 'Sandbox':
+      icon = <Terminal size={18} className="mr-2" />
       break
     default:
       icon = <Search size={18} className="mr-2" />

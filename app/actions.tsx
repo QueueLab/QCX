@@ -27,6 +27,7 @@ import { CopilotDisplay } from '@/components/copilot-display'
 import RetrieveSection from '@/components/retrieve-section'
 import { VideoSearchSection } from '@/components/video-search-section'
 import { MapQueryHandler } from '@/components/map/map-query-handler'
+import { SandboxSection } from '@/components/sandbox-section'
 
 // Define the type for related queries
 type RelatedQueries = {
@@ -911,6 +912,22 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                   ),
                   isCollapsed: isCollapsed.value
                 }
+              case 'sandbox': {
+                const logs = createStreamableValue(toolOutput.logs)
+                logs.done(toolOutput.logs)
+                return {
+                  id,
+                  component: (
+                    <SandboxSection
+                      logs={logs.value}
+                      previewUrl={toolOutput.previewUrl}
+                      exitCode={toolOutput.exitCode}
+                      error={toolOutput.error}
+                    />
+                  ),
+                  isCollapsed: isCollapsed.value
+                }
+              }
               default:
                 console.warn(
                   `Unhandled tool result in getUIStateFromAIState: ${name}`
