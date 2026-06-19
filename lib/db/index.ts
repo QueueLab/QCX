@@ -5,12 +5,14 @@ import * as schema from './schema';
 
 dotenv.config({ path: '.env.local' });
 
-if (!process.env.DATABASE_URL) {
-  throw new Error('DATABASE_URL environment variable is not set for Drizzle client');
+// In production/build environments, we might not have DATABASE_URL immediately available
+// especially during Next.js static optimization phases.
+if (!process.env.DATABASE_URL && process.env.NODE_ENV === 'production') {
+  console.warn('DATABASE_URL environment variable is not set. Database features will be unavailable.');
 }
 
 const poolConfig: PoolConfig = {
-  connectionString: process.env.DATABASE_URL,
+  connectionString: process.env.DATABASE_URL || 'postgres://localhost:5432/postgres',
 };
 
 // Conditionally apply SSL for Supabase URLs

@@ -36,8 +36,7 @@ FROM oven/bun:1.3.5-alpine AS runner
 WORKDIR /app
 
 # Create non-root group and user, with nextjs belonging to nodejs group
-RUN addgroup -g 1001 -S nodejs \
-    && adduser -S -u 1001 -G nodejs nextjs
+RUN addgroup -g 1001 -S nodejs     && adduser -S -u 1001 -G nodejs nextjs
 
 # Environment variables
 ENV NODE_ENV=production
@@ -52,6 +51,16 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Copy public folder
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
+# Copy migration files and entrypoint
+# Note: In standalone mode, we need to ensure all migration dependencies are available.
+# We copy the entire project source temporarily to a different folder if needed,
+# or just ensure drizzle and lib/db are available for the migration script.
+COPY --from=builder --chown=nextjs:nodejs /app/drizzle ./drizzle
+COPY --from=builder --chown=nextjs:nodejs /app/lib/db/migrate.ts ./lib/db/migrate.ts
+COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
+COPY --chown=nextjs:nodejs docker-entrypoint.sh ./docker-entrypoint.sh
+RUN chmod +x docker-entrypoint.sh
+
 # Switch to non-root user
 USER nextjs
 
@@ -59,8 +68,10 @@ USER nextjs
 EXPOSE 3000
 
 # Health check (uses Bun to fetch; adjust /api/health if your endpoint differs)
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD ["bun", "--eval", "fetch('http://localhost:3000/api/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3     CMD ["bun", "--eval", "fetch('http://localhost:3000/api/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
+
+# Use entrypoint script to handle migrations
+ENTRYPOINT ["./docker-entrypoint.sh"]
 
 # Run the standalone server with Bun (fully compatible in Bun 1.3+)
 CMD ["bun", "server.js"]
