@@ -66,7 +66,7 @@ export function UsageView() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <LayoutPanelLeft size={18} />
+              <img src="/images/eva-logo.png" alt="EVA Logo" className="h-[1.2em] w-auto object-contain mix-blend-multiply dark:mix-blend-normal dark:brightness-125" />
               <span className="font-medium">Computer Usage</span>
             </div>
           </div>
