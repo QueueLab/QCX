@@ -65,8 +65,11 @@ async function runBackgroundWorker(jobId: string, userId: string, domain: string
         formats: ['markdown'],
       });
 
-      if (!scrapeResult.success || !scrapeResult.markdown) {
-        throw new Error(scrapeResult.error || 'Failed to scrape content');
+      // The library's type definitions for scrapeUrl can be complex.
+      // We check for markdown presence to determine success.
+      if (!scrapeResult || !('markdown' in scrapeResult) || !scrapeResult.markdown) {
+        const errorMsg = (scrapeResult as any)?.error || 'Failed to scrape content';
+        throw new Error(errorMsg);
       }
 
       const content = scrapeResult.markdown;
