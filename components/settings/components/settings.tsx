@@ -46,6 +46,7 @@ const settingsFormSchema = z.object({
   ),
   newUserEmail: z.string().email().optional().or(z.literal('')),
   newUserRole: z.enum(["admin", "editor", "viewer"]).optional(),
+  domain: z.string().url().optional().or(z.literal('')),
 })
 
 export type SettingsFormValues = z.infer<typeof settingsFormSchema>
@@ -56,6 +57,7 @@ const defaultValues: Partial<SettingsFormValues> = {
     "You are a planetary copilot, an AI assistant designed to help users with information about planets, space exploration, and astronomy. Provide accurate, educational, and engaging responses about our solar system and beyond.",
   selectedModel: "Gemini 3.1 Pro",
   users: [],
+  domain: "",
 }
 
 interface SettingsProps {
