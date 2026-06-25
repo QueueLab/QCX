@@ -5,7 +5,7 @@ const exampleMessages = [
   {
     heading: 'What is a planet computer?',
     message: 'What is a planet computer?',
-    icon: Globe
+    image: '/images/eva-logo.png'
   },
   {
     heading: 'How does climate change affect our experience?',
@@ -20,7 +20,7 @@ const exampleMessages = [
   {
     heading: 'How do I use the computer?',
     message: 'How do I use the computer?',
-    icon: HelpCircle,
+    image: '/images/eva-logo.png'
   },
 ];
 
@@ -36,7 +36,6 @@ export function EmptyScreen({
       <div className="bg-background p-2">
         <div className="mt-4 flex flex-col items-start space-y-2 mb-4">
           {exampleMessages.map((item) => {
-            const Icon = item.icon;
             return (
               <Button
                 key={item.message} // Use a unique property as the key.
@@ -47,7 +46,11 @@ export function EmptyScreen({
                   submitMessage(item.message);
                 }}
               >
-                <Icon size={16} className="mr-2 text-muted-foreground" />
+                {item.image ? (
+                  <img src={item.image} alt="" className="h-4 w-auto mr-2 object-contain" />
+                ) : item.icon ? (
+                  <item.icon size={16} className="mr-2 text-muted-foreground" />
+                ) : null}
                 {item.heading}
               </Button>
             );
