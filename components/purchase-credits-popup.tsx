@@ -23,6 +23,10 @@ export function PurchaseCreditsPopup({ isOpen, onClose }: PurchaseCreditsPopupPr
     onClose();
   };
 
+  const handleZapClick = () => {
+    window.open('https://www.benchmark.queue.cx', '_blank');
+  };
+
   const features = [
     'Resolution Search',
     'Upload and analyze unlimited files',
@@ -37,7 +41,13 @@ export function PurchaseCreditsPopup({ isOpen, onClose }: PurchaseCreditsPopupPr
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Zap className="text-yellow-500" />
+            <button
+              onClick={handleZapClick}
+              className="hover:opacity-80 transition-opacity cursor-pointer focus:outline-none"
+              aria-label="Upgrade options"
+            >
+              <Zap className="text-yellow-500" />
+            </button>
             Upgrade Your Plan
           </DialogTitle>
           <DialogDescription>
