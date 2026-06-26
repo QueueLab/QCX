@@ -68,10 +68,24 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({
   const filteredMessages = rawFiltered.filter((message, index) => {
     // If this is a response followed by a resolution search result,
     // and the response is relatively short (likely a transition/redundant summary), filter it out.
-    if (message.type === 'response' && index + 1 < rawFiltered.length) {
+    if (message.type === "response" && index + 1 < rawFiltered.length) {
       const nextMessage = rawFiltered[index + 1]
-      if (nextMessage.role === 'assistant' && (nextMessage.type === 'resolution_search_result' || nextMessage.type === 'response')) {
+      if (nextMessage.role === "assistant") {
         const content = renderMessageContent(message.content)
+
+        // If next is resolution_search_result, check if its summary is redundant with this response
+        if (nextMessage.type === "resolution_search_result") {
+          try {
+            const nextContentString = renderMessageContent(nextMessage.content)
+            const nextResult = JSON.parse(nextContentString)
+            if (nextResult.summary && (nextResult.summary.trim() === content.trim())) {
+              return false
+            }
+          } catch (e) {
+            // If parse fails, fall back to length check
+          }
+        }
+
         // Filter out short transition messages or duplicated high-level summaries
         if (content.length < 500) {
           return false
@@ -83,7 +97,6 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({
 
   return (
     <div id="report-template" className="bg-white text-[#1a1a1a] font-sans max-w-[800px] mx-auto">
-      {/* Cover Page */}
       <section className="h-[1120px] flex flex-col justify-between p-20 border-b-[16px] border-[#003366] bg-slate-50 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-[#003366] opacity-[0.03] -mr-48 -mt-48 rounded-full"></div>
         <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-[#003366] opacity-[0.02] rounded-full"></div>
