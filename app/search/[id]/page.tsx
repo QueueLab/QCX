@@ -14,11 +14,14 @@ export interface SearchPageProps {
 }
 
 export async function generateMetadata({ params }: SearchPageProps) {
-  const { id } = await params; // Keep as is for now
-  // TODO: Metadata generation might need authenticated user if chats are private
-  // For now, assuming getChat can be called or it handles anon access for metadata appropriately
-  const userId = await getCurrentUserIdOnServer(); // Attempt to get user for metadata
-  const chat = await getChat(id, userId || 'anonymous'); // Pass userId or 'anonymous' if none
+  const { id } = await params;
+  const userId = await getCurrentUserIdOnServer();
+
+  if (!userId) {
+    return { title: 'Search' };
+  }
+
+  const chat = await getChat(id, userId);
   return {
     title: chat?.title?.toString().slice(0, 50) || 'Search',
   };
@@ -59,16 +62,32 @@ export default async function SearchPage({ params }: SearchPageProps) {
     };
   });
 
+  // PERSISTENCE: Seed map context from latest persisted drawing data
+  const latestDrawingContext = [...dbMessages]
+    .reverse()
+    .find(m => m.role === 'data');
+
+  let initialMapData = undefined;
+  if (latestDrawingContext) {
+    try {
+      const parsed = JSON.parse(latestDrawingContext.content as string);
+      initialMapData = {
+        drawnFeatures: parsed.drawnFeatures || [],
+        cameraState: parsed.cameraState,
+      };
+    } catch (e) {
+      console.error('Failed to parse latest drawing context:', e);
+    }
+  }
+
   return (
     <AI
       initialAIState={{
         chatId: chat.id,
-        messages: initialMessages, // Use the transformed messages from the database
-        // isSharePage: true, // This was in PR#533, but share functionality is removed.
-                             // If needed for styling or other logic, it can be set.
+        messages: initialMessages,
       }}
     >
-      <MapDataProvider>
+      <MapDataProvider initialData={initialMapData}>
         <Chat id={id} />
       </MapDataProvider>
     </AI>

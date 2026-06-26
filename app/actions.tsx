@@ -12,9 +12,14 @@ import type { FeatureCollection } from 'geojson'
 import { Spinner } from '@/components/ui/spinner'
 import { Section } from '@/components/section'
 import { FollowupPanel } from '@/components/followup-panel'
-import { inquire, researcher, taskManager, querySuggestor, resolutionSearch, type DrawnFeature } from '@/lib/agents'
+import { taskManager } from '@/lib/agents/task-manager'
+import { inquire } from '@/lib/agents/inquire'
+import { querySuggestor } from '@/lib/agents/query-suggestor'
+import { researcher } from '@/lib/agents/researcher'
+import { resolutionSearch, type DrawnFeature } from '@/lib/agents/resolution-search'
 import { writer } from '@/lib/agents/writer'
 import { saveChat, getSystemPrompt, generateReportContext } from '@/lib/actions/chat'
+
 import { Chat, AIMessage } from '@/lib/types'
 import { UserMessage } from '@/components/user-message'
 import { BotMessage } from '@/components/message'
@@ -49,6 +54,43 @@ async function submit(formData?: FormData, skip?: boolean) {
   } catch (e) {
     console.error('Failed to parse drawnFeatures:', e);
   }
+
+  // PERSISTENCE: Always append drawing_context for durable feature history
+  if (drawnFeatures.length > 0) {
+    aiState.update({
+      ...aiState.get(),
+      messages: [
+        ...aiState.get().messages,
+        {
+          id: nanoid(),
+          role: 'data',
+          content: JSON.stringify(drawnFeatures),
+          type: 'drawing_context'
+        }
+      ]
+    });
+  }
+
+  // PERSISTENCE: build merged drawing set from all historical drawing_context messages
+  const mergedDrawnFeatures = [...drawnFeatures];
+  const historicalDrawingContexts = aiState.get().messages.filter(m => m.type === 'drawing_context');
+  historicalDrawingContexts.forEach(m => {
+    try {
+      const historicalFeatures = JSON.parse(m.content as string) as DrawnFeature[];
+      historicalFeatures.forEach(hf => {
+        if (!mergedDrawnFeatures.some(f => f.id === hf.id)) {
+          mergedDrawnFeatures.push(hf);
+        }
+      });
+    } catch (e) {
+      console.error('Failed to parse historical drawing context:', e);
+    }
+  });
+
+  const { getCurrentUserIdOnServer } = await import(
+    "@/lib/auth/get-current-user"
+  )
+  const userId = (await getCurrentUserIdOnServer()) || "anonymous";
 
   if (action === 'generate_report_context') {
     const messagesString = formData?.get('messages');
@@ -92,6 +134,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         message.type !== 'followup' &&
         message.type !== 'related' &&
         message.type !== 'end' &&
+        message.type !== 'drawing_context' &&
         message.type !== 'resolution_search_result'
     );
 
@@ -115,7 +158,7 @@ async function submit(formData?: FormData, skip?: boolean) {
 
     async function processResolutionSearch() {
       try {
-        const streamResult = await resolutionSearch(messages, timezone, drawnFeatures, location);
+        const streamResult = await resolutionSearch(messages, timezone, mergedDrawnFeatures, location);
 
         let fullSummary = '';
         for await (const partialObject of streamResult.partialObjectStream) {
@@ -192,7 +235,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         aiState.done({
           ...aiState.get(),
           messages: [
-            ...aiState.get().messages,
+            ...sanitizedHistory,
             {
               id: groupeId,
               role: 'assistant',
@@ -357,6 +400,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         message.type !== 'followup' &&
         message.type !== 'related' &&
         message.type !== 'end' &&
+        message.type !== 'drawing_context' &&
         message.type !== 'resolution_search_result'
     )
     .map((m: any) => {
@@ -488,7 +532,6 @@ async function submit(formData?: FormData, skip?: boolean) {
     } as CoreMessage)
   }
 
-  const userId = 'anonymous'
   const currentSystemPrompt = (await getSystemPrompt(userId)) || ''
   const mapProvider = formData?.get('mapProvider') as 'mapbox' | 'google'
 
@@ -539,7 +582,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         messages,
         mapProvider,
         useSpecificAPI,
-        drawnFeatures
+        mergedDrawnFeatures
       )
       answer = fullResponse
       toolOutputs = toolResponses
@@ -729,7 +772,7 @@ export const AI = createAI<AIState, UIState>({
     ]
 
     const { getCurrentUserIdOnServer } = await import(
-      '@/lib/auth/get-current-user'
+      "@/lib/auth/get-current-user"
     )
     const actualUserId = await getCurrentUserIdOnServer()
 
