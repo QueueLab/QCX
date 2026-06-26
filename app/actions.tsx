@@ -693,6 +693,7 @@ async function submit(formData?: FormData, skip?: boolean) {
 async function clearChat() {
   'use server'
 
+  const aiState = getMutableAIState<typeof AI>()
 
   aiState.done({
     chatId: nanoid(),
