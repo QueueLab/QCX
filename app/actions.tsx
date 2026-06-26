@@ -6,13 +6,13 @@ import {
   getAIState,
   getMutableAIState
 } from 'ai/rsc'
-import { CoreMessage, ToolResultPart, TextPart, ImagePart } from 'ai'
+import { CoreMessage, ToolResultPart } from 'ai'
 import { nanoid } from '@/lib/utils'
 import type { FeatureCollection } from 'geojson'
 import { Spinner } from '@/components/ui/spinner'
 import { Section } from '@/components/section'
 import { FollowupPanel } from '@/components/followup-panel'
-import { inquire, researcher, taskManager, querySuggestor, resolutionSearch, type DrawnFeature } from '@/lib/agents'
+import { inquire, researcher, querySuggestor, resolutionSearch, type DrawnFeature } from '@/lib/agents'
 import { writer } from '@/lib/agents/writer'
 import { saveChat, getSystemPrompt, generateReportContext, getDrawingContext } from '@/lib/actions/chat'
 import { Chat, AIMessage } from '@/lib/types'
@@ -203,7 +203,9 @@ async function submit(formData?: FormData, skip?: boolean) {
 
   const userInput = skip
     ? `What's next?`
-    : (formData?.get('input') as string) || '';
+    : (formData?.get('related_query') as string) ||
+      (formData?.get('input') as string) ||
+      '';
   const content: CoreMessage['content'] = [{ type: 'text', text: userInput }];
 
   const messages: CoreMessage[] = [...(aiState.get().messages as any[])].filter(
