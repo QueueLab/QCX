@@ -1,5 +1,5 @@
+"use client"
 import { toast } from "sonner"
-'use client'
 
 import { useEffect, useState, useRef, ChangeEvent, forwardRef, useImperativeHandle, useCallback } from 'react'
 import type { AI, UIState } from '@/app/actions'
