@@ -104,10 +104,10 @@ export async function researcher(
       ? dynamicSystemPrompt
       : getDefaultSystemPrompt(currentDate, drawnFeatures)
 
-  // Check if any message contains an image - Ensure we only count real data URLs
+  // Check if any message contains an image
   const hasImage = messages.some(message =>
     Array.isArray(message.content) &&
-    message.content.some(part => part.type === 'image' && typeof part.image === 'string' && part.image.startsWith('data:'))
+    message.content.some(part => part.type === 'image')
   )
 
   const lastUserMessage = [...messages].reverse().find(m => m.role === 'user')
@@ -132,70 +132,58 @@ export async function researcher(
       : 'none'
   })
 
-  try {
-    const result = await nonexperimental_streamText({
-      model: (await getModel(hasImage)) as LanguageModel,
-      maxTokens: 4096,
-      system: systemPromptToUse,
-      messages,
-      tools: getTools({ uiStream, fullResponse, mapProvider }),
-    })
+  const result = await nonexperimental_streamText({
+    model: (await getModel(hasImage)) as LanguageModel,
+    maxTokens: 4096,
+    system: systemPromptToUse,
+    messages,
+    tools: getTools({ uiStream, fullResponse, mapProvider }),
+  })
 
-    uiStream.update(null) // remove spinner
+  uiStream.update(null) // remove spinner
 
-    const toolCalls: ToolCallPart[] = []
-    const toolResponses: ToolResultPart[] = []
+  const toolCalls: ToolCallPart[] = []
+  const toolResponses: ToolResultPart[] = []
 
-    for await (const delta of result.fullStream) {
-      switch (delta.type) {
-        case 'text-delta':
-          if (delta.textDelta) {
-            if (fullResponse.length === 0 && delta.textDelta.length > 0) {
-              uiStream.update(answerSection)
-            }
-            fullResponse += delta.textDelta
-            streamText.update(fullResponse)
+  for await (const delta of result.fullStream) {
+    switch (delta.type) {
+      case 'text-delta':
+        if (delta.textDelta) {
+          if (fullResponse.length === 0 && delta.textDelta.length > 0) {
+            uiStream.update(answerSection)
           }
-          break
+          fullResponse += delta.textDelta
+          streamText.update(fullResponse)
+        }
+        break
 
-        case 'tool-call':
-          toolCalls.push(delta)
-          break
+      case 'tool-call':
+        toolCalls.push(delta)
+        break
 
-        case 'tool-result':
-          if (!useSpecificModel && toolResponses.length === 0 && delta.result) {
-            uiStream.append(answerSection)
-          }
-          if (!delta.result) hasError = true
-          toolResponses.push(delta)
-          break
+      case 'tool-result':
+        if (!useSpecificModel && toolResponses.length === 0 && delta.result) {
+          uiStream.append(answerSection)
+        }
+        if (!delta.result) hasError = true
+        toolResponses.push(delta)
+        break
 
-        case 'error':
-          hasError = true
-          console.error('Researcher: Stream error:', delta.error)
-          break
-      }
+      case 'error':
+        hasError = true
+        fullResponse += `\n\nError: Tool execution failed.`
+        break
     }
-
-    messages.push({
-      role: 'assistant',
-      content: [{ type: 'text', text: fullResponse }, ...toolCalls],
-    })
-
-    if (toolResponses.length > 0) {
-      messages.push({ role: 'tool', content: toolResponses })
-    }
-
-    return { result, fullResponse, hasError, toolResponses }
-  } catch (error) {
-    hasError = true
-    console.error('Researcher: Error:', error)
-    uiStream.update(
-      <div className="text-destructive font-medium">
-        An error occurred during analysis. Please try again.
-      </div>
-    )
-    streamText.error(error)
-    return { result: null as any, fullResponse: '', hasError, toolResponses: [] }
   }
+
+  messages.push({
+    role: 'assistant',
+    content: [{ type: 'text', text: fullResponse }, ...toolCalls],
+  })
+
+  if (toolResponses.length > 0) {
+    messages.push({ role: 'tool', content: toolResponses })
+  }
+
+  return { result, fullResponse, hasError, toolResponses }
 }
