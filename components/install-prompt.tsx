@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
 
 export function InstallPrompt() {
@@ -10,17 +9,13 @@ export function InstallPrompt() {
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: Event) => {
-      // Prevent the mini-infobar from appearing on mobile
       e.preventDefault();
-      // Stash the event so it can be triggered later.
       setDeferredPrompt(e);
-      // Update UI notify the user they can install the PWA
       setIsVisible(true);
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    // Check if already installed
     if (window.matchMedia('(display-mode: standalone)').matches) {
       setIsVisible(false);
     }
@@ -32,15 +27,8 @@ export function InstallPrompt() {
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
-
-    // Show the install prompt
     deferredPrompt.prompt();
-
-    // Wait for the user to respond to the prompt
     const { outcome } = await deferredPrompt.userChoice;
-    console.log(`User response to the install prompt: ${outcome}`);
-
-    // We've used the prompt, and can't use it again, throw it away
     setDeferredPrompt(null);
     setIsVisible(false);
   };
@@ -48,18 +36,14 @@ export function InstallPrompt() {
   if (!isVisible) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 p-4 bg-card border rounded-lg shadow-lg flex items-center gap-4 animate-in fade-in slide-in-from-bottom-4">
-      <div className="flex-1">
-        <p className="text-sm font-medium">Install QCX</p>
-        <p className="text-xs text-muted-foreground">Add to home screen for a better experience</p>
-      </div>
-      <Button size="sm" onClick={handleInstallClick} className="flex items-center gap-2">
-        <Download className="w-4 h-4" />
-        Install
-      </Button>
-      <Button size="sm" variant="ghost" onClick={() => setIsVisible(false)}>
-        Close
-      </Button>
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-2">
+      <button
+        onClick={handleInstallClick}
+        className="flex items-center gap-1.5 px-3 py-1.5 bg-background/60 backdrop-blur-md border border-border/40 rounded-full shadow-sm hover:bg-background/80 transition-all text-[11px] font-medium text-muted-foreground hover:text-foreground group"
+      >
+        <Download className="w-3 h-3 transition-transform group-hover:-translate-y-0.5" />
+        Install App
+      </button>
     </div>
   );
 }
