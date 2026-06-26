@@ -335,7 +335,8 @@ async function submit(formData?: FormData, skip?: boolean) {
       if (Array.isArray(m.content)) {
         const filteredContent = m.content.filter((part: any) => {
           if (part.type === 'image') {
-            const isValid = typeof part.image === 'string' && (part.image.startsWith('data:') || part.image === 'IMAGE_PROCESSED')
+            // Only keep actual data URLs; discard IMAGE_PROCESSED placeholders and other invalid values
+            const isValid = typeof part.image === 'string' && part.image.startsWith('data:')
             if (isValid) retainedImagesCount++
             else filteredImagesCount++
             return isValid
@@ -381,14 +382,11 @@ async function submit(formData?: FormData, skip?: boolean) {
   let errorOccurred = false
 
   async function processEvents() {
+    isCollapsed.done(true)
+    uiStream.update(<Spinner />)
+
     try {
-      const modifiedMessages = messages.map(msg =>
-        msg.role === 'tool' ? { ...msg, role: 'assistant', content: JSON.stringify(msg.content), type: 'tool' } : msg
-      ) as CoreMessage[]
-
-      await taskManager(messages)
-
-      const { fullResponse } = await researcher(
+      const { fullResponse, hasError } = await researcher(
         currentSystemPrompt,
         uiStream,
         streamText,
@@ -397,6 +395,9 @@ async function submit(formData?: FormData, skip?: boolean) {
         useSpecificAPI,
         mergedDrawnFeatures
       )
+
+      errorOccurred = hasError
+      streamText.done()
 
       if (!errorOccurred) {
         const relatedQueries = await querySuggestor(uiStream, messages)
