@@ -124,3 +124,19 @@ export async function getModel(requireVision: boolean = false) {
   });
   return openai('gpt-4o');
 }
+
+/**
+ * Normalizes and sanitizes message content to plain text.
+ */
+export function normalizeMessageContent(content: any): string {
+  const rawContent =
+    typeof content === "string"
+      ? content
+      : Array.isArray(content)
+        ? content.map(p => (p && typeof p === "object" && "type" in p && p.type === "text") ? p.text : "").join("\n")
+        : JSON.stringify(content)
+
+  return rawContent
+    .replace(/data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+/g, "[image omitted]")
+    .trim()
+}

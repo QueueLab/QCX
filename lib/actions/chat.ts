@@ -19,66 +19,108 @@ import { db } from '@/lib/db'
 import { users } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
-import { generateText } from 'ai'
-import { getModel } from '../utils'
+import { getModel, normalizeMessageContent } from '../utils'
+import { executiveSummaryAgent } from '../agents/report/executive-summary'
+import { strategicSynthesisAgent } from '../agents/report/strategic-synthesis'
+
+/**
+ * Retrieves all chats for a given user.
+ */
+export async function getAllChats(userId?: string): Promise<DrizzleChat[]> {
+  const effectiveUserId = userId || (await getCurrentUserIdOnServer())
+  if (!effectiveUserId) {
+    console.warn('getAllChats called without userId.')
+    return []
+  }
+
+  const allChats: DrizzleChat[] = []
+  let offset = 0
+  const limit = 50
+
+  while (true) {
+    const { chats, nextOffset } = await dbGetChatsPage(effectiveUserId, limit, offset)
+    allChats.push(...chats)
+    if (nextOffset === null) break
+    offset = nextOffset
+  }
+
+  return allChats
+}
+
+/**
+ * Aggregates cross-session messages for the user.
+ */
+export async function getCrossSessionContext(userId?: string): Promise<string> {
+  const effectiveUserId = userId || (await getCurrentUserIdOnServer())
+  if (!effectiveUserId) return ''
+
+  const allChats = await getAllChats(effectiveUserId)
+  // Sort by createdAt desc to prioritize most recent
+  allChats.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+
+  let combinedText = ''
+  const MAX_TOTAL_CHARS = 10000
+
+  for (const chat of allChats) {
+    const messages = await getChatMessages(chat.id)
+    const chatContext = messages
+      .filter(msg => msg.role === 'user' || msg.role === 'assistant')
+      .map(msg => `[${msg.role.toUpperCase()}]: ${normalizeMessageContent(msg.content)}`)
+      .join('\n')
+
+    if (combinedText.length + chatContext.length > MAX_TOTAL_CHARS) {
+      const remaining = MAX_TOTAL_CHARS - combinedText.length
+      if (remaining > 50) {
+        combinedText += chatContext.slice(0, remaining) + '... [truncated]'
+      }
+      break
+    }
+    combinedText += chatContext + '\n---\n'
+  }
+
+  return combinedText.trim()
+}
 
 export async function generateReportContext(messages: AIMessage[]) {
   try {
-    const model = await getModel()
+    const crossSessionContext = await getCrossSessionContext()
 
-    const promptMessages = messages
+    const activeMessages = messages
       .filter(msg => msg.role === 'user' || (msg.role === 'assistant' && msg.type === 'response'))
       .map(msg => {
         const role = msg.role === 'user' ? 'user' as const : 'assistant' as const
-        const rawContent =
-          typeof msg.content === 'string'
-            ? msg.content
-            : Array.isArray(msg.content)
-              ? msg.content.map(p => (p && typeof p === 'object' && 'type' in p && p.type === 'text') ? p.text : '').join('\n')
-              : JSON.stringify(msg.content)
-
-        // Sanitize: strip huge base64 images if any are still in there
-        const content = rawContent
-          .replace(/data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+/g, '[image omitted]')
-          .trim()
-
+        const content = normalizeMessageContent(msg.content)
         return { role, content }
       })
       .filter(msg => msg.content.length > 0)
 
-    const { text } = await generateText({
-      model,
-      system: `You are a high-level geospatial intelligence analyst. Based on the provided conversation, generate:
-      1. A professional, concise report title (max 60 characters).
-      2. A 150-200 word executive summary that synthesizes the intelligence findings, observations, and spatial analysis discussed.
-
-      Format your response as a JSON object:
-      {
-        "title": "The Title Here",
-        "summary": "The executive summary here..."
-      }
-      Do not include any other text or markdown formatting in your response.`,
-      messages: promptMessages as any,
-    })
-
-    try {
-      return JSON.parse(text) as { title: string; summary: string }
-    } catch (e) {
-      console.error('Failed to parse AI response for report context', {
-        error: e instanceof Error ? e.message : String(e),
-        preview: text.slice(0, 200)
+    const sensorFusionFindings = messages
+      .filter(msg => msg.type === 'resolution_search_result')
+      .map(msg => {
+        try {
+          return JSON.parse(msg.content as string)
+        } catch (e) {
+          return { summary: msg.content }
+        }
       })
-      // Fallback
-      return {
-        title: 'QCX Intelligence Analysis',
-        summary: 'Executive summary generation failed, but manual review of the intelligence assessment is recommended.'
-      }
+
+    const strategicContent = activeMessages.filter(msg => msg.role === 'assistant')
+
+    const [execSummary, strategicSynthesis] = await Promise.all([
+      executiveSummaryAgent(crossSessionContext, activeMessages),
+      strategicSynthesisAgent(sensorFusionFindings, strategicContent)
+    ])
+
+    return {
+      ...execSummary,
+      strategicOutput: strategicSynthesis.strategicOutput
     }
   } catch (error) {
     console.error('Error generating report context:', error)
     return {
       title: 'QCX Intelligence Analysis',
-      summary: 'Automated executive summary is currently unavailable.'
+      summary: 'Automated report synthesis is currently unavailable.',
+      strategicOutput: 'Strategic synthesis failed.'
     }
   }
 }
