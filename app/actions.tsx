@@ -534,7 +534,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     } as CoreMessage)
   }
 
-  const currentSystemPrompt = (await getSystemPrompt(userId)) || ''
+  const currentSystemPrompt = userId ? (await getSystemPrompt(userId)) ?? '' : ''
   const mapProvider = formData?.get('mapProvider') as 'mapbox' | 'google'
 
   async function processEvents() {
