@@ -19,25 +19,9 @@ import { db } from '@/lib/db'
 import { users } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
-import { getModel } from '../utils'
+import { getModel, normalizeMessageContent } from '../utils'
 import { executiveSummaryAgent } from '../agents/report/executive-summary'
 import { strategicSynthesisAgent } from '../agents/report/strategic-synthesis'
-
-/**
- * Normalizes and sanitizes message content to plain text.
- */
-export function normalizeMessageContent(content: any): string {
-  const rawContent =
-    typeof content === "string"
-      ? content
-      : Array.isArray(content)
-        ? content.map(p => (p && typeof p === "object" && "type" in p && p.type === "text") ? p.text : "").join("\n")
-        : JSON.stringify(content)
-
-  return rawContent
-    .replace(/data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+/g, "[image omitted]")
-    .trim()
-}
 
 /**
  * Retrieves all chats for a given user.
