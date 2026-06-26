@@ -123,7 +123,7 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({
             </div>
             <div className="bg-slate-50 p-10 rounded-2xl border-l-8 border-indigo-600 shadow-sm">
               <p className="text-slate-700 leading-relaxed font-medium italic text-lg">
-                "{aiSummary}"
+                {`"${aiSummary}"`}
               </p>
             </div>
           </section>
