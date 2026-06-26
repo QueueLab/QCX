@@ -23,6 +23,24 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({
   chatTitle,
   aiSummary
 }) => {
+  const normalizeMarkdown = (content: string): string => {
+    return content
+      .replace(/\n{3,}/g, '\n\n') // Collapse 3+ newlines to 2
+      .trim()
+  }
+
+  const MarkdownComponents = {
+    p: ({ children }: { children?: React.ReactNode }) => {
+      if (!children || (typeof children === 'string' && !children.trim())) {
+        return null
+      }
+      if (Array.isArray(children) && children.every(child => typeof child === 'string' && !child.trim())) {
+        return null
+      }
+      return <p>{children}</p>
+    }
+  }
+
   const renderMessageContent = (content: any): string => {
     if (typeof content === 'string') {
       return content
@@ -113,9 +131,9 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({
               <h2 className="text-2xl font-black text-[#003366] uppercase tracking-tight">Intelligence Executive Summary</h2>
             </div>
             <div className="bg-slate-50 p-10 rounded-2xl border-l-8 border-[#003366] shadow-inner">
-              <div className="prose prose-slate prose-lg max-w-none text-slate-800 font-medium leading-relaxed">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {aiSummary}
+              <div className="prose prose-slate prose-lg prose-p:my-1 max-w-none text-slate-800 font-medium leading-relaxed">
+                <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponents}>
+                  {normalizeMarkdown(aiSummary)}
                 </ReactMarkdown>
               </div>
             </div>
@@ -128,7 +146,7 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({
               <span className="text-4xl font-black text-slate-200">01</span>
               <h2 className="text-2xl font-black text-[#003366] uppercase tracking-tight">Executive Visualization</h2>
             </div>
-            <div className="border-[12px] border-slate-50 rounded-2xl overflow-hidden shadow-2xl">
+            <div data-pdf-nosplit className="border-[12px] border-slate-50 rounded-2xl overflow-hidden shadow-2xl">
               <img src={mapSnapshot} alt="Map Snapshot" className="w-full h-auto block" crossOrigin="anonymous" />
               <div className="bg-slate-50 px-6 py-4 text-xs text-slate-500 text-center font-bold tracking-wide border-t border-slate-100">
                 ORBITAL PERSPECTIVE REF: {Math.random().toString(16).substring(2, 10).toUpperCase()}
@@ -167,14 +185,14 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({
                 )
               } else if (message.type === 'response') {
                 return (
-                  <div key={index} className="prose prose-slate prose-lg max-w-none break-inside-avoid">
+                  <div key={index} className="prose prose-slate prose-lg prose-p:my-1 max-w-none break-inside-avoid">
                     <div className="flex items-center gap-3 mb-6">
                       <div className="w-1.5 h-6 bg-emerald-500"></div>
                       <p className="text-xs font-black text-emerald-700 uppercase tracking-[0.2em] m-0">Strategic Output</p>
                     </div>
                     <div className="text-slate-700 leading-relaxed font-medium">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {contentString}
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponents}>
+                        {normalizeMarkdown(contentString)}
                       </ReactMarkdown>
                     </div>
                   </div>
@@ -190,12 +208,14 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({
                       </div>
                       {result.summary && (
                         <div className="text-slate-800 text-lg font-bold leading-snug bg-white p-8 rounded-2xl border border-slate-100 shadow-sm">
-                          {result.summary}
+                          <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponents}>
+                            {normalizeMarkdown(result.summary)}
+                          </ReactMarkdown>
                         </div>
                       )}
                       <div className="flex flex-col items-center gap-12">
                         {result.mapboxImage && (
-                          <div className="space-y-4 w-full max-w-2xl">
+                          <div data-pdf-nosplit className="space-y-4 w-full max-w-2xl">
                             <div className="flex items-center justify-center gap-2">
                               <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
                               <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Spectral RGB Analysis View</p>
@@ -204,7 +224,7 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({
                           </div>
                         )}
                         {result.googleImage && (
-                          <div className="space-y-4 w-full max-w-2xl">
+                          <div data-pdf-nosplit className="space-y-4 w-full max-w-2xl">
                             <div className="flex items-center justify-center gap-2">
                               <div className="w-2 h-2 rounded-full bg-orange-500"></div>
                               <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">High-Resolution Panchromatic Satellite</p>
