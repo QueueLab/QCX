@@ -18,6 +18,7 @@ import { querySuggestor } from '@/lib/agents/query-suggestor'
 import { researcher } from '@/lib/agents/researcher'
 import { resolutionSearch, type DrawnFeature } from '@/lib/agents/resolution-search'
 import { writer } from '@/lib/agents/writer'
+import { getCurrentUserIdOnServer } from "@/lib/auth/get-current-user"
 import { saveChat, getSystemPrompt, generateReportContext } from '@/lib/actions/chat'
 
 import { Chat, AIMessage } from '@/lib/types'
@@ -40,8 +41,15 @@ type RelatedQueries = {
 
 async function submit(formData?: FormData, skip?: boolean) {
   'use server'
-
+  const userId = await getCurrentUserIdOnServer();
   const aiState = getMutableAIState<typeof AI>()
+  if (userId && aiState.get().userId !== userId) {
+    aiState.update({
+      ...aiState.get(),
+      userId
+    })
+  }
+
   const uiStream = createStreamableUI()
   const isGenerating = createStreamableValue(true)
   const isCollapsed = createStreamableValue(false)
@@ -87,10 +95,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     }
   });
 
-  const { getCurrentUserIdOnServer } = await import(
-    "@/lib/auth/get-current-user"
-  )
-  const userId = (await getCurrentUserIdOnServer()) || "anonymous";
+
 
   if (action === 'generate_report_context') {
     const messagesString = formData?.get('messages');
@@ -407,10 +412,7 @@ async function submit(formData?: FormData, skip?: boolean) {
       if (Array.isArray(m.content)) {
         const filteredContent = m.content.filter((part: any) => {
           if (part.type === 'image') {
-            const isValid =
-              typeof part.image === 'string' &&
-              (part.image.startsWith('data:') ||
-                part.image === 'IMAGE_PROCESSED')
+            const isValid = typeof part.image === 'string' && part.image.startsWith('data:')
             if (isValid) {
               retainedImagesCount++
             } else {
@@ -532,10 +534,11 @@ async function submit(formData?: FormData, skip?: boolean) {
     } as CoreMessage)
   }
 
-  const currentSystemPrompt = (await getSystemPrompt(userId)) || ''
+  const currentSystemPrompt = userId ? (await getSystemPrompt(userId)) ?? '' : ''
   const mapProvider = formData?.get('mapProvider') as 'mapbox' | 'google'
 
   async function processEvents() {
+    try {
     let action: any = { object: { next: 'proceed' } }
     if (!skip) {
       const taskManagerResult = await taskManager(messages)
@@ -668,7 +671,13 @@ async function submit(formData?: FormData, skip?: boolean) {
     }
 
     isGenerating.done(false)
-    uiStream.done()
+      uiStream.done()
+    } catch (error) {
+      console.error("Error in processEvents:", error)
+      isGenerating.done(false)
+      uiStream.done()
+      aiState.done(aiState.get())
+    }
   }
 
   processEvents()
@@ -688,7 +697,8 @@ async function clearChat() {
 
   aiState.done({
     chatId: nanoid(),
-    messages: []
+    messages: [],
+  userId: undefined as string | undefined
   })
 }
 
@@ -696,6 +706,7 @@ export type AIState = {
   messages: AIMessage[]
   chatId: string
   isSharePage?: boolean
+  userId?: string
 }
 
 export type UIState = {
@@ -707,7 +718,8 @@ export type UIState = {
 
 const initialAIState: AIState = {
   chatId: nanoid(),
-  messages: []
+  messages: [],
+  userId: undefined as string | undefined
 }
 
 const initialUIState: UIState = []
@@ -771,13 +783,10 @@ export const AI = createAI<AIState, UIState>({
       }
     ]
 
-    const { getCurrentUserIdOnServer } = await import(
-      "@/lib/auth/get-current-user"
-    )
-    const actualUserId = await getCurrentUserIdOnServer()
+    const actualUserId = state.userId
 
     if (!actualUserId) {
-      console.error('onSetAIState: User not authenticated. Chat not saved.')
+      console.info('onSetAIState: User not authenticated. Chat not saved.')
       return
     }
 
