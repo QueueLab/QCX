@@ -78,3 +78,20 @@ ALTER TABLE "visualizations" ADD CONSTRAINT "visualizations_chat_id_chats_id_fk"
 ALTER TABLE "messages" ADD CONSTRAINT "messages_location_id_locations_id_fk" FOREIGN KEY ("location_id") REFERENCES "public"."locations"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "chats" ADD CONSTRAINT "chats_shareable_link_id_unique" UNIQUE("shareable_link_id");--> statement-breakpoint
 ALTER TABLE "users" ADD CONSTRAINT "users_email_unique" UNIQUE("email");
+
+-- Add RLS for calendar_notes (extracted from removed duplicate migration)
+ALTER TABLE "calendar_notes" ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "user_select_own_notes" ON "calendar_notes" FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "user_insert_own_notes" ON "calendar_notes" FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "user_update_own_notes" ON "calendar_notes" FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "user_delete_own_notes" ON "calendar_notes" FOR DELETE USING (auth.uid() = user_id);
+
+-- Add RLS for system_prompts
+ALTER TABLE "system_prompts" ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "user_select_own_system_prompts" ON "system_prompts" FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "user_insert_own_system_prompts" ON "system_prompts" FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "user_update_own_system_prompts" ON "system_prompts" FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "user_delete_own_system_prompts" ON "system_prompts" FOR DELETE USING (auth.uid() = user_id);
+
+-- Add RLS for chat_contexts (newly added in 0007, but including here for consistency if needed,
+-- or we can just ensure 0007 has it. Let's add it to 0007).

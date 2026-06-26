@@ -39,7 +39,7 @@ export async function HistoryList({ userId }: HistoryListProps) {
                 key={chat.id}
                 chat={{
                   ...chat,
-                  path: chat.path || `/search/${chat.id}`,
+                  path: `/search/${chat.id}`,
                 }}
               />
             ))

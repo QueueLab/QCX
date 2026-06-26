@@ -14,24 +14,21 @@ import { Section } from '@/components/section'
 import { FollowupPanel } from '@/components/followup-panel'
 import { inquire, researcher, taskManager, querySuggestor, resolutionSearch, type DrawnFeature } from '@/lib/agents'
 import { writer } from '@/lib/agents/writer'
-import { saveChat, getSystemPrompt, generateReportContext } from '@/lib/actions/chat'
+import { saveChat, getSystemPrompt, generateReportContext, getDrawingContext } from '@/lib/actions/chat'
 import { Chat, AIMessage } from '@/lib/types'
 import { UserMessage } from '@/components/user-message'
 import { BotMessage } from '@/components/message'
 import { SearchSection } from '@/components/search-section'
-import SearchRelated from '@/components/search-related'
-import { GeoJsonLayer } from '@/components/map/geojson-layer'
+import { SearchRelated } from '@/components/search-related'
+import { VideoSearchSection } from '@/components/video-search-section'
+import { RetrieveSection } from '@/components/retrieve-section'
+import { CopilotDisplay } from '@/components/copilot-display'
+import { MapQueryHandler } from '@/components/map-query-handler'
 import { ResolutionCarousel } from '@/components/resolution-carousel'
 import { ResolutionImage } from '@/components/resolution-image'
-import { CopilotDisplay } from '@/components/copilot-display'
-import RetrieveSection from '@/components/retrieve-section'
-import { VideoSearchSection } from '@/components/video-search-section'
-import { MapQueryHandler } from '@/components/map/map-query-handler'
-
-// Define the type for related queries
-type RelatedQueries = {
-  items: { query: string }[]
-}
+import { GeoJsonLayer } from '@/components/map/geojson-layer'
+import { RelatedQueries } from '@/lib/types'
+import { getNotes } from '@/lib/actions/calendar'
 
 async function submit(formData?: FormData, skip?: boolean) {
   'use server'
@@ -48,6 +45,14 @@ async function submit(formData?: FormData, skip?: boolean) {
     drawnFeatures = drawnFeaturesString ? JSON.parse(drawnFeaturesString) : [];
   } catch (e) {
     console.error('Failed to parse drawnFeatures:', e);
+  }
+
+  const chatId = aiState.get().chatId;
+  if (chatId && drawnFeatures.length === 0) {
+    const drawingContext = await getDrawingContext(chatId);
+    if (drawingContext) {
+      drawnFeatures = (drawingContext as any).drawnFeatures || [];
+    }
   }
 
   if (action === 'generate_report_context') {
@@ -148,46 +153,8 @@ async function submit(formData?: FormData, skip?: boolean) {
         }
 
         if (geoJson) {
-          uiStream.append(
-            <GeoJsonLayer
-              id={groupeId}
-              data={geoJson}
-            />
-          );
+          uiStream.append(<GeoJsonLayer id={groupeId} data={geoJson} />);
         }
-
-        messages.push({ role: 'assistant', content: analysisResult.summary || 'Analysis complete.' });
-
-        const sanitizedMessages: CoreMessage[] = messages.map((m: any) => {
-          if (Array.isArray(m.content)) {
-            return {
-              ...m,
-              content: m.content.filter((part: any) => part.type !== 'image')
-            } as CoreMessage
-          }
-          return m
-        })
-
-        const currentMessages = aiState.get().messages;
-        const sanitizedHistory = currentMessages.map((m: any) => {
-          if (m.role === "user" && Array.isArray(m.content)) {
-            return {
-              ...m,
-              content: m.content.map((part: any) =>
-                part.type === "image" ? { ...part, image: "IMAGE_PROCESSED" } : part
-              )
-            }
-          }
-          return m
-        });
-        const relatedQueries = await querySuggestor(uiStream, sanitizedMessages);
-        uiStream.append(
-          <Section title="Follow-up">
-            <FollowupPanel />
-          </Section>
-        );
-
-        await new Promise(resolve => setTimeout(resolve, 500));
 
         aiState.done({
           ...aiState.get(),
@@ -196,32 +163,14 @@ async function submit(formData?: FormData, skip?: boolean) {
             {
               id: groupeId,
               role: 'assistant',
-              content: analysisResult.summary || 'Analysis complete.',
-              type: 'response'
-            },
-            {
-              id: groupeId,
-              role: 'assistant',
               content: JSON.stringify({
                 ...analysisResult,
-                geoJson: geoJson, // Use reconstructed GeoJSON for storage/UI
+                geoJson,
                 image: dataUrl,
                 mapboxImage: mapboxDataUrl,
                 googleImage: googleDataUrl
               }),
               type: 'resolution_search_result'
-            },
-            {
-              id: groupeId,
-              role: 'assistant',
-              content: JSON.stringify(relatedQueries),
-              type: 'related'
-            },
-            {
-              id: groupeId,
-              role: 'assistant',
-              content: 'followup',
-              type: 'followup'
             }
           ]
         });
@@ -236,276 +185,101 @@ async function submit(formData?: FormData, skip?: boolean) {
 
     processResolutionSearch();
 
-    uiStream.update(
-      <Section title="response">
-        <ResolutionCarousel
-          mapboxImage={mapboxDataUrl || undefined}
-          googleImage={googleDataUrl || undefined}
-          initialImage={dataUrl}
-        />
-        <BotMessage content={summaryStream.value} />
-      </Section>
-    );
-
     return {
-      id: nanoid(),
-      isGenerating: isGenerating.value,
-      component: uiStream.value,
-      isCollapsed: isCollapsed.value
+      id: groupeId,
+      component: (
+        <Section title="Map Analysis">
+          <ResolutionCarousel
+            mapboxImage={mapboxDataUrl}
+            googleImage={googleDataUrl}
+            initialImage={dataUrl}
+          />
+          <BotMessage content={summaryStream.value} />
+        </Section>
+      ),
+      isGenerating: isGenerating.value
     };
   }
 
-  const file = !skip ? (formData?.get('file') as File) : undefined
-  console.log('File extraction:', {
-    exists: !!file,
-    name: file?.name,
-    type: file?.type,
-    size: file?.size
-  })
   const userInput = skip
-    ? `{"action": "skip"}`
-    : ((formData?.get('related_query') as string) ||
-      (formData?.get('input') as string))
+    ? `What's next?`
+    : (formData?.get('input') as string) || '';
+  const content: CoreMessage['content'] = [{ type: 'text', text: userInput }];
 
-  if (userInput && (userInput.toLowerCase().trim() === 'what is a planet computer?' || userInput.toLowerCase().trim() === 'what is qcx-terra?')) {
-    const definition = userInput.toLowerCase().trim() === 'what is a planet computer?'
-      ? `A planet computer is a proprietary environment aware system that interoperates weather forecasting, mapping and scheduling using cutting edge multi-agents to streamline automation and exploration on a planet. Available for our Pro and Enterprise customers. [QCX Pricing](https://www.queue.cx/#pricing)`
-      : `QCX-Terra is a model garden of pixel level precision geospatial foundational models for efficient land feature predictions from satellite imagery. Available for our Pro and Enterprise customers. [QCX Pricing] (https://www.queue.cx/#pricing)`;
+  const messages: CoreMessage[] = [...(aiState.get().messages as any[])].filter(
+    (message: any) =>
+      message.role !== 'tool' &&
+      message.type !== 'followup' &&
+      message.type !== 'related' &&
+      message.type !== 'end'
+  )
 
-    const content = JSON.stringify(Object.fromEntries(formData!));
-    const type = 'input';
-    const groupeId = nanoid();
-
+  if (skip) {
     aiState.update({
       ...aiState.get(),
       messages: [
         ...aiState.get().messages,
         {
           id: nanoid(),
-          role: 'user',
-          content,
-          type,
-        },
-      ],
-    });
-
-    const definitionStream = createStreamableValue();
-    definitionStream.done(definition);
-
-    const answerSection = (
-      <Section title="response">
-        <BotMessage content={definitionStream.value} />
-      </Section>
-    );
-
-    uiStream.update(answerSection);
-
-    const relatedQueries = { items: [] };
-
-    aiState.done({
-      ...aiState.get(),
-      messages: [
-        ...aiState.get().messages,
-        {
-          id: groupeId,
           role: 'assistant',
-          content: definition,
-          type: 'response',
-        },
-        {
-          id: groupeId,
-          role: 'assistant',
-          content: JSON.stringify(relatedQueries),
-          type: 'related',
-        },
-        {
-          id: groupeId,
-          role: 'assistant',
-          content: 'followup',
-          type: 'followup',
-        },
-      ],
-    });
-
-    isGenerating.done(false);
-    uiStream.done();
-
-    return {
-      id: nanoid(),
-      isGenerating: isGenerating.value,
-      component: uiStream.value,
-      isCollapsed: isCollapsed.value
-    };
-  }
-
-  if (!userInput && !file) {
-    isGenerating.done(false)
-    return {
-      id: nanoid(),
-      isGenerating: isGenerating.value,
-      component: null,
-      isCollapsed: isCollapsed.value
-    }
-  }
-
-  let filteredImagesCount = 0
-  let retainedImagesCount = 0
-  const messages: CoreMessage[] = [...(aiState.get().messages as any[])]
-    .filter(
-      (message: any) =>
-        message.role !== 'tool' &&
-        message.type !== 'followup' &&
-        message.type !== 'related' &&
-        message.type !== 'end' &&
-        message.type !== 'resolution_search_result'
-    )
-    .map((m: any) => {
-      if (Array.isArray(m.content)) {
-        const filteredContent = m.content.filter((part: any) => {
-          if (part.type === 'image') {
-            const isValid =
-              typeof part.image === 'string' &&
-              (part.image.startsWith('data:') ||
-                part.image === 'IMAGE_PROCESSED')
-            if (isValid) {
-              retainedImagesCount++
-            } else {
-              filteredImagesCount++
-            }
-            return isValid
-          }
-          return true
-        })
-        return {
-          ...m,
-          content: filteredContent
-        } as any
-      }
-      return m
-    })
-  console.log('Historical messages image filter:', {
-    filteredImagesCount,
-    retainedImagesCount,
-    totalMessages: messages.length
-  })
-
-  const groupeId = nanoid()
-  const useSpecificAPI = process.env.USE_SPECIFIC_API_FOR_WRITER === 'true'
-  const maxMessages = useSpecificAPI ? 5 : 10
-  messages.splice(0, Math.max(messages.length - maxMessages, 0))
-
-  const messageParts: (TextPart | ImagePart)[] = []
-
-  if (userInput) {
-    messageParts.push({ type: 'text', text: userInput })
-  }
-
-  if (file) {
-    const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
-    if (file.size > MAX_FILE_SIZE) {
-      console.error('File size exceeds 10MB limit:', file.size)
-    } else {
-      try {
-        const buffer = await file.arrayBuffer()
-        console.log('File buffer loaded:', { size: buffer.byteLength })
-        if (file.type.startsWith('image/')) {
-          const dataUrl = `data:${file.type};base64,${Buffer.from(
-            buffer
-          ).toString('base64')}`
-          console.log('Image processed:', {
-            dataUrlPrefix: dataUrl.substring(0, 50),
-            totalLength: dataUrl.length
-          })
-          const imagePart: ImagePart = {
-            type: 'image',
-            image: dataUrl,
-            mimeType: file.type
-          }
-          console.log('Pushing image part (debug shape):', {
-            ...imagePart,
-            image: dataUrl.substring(0, 50) + '...'
-          })
-          messageParts.push(imagePart)
-        } else if (file.type === 'text/plain') {
-          const textContent = Buffer.from(buffer).toString('utf-8')
-          const existingTextPart = messageParts.find(
-            (p): p is TextPart => p.type === 'text'
-          )
-          if (existingTextPart) {
-            existingTextPart.text = `${textContent}\n\n${existingTextPart.text}`
-          } else {
-            messageParts.push({ type: 'text', text: textContent })
-          }
-        }
-      } catch (error) {
-        console.error('Error processing file:', error)
-      }
-    }
-  }
-
-  const hasImage = messageParts.some(part => part.type === 'image')
-  console.log('messageParts structure:', {
-    parts: messageParts.map(p => ({
-      type: p.type,
-      length: p.type === 'text' ? p.text.length : undefined
-    })),
-    hasImage
-  })
-  const content: CoreMessage['content'] = hasImage
-    ? messageParts
-    : messageParts.map(part => (part.type === 'text' ? part.text : '')).join('\n')
-  console.log('Final content structure:', {
-    hasImage,
-    contentType: typeof content,
-    isArray: Array.isArray(content),
-    partsCount: Array.isArray(content) ? content.length : 'N/A'
-  })
-
-  const type = skip
-    ? undefined
-    : formData?.has('input') || formData?.has('file')
-    ? 'input'
-    : formData?.has('related_query')
-    ? 'input_related'
-    : 'inquiry'
-
-  if (content) {
-    aiState.update({
-      ...aiState.get(),
-      messages: [
-        ...aiState.get().messages,
-        {
-          id: nanoid(),
-          role: 'user',
-          content,
-          type
+          content: `OK, what else can I help you with?`,
+          type: 'response'
         }
       ]
     })
-    messages.push({
-      role: 'user',
-      content
-    } as CoreMessage)
+  } else {
+    aiState.update({
+      ...aiState.get(),
+      messages: [
+        ...aiState.get().messages,
+        {
+          id: nanoid(),
+          role: 'user',
+          content: userInput,
+          type: 'input'
+        }
+      ]
+    })
+    messages.push({ role: 'user', content })
   }
 
-  const userId = 'anonymous'
-  const currentSystemPrompt = (await getSystemPrompt(userId)) || ''
-  const mapProvider = formData?.get('mapProvider') as 'mapbox' | 'google'
+  const { getCurrentUserIdOnServer } = await import(
+    '@/lib/auth/get-current-user'
+  )
+  const userId = await getCurrentUserIdOnServer()
+  const currentSystemPrompt = await getSystemPrompt(userId || '')
 
-  async function processEvents() {
-    let action: any = { object: { next: 'proceed' } }
-    if (!skip) {
-      const taskManagerResult = await taskManager(messages)
-      if (taskManagerResult) {
-        action.object = taskManagerResult.object
+  const useSpecificAPI =
+    (formData?.get('useSpecificAPI') as string) === 'true'
+  const maxMessages = 10
+  const mapProvider = (formData?.get('mapProvider') as any) || 'mapbox'
+
+  const groupeId = nanoid()
+
+  const processEvents = async () => {
+    let inquiry: any = null
+    let researcherResult: any = null
+
+    // Fetch calendar notes for context
+    let calendarNotesContext = '';
+    try {
+      if (chatId) {
+        const notes = await getNotes(new Date(), chatId);
+        if (notes && notes.length > 0) {
+          calendarNotesContext = `\n\nRelevant calendar notes for today in this chat:\n${notes.map(n => `- ${n.content}`).join('\n')}`;
+        }
       }
+    } catch (e) {
+      console.error('Failed to fetch calendar notes for context:', e);
     }
 
-    if (action.object.next === 'inquire') {
-      const inquiry = await inquire(uiStream, messages)
+    if (!skip) {
+      inquiry = await inquire(uiStream, messages)
+    }
+
+    if (inquiry) {
+      isGenerating.done(false)
       uiStream.done()
-      isGenerating.done()
-      isCollapsed.done(false)
       aiState.done({
         ...aiState.get(),
         messages: [
@@ -513,7 +287,8 @@ async function submit(formData?: FormData, skip?: boolean) {
           {
             id: nanoid(),
             role: 'assistant',
-            content: `inquiry: ${inquiry?.question}`
+            content: JSON.stringify(inquiry),
+            type: 'inquiry'
           }
         ]
       })
@@ -533,7 +308,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         : answer.length === 0 && !errorOccurred
     ) {
       const { fullResponse, hasError, toolResponses } = await researcher(
-        currentSystemPrompt,
+        currentSystemPrompt + calendarNotesContext,
         uiStream,
         streamText,
         messages,
@@ -564,13 +339,11 @@ async function submit(formData?: FormData, skip?: boolean) {
       }
     }
 
-    if (useSpecificAPI && answer.length === 0) {
-      const modifiedMessages = aiState
-        .get()
-        .messages.map(msg =>
+    if (!useSpecificAPI && answer.length > 0) {
+      const modifiedMessages = messages
+        .map(msg =>
           msg.role === 'tool'
             ? {
-                ...msg,
                 role: 'assistant',
                 content: JSON.stringify(msg.content),
                 type: 'tool'
@@ -579,7 +352,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         ) as CoreMessage[]
       const latestMessages = modifiedMessages.slice(maxMessages * -1)
       answer = await writer(
-        currentSystemPrompt,
+        currentSystemPrompt + calendarNotesContext,
         uiStream,
         streamText,
         latestMessages
@@ -695,7 +468,6 @@ export const AI = createAI<AIState, UIState>({
 
     const { chatId, messages } = state
     const createdAt = new Date()
-    const path = `/search/${chatId}`
 
     let title = 'Untitled Chat'
     if (messages.length > 0) {
@@ -742,7 +514,6 @@ export const AI = createAI<AIState, UIState>({
       id: chatId,
       createdAt,
       userId: actualUserId,
-      path,
       title,
       messages: updatedMessages
     }

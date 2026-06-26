@@ -2,6 +2,7 @@ import { pgTable, text, timestamp, uuid, jsonb, customType, unique } from 'drizz
 import { relations } from 'drizzle-orm';
 
 // Custom type for PostGIS geometry
+// Future readers: derive GeoJSON via ST_AsGeoJSON(geometry)
 const geometry = customType<{ data: string }>({
   dataType() {
     return 'geometry(GEOMETRY, 4326)';
@@ -24,7 +25,6 @@ export const users = pgTable('users', {
   email: text('email').unique(), // Enforced unique for user identity
   role: text('role').default('viewer'),
   selectedModel: text('selected_model'),
-  systemPrompt: text('system_prompt'),
 });
 
 export const chats = pgTable('chats', {
@@ -32,9 +32,15 @@ export const chats = pgTable('chats', {
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   title: text('title').notNull().default('Untitled Chat'),
   visibility: text('visibility').default('private'),
-  path: text('path'),
-  sharePath: text('share_path'),
   shareableLinkId: uuid('shareable_link_id').defaultRandom().unique(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const chatContexts = pgTable('chat_contexts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  chatId: uuid('chat_id').notNull().references(() => chats.id, { onDelete: 'cascade' }).unique(),
+  data: jsonb('data').notNull(), // Stores drawing and camera state
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
@@ -43,7 +49,6 @@ export const locations = pgTable('locations', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   chatId: uuid('chat_id').references(() => chats.id, { onDelete: 'cascade' }),
-  geojson: jsonb('geojson').notNull(),
   geometry: geometry('geometry'),
   name: text('name'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
@@ -73,7 +78,7 @@ export const chatParticipants = pgTable('chat_participants', {
 
 export const systemPrompts = pgTable('system_prompts', {
   id: uuid('id').primaryKey().defaultRandom(),
-  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }).unique(),
   prompt: text('prompt').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
@@ -84,7 +89,7 @@ export const visualizations = pgTable('visualizations', {
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   chatId: uuid('chat_id').references(() => chats.id, { onDelete: 'cascade' }),
   type: text('type').notNull().default('map_layer'),
-  data: jsonb('data').notNull(),
+  data: jsonb('data'), // Retained for non-spatial metadata/styling
   geometry: geometry('geometry'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
@@ -95,12 +100,26 @@ export const calendarNotes = pgTable('calendar_notes', {
   chatId: uuid('chat_id').references(() => chats.id, { onDelete: 'cascade' }),
   date: timestamp('date', { withTimezone: true }).notNull(),
   content: text('content').notNull(),
-  locationTags: jsonb('location_tags'),
-  userTags: text('user_tags').array(),
   mapFeatureId: text('map_feature_id'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
+
+export const calendarNoteLocations = pgTable('calendar_note_locations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  noteId: uuid('note_id').notNull().references(() => calendarNotes.id, { onDelete: 'cascade' }),
+  locationId: uuid('location_id').notNull().references(() => locations.id, { onDelete: 'cascade' }),
+}, (t) => ({
+  noteLocationUnique: unique('calendar_note_locations_note_location_unique').on(t.noteId, t.locationId),
+}));
+
+export const calendarNoteUserTags = pgTable('calendar_note_user_tags', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  noteId: uuid('note_id').notNull().references(() => calendarNotes.id, { onDelete: 'cascade' }),
+  tag: text('tag').notNull(),
+}, (t) => ({
+  noteTagUnique: unique('calendar_note_user_tags_note_tag_unique').on(t.noteId, t.tag),
+}));
 
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
@@ -124,6 +143,17 @@ export const chatsRelations = relations(chats, ({ one, many }) => ({
   participants: many(chatParticipants),
   locations: many(locations),
   visualizations: many(visualizations),
+  context: one(chatContexts, {
+    fields: [chats.id],
+    references: [chatContexts.chatId],
+  }),
+}));
+
+export const chatContextsRelations = relations(chatContexts, ({ one }) => ({
+  chat: one(chats, {
+    fields: [chatContexts.chatId],
+    references: [chats.id],
+  }),
 }));
 
 export const messagesRelations = relations(messages, ({ one }) => ({
@@ -169,6 +199,7 @@ export const locationsRelations = relations(locations, ({ one, many }) => ({
     references: [chats.id],
   }),
   messages: many(messages),
+  calendarNotes: many(calendarNoteLocations),
 }));
 
 export const visualizationsRelations = relations(visualizations, ({ one }) => ({
@@ -200,7 +231,7 @@ export const promptGenerationJobsRelations = relations(promptGenerationJobs, ({ 
   }),
 }));
 
-export const calendarNotesRelations = relations(calendarNotes, ({ one }) => ({
+export const calendarNotesRelations = relations(calendarNotes, ({ one, many }) => ({
   user: one(users, {
     fields: [calendarNotes.userId],
     references: [users.id],
@@ -208,5 +239,25 @@ export const calendarNotesRelations = relations(calendarNotes, ({ one }) => ({
   chat: one(chats, {
     fields: [calendarNotes.chatId],
     references: [chats.id],
+  }),
+  locations: many(calendarNoteLocations),
+  userTags: many(calendarNoteUserTags),
+}));
+
+export const calendarNoteLocationsRelations = relations(calendarNoteLocations, ({ one }) => ({
+  note: one(calendarNotes, {
+    fields: [calendarNoteLocations.noteId],
+    references: [calendarNotes.id],
+  }),
+  location: one(locations, {
+    fields: [calendarNoteLocations.locationId],
+    references: [locations.id],
+  }),
+}));
+
+export const calendarNoteUserTagsRelations = relations(calendarNoteUserTags, ({ one }) => ({
+  note: one(calendarNotes, {
+    fields: [calendarNoteUserTags.noteId],
+    references: [calendarNotes.id],
   }),
 }));

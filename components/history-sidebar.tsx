@@ -7,7 +7,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { History as HistoryIcon } from 'lucide-react'
-import { ChatHistoryClient } from './sidebar/chat-history-client'
+import ChatHistoryClient from './sidebar/chat-history-client'
 import { Suspense } from 'react'
 import { HistorySkeleton } from './history-skelton'
 import { useHistoryToggle } from './history-toggle-context'

@@ -2,10 +2,9 @@
 
 import { and, desc, eq, isNull, sql } from 'drizzle-orm'
 import { db } from '@/lib/db'
-import { calendarNotes } from '@/lib/db/schema'
+import { calendarNotes, calendarNoteLocations, calendarNoteUserTags } from '@/lib/db/schema'
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
 import type { CalendarNote, NewCalendarNote } from '@/lib/types'
-import { createMessage, NewMessage } from './chat-db'
 
 /**
  * Retrieves notes for a specific date and chat session.
@@ -41,14 +40,24 @@ export async function getNotes(date: Date, chatId: string | null): Promise<Calen
       whereConditions.push(isNull(calendarNotes.chatId));
     }
 
-    const notes = await db
-      .select()
-      .from(calendarNotes)
-      .where(and(...whereConditions))
-      .orderBy(desc(calendarNotes.createdAt))
-      .execute()
+    const notes = await db.query.calendarNotes.findMany({
+      where: and(...whereConditions),
+      orderBy: [desc(calendarNotes.createdAt)],
+      with: {
+        locations: {
+          with: {
+            location: true
+          }
+        },
+        userTags: true
+      }
+    });
 
-    return notes;
+    return notes.map(note => ({
+      ...note,
+      locationTags: note.locations.map(l => l.location)[0] || null, // UI currently expects single object
+      userTags: note.userTags.map(t => t.tag)
+    })) as any;
 
   } catch (error) {
     console.error('Error fetching notes:', error)
@@ -68,44 +77,86 @@ export async function saveNote(noteData: NewCalendarNote | CalendarNote): Promis
         return null;
     }
 
-    if ('id' in noteData) {
-        // Update existing note
-        try {
-            const [updatedNote] = await db
-                .update(calendarNotes)
-                .set({ ...noteData, updatedAt: new Date() })
-                .where(and(eq(calendarNotes.id, noteData.id), eq(calendarNotes.userId, userId)))
-                .returning();
-            return updatedNote;
-        } catch (error) {
-            console.error('Error updating note:', error);
-            return null;
-        }
-    } else {
-        // Create new note
-        try {
-            const [newNote] = await db
-                .insert(calendarNotes)
-                .values({ ...noteData, userId })
-                .returning();
+    const { locationTags, userTags, ...directNoteData } = noteData as any;
 
-            if (newNote && newNote.chatId) {
-                const calendarContextMessage: NewMessage = {
-                    chatId: newNote.chatId,
-                    userId: userId,
-                    role: 'data',
-                    content: JSON.stringify({
-                        type: 'calendar_note',
-                        note: newNote,
-                    }),
-                };
-                await createMessage(calendarContextMessage);
+    try {
+        const result = await db.transaction(async (tx) => {
+            let noteId: string;
+            let savedNote: any;
+
+            if ('id' in noteData) {
+                const [updatedNote] = await tx
+                    .update(calendarNotes)
+                    .set({ ...directNoteData, updatedAt: new Date() })
+                    .where(and(eq(calendarNotes.id, noteData.id), eq(calendarNotes.userId, userId)))
+                    .returning();
+
+                if (!updatedNote) return null;
+                noteId = updatedNote.id;
+                savedNote = updatedNote;
+            } else {
+                const [newNote] = await tx
+                    .insert(calendarNotes)
+                    .values({ ...directNoteData, userId })
+                    .returning();
+
+                if (!newNote) return null;
+                noteId = newNote.id;
+                savedNote = newNote;
             }
 
-            return newNote;
-        } catch (error) {
-            console.error('Error creating note:', error);
-            return null;
+            if (locationTags !== undefined) {
+                await tx.delete(calendarNoteLocations).where(eq(calendarNoteLocations.noteId, noteId));
+                if (Array.isArray(locationTags) && locationTags.length > 0) {
+                    await tx.insert(calendarNoteLocations).values(
+                        locationTags.map((loc: any) => ({
+                            noteId,
+                            locationId: typeof loc === 'string' ? loc : loc.id
+                        }))
+                    );
+                } else if (locationTags && typeof locationTags === 'object') {
+                    await tx.insert(calendarNoteLocations).values({
+                        noteId,
+                        locationId: locationTags.id || locationTags // handle ID or object
+                    });
+                }
+            }
+
+            if (userTags !== undefined) {
+                await tx.delete(calendarNoteUserTags).where(eq(calendarNoteUserTags.noteId, noteId));
+                if (Array.isArray(userTags) && userTags.length > 0) {
+                    await tx.insert(calendarNoteUserTags).values(
+                        userTags.map((tag: string) => ({
+                            noteId,
+                            tag
+                        }))
+                    );
+                }
+            }
+
+            return savedNote;
+        });
+
+        if (result && result.chatId) {
+            const { createMessage } = await import('./chat-db');
+            await createMessage({
+                chatId: result.chatId,
+                userId: userId,
+                role: 'data',
+                content: JSON.stringify({
+                    type: 'calendar_note',
+                    note: {
+                        ...result,
+                        locationTags,
+                        userTags
+                    },
+                }),
+            });
         }
+
+        return result;
+    } catch (error) {
+        console.error('Error saving note:', error);
+        return null;
     }
 }

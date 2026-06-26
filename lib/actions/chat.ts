@@ -16,8 +16,8 @@ import {
   type NewMessage as DbNewMessage
 } from '@/lib/actions/chat-db'
 import { db } from '@/lib/db'
-import { users } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { users, systemPrompts, chatContexts } from '@/lib/db/schema'
+import { eq, desc } from 'drizzle-orm'
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
 import { generateText } from 'ai'
 import { getModel } from '../utils'
@@ -190,23 +190,30 @@ export async function updateDrawingContext(chatId: string, contextData: { drawnF
     return { error: 'User not authenticated' };
   }
 
-  const newDrawingMessage: DbNewMessage = {
-    userId: userId,
-    chatId: chatId,
-    role: 'data',
-    content: JSON.stringify(contextData),
-    createdAt: new Date(),
-  };
-
   try {
-    const savedMessage = await dbCreateMessage(newDrawingMessage);
-    if (!savedMessage) {
-      throw new Error('Failed to save drawing context message.');
-    }
-    return { success: true, messageId: savedMessage.id };
+    await db.insert(chatContexts)
+      .values({ chatId, data: contextData, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: chatContexts.chatId,
+        set: { data: contextData, updatedAt: new Date() }
+      });
+    return { success: true };
   } catch (error) {
-    console.error('updateDrawingContext: Error saving drawing context message:', error);
-    return { error: 'Failed to save drawing context message' };
+    console.error('updateDrawingContext: Error updating drawing context:', error);
+    return { error: 'Failed to update drawing context' };
+  }
+}
+
+export async function getDrawingContext(chatId: string) {
+  try {
+    const result = await db.select()
+      .from(chatContexts)
+      .where(eq(chatContexts.chatId, chatId))
+      .limit(1);
+    return result[0]?.data || null;
+  } catch (error) {
+    console.error('getDrawingContext: Error:', error);
+    return null;
   }
 }
 
@@ -218,9 +225,12 @@ export async function saveSystemPrompt(
   if (!prompt) return { error: 'Prompt is required' }
 
   try {
-    await db.update(users)
-      .set({ systemPrompt: prompt })
-      .where(eq(users.id, userId));
+    await db.insert(systemPrompts)
+      .values({ userId, prompt, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: systemPrompts.userId,
+        set: { prompt, updatedAt: new Date() }
+      });
 
     return { success: true }
   } catch (error) {
@@ -235,12 +245,12 @@ export async function getSystemPrompt(
   if (!userId) return null
 
   try {
-    const result = await db.select({ systemPrompt: users.systemPrompt })
-      .from(users)
-      .where(eq(users.id, userId))
+    const result = await db.select({ prompt: systemPrompts.prompt })
+      .from(systemPrompts)
+      .where(eq(systemPrompts.userId, userId))
       .limit(1);
 
-    return result[0]?.systemPrompt || null;
+    return result[0]?.prompt || null;
   } catch (error) {
     console.error('getSystemPrompt: Error:', error)
     return null

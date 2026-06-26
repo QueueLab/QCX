@@ -22,6 +22,48 @@
       "when": 1782395315062,
       "tag": "0002_lively_black_widow",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1782395400000,
+      "tag": "0003_consolidate_system_prompt",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1782395460000,
+      "tag": "0004_remove_redundant_spatial",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1782395520000,
+      "tag": "0005_drop_chat_paths",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1782395580000,
+      "tag": "0006_remove_synthetic_calendar_notes",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1782395640000,
+      "tag": "0007_add_chat_contexts",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1782395700000,
+      "tag": "0008_normalize_calendar_tags",
+      "breakpoints": true
     }
   ]
 }
