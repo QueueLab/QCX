@@ -1,4 +1,4 @@
-import { defaultCacheOnFront, Serwist } from "serwist";
+import { Serwist, CacheFirst, NetworkFirst } from "serwist";
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
 
 declare global {
@@ -7,7 +7,7 @@ declare global {
   }
 }
 
-declare const self: ServiceWorkerGlobalScope;
+declare const self: ServiceWorkerGlobalScope & typeof globalThis;
 
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
@@ -18,14 +18,9 @@ const serwist = new Serwist({
     {
       // Cache-first for immutable static assets
       matcher: /\.(?:js|css|woff2?|png|jpg|jpeg|svg|gif|ico)$/,
-      handler: "CacheFirst",
-      options: {
+      handler: new CacheFirst({
         cacheName: "static-assets",
-        expiration: {
-          maxEntries: 100,
-          maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
-        },
-      },
+      }),
     },
     {
       // Network-first for /api/* excluding mutations
@@ -36,21 +31,15 @@ const serwist = new Serwist({
           (url.pathname === "/api/chats/all" && request.method === "DELETE");
         return isApi && !isMutation;
       },
-      handler: "NetworkFirst",
-      options: {
+      handler: new NetworkFirst({
         cacheName: "api-cache",
         networkTimeoutSeconds: 5,
-        expiration: {
-          maxEntries: 50,
-          maxAgeSeconds: 24 * 60 * 60, // 24 hours
-        },
-      },
+      }),
     },
     {
       // Network-first for navigation/page requests with offline fallback
       matcher: ({ request }) => request.mode === "navigate",
-      handler: "NetworkFirst",
-      options: {
+      handler: new NetworkFirst({
         cacheName: "pages-cache",
         networkTimeoutSeconds: 5,
         plugins: [
@@ -60,19 +49,18 @@ const serwist = new Serwist({
             },
           },
         ],
-      },
+      }),
     },
-    ...defaultCacheOnFront,
   ],
 });
 
 serwist.addEventListeners();
 
 // Placeholder listeners for push and sync
-self.addEventListener("push", (event) => {
+self.addEventListener("push", (event: any) => {
   console.log("[Service Worker] Push Received.", event);
 });
 
-self.addEventListener("sync", (event) => {
+self.addEventListener("sync", (event: any) => {
   console.log("[Service Worker] Background Sync.", event);
 });

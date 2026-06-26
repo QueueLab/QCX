@@ -7,8 +7,8 @@ export default function OfflinePage() {
     <div className="flex flex-col items-center justify-center min-h-[60vh] p-4 text-center">
       <h1 className="text-4xl font-bold mb-4 text-primary">You are offline</h1>
       <p className="text-lg text-muted-foreground max-w-md">
-        It looks like you don't have an active internet connection.
-        Some features of QCX may be unavailable until you're back online.
+        It looks like you don&apos;t have an active internet connection.
+        Some features of QCX may be unavailable until you&apos;re back online.
       </p>
       <button
         onClick={() => window.location.reload()}
