@@ -15,6 +15,13 @@
       "when": 1781859708408,
       "tag": "0001_sync_schema_full",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1782395315062,
+      "tag": "0002_lively_black_widow",
+      "breakpoints": true
     }
   ]
 }

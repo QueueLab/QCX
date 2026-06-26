@@ -111,6 +111,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   systemPrompts: many(systemPrompts),
   locations: many(locations),
   visualizations: many(visualizations),
+  promptGenerationJobs: many(promptGenerationJobs),
 }));
 
 export const chatsRelations = relations(chats, ({ one, many }) => ({
@@ -178,6 +179,24 @@ export const visualizationsRelations = relations(visualizations, ({ one }) => ({
   chat: one(chats, {
     fields: [visualizations.chatId],
     references: [chats.id],
+  }),
+}));
+
+export const promptGenerationJobs = pgTable('prompt_generation_jobs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  domain: text('domain').notNull(),
+  status: text('status').notNull().default('pending'), // pending | processing | complete | error
+  resultPrompt: text('result_prompt'),
+  errorMessage: text('error_message'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const promptGenerationJobsRelations = relations(promptGenerationJobs, ({ one }) => ({
+  user: one(users, {
+    fields: [promptGenerationJobs.userId],
+    references: [users.id],
   }),
 }));
 

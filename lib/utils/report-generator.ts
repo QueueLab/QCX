@@ -1,8 +1,8 @@
 export const generatePDFReport = async (elementId: string, fileName: string) => {
   const element = document.getElementById(elementId)
   if (!element) {
-    console.error(`Element with id ${elementId} not found in the DOM. Full document structure:`, document.body.innerHTML.substring(0, 500))
-    throw new Error(`Element with id ${elementId} not found. Please try again.`)
+    console.error(`Element with id ${elementId} not found in the DOM.`)
+    throw new Error(`Element with id ${elementId} not found.`)
   }
 
   try {
@@ -12,17 +12,15 @@ export const generatePDFReport = async (elementId: string, fileName: string) => 
     ])
 
     const images = Array.from(element.getElementsByTagName('img'))
-    const imageLoadTimeout = 10000 // 10 seconds timeout for high-res images
+    const imageLoadTimeout = 10000
 
-    // Wait for images to load, but don't block forever
     await Promise.race([
       Promise.all(
         images.map(img => {
           if (img.complete) return Promise.resolve()
           return new Promise((resolve) => {
             img.onload = resolve
-            img.onerror = resolve // Continue even if one image fails
-            // Force a check after a small delay for data URLs
+            img.onerror = resolve
             if (img.src.startsWith('data:')) setTimeout(resolve, 500)
           })
         })
@@ -30,29 +28,15 @@ export const generatePDFReport = async (elementId: string, fileName: string) => 
       new Promise(resolve => setTimeout(resolve, imageLoadTimeout))
     ])
 
-    const canvas = await html2canvas(element, {
-      scale: 3, // Increased scale for ultra-sharp text and images
-      useCORS: true,
-      logging: false,
-      allowTaint: true,
-      backgroundColor: '#ffffff',
-      imageTimeout: 15000,
-      onclone: (clonedDoc) => {
-        // Ensure the cloned element is visible for html2canvas
-        const clonedElement = clonedDoc.getElementById(elementId)
-        if (clonedElement) {
-          clonedElement.style.position = 'static'
-          clonedElement.style.left = '0'
-          clonedElement.style.visibility = 'visible'
-          clonedElement.style.width = '800px' // Fix width for consistent scaling
-        }
-      }
-    })
+    const templateWidth = 800 // The width we force for PDF generation
 
-    const imgData = canvas.toDataURL('image/png') // Use PNG for lossless quality and sharper text
+    // To get accurate positions for the 800px width used in the PDF,
+    // we temporarily set the element width.
+    const originalStyle = element.getAttribute('style') || ''
+    element.style.width = `${templateWidth}px`
+    element.style.position = 'relative'
 
-    // A4 dimensions in px at 72 DPI are roughly 595 x 842
-    // But we use the internal pageSize values for flexibility
+    const templateRect = element.getBoundingClientRect()
     const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'px',
@@ -61,24 +45,72 @@ export const generatePDFReport = async (elementId: string, fileName: string) => 
 
     const pdfWidth = pdf.internal.pageSize.getWidth()
     const pdfHeight = pdf.internal.pageSize.getHeight()
+    const pdfScale = pdfWidth / templateWidth
 
+    const protectedRanges = Array.from(element.querySelectorAll('[data-pdf-nosplit]'))
+      .map(el => {
+        const rect = el.getBoundingClientRect()
+        return {
+          top: (rect.top - templateRect.top) * pdfScale,
+          bottom: (rect.bottom - templateRect.top) * pdfScale
+        }
+      })
+      .sort((a, b) => a.top - b.top)
+
+    // Restore original style
+    element.setAttribute('style', originalStyle)
+
+    const canvas = await html2canvas(element, {
+      scale: 3,
+      useCORS: true,
+      logging: false,
+      allowTaint: true,
+      backgroundColor: '#ffffff',
+      imageTimeout: 15000,
+      onclone: (clonedDoc) => {
+        const clonedElement = clonedDoc.getElementById(elementId)
+        if (clonedElement) {
+          clonedElement.style.position = 'static'
+          clonedElement.style.left = '0'
+          clonedElement.style.visibility = 'visible'
+          clonedElement.style.width = `${templateWidth}px`
+        }
+      }
+    })
+
+    const imgData = canvas.toDataURL('image/png')
     const imgProps = pdf.getImageProperties(imgData)
-    const ratio = imgProps.height / imgProps.width
-    const scaledHeight = pdfWidth * ratio
+    const scaledHeight = pdfWidth * (imgProps.height / imgProps.width)
 
-    let heightLeft = scaledHeight
-    let position = 0
+    let currentPosition = 0
 
-    // Add first page
-    pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, scaledHeight, undefined, 'FAST')
-    heightLeft -= pdfHeight
+    while (currentPosition < scaledHeight - 0.5) {
+      if (currentPosition > 0) {
+        pdf.addPage()
+      }
 
-    // Add subsequent pages if content overflows
-    while (heightLeft > 0) {
-      position = heightLeft - scaledHeight
-      pdf.addPage()
-      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, scaledHeight, undefined, 'FAST')
-      heightLeft -= pdfHeight
+      let nextPossibleCut = currentPosition + pdfHeight
+      let effectiveCut = nextPossibleCut
+
+      if (nextPossibleCut < scaledHeight) {
+        const straddle = protectedRanges.find(range =>
+          nextPossibleCut > range.top && nextPossibleCut < range.bottom
+        )
+
+        // Only move the cut if the element starts after our current position (with small buffer)
+        // and fits on a single page.
+        if (straddle && straddle.top > currentPosition + 10) {
+          const elementHeight = straddle.bottom - straddle.top
+          if (elementHeight <= pdfHeight) {
+            effectiveCut = straddle.top
+          }
+        }
+      } else {
+        effectiveCut = scaledHeight
+      }
+
+      pdf.addImage(imgData, 'PNG', 0, -currentPosition, pdfWidth, scaledHeight, undefined, 'FAST')
+      currentPosition = effectiveCut
     }
 
     pdf.save(`${fileName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_report.pdf`)
