@@ -137,23 +137,6 @@ export async function saveNote(noteData: NewCalendarNote | CalendarNote): Promis
             return savedNote;
         });
 
-        if (result && result.chatId) {
-            const { createMessage } = await import('./chat-db');
-            await createMessage({
-                chatId: result.chatId,
-                userId: userId,
-                role: 'data',
-                content: JSON.stringify({
-                    type: 'calendar_note',
-                    note: {
-                        ...result,
-                        locationTags,
-                        userTags
-                    },
-                }),
-            });
-        }
-
         return result;
     } catch (error) {
         console.error('Error saving note:', error);

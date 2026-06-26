@@ -121,6 +121,17 @@ export const calendarNoteUserTags = pgTable('calendar_note_user_tags', {
   noteTagUnique: unique('calendar_note_user_tags_note_tag_unique').on(t.noteId, t.tag),
 }));
 
+export const promptGenerationJobs = pgTable('prompt_generation_jobs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  domain: text('domain').notNull(),
+  status: text('status').notNull().default('pending'), // pending | processing | complete | error
+  resultPrompt: text('result_prompt'),
+  errorMessage: text('error_message'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   chats: many(chats),
@@ -212,17 +223,6 @@ export const visualizationsRelations = relations(visualizations, ({ one }) => ({
     references: [chats.id],
   }),
 }));
-
-export const promptGenerationJobs = pgTable('prompt_generation_jobs', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  domain: text('domain').notNull(),
-  status: text('status').notNull().default('pending'), // pending | processing | complete | error
-  resultPrompt: text('result_prompt'),
-  errorMessage: text('error_message'),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-});
 
 export const promptGenerationJobsRelations = relations(promptGenerationJobs, ({ one }) => ({
   user: one(users, {

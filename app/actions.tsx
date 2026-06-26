@@ -308,7 +308,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         : answer.length === 0 && !errorOccurred
     ) {
       const { fullResponse, hasError, toolResponses } = await researcher(
-        currentSystemPrompt + calendarNotesContext,
+        (currentSystemPrompt ?? '') + calendarNotesContext,
         uiStream,
         streamText,
         messages,
@@ -352,7 +352,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         ) as CoreMessage[]
       const latestMessages = modifiedMessages.slice(maxMessages * -1)
       answer = await writer(
-        currentSystemPrompt + calendarNotesContext,
+        (currentSystemPrompt ?? '') + calendarNotesContext,
         uiStream,
         streamText,
         latestMessages
