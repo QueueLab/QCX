@@ -14,6 +14,7 @@ export interface ReportTemplateProps {
   mapSnapshot?: string
   chatTitle: string
   aiSummary?: string
+  strategicOutput?: string
 }
 
 export const ReportTemplate: React.FC<ReportTemplateProps> = ({
@@ -21,7 +22,8 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({
   drawnFeatures,
   mapSnapshot,
   chatTitle,
-  aiSummary
+  aiSummary,
+  strategicOutput
 }) => {
   const normalizeMarkdown = (content: string): string => {
     return content
@@ -57,29 +59,9 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({
     return ''
   }
 
-  // Filter messages to reduce redundancy
-  const rawFiltered = messages.filter(m =>
-    m.type === 'input' ||
-    m.type === 'input_related' ||
-    m.type === 'response' ||
-    m.type === 'resolution_search_result'
-  )
-
-  const filteredMessages = rawFiltered.filter((message, index) => {
-    // If this is a response followed by a resolution search result,
-    // and the response is relatively short (likely a transition/redundant summary), filter it out.
-    if (message.type === 'response' && index + 1 < rawFiltered.length) {
-      const nextMessage = rawFiltered[index + 1]
-      if (nextMessage.role === 'assistant' && (nextMessage.type === 'resolution_search_result' || nextMessage.type === 'response')) {
-        const content = renderMessageContent(message.content)
-        // Filter out short transition messages or duplicated high-level summaries
-        if (content.length < 500) {
-          return false
-        }
-      }
-    }
-    return true
-  })
+  // Group messages by type
+  const inquiries = messages.filter(m => m.type === 'input' || m.type === 'input_related')
+  const sensorFusionResults = messages.filter(m => m.type === 'resolution_search_result')
 
   return (
     <div id="report-template" className="bg-white text-[#1a1a1a] font-sans max-w-[800px] mx-auto">
@@ -98,44 +80,51 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({
 
           <div className="space-y-6 mt-32">
             <div className="inline-block px-3 py-1 bg-[#003366] text-white text-[10px] font-bold tracking-[0.2em] uppercase rounded-sm">
-              Confidential Analysis
+              SENSITIVE COMPARTMENTED INFORMATION
             </div>
-            <h1 className="text-6xl font-black text-[#1a1a1a] leading-[1.1] tracking-tight">
+            <h1 className="text-7xl font-black text-[#003366] leading-[0.95] tracking-tight uppercase break-words">
               {chatTitle}
             </h1>
-            <div className="w-24 h-2 bg-[#003366]"></div>
+            <div className="w-32 h-2 bg-emerald-500"></div>
           </div>
         </div>
 
-        <div className="mt-auto pt-12 flex justify-between items-end border-t border-slate-200">
-          <div className="space-y-3">
-            <p className="text-[10px] text-slate-400 uppercase font-black tracking-[0.15em]">Prepared By</p>
+        <div className="space-y-12 pb-10 border-l-4 border-slate-200 pl-12">
+          <div className="grid grid-cols-2 gap-16">
             <div>
-              <p className="text-xl font-bold text-[#003366]">Planet Computer Intelligence</p>
-              <p className="text-sm text-slate-500 font-medium italic">Geospatial Intelligence Division</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Analysis Date</p>
+              <p className="text-xl font-bold text-[#003366]">
+                {new Date().toLocaleDateString('en-US', {
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric'
+                })}
+              </p>
+            </div>
+            <div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Clearance Level</p>
+              <p className="text-xl font-bold text-[#003366]">TOP SECRET / PLANET COMPUTER</p>
             </div>
           </div>
-          <div className="text-right space-y-3">
-            <p className="text-[10px] text-slate-400 uppercase font-black tracking-[0.15em]">Issue Date</p>
-            <p className="text-xl font-bold text-[#1a1a1a]">{new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Subject Area</p>
+            <p className="text-xl font-bold text-[#003366]">Autonomous Geospatial Intelligence Synthesis</p>
           </div>
         </div>
       </section>
 
-      {/* Main Content Container */}
-      <div className="p-16 space-y-20">
+      {/* Content Pages */}
+      <div className="p-16 space-y-24">
         {aiSummary && (
           <section className="break-inside-avoid">
             <div className="flex items-baseline gap-4 mb-8 border-b border-slate-100 pb-4">
               <span className="text-4xl font-black text-slate-200">00</span>
-              <h2 className="text-2xl font-black text-[#003366] uppercase tracking-tight">Intelligence Executive Summary</h2>
+              <h2 className="text-2xl font-black text-[#003366] uppercase tracking-tight">Executive Summary</h2>
             </div>
-            <div className="bg-slate-50 p-10 rounded-2xl border-l-8 border-[#003366] shadow-inner">
-              <div className="prose prose-slate prose-lg prose-p:my-1 max-w-none text-slate-800 font-medium leading-relaxed">
-                <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponents}>
-                  {normalizeMarkdown(aiSummary)}
-                </ReactMarkdown>
-              </div>
+            <div className="bg-slate-50 p-10 rounded-2xl border-l-8 border-indigo-600 shadow-sm">
+              <p className="text-slate-700 leading-relaxed font-medium italic text-lg">
+                "{aiSummary}"
+              </p>
             </div>
           </section>
         )}
@@ -161,86 +150,88 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({
             <h2 className="text-2xl font-black text-[#003366] uppercase tracking-tight">Intelligence Assessment</h2>
           </div>
           <div className="space-y-16">
-            {filteredMessages.map((message, index) => {
+            {/* 1. Primary Inquiries */}
+            {inquiries.map((message, index) => {
               const contentString = renderMessageContent(message.content)
+              let content = ''
+              try {
+                const json = JSON.parse(contentString)
+                content = message.type === 'input' ? (json.input || contentString) : (json.related_query || contentString)
+              } catch (e) {
+                content = contentString
+              }
+              return (
+                <div key={`inquiry-${index}`} className="bg-[#003366] p-10 rounded-2xl shadow-xl break-inside-avoid relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-4">
+                    <svg className="w-8 h-8 text-white opacity-10" fill="currentColor" viewBox="0 0 24 24"><path d="M14.017 21L14.017 18C14.017 16.8954 14.9124 16 16.017 16H19.017C19.5693 16 20.017 15.5523 20.017 15V9C20.017 8.44772 19.5693 8 19.017 8H16.017C14.9124 8 14.017 7.10457 14.017 6V3L14.017 3C14.017 2.44772 14.4647 2 15.017 2H21.017C21.5693 2 22.017 2.44772 22.017 3V15C22.017 18.3137 19.3307 21 16.017 21H14.017ZM3.017 21L3.017 18C3.017 16.8954 3.91243 16 5.017 16H8.017C8.56928 16 9.017 15.5523 9.017 15V9C9.017 8.44772 8.56928 8 8.017 8H5.017C3.91243 8 3.017 7.10457 3.017 6V3L3.017 3C3.017 2.44772 3.46472 2 4.017 2H10.017C10.5693 2 11.017 2.44772 11.017 3V15C11.017 18.3137 8.33072 21 5.017 21H3.017Z" /></svg>
+                  </div>
+                  <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-4">Primary Inquiry</p>
+                  <p className="text-2xl text-white font-bold leading-tight tracking-tight italic">
+                    {content}
+                  </p>
+                </div>
+              )
+            })}
 
-              if (message.type === 'input' || message.type === 'input_related') {
-                let content = ''
-                try {
-                  const json = JSON.parse(contentString)
-                  content = message.type === 'input' ? (json.input || contentString) : (json.related_query || contentString)
-                } catch (e) {
-                  content = contentString
-                }
+            {/* 2. Sensor Fusion (Always before Strategic Output) */}
+            {sensorFusionResults.map((message, index) => {
+              const contentString = renderMessageContent(message.content)
+              try {
+                const result = JSON.parse(contentString)
                 return (
-                  <div key={index} className="bg-[#003366] p-10 rounded-2xl shadow-xl break-inside-avoid relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-4">
-                      <svg className="w-8 h-8 text-white opacity-10" fill="currentColor" viewBox="0 0 24 24"><path d="M14.017 21L14.017 18C14.017 16.8954 14.9124 16 16.017 16H19.017C19.5693 16 20.017 15.5523 20.017 15V9C20.017 8.44772 19.5693 8 19.017 8H16.017C14.9124 8 14.017 7.10457 14.017 6V3L14.017 3C14.017 2.44772 14.4647 2 15.017 2H21.017C21.5693 2 22.017 2.44772 22.017 3V15C22.017 18.3137 19.3307 21 16.017 21H14.017ZM3.017 21L3.017 18C3.017 16.8954 3.91243 16 5.017 16H8.017C8.56928 16 9.017 15.5523 9.017 15V9C9.017 8.44772 8.56928 8 8.017 8H5.017C3.91243 8 3.017 7.10457 3.017 6V3L3.017 3C3.017 2.44772 3.46472 2 4.017 2H10.017C10.5693 2 11.017 2.44772 11.017 3V15C11.017 18.3137 8.33072 21 5.017 21H3.017Z" /></svg>
+                  <div key={`sensor-${index}`} className="space-y-8 bg-slate-50 p-12 rounded-3xl border border-slate-100 break-inside-avoid">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-black text-indigo-700 uppercase tracking-[0.2em]">Sensor Fusion Analysis</p>
+                      <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-[9px] font-bold rounded">LEVEL 4 DATA</span>
                     </div>
-                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-4">Primary Inquiry</p>
-                    <p className="text-2xl text-white font-bold leading-tight tracking-tight italic">
-                      {content}
-                    </p>
-                  </div>
-                )
-              } else if (message.type === 'response') {
-                return (
-                  <div key={index} className="prose prose-slate prose-lg prose-p:my-1 max-w-none break-inside-avoid">
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="w-1.5 h-6 bg-emerald-500"></div>
-                      <p className="text-xs font-black text-emerald-700 uppercase tracking-[0.2em] m-0">Strategic Output</p>
-                    </div>
-                    <div className="text-slate-700 leading-relaxed font-medium">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponents}>
-                        {normalizeMarkdown(contentString)}
-                      </ReactMarkdown>
-                    </div>
-                  </div>
-                )
-              } else if (message.type === 'resolution_search_result') {
-                try {
-                  const result = JSON.parse(contentString)
-                  return (
-                    <div key={index} className="space-y-8 bg-slate-50 p-12 rounded-3xl border border-slate-100 break-inside-avoid">
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs font-black text-indigo-700 uppercase tracking-[0.2em]">Sensor Fusion Analysis</p>
-                        <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-[9px] font-bold rounded">LEVEL 4 DATA</span>
+                    {result.summary && (
+                      <div className="text-slate-800 text-lg font-bold leading-snug bg-white p-8 rounded-2xl border border-slate-100 shadow-sm">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponents}>
+                          {normalizeMarkdown(result.summary)}
+                        </ReactMarkdown>
                       </div>
-                      {result.summary && (
-                        <div className="text-slate-800 text-lg font-bold leading-snug bg-white p-8 rounded-2xl border border-slate-100 shadow-sm">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponents}>
-                            {normalizeMarkdown(result.summary)}
-                          </ReactMarkdown>
+                    )}
+                    <div className="flex flex-col items-center gap-12">
+                      {result.mapboxImage && (
+                        <div data-pdf-nosplit className="space-y-4 w-full max-w-2xl">
+                          <div className="flex items-center justify-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
+                            <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Spectral RGB Analysis View</p>
+                          </div>
+                          <img src={result.mapboxImage} alt="Mapbox View" className="rounded-xl border-4 border-white shadow-xl w-full block mx-auto" crossOrigin="anonymous" />
                         </div>
                       )}
-                      <div className="flex flex-col items-center gap-12">
-                        {result.mapboxImage && (
-                          <div data-pdf-nosplit className="space-y-4 w-full max-w-2xl">
-                            <div className="flex items-center justify-center gap-2">
-                              <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
-                              <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Spectral RGB Analysis View</p>
-                            </div>
-                            <img src={result.mapboxImage} alt="Mapbox View" className="rounded-xl border-4 border-white shadow-xl w-full block mx-auto" crossOrigin="anonymous" />
+                      {result.googleImage && (
+                        <div data-pdf-nosplit className="space-y-4 w-full max-w-2xl">
+                          <div className="flex items-center justify-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+                            <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">High-Resolution Panchromatic Satellite</p>
                           </div>
-                        )}
-                        {result.googleImage && (
-                          <div data-pdf-nosplit className="space-y-4 w-full max-w-2xl">
-                            <div className="flex items-center justify-center gap-2">
-                              <div className="w-2 h-2 rounded-full bg-orange-500"></div>
-                              <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">High-Resolution Panchromatic Satellite</p>
-                            </div>
-                            <img src={result.googleImage} alt="Google Satellite" className="rounded-xl border-4 border-white shadow-xl w-full block mx-auto" crossOrigin="anonymous" />
-                          </div>
-                        )}
-                      </div>
+                          <img src={result.googleImage} alt="Google Satellite" className="rounded-xl border-4 border-white shadow-xl w-full block mx-auto" crossOrigin="anonymous" />
+                        </div>
+                      )}
                     </div>
-                  )
-                } catch (e) {
-                  return null
-                }
+                  </div>
+                )
+              } catch (e) {
+                return null
               }
-              return null
             })}
+
+            {/* 3. Strategic Output (Synthesized narrative) */}
+            {strategicOutput && (
+              <div className="prose prose-slate prose-lg prose-p:my-1 max-w-none break-inside-avoid">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-1.5 h-6 bg-emerald-500"></div>
+                  <p className="text-xs font-black text-emerald-700 uppercase tracking-[0.2em] m-0">Strategic Output</p>
+                </div>
+                <div className="text-slate-700 leading-relaxed font-medium">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponents}>
+                    {normalizeMarkdown(strategicOutput)}
+                  </ReactMarkdown>
+                </div>
+              </div>
+            )}
           </div>
         </section>
 

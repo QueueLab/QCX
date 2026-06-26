@@ -23,6 +23,7 @@ export const DownloadReportButton = () => {
   const [mapSnapshot, setMapSnapshot] = useState<string | undefined>()
   const [reportTitle, setReportTitle] = useState('QCX Analysis Report')
   const [reportSummary, setReportSummary] = useState<string | undefined>()
+  const [strategicOutput, setStrategicOutput] = useState<string | undefined>()
   const [isMounted, setIsMounted] = useState(false)
 
   useEffect(() => {
@@ -57,11 +58,12 @@ export const DownloadReportButton = () => {
       formData.append('action', 'generate_report_context');
       formData.append('messages', JSON.stringify(aiState.messages));
 
-      const { title, summary } = await (actions as any).submit(formData);
+      const { title, summary, strategicOutput } = await (actions as any).submit(formData);
 
       const finalTitle = title || 'QCX Intelligence Analysis'
       setReportTitle(finalTitle)
       setReportSummary(summary)
+      setStrategicOutput(strategicOutput)
 
       // Step 1: Render template in portal
       setShowTemplate(true)
@@ -128,6 +130,7 @@ export const DownloadReportButton = () => {
             mapSnapshot={mapSnapshot}
             chatTitle={reportTitle}
             aiSummary={reportSummary}
+            strategicOutput={strategicOutput}
           />
         </div>,
         document.body
