@@ -1,23 +1,31 @@
-$ next start
-   ▲ Next.js 15.3.8
+$ next dev --turbo
+   ▲ Next.js 15.3.8 (Turbopack)
    - Local:        http://localhost:3000
    - Network:      http://192.168.0.2:3000
+   - Environments: .env
 
  ✓ Starting...
- ⚠ "next start" does not work with "output: standalone" configuration. Use "node .next/standalone/server.js" instead.
- ✓ Ready in 504ms
+Attention: Next.js now collects completely anonymous telemetry regarding usage.
+This information is used to shape Next.js' roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://nextjs.org/telemetry
+
+ ✓ Compiled middleware in 343ms
+ ✓ Ready in 1958ms
+ ⚠ Webpack is configured while Turbopack is not, which may cause problems.
+ ⚠ See instructions if you need to configure Turbopack:
+  https://nextjs.org/docs/app/api-reference/next-config-js/turbo
+
+ ○ Compiling / ...
+ ✓ Compiled / in 33.1s
 Chat DB actions loaded. Ensure getCurrentUserId() is correctly implemented for server-side usage if applicable.
-Chat DB actions loaded. Ensure getCurrentUserId() is correctly implemented for server-side usage if applicable.
-[Auth] Supabase URL or Anon Key is not set for server-side auth.
-[Auth] Supabase URL or Anon Key is not set for server-side auth.
-[Auth] Supabase URL or Anon Key is not set for server-side auth.
-[Auth] Supabase URL or Anon Key is not set for server-side auth.
-[Auth] Supabase URL or Anon Key is not set for server-side auth.
-[Auth] Supabase URL or Anon Key is not set for server-side auth.
-[Auth] Supabase URL or Anon Key is not set for server-side auth.
-[Auth] Supabase URL or Anon Key is not set for server-side auth.
-[Auth] Supabase URL or Anon Key is not set for server-side auth.
-[Auth] Supabase URL or Anon Key is not set for server-side auth.
-[Auth] Supabase URL or Anon Key is not set for server-side auth.
-[Auth] Supabase URL or Anon Key is not set for server-side auth.
-[Auth] Supabase URL or Anon Key is not set for server-side auth.
+ GET / 200 in 35620ms
+ ○ Compiling /_not-found/page ...
+ ✓ Compiled /_not-found/page in 5.8s
+ HEAD /manifest.json 404 in 6250ms
+ ○ Compiling /offline ...
+ ✓ Compiled /offline in 5.5s
+ GET /offline 200 in 5861ms
+ ○ Compiling /manifest.webmanifest ...
+ ✓ Compiled /manifest.webmanifest in 953ms
+ HEAD /manifest.webmanifest 200 in 1029ms
