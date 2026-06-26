@@ -50,6 +50,38 @@ async function submit(formData?: FormData, skip?: boolean) {
     console.error('Failed to parse drawnFeatures:', e);
   }
 
+  // PERSISTENCE: Always append drawing_context for durable feature history
+  if (drawnFeatures.length > 0) {
+    aiState.update({
+      ...aiState.get(),
+      messages: [
+        ...aiState.get().messages,
+        {
+          id: nanoid(),
+          role: 'data',
+          content: JSON.stringify(drawnFeatures),
+          type: 'drawing_context'
+        }
+      ]
+    });
+  }
+
+  // PERSISTENCE: Build merged drawing set from all historical drawing_context messages
+  const mergedDrawnFeatures = [...drawnFeatures];
+  const historicalDrawingContexts = aiState.get().messages.filter(m => m.type === 'drawing_context');
+  historicalDrawingContexts.forEach(m => {
+    try {
+      const historicalFeatures = JSON.parse(m.content as string) as DrawnFeature[];
+      historicalFeatures.forEach(hf => {
+        if (!mergedDrawnFeatures.some(f => f.id === hf.id)) {
+          mergedDrawnFeatures.push(hf);
+        }
+      });
+    } catch (e) {
+      console.error('Failed to parse historical drawing context:', e);
+    }
+  });
+
   if (action === 'generate_report_context') {
     const messagesString = formData?.get('messages');
     if (typeof messagesString !== 'string') {
@@ -92,6 +124,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         message.type !== 'followup' &&
         message.type !== 'related' &&
         message.type !== 'end' &&
+        message.type !== 'drawing_context' &&
         message.type !== 'resolution_search_result'
     );
 
@@ -115,7 +148,7 @@ async function submit(formData?: FormData, skip?: boolean) {
 
     async function processResolutionSearch() {
       try {
-        const streamResult = await resolutionSearch(messages, timezone, drawnFeatures, location);
+        const streamResult = await resolutionSearch(messages, timezone, mergedDrawnFeatures, location);
 
         let fullSummary = '';
         for await (const partialObject of streamResult.partialObjectStream) {
@@ -357,6 +390,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         message.type !== 'followup' &&
         message.type !== 'related' &&
         message.type !== 'end' &&
+        message.type !== 'drawing_context' &&
         message.type !== 'resolution_search_result'
     )
     .map((m: any) => {
@@ -539,7 +573,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         messages,
         mapProvider,
         useSpecificAPI,
-        drawnFeatures
+        mergedDrawnFeatures
       )
       answer = fullResponse
       toolOutputs = toolResponses
