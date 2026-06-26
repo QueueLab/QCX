@@ -141,8 +141,8 @@ export async function getChats(userId?: string | null): Promise<DrizzleChat[]> {
 }
 
 export async function getChat(id: string, userId: string): Promise<DrizzleChat | null> {
-  if (!userId) {
-    console.warn('getChat called without userId.')
+  if (!userId || userId === 'anonymous') {
+    console.warn('getChat: Invalid or missing userId.');
     return null;
   }
   try {
@@ -227,8 +227,8 @@ export async function saveChat(chat: OldChatType, userId: string): Promise<strin
 
 export async function updateDrawingContext(chatId: string, contextData: { drawnFeatures: any[], cameraState: any }) {
   const userId = await getCurrentUserIdOnServer();
-  if (!userId) {
-    console.error('updateDrawingContext: Could not get current user ID.');
+  if (!userId || userId === 'anonymous') {
+    console.error('updateDrawingContext: Invalid or missing user ID.');
     return { error: 'User not authenticated' };
   }
 

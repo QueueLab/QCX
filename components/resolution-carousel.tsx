@@ -17,6 +17,7 @@ import { UserMessage } from './user-message'
 import { toast } from 'sonner'
 import { CompareSlider } from './compare-slider'
 import { compressImage } from '@/lib/utils/image-utils'
+import { useMapData } from './map/map-data-context'
 
 interface ResolutionCarouselProps {
   mapboxImage?: string | null
@@ -28,6 +29,7 @@ export function ResolutionCarousel({ mapboxImage, googleImage, initialImage }: R
   const actions = useActions<typeof AI>() as any
   const [, setMessages] = useUIState<typeof AI>()
   const [isAnalyzing, setIsAnalyzing] = React.useState(false)
+  const { mapData } = useMapData()
 
   const handleQCXAnalysis = async () => {
     if (!googleImage) return
@@ -52,6 +54,14 @@ export function ResolutionCarousel({ mapboxImage, googleImage, initialImage }: R
       const formData = new FormData()
       formData.append('file', blob, 'google_analysis.png')
       formData.append('action', 'resolution_search')
+      formData.append('timezone', mapData.currentTimezone || 'UTC')
+      formData.append('drawnFeatures', JSON.stringify(mapData.drawnFeatures || []))
+
+      const center = mapData.cameraState?.center || mapData.targetPosition;
+      if (center) {
+        formData.append('latitude', center.lat.toString())
+        formData.append('longitude', center.lng.toString())
+      }
 
       const responseMessage = await actions.submit(formData)
       setMessages((currentMessages: any[]) => [...currentMessages, responseMessage as any])
