@@ -1,23 +1,14 @@
-$ next start
-   ▲ Next.js 15.3.8
+$ next dev --turbo
+   ▲ Next.js 15.3.8 (Turbopack)
    - Local:        http://localhost:3000
    - Network:      http://192.168.0.2:3000
+   - Environments: .env
 
  ✓ Starting...
- ⚠ "next start" does not work with "output: standalone" configuration. Use "node .next/standalone/server.js" instead.
- ✓ Ready in 504ms
-Chat DB actions loaded. Ensure getCurrentUserId() is correctly implemented for server-side usage if applicable.
-Chat DB actions loaded. Ensure getCurrentUserId() is correctly implemented for server-side usage if applicable.
-[Auth] Supabase URL or Anon Key is not set for server-side auth.
-[Auth] Supabase URL or Anon Key is not set for server-side auth.
-[Auth] Supabase URL or Anon Key is not set for server-side auth.
-[Auth] Supabase URL or Anon Key is not set for server-side auth.
-[Auth] Supabase URL or Anon Key is not set for server-side auth.
-[Auth] Supabase URL or Anon Key is not set for server-side auth.
-[Auth] Supabase URL or Anon Key is not set for server-side auth.
-[Auth] Supabase URL or Anon Key is not set for server-side auth.
-[Auth] Supabase URL or Anon Key is not set for server-side auth.
-[Auth] Supabase URL or Anon Key is not set for server-side auth.
-[Auth] Supabase URL or Anon Key is not set for server-side auth.
-[Auth] Supabase URL or Anon Key is not set for server-side auth.
-[Auth] Supabase URL or Anon Key is not set for server-side auth.
+Attention: Next.js now collects completely anonymous telemetry regarding usage.
+This information is used to shape Next.js' roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://nextjs.org/telemetry
+
+ ✓ Compiled middleware in 383ms
+ ✓ Ready in 1798ms
