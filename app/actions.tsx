@@ -19,15 +19,15 @@ import { Chat, AIMessage } from '@/lib/types'
 import { UserMessage } from '@/components/user-message'
 import { BotMessage } from '@/components/message'
 import { SearchSection } from '@/components/search-section'
-import { SearchRelated } from '@/components/search-related'
+import SearchRelated from '@/components/search-related'
 import { VideoSearchSection } from '@/components/video-search-section'
-import { RetrieveSection } from '@/components/retrieve-section'
+import RetrieveSection from '@/components/retrieve-section'
 import { CopilotDisplay } from '@/components/copilot-display'
-import { MapQueryHandler } from '@/components/map-query-handler'
+import { MapQueryHandler } from '@/components/map/map-query-handler'
 import { ResolutionCarousel } from '@/components/resolution-carousel'
 import { ResolutionImage } from '@/components/resolution-image'
 import { GeoJsonLayer } from '@/components/map/geojson-layer'
-import { RelatedQueries } from '@/lib/types'
+import { Related } from '@/lib/schema/related'
 import { getNotes } from '@/lib/actions/calendar'
 
 async function submit(formData?: FormData, skip?: boolean) {
@@ -240,7 +240,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         }
       ]
     })
-    messages.push({ role: 'user', content })
+    messages.push({ role: 'user', content: content as any })
   }
 
   const { getCurrentUserIdOnServer } = await import(
@@ -580,7 +580,7 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                 )
               }
             case 'related':
-              const relatedQueries = createStreamableValue<RelatedQueries>({
+              const relatedQueries = createStreamableValue<Related>({
                 items: []
               })
               relatedQueries.done(JSON.parse(content as string))
