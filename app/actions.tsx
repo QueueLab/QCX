@@ -361,7 +361,7 @@ async function submit(formData?: FormData, skip?: boolean) {
   if (file) {
     const buffer = await file.arrayBuffer()
     const content: CoreMessage['content'] = [
-      { type: 'text', text: userInput },
+      { type: 'text', text: userInput || 'Analyze this image.' },
       { type: 'image', image: buffer, mimeType: file.type }
     ]
     aiState.update({
@@ -382,24 +382,50 @@ async function submit(formData?: FormData, skip?: boolean) {
 
   async function processEvents() {
     try {
+      // Normalize tool messages to assistant messages for the LLM
       const modifiedMessages = messages.map(msg =>
         msg.role === 'tool' ? { ...msg, role: 'assistant', content: JSON.stringify(msg.content), type: 'tool' } : msg
       ) as CoreMessage[]
 
-      await taskManager(messages)
+      // Show spinner while processing and collapse chat input
+      uiStream.update(<Spinner />)
+      isCollapsed.done(true)
 
-      const { fullResponse } = await researcher(
+      // Check if we need to inquire for more info
+      const taskManagerResult = await taskManager(modifiedMessages)
+      if (taskManagerResult?.object?.next === 'inquire') {
+        const inquiry = await inquire(uiStream, modifiedMessages)
+        uiStream.done()
+        isGenerating.done(false)
+        aiState.done({
+          ...aiState.get(),
+          messages: [
+            ...aiState.get().messages,
+            {
+              id: nanoid(),
+              role: 'assistant',
+              content: `inquiry: ${inquiry?.question}`
+            }
+          ]
+        })
+        return
+      }
+
+      const { fullResponse, hasError } = await researcher(
         currentSystemPrompt,
         uiStream,
         streamText,
-        messages,
+        modifiedMessages,
         mapProvider,
         useSpecificAPI,
         mergedDrawnFeatures
       )
 
+      errorOccurred = hasError
+
       if (!errorOccurred) {
-        const relatedQueries = await querySuggestor(uiStream, messages)
+        streamText.done()
+        const relatedQueries = await querySuggestor(uiStream, modifiedMessages)
 
         uiStream.append(
           <Section title="Follow-up">
@@ -419,9 +445,10 @@ async function submit(formData?: FormData, skip?: boolean) {
         })
       }
     } catch (error) {
-      console.error('Error in researcher:', error)
+      console.error('Error in processEvents:', error)
       errorOccurred = true
-      streamText.error(error)
+      // Only call streamText.error if researcher didn't already handle it
+      try { streamText.error(error) } catch { /* already errored */ }
     } finally {
       isGenerating.done(false)
       uiStream.done()
