@@ -1,5 +1,4 @@
-"use client"
-import { toast } from "sonner"
+'use client'
 
 import { useEffect, useState, useRef, ChangeEvent, forwardRef, useImperativeHandle, useCallback } from 'react'
 import type { AI, UIState } from '@/app/actions'
@@ -122,13 +121,8 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
     setInput('')
     clearAttachment()
 
-    try {
-      const responseMessage = await submit(formData)
-      setMessages(currentMessages => [...currentMessages, responseMessage as any])
-    } catch (error) {
-      console.error("Failed to submit message:", error)
-      toast.error("Failed to send message. Please try again.")
-    }
+    const responseMessage = await submit(formData)
+    setMessages(currentMessages => [...currentMessages, responseMessage as any])
   }
 
   const handleClear = async () => {

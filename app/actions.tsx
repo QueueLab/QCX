@@ -12,15 +12,10 @@ import type { FeatureCollection } from 'geojson'
 import { Spinner } from '@/components/ui/spinner'
 import { Section } from '@/components/section'
 import { FollowupPanel } from '@/components/followup-panel'
-import { taskManager } from '@/lib/agents/task-manager'
-import { inquire } from '@/lib/agents/inquire'
-import { querySuggestor } from '@/lib/agents/query-suggestor'
-import { researcher } from '@/lib/agents/researcher'
+import { inquire, researcher, taskManager, querySuggestor } from '@/lib/agents'
 import { resolutionSearch, type DrawnFeature } from '@/lib/agents/resolution-search'
 import { writer } from '@/lib/agents/writer'
-import { getCurrentUserIdOnServer } from "@/lib/auth/get-current-user"
 import { saveChat, getSystemPrompt, generateReportContext } from '@/lib/actions/chat'
-
 import { Chat, AIMessage } from '@/lib/types'
 import { UserMessage } from '@/components/user-message'
 import { BotMessage } from '@/components/message'
@@ -33,6 +28,7 @@ import { CopilotDisplay } from '@/components/copilot-display'
 import RetrieveSection from '@/components/retrieve-section'
 import { VideoSearchSection } from '@/components/video-search-section'
 import { MapQueryHandler } from '@/components/map/map-query-handler'
+import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
 
 // Define the type for related queries
 type RelatedQueries = {
@@ -41,15 +37,8 @@ type RelatedQueries = {
 
 async function submit(formData?: FormData, skip?: boolean) {
   'use server'
-  const userId = await getCurrentUserIdOnServer();
-  const aiState = getMutableAIState<typeof AI>()
-  if (userId && aiState.get().userId !== userId) {
-    aiState.update({
-      ...aiState.get(),
-      userId
-    })
-  }
 
+  const aiState = getMutableAIState<typeof AI>()
   const uiStream = createStreamableUI()
   const isGenerating = createStreamableValue(true)
   const isCollapsed = createStreamableValue(false)
@@ -62,40 +51,6 @@ async function submit(formData?: FormData, skip?: boolean) {
   } catch (e) {
     console.error('Failed to parse drawnFeatures:', e);
   }
-
-  // PERSISTENCE: Always append drawing_context for durable feature history
-  if (drawnFeatures.length > 0) {
-    aiState.update({
-      ...aiState.get(),
-      messages: [
-        ...aiState.get().messages,
-        {
-          id: nanoid(),
-          role: 'data',
-          content: JSON.stringify(drawnFeatures),
-          type: 'drawing_context'
-        }
-      ]
-    });
-  }
-
-  // PERSISTENCE: build merged drawing set from all historical drawing_context messages
-  const mergedDrawnFeatures = [...drawnFeatures];
-  const historicalDrawingContexts = aiState.get().messages.filter(m => m.type === 'drawing_context');
-  historicalDrawingContexts.forEach(m => {
-    try {
-      const historicalFeatures = JSON.parse(m.content as string) as DrawnFeature[];
-      historicalFeatures.forEach(hf => {
-        if (!mergedDrawnFeatures.some(f => f.id === hf.id)) {
-          mergedDrawnFeatures.push(hf);
-        }
-      });
-    } catch (e) {
-      console.error('Failed to parse historical drawing context:', e);
-    }
-  });
-
-
 
   if (action === 'generate_report_context') {
     const messagesString = formData?.get('messages');
@@ -139,7 +94,6 @@ async function submit(formData?: FormData, skip?: boolean) {
         message.type !== 'followup' &&
         message.type !== 'related' &&
         message.type !== 'end' &&
-        message.type !== 'drawing_context' &&
         message.type !== 'resolution_search_result'
     );
 
@@ -163,7 +117,7 @@ async function submit(formData?: FormData, skip?: boolean) {
 
     async function processResolutionSearch() {
       try {
-        const streamResult = await resolutionSearch(messages, timezone, mergedDrawnFeatures, location);
+        const streamResult = await resolutionSearch(messages, timezone, drawnFeatures, location);
 
         let fullSummary = '';
         for await (const partialObject of streamResult.partialObjectStream) {
@@ -240,7 +194,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         aiState.done({
           ...aiState.get(),
           messages: [
-            ...sanitizedHistory,
+            ...aiState.get().messages,
             {
               id: groupeId,
               role: 'assistant',
@@ -332,23 +286,22 @@ async function submit(formData?: FormData, skip?: boolean) {
           id: nanoid(),
           role: 'user',
           content,
-          type,
-        },
-      ],
+          type
+        }
+      ]
     });
 
-    const definitionStream = createStreamableValue();
-    definitionStream.done(definition);
+    const summaryStream = createStreamableValue<string>(definition);
+    summaryStream.done(definition);
 
-    const answerSection = (
+    uiStream.update(
       <Section title="response">
-        <BotMessage content={definitionStream.value} />
+        <BotMessage content={summaryStream.value} />
       </Section>
     );
 
-    uiStream.update(answerSection);
-
-    const relatedQueries = { items: [] };
+    isGenerating.done(false);
+    uiStream.done();
 
     aiState.done({
       ...aiState.get(),
@@ -358,25 +311,10 @@ async function submit(formData?: FormData, skip?: boolean) {
           id: groupeId,
           role: 'assistant',
           content: definition,
-          type: 'response',
-        },
-        {
-          id: groupeId,
-          role: 'assistant',
-          content: JSON.stringify(relatedQueries),
-          type: 'related',
-        },
-        {
-          id: groupeId,
-          role: 'assistant',
-          content: 'followup',
-          type: 'followup',
-        },
-      ],
+          type: 'response'
+        }
+      ]
     });
-
-    isGenerating.done(false);
-    uiStream.done();
 
     return {
       id: nanoid(),
@@ -386,136 +324,21 @@ async function submit(formData?: FormData, skip?: boolean) {
     };
   }
 
-  if (!userInput && !file) {
-    isGenerating.done(false)
-    return {
-      id: nanoid(),
-      isGenerating: isGenerating.value,
-      component: null,
-      isCollapsed: isCollapsed.value
-    }
-  }
-
-  let filteredImagesCount = 0
-  let retainedImagesCount = 0
-  const messages: CoreMessage[] = [...(aiState.get().messages as any[])]
-    .filter(
-      (message: any) =>
-        message.role !== 'tool' &&
-        message.type !== 'followup' &&
-        message.type !== 'related' &&
-        message.type !== 'end' &&
-        message.type !== 'drawing_context' &&
-        message.type !== 'resolution_search_result'
-    )
-    .map((m: any) => {
-      if (Array.isArray(m.content)) {
-        const filteredContent = m.content.filter((part: any) => {
-          if (part.type === 'image') {
-            const isValid = typeof part.image === 'string' && part.image.startsWith('data:')
-            if (isValid) {
-              retainedImagesCount++
-            } else {
-              filteredImagesCount++
-            }
-            return isValid
-          }
-          return true
-        })
-        return {
-          ...m,
-          content: filteredContent
-        } as any
-      }
-      return m
-    })
-  console.log('Historical messages image filter:', {
-    filteredImagesCount,
-    retainedImagesCount,
-    totalMessages: messages.length
-  })
-
-  const groupeId = nanoid()
-  const useSpecificAPI = process.env.USE_SPECIFIC_API_FOR_WRITER === 'true'
-  const maxMessages = useSpecificAPI ? 5 : 10
-  messages.splice(0, Math.max(messages.length - maxMessages, 0))
-
-  const messageParts: (TextPart | ImagePart)[] = []
-
-  if (userInput) {
-    messageParts.push({ type: 'text', text: userInput })
-  }
+  const userId = await getCurrentUserIdOnServer()
+  const currentSystemPrompt = userId ? await getSystemPrompt(userId) : null
+  const maxMessages = 10
+  const messages = aiState.get().messages.map(message => ({
+    role: message.role,
+    content: message.content,
+    name: message.name
+  })) as CoreMessage[]
 
   if (file) {
-    const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
-    if (file.size > MAX_FILE_SIZE) {
-      console.error('File size exceeds 10MB limit:', file.size)
-    } else {
-      try {
-        const buffer = await file.arrayBuffer()
-        console.log('File buffer loaded:', { size: buffer.byteLength })
-        if (file.type.startsWith('image/')) {
-          const dataUrl = `data:${file.type};base64,${Buffer.from(
-            buffer
-          ).toString('base64')}`
-          console.log('Image processed:', {
-            dataUrlPrefix: dataUrl.substring(0, 50),
-            totalLength: dataUrl.length
-          })
-          const imagePart: ImagePart = {
-            type: 'image',
-            image: dataUrl,
-            mimeType: file.type
-          }
-          console.log('Pushing image part (debug shape):', {
-            ...imagePart,
-            image: dataUrl.substring(0, 50) + '...'
-          })
-          messageParts.push(imagePart)
-        } else if (file.type === 'text/plain') {
-          const textContent = Buffer.from(buffer).toString('utf-8')
-          const existingTextPart = messageParts.find(
-            (p): p is TextPart => p.type === 'text'
-          )
-          if (existingTextPart) {
-            existingTextPart.text = `${textContent}\n\n${existingTextPart.text}`
-          } else {
-            messageParts.push({ type: 'text', text: textContent })
-          }
-        }
-      } catch (error) {
-        console.error('Error processing file:', error)
-      }
-    }
-  }
-
-  const hasImage = messageParts.some(part => part.type === 'image')
-  console.log('messageParts structure:', {
-    parts: messageParts.map(p => ({
-      type: p.type,
-      length: p.type === 'text' ? p.text.length : undefined
-    })),
-    hasImage
-  })
-  const content: CoreMessage['content'] = hasImage
-    ? messageParts
-    : messageParts.map(part => (part.type === 'text' ? part.text : '')).join('\n')
-  console.log('Final content structure:', {
-    hasImage,
-    contentType: typeof content,
-    isArray: Array.isArray(content),
-    partsCount: Array.isArray(content) ? content.length : 'N/A'
-  })
-
-  const type = skip
-    ? undefined
-    : formData?.has('input') || formData?.has('file')
-    ? 'input'
-    : formData?.has('related_query')
-    ? 'input_related'
-    : 'inquiry'
-
-  if (content) {
+    const buffer = await file.arrayBuffer()
+    const content: CoreMessage['content'] = [
+      { type: 'text', text: userInput },
+      { type: 'image', image: buffer, mimeType: file.type }
+    ]
     aiState.update({
       ...aiState.get(),
       messages: [
@@ -523,160 +346,99 @@ async function submit(formData?: FormData, skip?: boolean) {
         {
           id: nanoid(),
           role: 'user',
-          content,
-          type
+          content: JSON.stringify(Object.fromEntries(formData!)),
+          type: 'input'
         }
       ]
     })
-    messages.push({
-      role: 'user',
-      content
-    } as CoreMessage)
+    messages.push({ role: 'user', content })
+  } else {
+    aiState.update({
+      ...aiState.get(),
+      messages: [
+        ...aiState.get().messages,
+        {
+          id: nanoid(),
+          role: 'user',
+          content: JSON.stringify(Object.fromEntries(formData!)),
+          type: 'input'
+        }
+      ]
+    })
+    const content = userInput
+    messages.push({ role: 'user', content })
   }
 
-  const currentSystemPrompt = userId ? (await getSystemPrompt(userId)) ?? '' : ''
-  const mapProvider = formData?.get('mapProvider') as 'mapbox' | 'google'
+  const groupeId = nanoid()
+
+  const streamText = createStreamableValue<string>('')
+  let errorOccurred = false
 
   async function processEvents() {
     try {
-    let action: any = { object: { next: 'proceed' } }
-    if (!skip) {
-      const taskManagerResult = await taskManager(messages)
-      if (taskManagerResult) {
-        action.object = taskManagerResult.object
-      }
-    }
-
-    if (action.object.next === 'inquire') {
-      const inquiry = await inquire(uiStream, messages)
-      uiStream.done()
-      isGenerating.done()
-      isCollapsed.done(false)
-      aiState.done({
-        ...aiState.get(),
-        messages: [
-          ...aiState.get().messages,
-          {
-            id: nanoid(),
-            role: 'assistant',
-            content: `inquiry: ${inquiry?.question}`
-          }
-        ]
-      })
-      return
-    }
-
-    isCollapsed.done(true)
-    let answer = ''
-    let toolOutputs: ToolResultPart[] = []
-    let errorOccurred = false
-    const streamText = createStreamableValue<string>()
-    uiStream.update(<Spinner />)
-
-    while (
-      useSpecificAPI
-        ? answer.length === 0
-        : answer.length === 0 && !errorOccurred
-    ) {
-      const { fullResponse, hasError, toolResponses } = await researcher(
-        currentSystemPrompt,
+      const modifiedMessages = messages.map(msg =>
+        msg.role === 'tool'
+          ? {
+              ...msg,
+              role: 'assistant',
+              content: JSON.stringify(msg.content),
+              type: 'tool'
+            }
+          : msg
+      ) as CoreMessage[]
+      const latestMessages = modifiedMessages.slice(maxMessages * -1)
+      const { fullResponse } = await researcher(
+        currentSystemPrompt || '',
         uiStream,
         streamText,
-        messages,
-        mapProvider,
-        useSpecificAPI,
-        mergedDrawnFeatures
+        latestMessages,
+        'mapbox', // default provider
+        false,
+        drawnFeatures
       )
-      answer = fullResponse
-      toolOutputs = toolResponses
-      errorOccurred = hasError
 
-      if (toolOutputs.length > 0) {
-        toolOutputs.map(output => {
-          aiState.update({
-            ...aiState.get(),
-            messages: [
-              ...aiState.get().messages,
-              {
-                id: groupeId,
-                role: 'tool',
-                content: JSON.stringify(output.result),
-                name: output.toolName,
-                type: 'tool'
-              }
-            ]
-          })
+      if (!errorOccurred) {
+        const relatedQueries = await querySuggestor(uiStream, messages)
+        uiStream.append(
+          <Section title="Follow-up">
+            <FollowupPanel />
+          </Section>
+        )
+
+        await new Promise(resolve => setTimeout(resolve, 500))
+
+        aiState.done({
+          ...aiState.get(),
+          messages: [
+            ...aiState.get().messages,
+            {
+              id: groupeId,
+              role: 'assistant',
+              content: fullResponse,
+              type: 'response'
+            },
+            {
+              id: groupeId,
+              role: 'assistant',
+              content: JSON.stringify(relatedQueries),
+              type: 'related'
+            },
+            {
+              id: groupeId,
+              role: 'assistant',
+              content: 'followup',
+              type: 'followup'
+            }
+          ]
         })
       }
-    }
-
-    if (useSpecificAPI && answer.length === 0) {
-      const modifiedMessages = aiState
-        .get()
-        .messages.map(msg =>
-          msg.role === 'tool'
-            ? {
-                ...msg,
-                role: 'assistant',
-                content: JSON.stringify(msg.content),
-                type: 'tool'
-              }
-            : msg
-        ) as CoreMessage[]
-      const latestMessages = modifiedMessages.slice(maxMessages * -1)
-      answer = await writer(
-        currentSystemPrompt,
-        uiStream,
-        streamText,
-        latestMessages
-      )
-    } else {
-      streamText.done()
-    }
-
-    if (!errorOccurred) {
-      const relatedQueries = await querySuggestor(uiStream, messages)
-      uiStream.append(
-        <Section title="Follow-up">
-          <FollowupPanel />
-        </Section>
-      )
-
-      await new Promise(resolve => setTimeout(resolve, 500))
-
-      aiState.done({
-        ...aiState.get(),
-        messages: [
-          ...aiState.get().messages,
-          {
-            id: groupeId,
-            role: 'assistant',
-            content: answer,
-            type: 'response'
-          },
-          {
-            id: groupeId,
-            role: 'assistant',
-            content: JSON.stringify(relatedQueries),
-            type: 'related'
-          },
-          {
-            id: groupeId,
-            role: 'assistant',
-            content: 'followup',
-            type: 'followup'
-          }
-        ]
-      })
-    }
-
-    isGenerating.done(false)
-      uiStream.done()
     } catch (error) {
-      console.error("Error in processEvents:", error)
+      console.error('Error in researcher:', error)
+      errorOccurred = true
+      streamText.error(error)
+    } finally {
       isGenerating.done(false)
       uiStream.done()
-      aiState.done(aiState.get())
     }
   }
 
@@ -697,8 +459,7 @@ async function clearChat() {
 
   aiState.done({
     chatId: nanoid(),
-    messages: [],
-  userId: undefined as string | undefined
+    messages: []
   })
 }
 
@@ -706,7 +467,6 @@ export type AIState = {
   messages: AIMessage[]
   chatId: string
   isSharePage?: boolean
-  userId?: string
 }
 
 export type UIState = {
@@ -718,8 +478,7 @@ export type UIState = {
 
 const initialAIState: AIState = {
   chatId: nanoid(),
-  messages: [],
-  userId: undefined as string | undefined
+  messages: []
 }
 
 const initialUIState: UIState = []
@@ -783,10 +542,10 @@ export const AI = createAI<AIState, UIState>({
       }
     ]
 
-    const actualUserId = state.userId
+    const actualUserId = await getCurrentUserIdOnServer()
 
     if (!actualUserId) {
-      console.info('onSetAIState: User not authenticated. Chat not saved.')
+      console.error('onSetAIState: User not authenticated. Chat not saved.')
       return
     }
 

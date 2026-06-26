@@ -19,6 +19,8 @@ import { HistorySidebar } from '@/components/history-sidebar'
 import { MapLoadingProvider } from '@/components/map-loading-context';
 import ConditionalLottie from '@/components/conditional-lottie';
 import { MapProvider as MapContextProvider } from '@/components/map/map-context'
+import { InstallPrompt } from '@/components/install-prompt'
+import { SWUpdateNotification } from '@/components/sw-update-notification'
 
 const fontSans = FontSans({
   subsets: ['latin'],
@@ -31,14 +33,23 @@ const fontPoppins = Poppins({
   weight: ['400', '500', '600', '700']
 })
 
-const title = ''
-const description =
-  'language to Maps'
+const title = 'QCX'
+const description = 'language to Maps'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.qcx.world'),
   title,
   description,
+  manifest: '/manifest.json',
+  icons: {
+    icon: '/icons/icon-192x192.png',
+    apple: '/icons/apple-touch-icon.png',
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'QCX',
+  },
   openGraph: {
     title,
     description
@@ -55,7 +66,8 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   minimumScale: 1,
-  maximumScale: 1
+  maximumScale: 1,
+  themeColor: '#246024',
 }
 
 export default function RootLayout({
@@ -115,6 +127,8 @@ export default function RootLayout({
                         <HistorySidebar />
                         <Footer />
                         <Toaster />
+                        <InstallPrompt />
+                        <SWUpdateNotification />
                       </MapLoadingProvider>
                     </MapContextProvider>
                   </ThemeProvider>
