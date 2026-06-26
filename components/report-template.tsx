@@ -30,7 +30,7 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({
   }
 
   const MarkdownComponents = {
-    p: ({ children }: { children: React.ReactNode }) => {
+    p: ({ children }: { children?: React.ReactNode }) => {
       if (!children || (typeof children === 'string' && !children.trim())) {
         return null
       }
