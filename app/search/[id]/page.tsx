@@ -14,11 +14,14 @@ export interface SearchPageProps {
 }
 
 export async function generateMetadata({ params }: SearchPageProps) {
-  const { id } = await params; // Keep as is for now
-  // TODO: Metadata generation might need authenticated user if chats are private
-  // For now, assuming getChat can be called or it handles anon access for metadata appropriately
-  const userId = await getCurrentUserIdOnServer(); // Attempt to get user for metadata
-  const chat = await getChat(id, userId || 'anonymous'); // Pass userId or 'anonymous' if none
+  const { id } = await params;
+  const userId = await getCurrentUserIdOnServer();
+
+  if (!userId) {
+    return { title: 'Search' };
+  }
+
+  const chat = await getChat(id, userId);
   return {
     title: chat?.title?.toString().slice(0, 50) || 'Search',
   };

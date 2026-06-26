@@ -12,9 +12,14 @@ import type { FeatureCollection } from 'geojson'
 import { Spinner } from '@/components/ui/spinner'
 import { Section } from '@/components/section'
 import { FollowupPanel } from '@/components/followup-panel'
-import { inquire, researcher, taskManager, querySuggestor, resolutionSearch, type DrawnFeature } from '@/lib/agents'
+import { taskManager } from '@/lib/agents/task-manager'
+import { inquire } from '@/lib/agents/inquire'
+import { querySuggestor } from '@/lib/agents/query-suggestor'
+import { researcher } from '@/lib/agents/researcher'
+import { resolutionSearch, type DrawnFeature } from '@/lib/agents/resolution-search'
 import { writer } from '@/lib/agents/writer'
 import { saveChat, getSystemPrompt, generateReportContext } from '@/lib/actions/chat'
+
 import { Chat, AIMessage } from '@/lib/types'
 import { UserMessage } from '@/components/user-message'
 import { BotMessage } from '@/components/message'
@@ -66,7 +71,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     });
   }
 
-  // PERSISTENCE: Build merged drawing set from all historical drawing_context messages
+  // PERSISTENCE: build merged drawing set from all historical drawing_context messages
   const mergedDrawnFeatures = [...drawnFeatures];
   const historicalDrawingContexts = aiState.get().messages.filter(m => m.type === 'drawing_context');
   historicalDrawingContexts.forEach(m => {
@@ -81,6 +86,11 @@ async function submit(formData?: FormData, skip?: boolean) {
       console.error('Failed to parse historical drawing context:', e);
     }
   });
+
+  const { getCurrentUserIdOnServer } = await import(
+    "@/lib/auth/get-current-user"
+  )
+  const userId = (await getCurrentUserIdOnServer()) || "anonymous";
 
   if (action === 'generate_report_context') {
     const messagesString = formData?.get('messages');
@@ -225,7 +235,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         aiState.done({
           ...aiState.get(),
           messages: [
-            ...aiState.get().messages,
+            ...sanitizedHistory,
             {
               id: groupeId,
               role: 'assistant',
@@ -522,7 +532,6 @@ async function submit(formData?: FormData, skip?: boolean) {
     } as CoreMessage)
   }
 
-  const userId = 'anonymous'
   const currentSystemPrompt = (await getSystemPrompt(userId)) || ''
   const mapProvider = formData?.get('mapProvider') as 'mapbox' | 'google'
 
@@ -763,7 +772,7 @@ export const AI = createAI<AIState, UIState>({
     ]
 
     const { getCurrentUserIdOnServer } = await import(
-      '@/lib/auth/get-current-user'
+      "@/lib/auth/get-current-user"
     )
     const actualUserId = await getCurrentUserIdOnServer()
 
