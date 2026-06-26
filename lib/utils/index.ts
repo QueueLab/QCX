@@ -86,7 +86,7 @@ export async function getModel(requireVision: boolean = false) {
       baseURL: 'https://api.x.ai/v1',
     });
     try {
-      return xai('grok-2-1212');
+      return xai('grok-latest');
     } catch (error) {
       console.warn('xAI API unavailable, falling back to next provider:');
     }
