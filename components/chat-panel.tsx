@@ -241,9 +241,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
             data-testid="chat-input"
             className={cn(
               'resize-none w-full min-h-12 rounded-fill border border-input pl-14 pr-12 pt-3 pb-1 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
-              isMobile
-                ? 'mobile-chat-input input bg-background'
-                : 'bg-muted'
+              isMobile ? 'mobile-chat-input input bg-background' : 'bg-muted'
             )}
             onChange={e => {
               setInput(e.target.value)
@@ -292,10 +290,15 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
       {selectedFile && (
         <div className="w-full px-4 pb-2 mb-2">
           <div className="flex items-center justify-between p-2 bg-muted rounded-lg">
-            <span className="text-sm text-muted-foreground truncate max-w-xs">
+            <span className="text-sm text-muted-foreground truncate max-w-[60%]">
               {selectedFile.name}
             </span>
-            <Button variant="ghost" size="icon" onClick={clearAttachment} data-testid="clear-attachment-button">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={clearAttachment}
+              data-testid="clear-attachment-button"
+            >
               <X size={16} />
             </Button>
           </div>
