@@ -11,9 +11,9 @@ declare const self: ServiceWorkerGlobalScope & typeof globalThis;
 
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
-  skipWaiting: true,
-  clientsClaim: true,
-  navigationPreload: true,
+  skipWaiting: false,
+  clientsClaim: false,
+  navigationPreload: false,
   runtimeCaching: [
     {
       // Cache-first for immutable static assets
