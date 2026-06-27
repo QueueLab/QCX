@@ -34,21 +34,21 @@ export function EmptyScreen({
   return (
     <div className={`mx-auto w-full transition-all ${className}`}>
       <div className="bg-background p-2">
-        <div className="mt-4 flex flex-col items-start space-y-2 mb-4">
+        <div className="mt-4 flex flex-col items-start space-y-2 mb-4 w-full overflow-hidden">
           {exampleMessages.map((item) => {
             const Icon = item.icon;
             return (
               <Button
                 key={item.message} // Use a unique property as the key.
                 variant="link"
-                className="h-auto p-0 text-base flex items-center"
+                className="h-auto p-0 text-base flex items-center w-full overflow-hidden text-left"
                 name={item.message}
                 onClick={async () => {
                   submitMessage(item.message);
                 }}
               >
-                <Icon size={16} className="mr-2 text-muted-foreground" />
-                {item.heading}
+                <Icon size={16} className="mr-2 shrink-0 text-muted-foreground" />
+                <span className="truncate">{item.heading}</span>
               </Button>
             );
           })}
