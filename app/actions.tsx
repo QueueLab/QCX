@@ -311,7 +311,7 @@ async function submit(formData?: FormData, skip?: boolean) {
           id: groupeId,
           role: 'assistant',
           content: definition,
-          type: 'response'
+          type: 'definition'
         }
       ]
     });

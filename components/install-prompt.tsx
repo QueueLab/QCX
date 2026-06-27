@@ -2,10 +2,12 @@
 
 import React, { useEffect, useState } from 'react';
 import { Download } from 'lucide-react';
+import { useIsStandalone } from '@/lib/hooks/use-is-standalone';
 
 export function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const isStandalone = useIsStandalone();
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -16,14 +18,16 @@ export function InstallPrompt() {
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-      setIsVisible(false);
-    }
-
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
   }, []);
+
+  useEffect(() => {
+    if (isStandalone) {
+      setIsVisible(false);
+    }
+  }, [isStandalone]);
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
@@ -33,7 +37,7 @@ export function InstallPrompt() {
     setIsVisible(false);
   };
 
-  if (!isVisible) return null;
+  if (!isVisible || isStandalone) return null;
 
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-2">

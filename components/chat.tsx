@@ -40,6 +40,7 @@ export function Chat({ id }: ChatProps) {
   const [input, setInput] = useState('')
   const [showEmptyScreen, setShowEmptyScreen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const lastMessage = aiState.messages[aiState.messages.length - 1];
   const [suggestions, setSuggestions] = useState<PartialRelated | null>(null)
   const chatPanelRef = useRef<ChatPanelRef>(null);
 
@@ -72,15 +73,14 @@ export function Chat({ id }: ChatProps) {
   }, [])
 
   useEffect(() => {
-    if (!isStandalone && !path.includes('search') && messages.length === 1) {
+    if (!isStandalone && lastMessage?.type === 'response' && !path.includes('search') && messages.length === 1) {
       window.history.replaceState({}, '', `/search/${id}`)
     }
-  }, [id, path, messages.length, isStandalone]) // OPTIMIZATION: Use messages.length instead of full array
+  }, [id, path, messages.length, isStandalone, lastMessage?.type]) // OPTIMIZATION: Use messages.length instead of full array
 
   // OPTIMIZATION: Debounce router.refresh() to prevent excessive re-renders
   // Only refresh when a new response is added, not on every state change
   useEffect(() => {
-    const lastMessage = aiState.messages[aiState.messages.length - 1];
     if (!isStandalone && lastMessage?.type === 'response' && lastMessage?.id) {
       // Use a small delay to batch multiple updates
       const timer = setTimeout(() => {
@@ -88,7 +88,7 @@ export function Chat({ id }: ChatProps) {
       }, 300);
       return () => clearTimeout(timer);
     }
-  }, [aiState.messages.length, router, isStandalone])
+  }, [aiState.messages.length, router, isStandalone, lastMessage?.type])
 
   // Get mapData to access drawnFeatures
   // OPTIMIZATION: Memoize mapData to prevent unnecessary re-renders
