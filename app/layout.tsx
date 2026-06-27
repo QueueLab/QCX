@@ -19,7 +19,6 @@ import { HistorySidebar } from '@/components/history-sidebar'
 import { MapLoadingProvider } from '@/components/map-loading-context';
 import ConditionalLottie from '@/components/conditional-lottie';
 import { MapProvider as MapContextProvider } from '@/components/map/map-context'
-import { InstallPrompt } from '@/components/install-prompt'
 import { SWUpdateNotification } from '@/components/sw-update-notification'
 
 const fontSans = FontSans({
@@ -127,7 +126,6 @@ export default function RootLayout({
                         <HistorySidebar />
                         <Footer />
                         <Toaster />
-                        <InstallPrompt />
                         <SWUpdateNotification />
                       </MapLoadingProvider>
                     </MapContextProvider>
