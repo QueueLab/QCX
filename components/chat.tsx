@@ -21,6 +21,7 @@ import { MapDataProvider, useMapData } from './map/map-data-context'; // Add thi
 import { updateDrawingContext } from '@/lib/actions/chat'; // Import the server action
 import dynamic from 'next/dynamic'
 import { HeaderSearchButton } from './header-search-button'
+import { useIsStandalone } from '@/lib/hooks/use-is-standalone'
 
 type ChatProps = {
   id?: string // This is the chatId
@@ -32,6 +33,7 @@ export function Chat({ id }: ChatProps) {
   const [messages] = useUIState()
   const [aiState] = useAIState()
   const [isMobile, setIsMobile] = useState(false)
+  const isStandalone = useIsStandalone()
   const { activeView } = useProfileToggle();
   const { isUsageOpen } = useUsageToggle();
   const { isCalendarOpen } = useCalendarToggle()
@@ -70,23 +72,23 @@ export function Chat({ id }: ChatProps) {
   }, [])
 
   useEffect(() => {
-    if (!path.includes('search') && messages.length === 1) {
+    if (!isStandalone && !path.includes('search') && messages.length === 1) {
       window.history.replaceState({}, '', `/search/${id}`)
     }
-  }, [id, path, messages.length]) // OPTIMIZATION: Use messages.length instead of full array
+  }, [id, path, messages.length, isStandalone]) // OPTIMIZATION: Use messages.length instead of full array
 
   // OPTIMIZATION: Debounce router.refresh() to prevent excessive re-renders
   // Only refresh when a new response is added, not on every state change
   useEffect(() => {
     const lastMessage = aiState.messages[aiState.messages.length - 1];
-    if (lastMessage?.type === 'response' && lastMessage?.id) {
+    if (!isStandalone && lastMessage?.type === 'response' && lastMessage?.id) {
       // Use a small delay to batch multiple updates
       const timer = setTimeout(() => {
         router.refresh()
       }, 300);
       return () => clearTimeout(timer);
     }
-  }, [aiState.messages.length, router])
+  }, [aiState.messages.length, router, isStandalone])
 
   // Get mapData to access drawnFeatures
   // OPTIMIZATION: Memoize mapData to prevent unnecessary re-renders
