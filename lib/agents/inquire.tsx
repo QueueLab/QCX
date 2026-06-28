@@ -3,6 +3,7 @@ import { createStreamableUI, createStreamableValue } from 'ai/rsc';
 import { CoreMessage, LanguageModel, streamObject } from 'ai';
 import { PartialInquiry, inquirySchema } from '@/lib/schema/inquiry';
 import { getModel } from '../utils';
+import { recordUsageEvent } from '@/lib/actions/usage'
 
 // Define a plain object type for the inquiry prop
 interface InquiryProp {
@@ -10,6 +11,8 @@ interface InquiryProp {
 }
 
 export async function inquire(
+  userId: string,
+  chatId: string,
   uiStream: ReturnType<typeof createStreamableUI>,
   messages: CoreMessage[]
 ) {
@@ -23,13 +26,28 @@ export async function inquire(
   );
 
   let finalInquiry: PartialInquiry = {};
+  const { model, modelId } = await getModel()
+
   const result = await streamObject({
-    model: (await getModel()) as LanguageModel,
+    model: model as LanguageModel,
     system: `You are a helpful assistant that gathers clarifying information from the user. 
     Generate a structured inquiry with a clear question, multiple choice options, and optionally allow free-text input.
     Ensure the inquiry is concise and helps narrow down the user's intent.`,
     messages,
     schema: inquirySchema,
+    onFinish: ({ usage }) => {
+      if (userId) {
+        recordUsageEvent({
+          userId,
+          chatId,
+          kind: 'llm',
+          source: modelId,
+          promptTokens: usage.promptTokens,
+          completionTokens: usage.completionTokens,
+          totalTokens: usage.totalTokens
+        }).catch(console.error)
+      }
+    }
   });
 
   // OPTIMIZATION: Collect all partial objects and only update UI with final state

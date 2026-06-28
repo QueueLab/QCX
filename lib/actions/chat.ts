@@ -81,7 +81,7 @@ export async function getCrossSessionContext(userId?: string): Promise<string> {
   return combinedText.trim()
 }
 
-export async function generateReportContext(messages: AIMessage[]) {
+export async function generateReportContext(userId: string, chatId: string, messages: AIMessage[]) {
   try {
     const crossSessionContext = await getCrossSessionContext()
 
@@ -107,8 +107,8 @@ export async function generateReportContext(messages: AIMessage[]) {
     const strategicContent = activeMessages.filter(msg => msg.role === 'assistant')
 
     const [execSummary, strategicSynthesis] = await Promise.all([
-      executiveSummaryAgent(crossSessionContext, activeMessages),
-      strategicSynthesisAgent(sensorFusionFindings, strategicContent)
+      executiveSummaryAgent(userId, chatId, crossSessionContext, activeMessages),
+      strategicSynthesisAgent(userId, chatId, sensorFusionFindings, strategicContent)
     ])
 
     return {

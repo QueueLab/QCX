@@ -1,14 +1,15 @@
 import { generateText } from 'ai'
 import { getModel } from '@/lib/utils'
+import { recordUsageEvent } from '@/lib/actions/usage'
 
-export async function strategicSynthesisAgent(sensorFusionFindings: any[], strategicContent: any[]) {
+export async function strategicSynthesisAgent(userId: string, chatId: string, sensorFusionFindings: any[], strategicContent: any[]) {
   try {
-    const model = await getModel()
+    const { model, modelId } = await getModel()
 
     const findingsContext = sensorFusionFindings.map(f => f.summary || JSON.stringify(f)).join('\n\n')
     const strategyContext = strategicContent.map(s => s.content).join('\n\n')
 
-    const { text } = await generateText({
+    const result = await generateText({
       model,
       system: `You are a strategic intelligence officer. Your task is to synthesize "new knowledge" narrative derived from exploration.
       Focus on insights, implications, and decisions.
@@ -25,12 +26,24 @@ export async function strategicSynthesisAgent(sensorFusionFindings: any[], strat
       ],
     })
 
+    if (userId) {
+      recordUsageEvent({
+        userId,
+        chatId,
+        kind: 'llm',
+        source: modelId,
+        promptTokens: result.usage.promptTokens,
+        completionTokens: result.usage.completionTokens,
+        totalTokens: result.usage.totalTokens
+      }).catch(console.error)
+    }
+
     try {
-      return JSON.parse(text) as { strategicOutput: string }
+      return JSON.parse(result.text) as { strategicOutput: string }
     } catch (e) {
       console.error('Failed to parse AI response for strategic synthesis', {
         error: e instanceof Error ? e.message : String(e),
-        preview: text.slice(0, 200)
+        preview: result.text.slice(0, 200)
       })
       return {
         strategicOutput: 'Strategic synthesis failed. Manual assessment of strategic implications is required.'

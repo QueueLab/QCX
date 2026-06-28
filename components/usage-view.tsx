@@ -5,15 +5,34 @@ import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Zap, RefreshCw, LayoutPanelLeft, Minus } from 'lucide-react'
 import { useUsageToggle } from './usage-toggle-context'
+import { UsageSummary } from '@/lib/types'
+import { Spinner } from '@/components/ui/spinner'
 
 export function UsageView() {
-  const [usage] = useState([
-    { details: 'QCX-TERRA Crop yield Analysis', date: 'upcoming', change: 7 },
-    { details: 'QCX-TERRA Flood predictions', date: 'upcoming', change: 5 },
-    { details: 'Planet computer weather synchronization', date: 'upcoming', change: 3 },
-  ])
-  const [credits] = useState(0)
+  const [summary, setSummary] = useState<UsageSummary | null>(null)
+  const [loading, setLoading] = useState(true)
   const { toggleUsage } = useUsageToggle()
+
+  useEffect(() => {
+    async function fetchUsage() {
+      try {
+        const response = await fetch('/api/usage')
+        if (response.ok) {
+          const data = await response.json()
+          setSummary(data)
+        }
+      } catch (error) {
+        console.error('Failed to fetch usage:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchUsage()
+  }, [])
+
+  const totalCredits = 500
+  const usedCredits = summary ? Math.ceil(summary.totalCost * 100) : 0 // Simplified credit model
+  const availableCredits = Math.max(0, totalCredits - usedCredits)
 
   return (
     <div className="container py-8 h-full overflow-y-auto">
@@ -43,11 +62,11 @@ export function UsageView() {
                 <Zap size={16} className="text-muted-foreground" />
                 <span>Credits</span>
               </div>
-              <span className="font-bold">{credits}</span>
+              <span className="font-bold">{loading ? '...' : availableCredits}</span>
             </div>
             <div className="flex items-center justify-between text-xs text-muted-foreground pl-6">
-              <span>Free credits</span>
-              <span>0</span>
+              <span>Used credits</span>
+              <span>{loading ? '...' : usedCredits}</span>
             </div>
           </div>
 
@@ -57,9 +76,9 @@ export function UsageView() {
                 <RefreshCw size={16} className="text-muted-foreground" />
                 <span>Yearly refresh credits</span>
               </div>
-              <span className="font-bold">500</span>
+              <span className="font-bold">{totalCredits}</span>
             </div>
-            <p className="text-[10px] text-muted-foreground pl-6">Refresh to 500 every year.</p>
+            <p className="text-[10px] text-muted-foreground pl-6">Refresh to {totalCredits} every year.</p>
           </div>
         </div>
 
@@ -71,24 +90,46 @@ export function UsageView() {
             </div>
           </div>
 
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-xs">Details</TableHead>
-                <TableHead className="text-xs">Date</TableHead>
-                <TableHead className="text-xs text-right">Credits change</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {usage.map((item, i) => (
-                <TableRow key={i}>
-                  <TableCell className="text-xs font-medium">{item.details}</TableCell>
-                  <TableCell className="text-[10px] text-muted-foreground">{item.date}</TableCell>
-                  <TableCell className="text-xs text-right font-medium">{item.change}</TableCell>
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <Spinner />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs">Source</TableHead>
+                  <TableHead className="text-xs">Date</TableHead>
+                  <TableHead className="text-xs text-right">Cost (USD)</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {summary?.recentEvents.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="text-xs font-medium">
+                      <div className="flex flex-col">
+                        <span>{item.source}</span>
+                        <span className="text-[10px] text-muted-foreground uppercase">{item.kind}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-[10px] text-muted-foreground">
+                      {new Date(item.createdAt).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="text-xs text-right font-medium">
+                      ${parseFloat(item.cost).toFixed(4)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {(!summary || summary.recentEvents.length === 0) && (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center py-4 text-muted-foreground italic">
+                      No usage events recorded yet.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
         </div>
       </div>
     </div>

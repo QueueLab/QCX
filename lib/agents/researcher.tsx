@@ -13,6 +13,7 @@ import { getTools } from './tools'
 import { getModel } from '../utils'
 import { MapProvider } from '@/lib/store/settings'
 import { DrawnFeature } from './resolution-search'
+import { recordUsageEvent } from '@/lib/actions/usage'
 
 // This magic tag lets us write raw multi-line strings with backticks, arrows, etc.
 const raw = String.raw
@@ -40,40 +41,40 @@ Use these user-drawn areas/lines as primary areas of interest for your analysis 
 ### **Tool Usage Guidelines (Mandatory)**
 
 #### **1. General Web Search**
-- **Tool**: \`search\`
+- **Tool**: `search`
 - **When to use**:  
   Any query requiring up-to-date factual information, current events, statistics, product details, news, or general knowledge.
-- **Do NOT use** \`retrieve\` for URLs discovered via search results.
+- **Do NOT use** `retrieve` for URLs discovered via search results.
 
 #### **2. Fetching Specific Web Pages**
-- **Tool**: \`retrieve\`
+- **Tool**: `retrieve`
 - **When to use**:  
   ONLY when the user explicitly provides one or more URLs and asks you to read, summarize, or extract content from them.
 - **Never use** this tool proactively.
 
 #### **3. Location, Geography, Navigation, and Mapping Queries**
-- **Tool**: \`geospatialQueryTool\` → **MUST be used (no exceptions)** for:
+- **Tool**: `geospatialQueryTool` → **MUST be used (no exceptions)** for:
   • Finding places, businesses, "near me", distances, directions
   • Travel times, routes, traffic, map generation
   • Isochrones, travel-time matrices, multi-stop optimization
 
-**Examples that trigger \`geospatialQueryTool\`:**
+**Examples that trigger `geospatialQueryTool`:**
 - “Coffee shops within 500 m of the Eiffel Tower”
 - “Driving directions from LAX to Hollywood with current traffic”
 - “Show me a map of museums in Paris”
 - “How long to walk from Central Park to Times Square?”
 - “Areas reachable in 30 minutes from downtown Portland”
 
-**Behavior when using \`geospatialQueryTool\`:**
+**Behavior when using `geospatialQueryTool`:**
 - Issue the tool call immediately
 - In your final response: provide concise text only
 - → NEVER say “the map will update” or “markers are being added”
 - → Trust the system handles map rendering automatically
 
 #### **Summary of Decision Flow**
-1. User gave explicit URLs? → \`retrieve\`
-2. Location/distance/direction/maps? → \`geospatialQueryTool\` (mandatory)
-3. Everything else needing external data? → \`search\`
+1. User gave explicit URLs? → `retrieve`
+2. Location/distance/direction/maps? → `geospatialQueryTool` (mandatory)
+3. Everything else needing external data? → `search`
 4. Otherwise → answer from knowledge
 
 These rules override all previous instructions.
@@ -85,6 +86,8 @@ These rules override all previous instructions.
 `
 
 export async function researcher(
+  userId: string,
+  chatId: string,
   dynamicSystemPrompt: string,
   uiStream: ReturnType<typeof createStreamableUI>,
   streamText: ReturnType<typeof createStreamableValue<string>>,
@@ -115,34 +118,27 @@ export async function researcher(
     message.content.some(part => part.type === 'image')
   )
 
-  const lastUserMessage = [...messages].reverse().find(m => m.role === 'user')
-  console.log('Researcher - Image pipeline trace:', {
-    hasImage,
-    totalMessages: messages.length,
-    messagesWithImages: messages.filter(
-      m =>
-        Array.isArray(m.content) && m.content.some(p => p.type === 'image')
-    ).length,
-    lastUserMessageContentStructure: lastUserMessage
-      ? {
-          type: typeof lastUserMessage.content,
-          isArray: Array.isArray(lastUserMessage.content),
-          parts: Array.isArray(lastUserMessage.content)
-            ? lastUserMessage.content.map(p => ({
-                type: p.type,
-                hasImage: p.type === 'image'
-              }))
-            : 'string'
-        }
-      : 'none'
-  })
+  const { model, modelId } = await getModel(hasImage)
 
   const result = await nonexperimental_streamText({
-    model: (await getModel(hasImage)) as LanguageModel,
+    model: model as LanguageModel,
     maxTokens: 4096,
     system: systemPromptToUse,
     messages,
-    tools: getTools({ uiStream, fullResponse, mapProvider }),
+    tools: getTools({ uiStream, fullResponse, mapProvider, userId, chatId }),
+    onFinish: ({ usage }) => {
+      if (userId) {
+        recordUsageEvent({
+          userId,
+          chatId,
+          kind: 'llm',
+          source: modelId,
+          promptTokens: usage.promptTokens,
+          completionTokens: usage.completionTokens,
+          totalTokens: usage.totalTokens
+        }).catch(console.error)
+      }
+    }
   })
 
   uiStream.update(null) // remove spinner

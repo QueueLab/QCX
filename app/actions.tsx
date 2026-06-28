@@ -36,6 +36,8 @@ type RelatedQueries = {
 }
 
 async function submit(formData?: FormData, skip?: boolean) {
+  const userId = await getCurrentUserIdOnServer();
+  const chatId = aiState.get().chatId || nanoid();
   'use server'
 
   const aiState = getMutableAIState<typeof AI>()
@@ -59,7 +61,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     }
     try {
       const messages = JSON.parse(messagesString) as AIMessage[];
-      return await generateReportContext(messages);
+      return await generateReportContext(userId, chatId, messages);
     } catch (e) {
       console.error('Failed to parse messages for report context:', e);
       return { title: 'QCX Intelligence Analysis', summary: 'Automated executive summary is currently unavailable.' };
@@ -117,7 +119,7 @@ async function submit(formData?: FormData, skip?: boolean) {
 
     async function processResolutionSearch() {
       try {
-        const streamResult = await resolutionSearch(messages, timezone, drawnFeatures, location);
+        const streamResult = await resolutionSearch(userId, chatId, messages, timezone, drawnFeatures, location);
 
         let fullSummary = '';
         for await (const partialObject of streamResult.partialObjectStream) {
@@ -182,7 +184,7 @@ async function submit(formData?: FormData, skip?: boolean) {
           }
           return m
         });
-        const relatedQueries = await querySuggestor(uiStream, sanitizedMessages);
+        const relatedQueries = await querySuggestor(userId, chatId, uiStream, sanitizedMessages);
         uiStream.append(
           <Section title="Follow-up">
             <FollowupPanel />
@@ -398,7 +400,7 @@ async function submit(formData?: FormData, skip?: boolean) {
       )
 
       if (!errorOccurred) {
-        const relatedQueries = await querySuggestor(uiStream, messages)
+        const relatedQueries = await querySuggestor(userId, chatId, uiStream, messages)
         uiStream.append(
           <Section title="Follow-up">
             <FollowupPanel />
