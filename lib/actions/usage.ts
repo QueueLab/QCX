@@ -3,7 +3,7 @@
 import { db } from '@/lib/db'
 import { usageEvents } from '@/lib/db/schema'
 import { UsageEvent, UsageSummary } from '@/lib/types'
-import { calculateLlmCost, getToolCost } from '@/lib/costs'
+import { calculateLlmCost, getToolCost } from '../costs'
 import { eq, sql, desc } from 'drizzle-orm'
 
 export async function recordUsageEvent(payload: {

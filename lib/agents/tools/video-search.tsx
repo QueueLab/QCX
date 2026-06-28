@@ -1,4 +1,4 @@
-import { createStreamableUI } from 'ai/rsc'
+import { createStreamableUI, createStreamableValue } from 'ai/rsc'
 import { videoSearchSchema } from '@/lib/schema/video-search'
 import { ToolProps } from './index'
 import { Section } from '@/components/section'
@@ -22,9 +22,10 @@ export const videoSearchTool = ({
     const hasError = fullResponse.includes('Error: Tool execution failed.')
     if (hasError) return null
 
+    const resultStream = createStreamableValue<string>()
     uiStream.append(
       <Section title="Video Search">
-        <VideoSearchSection result={JSON.stringify({ query })} />
+        <VideoSearchSection result={resultStream.value} />
       </Section>
     )
 
@@ -39,6 +40,8 @@ export const videoSearchTool = ({
       })
       const json = await response.json()
 
+      resultStream.done(JSON.stringify(json))
+
       if (userId) {
         recordUsageEvent({
           userId,
@@ -51,6 +54,7 @@ export const videoSearchTool = ({
       return json
     } catch (error) {
       console.error('Video search tool error:', error)
+      resultStream.error(error)
       return {
         error: 'Failed to search for videos'
       }

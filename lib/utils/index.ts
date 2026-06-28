@@ -41,7 +41,7 @@ export async function getModel(requireVision: boolean = false) {
             baseURL: 'https://api.x.ai/v1',
           });
           try {
-            return xai('grok-2-1212');
+            return { model: xai('grok-2-1212'), modelId: 'grok-2-1212' };
           } catch (error) {
             console.error('Selected model "Grok 4.2" is configured but failed to initialize.', error);
             throw new Error('Failed to initialize selected model.');
@@ -57,7 +57,7 @@ export async function getModel(requireVision: boolean = false) {
             apiKey: gemini3ProApiKey,
           });
           try {
-            return google('gemini-1.5-pro-latest');
+            return { model: google('gemini-1.5-pro-latest'), modelId: 'gemini-1.5-pro-latest' };
           } catch (error) {
             console.error('Selected model "Gemini 3.1 Pro" is configured but failed to initialize.', error);
             throw new Error('Failed to initialize selected model.');
@@ -71,7 +71,7 @@ export async function getModel(requireVision: boolean = false) {
           const openai = createOpenAI({
             apiKey: openaiApiKey,
           });
-          return openai('gpt-4o');
+          return { model: openai('gpt-4o'), modelId: 'gpt-4o' };
         } else {
             console.error('User selected "GPT-5.1" but OPENAI_API_KEY is not set.');
             throw new Error('Selected model is not configured.');
@@ -86,7 +86,7 @@ export async function getModel(requireVision: boolean = false) {
       baseURL: 'https://api.x.ai/v1',
     });
     try {
-      return xai('grok-latest');
+      return { model: xai('grok-latest'), modelId: 'grok-latest' };
     } catch (error) {
       console.warn('xAI API unavailable, falling back to next provider:');
     }
@@ -97,7 +97,7 @@ export async function getModel(requireVision: boolean = false) {
       apiKey: gemini3ProApiKey,
     });
     try {
-      return google('gemini-1.5-pro-latest');
+      return { model: google('gemini-1.5-pro-latest'), modelId: 'gemini-1.5-pro-latest' };
     } catch (error) {
       console.warn('Gemini 3.1 Pro API unavailable, falling back to next provider:', error);
     }
@@ -116,13 +116,13 @@ export async function getModel(requireVision: boolean = false) {
     const model = bedrock(bedrockModelId, {
       additionalModelRequestFields: { top_k: 350 },
     });
-    return model;
+    return { model, modelId: bedrockModelId };
   }
 
   const openai = createOpenAI({
     apiKey: openaiApiKey,
   });
-  return openai('gpt-4o');
+  return { model: openai('gpt-4o'), modelId: 'gpt-4o' };
 }
 
 /**

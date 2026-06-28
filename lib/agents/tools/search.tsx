@@ -1,4 +1,4 @@
-import { createStreamableUI } from 'ai/rsc'
+import { createStreamableUI, createStreamableValue } from 'ai/rsc'
 import { searchSchema } from '@/lib/schema/search'
 import { ToolProps } from './index'
 import { Section } from '@/components/section'
@@ -35,9 +35,10 @@ export const searchTool = ({
     const hasError = fullResponse.includes('Error: Tool execution failed.')
     if (hasError) return null
 
+    const resultStream = createStreamableValue<string>()
     uiStream.append(
       <Section title="Search">
-        <SearchSection result={JSON.stringify({ query })} />
+        <SearchSection result={resultStream.value} />
       </Section>
     )
 
@@ -51,6 +52,8 @@ export const searchTool = ({
         includeAnswer: true
       })
 
+      resultStream.done(JSON.stringify(response))
+
       if (userId) {
         recordUsageEvent({
           userId,
@@ -63,6 +66,7 @@ export const searchTool = ({
       return response
     } catch (error) {
       console.error('Search tool error:', error)
+      resultStream.error(error)
       return {
         error: 'Failed to search'
       }

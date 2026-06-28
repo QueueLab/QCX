@@ -1,7 +1,6 @@
 import { createStreamableUI } from 'ai/rsc'
 import { retrieveSchema } from '@/lib/schema/retrieve'
 import { ToolProps } from './index'
-import { BotMessage } from '@/components/message'
 import { Section } from '@/components/section'
 import RetrieveSection from '@/components/retrieve-section'
 import { recordUsageEvent } from '@/lib/actions/usage'
@@ -23,12 +22,6 @@ export const retrieveTool = ({
     const hasError = fullResponse.includes('Error: Tool execution failed.')
     if (hasError) return null
 
-    uiStream.append(
-      <Section title="Retrieve" separator={true}>
-        <RetrieveSection url={url} />
-      </Section>
-    )
-
     try {
       const response = await fetch(`https://r.jina.ai/${url}`, {
         method: 'GET',
@@ -42,6 +35,20 @@ export const retrieveTool = ({
         throw new Error('Failed to retrieve content')
       }
 
+      const results = [
+        {
+          title: json.data.title,
+          content: json.data.content,
+          url: json.data.url
+        }
+      ]
+
+      uiStream.append(
+        <Section title="Retrieve" separator={true}>
+          <RetrieveSection data={{ results, images: [], query: url }} />
+        </Section>
+      )
+
       if (userId) {
         recordUsageEvent({
           userId,
@@ -52,13 +59,7 @@ export const retrieveTool = ({
       }
 
       return {
-        results: [
-          {
-            title: json.data.title,
-            content: json.data.content,
-            url: json.data.url
-          }
-        ],
+        results,
         query: url
       }
     } catch (error) {

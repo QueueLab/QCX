@@ -4,7 +4,7 @@ import { MapProvider } from '@/lib/store/settings'
 import { ToolProps } from './index'
 import { recordUsageEvent } from '@/lib/actions/usage'
 
-interface GeospatialToolProps extends ToolProps {
+interface GeospatialToolProps extends Omit<ToolProps, 'fullResponse'> {
   userId?: string
   chatId?: string
 }

@@ -36,14 +36,15 @@ type RelatedQueries = {
 }
 
 async function submit(formData?: FormData, skip?: boolean) {
-  const userId = await getCurrentUserIdOnServer();
-  const chatId = aiState.get().chatId || nanoid();
   'use server'
 
   const aiState = getMutableAIState<typeof AI>()
   const uiStream = createStreamableUI()
   const isGenerating = createStreamableValue(true)
   const isCollapsed = createStreamableValue(false)
+  const userId = await getCurrentUserIdOnServer();
+  if (!userId) return;
+  const chatId = aiState.get().chatId || nanoid();
 
   const action = formData?.get('action') as string;
   const drawnFeaturesString = formData?.get('drawnFeatures') as string;
@@ -61,7 +62,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     }
     try {
       const messages = JSON.parse(messagesString) as AIMessage[];
-      return await generateReportContext(userId, chatId, messages);
+      return await generateReportContext(userId as string, chatId, messages);
     } catch (e) {
       console.error('Failed to parse messages for report context:', e);
       return { title: 'QCX Intelligence Analysis', summary: 'Automated executive summary is currently unavailable.' };
@@ -119,7 +120,7 @@ async function submit(formData?: FormData, skip?: boolean) {
 
     async function processResolutionSearch() {
       try {
-        const streamResult = await resolutionSearch(userId, chatId, messages, timezone, drawnFeatures, location);
+        const streamResult = await resolutionSearch(userId as string, chatId, messages, timezone, drawnFeatures, location);
 
         let fullSummary = '';
         for await (const partialObject of streamResult.partialObjectStream) {
@@ -184,7 +185,7 @@ async function submit(formData?: FormData, skip?: boolean) {
           }
           return m
         });
-        const relatedQueries = await querySuggestor(userId, chatId, uiStream, sanitizedMessages);
+        const relatedQueries = await querySuggestor(userId as string, chatId, uiStream, sanitizedMessages);
         uiStream.append(
           <Section title="Follow-up">
             <FollowupPanel />
@@ -326,7 +327,6 @@ async function submit(formData?: FormData, skip?: boolean) {
     };
   }
 
-  const userId = await getCurrentUserIdOnServer()
   const currentSystemPrompt = userId ? await getSystemPrompt(userId) : null
   const maxMessages = 10
   const messages = aiState.get().messages.map(message => ({
@@ -390,6 +390,8 @@ async function submit(formData?: FormData, skip?: boolean) {
       ) as CoreMessage[]
       const latestMessages = modifiedMessages.slice(maxMessages * -1)
       const { fullResponse } = await researcher(
+        userId as string,
+        chatId,
         currentSystemPrompt || '',
         uiStream,
         streamText,
@@ -400,7 +402,7 @@ async function submit(formData?: FormData, skip?: boolean) {
       )
 
       if (!errorOccurred) {
-        const relatedQueries = await querySuggestor(userId, chatId, uiStream, messages)
+        const relatedQueries = await querySuggestor(userId as string, chatId, uiStream, messages)
         uiStream.append(
           <Section title="Follow-up">
             <FollowupPanel />
