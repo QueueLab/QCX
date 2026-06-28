@@ -1,20 +1,34 @@
-import { createStreamableValue } from 'ai/rsc'
-import { searchSchema } from '@/lib/schema/search'
-import { Card } from '@/components/ui/card'
-import { ToolProps } from '.'
+import { createStreamableUI, createStreamableValue } from 'ai/rsc'
+import { videoSearchSchema } from '@/lib/schema/video-search'
+import { ToolProps } from './index'
+import { Section } from '@/components/section'
 import { VideoSearchSection } from '@/components/video-search-section'
+import { recordUsageEvent } from '@/lib/actions/usage'
 
-// Start Generation Here
-export const videoSearchTool = ({ uiStream, fullResponse }: ToolProps) => ({
-  description: 'Search for videos from YouTube',
-  parameters: searchSchema,
+interface VideoSearchToolProps extends ToolProps {
+  userId?: string
+  chatId?: string
+}
+
+export const videoSearchTool = ({
+  uiStream,
+  fullResponse,
+  userId,
+  chatId
+}: VideoSearchToolProps) => ({
+  description: 'Search for videos related to a query.',
+  parameters: videoSearchSchema,
   execute: async ({ query }: { query: string }) => {
-    let hasError = false
-    // Append the search section
-    const streamResults = createStreamableValue<string>()
-    uiStream.append(<VideoSearchSection result={streamResults.value} />)
+    const hasError = fullResponse.includes('Error: Tool execution failed.')
+    if (hasError) return null
 
-    let searchResult
+    const resultStream = createStreamableValue<string>()
+    uiStream.append(
+      <Section title="Video Search">
+        <VideoSearchSection result={resultStream.value} />
+      </Section>
+    )
+
     try {
       const response = await fetch('https://google.serper.dev/videos', {
         method: 'POST',
@@ -24,27 +38,26 @@ export const videoSearchTool = ({ uiStream, fullResponse }: ToolProps) => ({
         },
         body: JSON.stringify({ q: query })
       })
-      if (!response.ok) {
-        throw new Error('Network response was not ok')
+      const json = await response.json()
+
+      resultStream.done(JSON.stringify(json))
+
+      if (userId) {
+        recordUsageEvent({
+          userId,
+          chatId,
+          kind: 'tool',
+          source: 'videoSearch'
+        }).catch(console.error)
       }
-      searchResult = await response.json()
+
+      return json
     } catch (error) {
-      console.error('Video Search API error:', error)
-      hasError = true
+      console.error('Video search tool error:', error)
+      resultStream.error(error)
+      return {
+        error: 'Failed to search for videos'
+      }
     }
-
-    if (hasError) {
-      fullResponse += `\nAn error occurred while searching for videos with "${query}.`
-      uiStream.update(
-        <Card className="p-4 mt-2 text-sm">
-          {`An error occurred while searching for videos with "${query}".`}
-        </Card>
-      )
-      return searchResult
-    }
-
-    streamResults.done(JSON.stringify(searchResult))
-
-    return searchResult
   }
 })

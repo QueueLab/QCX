@@ -1,19 +1,27 @@
+import { createStreamableUI } from 'ai/rsc'
 import { retrieveSchema } from '@/lib/schema/retrieve'
-import { ToolProps } from '.'
-import { Card } from '@/components/ui/card'
-import { SearchSkeleton } from '@/components/search-skeleton'
-import { SearchResults as SearchResultsType } from '@/lib/types'
+import { ToolProps } from './index'
+import { Section } from '@/components/section'
 import RetrieveSection from '@/components/retrieve-section'
+import { recordUsageEvent } from '@/lib/actions/usage'
 
-export const retrieveTool = ({ uiStream, fullResponse }: ToolProps) => ({
-  description: 'Retrieve content from the web',
+interface RetrieveToolProps extends ToolProps {
+  userId?: string
+  chatId?: string
+}
+
+export const retrieveTool = ({
+  uiStream,
+  fullResponse,
+  userId,
+  chatId
+}: RetrieveToolProps) => ({
+  description: 'Retrieve content from a specific URL provided by the user.',
   parameters: retrieveSchema,
   execute: async ({ url }: { url: string }) => {
-    let hasError = false
-    // Append the search section
-    uiStream.append(<SearchSkeleton />)
+    const hasError = fullResponse.includes('Error: Tool execution failed.')
+    if (hasError) return null
 
-    let results: SearchResultsType | undefined
     try {
       const response = await fetch(`https://r.jina.ai/${url}`, {
         method: 'GET',
@@ -23,45 +31,42 @@ export const retrieveTool = ({ uiStream, fullResponse }: ToolProps) => ({
         }
       })
       const json = await response.json()
-      if (!json.data || json.data.length === 0) {
-        hasError = true
-      } else {
-        results = {
-          results: [
-            {
-              title: json.data.title,
-              content: json.data.content,
-              url: json.data.url
-            }
-          ],
-          query: '',
-          images: []
+      if (!json.data || !json.data.content) {
+        throw new Error('Failed to retrieve content')
+      }
+
+      const results = [
+        {
+          title: json.data.title,
+          content: json.data.content,
+          url: json.data.url
         }
+      ]
+
+      uiStream.append(
+        <Section title="Retrieve" separator={true}>
+          <RetrieveSection data={{ results, images: [], query: url }} />
+        </Section>
+      )
+
+      if (userId) {
+        recordUsageEvent({
+          userId,
+          chatId,
+          kind: 'tool',
+          source: 'retrieve'
+        }).catch(console.error)
+      }
+
+      return {
+        results,
+        query: url
       }
     } catch (error) {
-      hasError = true
-      console.error('Retrieve API error:', error)
-
-      fullResponse += `\n${error} "${url}".`
-
-      uiStream.update(
-        <Card className="p-4 mt-2 text-sm">{`${error} "${url}".`}</Card>
-      )
-      return results
+      console.error('Retrieve tool error:', error)
+      return {
+        error: 'Failed to retrieve content'
+      }
     }
-
-    if (hasError || !results) {
-      fullResponse += `\nAn error occurred while retrieving "${url}".`
-      uiStream.update(
-        <Card className="p-4 mt-2 text-sm">
-          {`An error occurred while retrieving "${url}".This webiste may not be supported.`}
-        </Card>
-      )
-      return results
-    }
-
-    uiStream.update(<RetrieveSection data={results} />)
-
-    return results
   }
 })

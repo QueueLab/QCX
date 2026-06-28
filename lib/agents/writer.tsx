@@ -3,8 +3,11 @@ import { CoreMessage, LanguageModel, streamText as nonexperimental_streamText } 
 import { Section } from '@/components/section'
 import { BotMessage } from '@/components/message'
 import { getModel } from '../utils'
+import { recordUsageEvent } from '@/lib/actions/usage'
 
 export async function writer(
+  userId: string,
+  chatId: string,
   dynamicSystemPrompt: string, // New parameter
   uiStream: ReturnType<typeof createStreamableUI>,
   streamText: ReturnType<typeof createStreamableValue<string>>,
@@ -31,11 +34,26 @@ export async function writer(
 
   const systemToUse = dynamicSystemPrompt && dynamicSystemPrompt.trim() !== '' ? dynamicSystemPrompt : default_system_prompt;
 
+  const { model, modelId } = await getModel()
+
   const result = await nonexperimental_streamText({
-    model: (await getModel()) as LanguageModel,
+    model: model as LanguageModel,
     maxTokens: 2500,
     system: systemToUse, // Use the dynamic or default system prompt
-    messages
+    messages,
+    onFinish: ({ usage }) => {
+      if (userId) {
+        recordUsageEvent({
+          userId,
+          chatId,
+          kind: 'llm',
+          source: modelId,
+          promptTokens: usage.promptTokens,
+          completionTokens: usage.completionTokens,
+          totalTokens: usage.totalTokens
+        }).catch(console.error)
+      }
+    }
   })
 
   for await (const text of result.textStream) {

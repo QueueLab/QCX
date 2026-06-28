@@ -4,6 +4,7 @@ import { PartialRelated, relatedSchema } from '@/lib/schema/related'
 import { Section } from '@/components/section'
 import SearchRelated from '@/components/search-related'
 import { getModel } from '../utils'
+import { recordUsageEvent } from '@/lib/actions/usage'
 
 interface CacheEntry {
   data: PartialRelated;
@@ -24,6 +25,8 @@ function getCacheKey(messages: CoreMessage[]): string {
 }
 
 export async function querySuggestor(
+  userId: string,
+  chatId: string,
   uiStream: ReturnType<typeof createStreamableUI>,
   messages: CoreMessage[]
 ) {
@@ -53,14 +56,28 @@ export async function querySuggestor(
   )
 
   let finalRelatedQueries: PartialRelated = {}
+  const { model, modelId } = await getModel()
   
   // OPTIMIZATION: Use a more concise system prompt to reduce token usage
   const result = await streamObject({
-    model: (await getModel()) as LanguageModel,
+    model: model as LanguageModel,
     system: `Generate 3 follow-up queries that explore the subject matter deeper. Format as JSON with an "items" array containing objects with "query" fields. Keep queries concise and relevant.`,
     messages,
     schema: relatedSchema,
     temperature: 0.7, // Lower temperature for more consistent results
+    onFinish: ({ usage }) => {
+      if (userId) {
+        recordUsageEvent({
+          userId,
+          chatId,
+          kind: 'llm',
+          source: modelId,
+          promptTokens: usage.promptTokens,
+          completionTokens: usage.completionTokens,
+          totalTokens: usage.totalTokens
+        }).catch(console.error)
+      }
+    }
   })
 
   // OPTIMIZATION: Stream updates but batch them to reduce re-render frequency

@@ -91,3 +91,27 @@ export type CalendarNote = {
 };
 
 export type NewCalendarNote = Omit<CalendarNote, 'id' | 'createdAt' | 'updatedAt'>;
+export type UsageEvent = {
+  id: string;
+  userId: string;
+  chatId: string | null;
+  kind: 'llm' | 'tool';
+  source: string;
+  promptTokens: number | null;
+  completionTokens: number | null;
+  totalTokens: number | null;
+  cost: string;
+  createdAt: Date;
+};
+
+export type LlmUsage = {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+};
+
+export type UsageSummary = {
+  totalCost: number;
+  totalTokens: number;
+  recentEvents: UsageEvent[];
+};

@@ -1,98 +1,75 @@
-import { createStreamableValue } from 'ai/rsc'
-import { tavily } from '@tavily/core'
+import { createStreamableUI, createStreamableValue } from 'ai/rsc'
 import { searchSchema } from '@/lib/schema/search'
-import { Card } from '@/components/ui/card'
+import { ToolProps } from './index'
+import { Section } from '@/components/section'
 import { SearchSection } from '@/components/search-section'
-import { ToolProps } from '.'
+import { tavily } from '@tavily/core'
+import { recordUsageEvent } from '@/lib/actions/usage'
 
-export const searchTool = ({ uiStream, fullResponse }: ToolProps) => ({
-  description: 'Search the web for information',
+interface SearchToolProps extends ToolProps {
+  userId?: string
+  chatId?: string
+}
+
+export const searchTool = ({
+  uiStream,
+  fullResponse,
+  userId,
+  chatId
+}: SearchToolProps) => ({
+  description: 'Search for up-to-date factual information on the web.',
   parameters: searchSchema,
   execute: async ({
     query,
     max_results,
     search_depth,
-    include_answer,
-    topic,
-    time_range,
-    include_images,
-    include_image_descriptions,
-    include_raw_content
+    include_domains,
+    exclude_domains
   }: {
     query: string
-    max_results: number
-    search_depth: 'basic' | 'advanced'
-    include_answer: boolean
-    topic?: 'general' | 'news' | 'finance'
-    time_range?: 'y' | 'year' | 'd' | 'day' | 'month' | 'week' | 'm' | 'w'
-    include_images: boolean
-    include_image_descriptions: boolean
-    include_raw_content: boolean
+    max_results?: number
+    search_depth?: 'basic' | 'advanced'
+    include_domains?: string[]
+    exclude_domains?: string[]
   }) => {
-    let hasError = false
-    // Append the search section
-    const streamResults = createStreamableValue<string>()
-    uiStream.append(<SearchSection result={streamResults.value} />)
+    const hasError = fullResponse.includes('Error: Tool execution failed.')
+    if (hasError) return null
 
-    // Tavily API requires a minimum of 5 characters in the query
-    const filledQuery =
-      query.length < 5 ? query + ' '.repeat(5 - query.length) : query
-    let searchResult
+    const resultStream = createStreamableValue<string>()
+    uiStream.append(
+      <Section title="Search">
+        <SearchSection result={resultStream.value} />
+      </Section>
+    )
+
     try {
-      searchResult = await tavilySearch(
-        filledQuery,
-        max_results,
-        search_depth,
-        include_answer,
-        topic,
-        time_range,
-        include_images,
-        include_image_descriptions,
-        include_raw_content
-      )
+      const client = tavily({ apiKey: process.env.TAVILY_API_KEY })
+      const response = await client.search(query, {
+        maxResults: max_results || 5,
+        searchDepth: search_depth || 'basic',
+        includeDomains: include_domains,
+        excludeDomains: exclude_domains,
+        includeAnswer: true
+      })
+
+      resultStream.done(JSON.stringify(response))
+
+      if (userId) {
+        recordUsageEvent({
+          userId,
+          chatId,
+          kind: 'tool',
+          source: 'search'
+        }).catch(console.error)
+      }
+
+      return response
     } catch (error) {
-      console.error('Search API error:', error)
-      hasError = true
+      console.error('Search tool error:', error)
+      resultStream.error(error)
+      return {
+        error: 'Failed to search'
+      }
     }
-
-    if (hasError) {
-      fullResponse += `\nAn error occurred while searching for "${query}.`
-      uiStream.update(
-        <Card className="p-4 mt-2 text-sm">
-          {`An error occurred while searching for "${query}".`}
-        </Card>
-      )
-      return searchResult
-    }
-
-    streamResults.done(JSON.stringify(searchResult))
-
-    return searchResult
   }
 })
-
-async function tavilySearch(
-  query: string,
-  max_results: number = 10,
-  search_depth: 'basic' | 'advanced' = 'basic',
-  include_answer: boolean = true,
-  topic?: 'general' | 'news' | 'finance',
-  time_range?: 'y' | 'year' | 'd' | 'day' | 'month' | 'week' | 'm' | 'w',
-  include_images: boolean = false,
-  include_image_descriptions: boolean = false,
-  include_raw_content: boolean = false
-): Promise<any> {
-  const client = tavily({ apiKey: process.env.TAVILY_API_KEY })
-  const response = await client.search(query, {
-    maxResults: max_results < 5 ? 5 : max_results,
-    searchDepth: search_depth,
-    includeAnswer: include_answer,
-    topic,
-    timeRange: time_range,
-    includeImages: include_images,
-    includeImageDescriptions: include_image_descriptions,
-    includeRawContent: include_raw_content ? 'text' : undefined
-  })
-
-  return { ...response, results: response.results.reverse() }
-}

@@ -2,6 +2,7 @@ import { CoreMessage, streamObject } from 'ai'
 import { getModel } from '@/lib/utils'
 import { tavily } from '@tavily/core'
 import { resolutionSearchSchema } from '@/lib/schema/resolution-search'
+import { recordUsageEvent } from '@/lib/actions/usage'
 
 // This agent is now a pure data-processing module, with no UI dependencies.
 
@@ -62,7 +63,7 @@ async function getReverseGeocode(lat: number, lng: number): Promise<string> {
   }
 }
 
-export async function resolutionSearch(messages: CoreMessage[], timezone: string = 'UTC', drawnFeatures?: DrawnFeature[], location?: { lat: number, lng: number }) {
+export async function resolutionSearch(userId: string, chatId: string, messages: CoreMessage[], timezone: string = 'UTC', drawnFeatures?: DrawnFeature[], location?: { lat: number, lng: number }) {
   const now = new Date();
   
   // OPTIMIZATION: Format local time with timezone context
@@ -142,11 +143,26 @@ Analyze the user's prompt and the image to provide a holistic understanding of t
     message.content.some((part: any) => part.type === 'image')
   )
 
+  const { model, modelId } = await getModel(hasImage)
+
   // Use streamObject to get partial results.
   return streamObject({
-    model: await getModel(hasImage),
+    model: model,
     system: systemPrompt,
     messages: filteredMessages,
     schema: resolutionSearchSchema,
+    onFinish: ({ usage }) => {
+      if (userId) {
+        recordUsageEvent({
+          userId,
+          chatId,
+          kind: 'llm',
+          source: modelId,
+          promptTokens: usage.promptTokens,
+          completionTokens: usage.completionTokens,
+          totalTokens: usage.totalTokens
+        }).catch(console.error)
+      }
+    }
   })
 }

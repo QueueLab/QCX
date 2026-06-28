@@ -27,8 +27,9 @@ export async function getSuggestions(
   Generate three queries that anticipate the user's needs, offering logical next steps for their search. The suggestions should be concise and directly related to the partial query and map context.`
 
   ;(async () => {
+    const { model } = await getModel()
     const result = await streamObject({
-      model: (await getModel()) as LanguageModel,
+      model: model as LanguageModel,
       system: systemPrompt,
       messages: [{ role: 'user', content: query }],
       schema: relatedSchema

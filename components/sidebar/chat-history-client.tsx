@@ -22,6 +22,7 @@ import { Zap, ChevronDown, ChevronUp } from 'lucide-react';
 import { useHistoryToggle } from '../history-toggle-context';
 import HistoryItem from '@/components/history-item'; // Adjust path if HistoryItem is moved or renamed
 import type { Chat as DrizzleChat } from '@/lib/actions/chat-db'; // Use the Drizzle-based Chat type
+import { UsageSummary } from '@/lib/types';
 
 interface ChatHistoryClientProps {
   // userId is no longer passed as prop; API route will use authenticated user
@@ -34,47 +35,45 @@ export function ChatHistoryClient({}: ChatHistoryClientProps) {
   const [isClearPending, startClearTransition] = useTransition();
   const [isAlertDialogOpen, setIsAlertDialogOpen] = useState(false);
   const [isCreditsVisible, setIsCreditsVisible] = useState(false);
+  const [usageSummary, setUsageSummary] = useState<UsageSummary | null>(null);
   const { isHistoryOpen } = useHistoryToggle();
   const router = useRouter();
 
   useEffect(() => {
-    async function fetchChats() {
+    async function fetchData() {
       setIsLoading(true);
       setError(null);
       try {
-        // API route /api/chats uses getCurrentUserId internally
-        const response = await fetch('/api/chats?limit=50&offset=0'); // Example limit/offset
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || `Failed to fetch chats: ${response.statusText}`);
+        const [chatsRes, usageRes] = await Promise.all([
+          fetch('/api/chats?limit=50&offset=0'),
+          fetch('/api/usage')
+        ]);
+
+        if (chatsRes.ok) {
+          const chatsData = await chatsRes.json();
+          setChats(chatsData.chats);
         }
-        const data: { chats: DrizzleChat[], nextOffset: number | null } = await response.json();
-        setChats(data.chats);
+
+        if (usageRes.ok) {
+          const usageData = await usageRes.json();
+          setUsageSummary(usageData);
+        }
       } catch (err) {
-        if (err instanceof Error) {
-          setError(err.message);
-          toast.error(`Error fetching chats: ${err.message}`);
-        } else {
-          setError('An unknown error occurred.');
-          toast.error('Error fetching chats: An unknown error occurred.');
-        }
+        console.error('Error fetching data:', err);
       } finally {
         setIsLoading(false);
       }
     }
 
     if (isHistoryOpen) {
-      fetchChats();
+      fetchData();
     }
   }, [isHistoryOpen]);
 
   const handleClearHistory = async () => {
     startClearTransition(async () => {
       try {
-        // We need a new API endpoint for clearing history
-        // Example: DELETE /api/chats (or POST /api/clear-history)
-        // This endpoint will call clearHistory(userId) from chat-db.ts
-        const response = await fetch('/api/chats/all', { // Placeholder for the actual clear endpoint
+        const response = await fetch('/api/chats/all', {
           method: 'DELETE',
         });
 
@@ -86,9 +85,7 @@ export function ChatHistoryClient({}: ChatHistoryClientProps) {
         toast.success('History cleared');
         setChats([]); // Clear chats from UI
         setIsAlertDialogOpen(false);
-        router.refresh(); // Refresh to reflect changes, potentially redirect if on a chat page
-        // Consider redirecting to '/' if current page is a chat that got deleted.
-        // The old clearChats action did redirect('/');
+        router.refresh();
       } catch (err) {
         if (err instanceof Error) {
           toast.error(err.message);
@@ -100,6 +97,11 @@ export function ChatHistoryClient({}: ChatHistoryClientProps) {
     });
   };
 
+  const totalCredits = 500;
+  const usedCredits = usageSummary ? Math.ceil(usageSummary.totalCost * 100) : 0;
+  const availableCredits = Math.max(0, totalCredits - usedCredits);
+  const percentage = Math.min(100, (availableCredits / totalCredits) * 100);
+
   if (isLoading) {
     return (
       <div className="flex flex-col flex-1 space-y-3 h-full items-center justify-center">
@@ -110,7 +112,6 @@ export function ChatHistoryClient({}: ChatHistoryClientProps) {
   }
 
   if (error) {
-    // Optionally provide a retry button
     return (
       <div className="flex flex-col flex-1 space-y-3 h-full items-center justify-center text-destructive">
         <p>Error loading chat history: {error}</p>
@@ -138,12 +139,17 @@ export function ChatHistoryClient({}: ChatHistoryClientProps) {
           <div className="mt-2 p-3 rounded-lg bg-muted/50 border border-border/50 space-y-2">
             <div className="flex justify-between items-center text-xs">
               <span>Available Credits</span>
-              <span className="font-bold">0</span>
+              <span className="font-bold">{availableCredits}</span>
             </div>
             <div className="w-full bg-secondary h-1.5 rounded-full overflow-hidden">
-              <div className="bg-yellow-500 h-full w-[0%]" />
+              <div
+                className="bg-yellow-500 h-full transition-all duration-500"
+                style={{ width: `${percentage}%` }}
+              />
             </div>
-            <p className="text-[10px] text-muted-foreground">Upgrade to get more credits</p>
+            <p className="text-[10px] text-muted-foreground">
+              {usedCredits} credits used (${usageSummary?.totalCost.toFixed(4)} USD)
+            </p>
           </div>
         )}
       </div>
@@ -155,9 +161,7 @@ export function ChatHistoryClient({}: ChatHistoryClientProps) {
           </div>
         ) : (
           chats.map((chat) => (
-            // Assuming HistoryItem is adapted for DrizzleChat and expects chat.id and chat.title
-            // Also, chat.path will need to be constructed, e.g., `/search/${chat.id}`
-            <HistoryItem key={chat.id} chat={{...chat, path: `/search/${chat.id}`}} />
+            <HistoryItem key={chat.id} chat={{...chat, path: `/search/${chat.id}` }} />
           ))
         )}
       </div>

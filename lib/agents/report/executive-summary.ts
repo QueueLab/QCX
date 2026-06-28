@@ -1,11 +1,12 @@
 import { generateText } from 'ai'
 import { getModel } from '@/lib/utils'
+import { recordUsageEvent } from '@/lib/actions/usage'
 
-export async function executiveSummaryAgent(crossSessionContext: string, activeMessages: any[]) {
+export async function executiveSummaryAgent(userId: string, chatId: string, crossSessionContext: string, activeMessages: any[]) {
   try {
-    const model = await getModel()
+    const { model, modelId } = await getModel()
 
-    const { text } = await generateText({
+    const result = await generateText({
       model,
       system: `You are a high-level geospatial intelligence analyst. Based on the provided user history and current conversation, generate:
       1. A professional, concise report title (max 60 characters).
@@ -23,12 +24,24 @@ export async function executiveSummaryAgent(crossSessionContext: string, activeM
       ],
     })
 
+    if (userId) {
+      recordUsageEvent({
+        userId,
+        chatId,
+        kind: 'llm',
+        source: modelId,
+        promptTokens: result.usage.promptTokens,
+        completionTokens: result.usage.completionTokens,
+        totalTokens: result.usage.totalTokens
+      }).catch(console.error)
+    }
+
     try {
-      return JSON.parse(text) as { title: string; summary: string }
+      return JSON.parse(result.text) as { title: string; summary: string }
     } catch (e) {
       console.error('Failed to parse AI response for executive summary', {
         error: e instanceof Error ? e.message : String(e),
-        preview: text.slice(0, 200)
+        preview: result.text.slice(0, 200)
       })
       return {
         title: 'QCX Intelligence Analysis',

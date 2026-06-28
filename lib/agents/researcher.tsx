@@ -13,11 +13,9 @@ import { getTools } from './tools'
 import { getModel } from '../utils'
 import { MapProvider } from '@/lib/store/settings'
 import { DrawnFeature } from './resolution-search'
+import { recordUsageEvent } from '@/lib/actions/usage'
 
-// This magic tag lets us write raw multi-line strings with backticks, arrows, etc.
-const raw = String.raw
-
-const getDefaultSystemPrompt = (date: string, drawnFeatures?: DrawnFeature[]) => raw`
+const getDefaultSystemPrompt = (date: string, drawnFeatures?: DrawnFeature[]) => `
 As a comprehensive AI assistant, your primary directive is **Exploration Efficiency**. You must use the provided tools judiciously to gather information and formulate a response.
 
 **Product Context:**
@@ -85,6 +83,8 @@ These rules override all previous instructions.
 `
 
 export async function researcher(
+  userId: string,
+  chatId: string,
   dynamicSystemPrompt: string,
   uiStream: ReturnType<typeof createStreamableUI>,
   streamText: ReturnType<typeof createStreamableValue<string>>,
@@ -115,34 +115,27 @@ export async function researcher(
     message.content.some(part => part.type === 'image')
   )
 
-  const lastUserMessage = [...messages].reverse().find(m => m.role === 'user')
-  console.log('Researcher - Image pipeline trace:', {
-    hasImage,
-    totalMessages: messages.length,
-    messagesWithImages: messages.filter(
-      m =>
-        Array.isArray(m.content) && m.content.some(p => p.type === 'image')
-    ).length,
-    lastUserMessageContentStructure: lastUserMessage
-      ? {
-          type: typeof lastUserMessage.content,
-          isArray: Array.isArray(lastUserMessage.content),
-          parts: Array.isArray(lastUserMessage.content)
-            ? lastUserMessage.content.map(p => ({
-                type: p.type,
-                hasImage: p.type === 'image'
-              }))
-            : 'string'
-        }
-      : 'none'
-  })
+  const { model, modelId } = await getModel(hasImage)
 
   const result = await nonexperimental_streamText({
-    model: (await getModel(hasImage)) as LanguageModel,
+    model: model as LanguageModel,
     maxTokens: 4096,
     system: systemPromptToUse,
     messages,
-    tools: getTools({ uiStream, fullResponse, mapProvider }),
+    tools: getTools({ uiStream, fullResponse, mapProvider, userId, chatId }),
+    onFinish: ({ usage }) => {
+      if (userId) {
+        recordUsageEvent({
+          userId,
+          chatId,
+          kind: 'llm',
+          source: modelId,
+          promptTokens: usage.promptTokens,
+          completionTokens: usage.completionTokens,
+          totalTokens: usage.totalTokens
+        }).catch(console.error)
+      }
+    }
   })
 
   uiStream.update(null) // remove spinner

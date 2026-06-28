@@ -77,7 +77,7 @@ async function runBackgroundWorker(jobId: string, userId: string, domain: string
         throw new Error('Insufficient content scraped from domain');
       }
 
-      const model = await getModel();
+      const { model } = await getModel();
       const { text } = await generateText({
         model,
         system: 'You are an expert at creating concise and effective AI system prompts for business copilots.',

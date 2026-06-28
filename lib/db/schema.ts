@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, jsonb, customType, unique } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, uuid, jsonb, customType, unique, integer, numeric } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 // Custom type for PostGIS geometry
@@ -102,6 +102,30 @@ export const calendarNotes = pgTable('calendar_notes', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
+export const promptGenerationJobs = pgTable('prompt_generation_jobs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  domain: text('domain').notNull(),
+  status: text('status').notNull().default('pending'), // pending | processing | complete | error
+  resultPrompt: text('result_prompt'),
+  errorMessage: text('error_message'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const usageEvents = pgTable('usage_events', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  chatId: uuid('chat_id').references(() => chats.id, { onDelete: 'cascade' }),
+  kind: text('kind').notNull(), // 'llm' | 'tool'
+  source: text('source').notNull(), // model id or tool name
+  promptTokens: integer('prompt_tokens'),
+  completionTokens: integer('completion_tokens'),
+  totalTokens: integer('total_tokens'),
+  cost: numeric('cost', { precision: 12, scale: 6 }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   chats: many(chats),
@@ -112,6 +136,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   locations: many(locations),
   visualizations: many(visualizations),
   promptGenerationJobs: many(promptGenerationJobs),
+  usageEvents: many(usageEvents),
 }));
 
 export const chatsRelations = relations(chats, ({ one, many }) => ({
@@ -124,6 +149,7 @@ export const chatsRelations = relations(chats, ({ one, many }) => ({
   participants: many(chatParticipants),
   locations: many(locations),
   visualizations: many(visualizations),
+  usageEvents: many(usageEvents),
 }));
 
 export const messagesRelations = relations(messages, ({ one }) => ({
@@ -182,17 +208,6 @@ export const visualizationsRelations = relations(visualizations, ({ one }) => ({
   }),
 }));
 
-export const promptGenerationJobs = pgTable('prompt_generation_jobs', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  domain: text('domain').notNull(),
-  status: text('status').notNull().default('pending'), // pending | processing | complete | error
-  resultPrompt: text('result_prompt'),
-  errorMessage: text('error_message'),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-});
-
 export const promptGenerationJobsRelations = relations(promptGenerationJobs, ({ one }) => ({
   user: one(users, {
     fields: [promptGenerationJobs.userId],
@@ -207,6 +222,17 @@ export const calendarNotesRelations = relations(calendarNotes, ({ one }) => ({
   }),
   chat: one(chats, {
     fields: [calendarNotes.chatId],
+    references: [chats.id],
+  }),
+}));
+
+export const usageEventsRelations = relations(usageEvents, ({ one }) => ({
+  user: one(users, {
+    fields: [usageEvents.userId],
+    references: [users.id],
+  }),
+  chat: one(chats, {
+    fields: [usageEvents.chatId],
     references: [chats.id],
   }),
 }));
