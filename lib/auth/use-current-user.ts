@@ -4,7 +4,7 @@ export function useCurrentUser() {
   const { user, isLoaded } = useUser();
 
   return {
-    user: user ? { ...user, id: user.id } : null,
+    user: user || null,
     loading: !isLoaded
   };
 }

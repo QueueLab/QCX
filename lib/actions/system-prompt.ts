@@ -3,6 +3,7 @@
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user';
 import { z } from 'zod';
 import { createJob, updateJob, getJobByIdAndUserId } from './system-prompt-db';
+import { nanoid } from '@/lib/utils';
 import { getFirecrawlClient } from '@/lib/agents/tools/firecrawl';
 import { getModel } from '@/lib/utils';
 import { generateText } from 'ai';
@@ -36,6 +37,7 @@ export async function startSystemPromptGeneration(domain: string) {
 
   try {
     const job = await createJob({
+      id: nanoid(),
       userId,
       domain: normalizedDomain,
       status: 'pending',

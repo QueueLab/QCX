@@ -6,6 +6,7 @@ import { calendarNotes } from '@/lib/db/schema'
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
 import type { CalendarNote, NewCalendarNote } from '@/lib/types'
 import { createMessage, NewMessage } from './chat-db'
+import { nanoid } from '@/lib/utils'
 
 /**
  * Retrieves notes for a specific date and chat session.
@@ -86,11 +87,12 @@ export async function saveNote(noteData: NewCalendarNote | CalendarNote): Promis
         try {
             const [newNote] = await db
                 .insert(calendarNotes)
-                .values({ ...noteData, userId })
+                .values({ id: nanoid(), ...noteData, userId })
                 .returning();
 
             if (newNote && newNote.chatId) {
                 const calendarContextMessage: NewMessage = {
+                    id: nanoid(),
                     chatId: newNote.chatId,
                     userId: userId,
                     role: 'data',

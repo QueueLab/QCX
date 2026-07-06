@@ -1,4 +1,5 @@
 import { db } from '@/lib/db';
+import { nanoid } from '@/lib/utils';
 import { promptGenerationJobs } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 
@@ -9,7 +10,7 @@ export type NewPromptGenerationJob = typeof promptGenerationJobs.$inferInsert;
  * Creates a new prompt generation job.
  */
 export async function createJob(data: NewPromptGenerationJob): Promise<PromptGenerationJob> {
-  const result = await db.insert(promptGenerationJobs).values(data).returning();
+  const result = await db.insert(promptGenerationJobs).values({ ...data, id: data.id || nanoid() }).returning();
   if (!result[0]) {
     throw new Error('Failed to create prompt generation job');
   }

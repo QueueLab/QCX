@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { saveChat, createMessage, NewChat, NewMessage } from '@/lib/actions/chat-db';
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user';
+import { nanoid } from '@/lib/utils';
 // import { generateUUID } from '@/lib/utils'; // Assuming generateUUID is in lib/utils as per PR context - not needed for PKs
 
 // This is a simplified POST handler. PR #533's version might be more complex,
@@ -26,6 +27,7 @@ export async function POST(request: NextRequest) {
 
     const newChatData: NewChat = {
       // id: generateUUID(), // Drizzle schema now has defaultRandom for UUIDs
+      id: nanoid(),
       userId: userId,
       title: title || 'New Chat', // Default title if not provided
       // createdAt: new Date(), // Handled by defaultNow() in schema
@@ -40,7 +42,8 @@ export async function POST(request: NextRequest) {
     const firstMessage: Omit<NewMessage, 'chatId'> = {
         // id: generateUUID(), // Drizzle schema now has defaultRandom for UUIDs
         // chatId is omitted as it will be set by saveChat
-        userId: userId,
+        id: nanoid(),
+      userId: userId,
         role: role as NewMessage['role'], // Ensure role type matches schema expectation
         content: initialMessageContent,
         // createdAt: new Date(), // Handled by defaultNow() in schema, not strictly needed here

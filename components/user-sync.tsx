@@ -9,10 +9,15 @@ export function UserSync() {
 
   useEffect(() => {
     if (isLoaded && user) {
-      syncUser({
-        id: user.id,
-        email: user.primaryEmailAddress?.emailAddress || null,
-      })
+      syncUser()
+        .then((result) => {
+          if (result?.error) {
+            console.error('[UserSync] Failed to sync user:', result.error)
+          }
+        })
+        .catch((err) => {
+          console.error('[UserSync] Unexpected error during sync:', err)
+        })
     }
   }, [user, isLoaded])
 

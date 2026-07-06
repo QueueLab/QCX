@@ -19,7 +19,7 @@ import { db } from '@/lib/db'
 import { users } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
-import { getModel, normalizeMessageContent } from '../utils'
+import { getModel, normalizeMessageContent, nanoid } from '../utils'
 import { executiveSummaryAgent } from '../agents/report/executive-summary'
 import { strategicSynthesisAgent } from '../agents/report/strategic-synthesis'
 
@@ -233,6 +233,7 @@ export async function updateDrawingContext(chatId: string, contextData: { drawnF
   }
 
   const newDrawingMessage: DbNewMessage = {
+    id: nanoid(),
     userId: userId,
     chatId: chatId,
     role: 'data',

@@ -20,7 +20,7 @@ const vector = customType<{ data: number[] }>({
 });
 
 export const users = pgTable('users', {
-  id: uuid('id').primaryKey().defaultRandom(),
+  id: text('id').primaryKey(), // Clerk User ID
   email: text('email').unique(), // Enforced unique for user identity
   role: text('role').default('viewer'),
   selectedModel: text('selected_model'),
@@ -28,8 +28,8 @@ export const users = pgTable('users', {
 });
 
 export const chats = pgTable('chats', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   title: text('title').notNull().default('Untitled Chat'),
   visibility: text('visibility').default('private'),
   path: text('path'),
@@ -40,9 +40,9 @@ export const chats = pgTable('chats', {
 });
 
 export const locations = pgTable('locations', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  chatId: uuid('chat_id').references(() => chats.id, { onDelete: 'cascade' }),
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  chatId: text('chat_id').references(() => chats.id, { onDelete: 'cascade' }),
   geojson: jsonb('geojson').notNull(),
   geometry: geometry('geometry'),
   name: text('name'),
@@ -50,20 +50,20 @@ export const locations = pgTable('locations', {
 });
 
 export const messages = pgTable('messages', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  chatId: uuid('chat_id').notNull().references(() => chats.id, { onDelete: 'cascade' }),
-  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  id: text('id').primaryKey(),
+  chatId: text('chat_id').notNull().references(() => chats.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   role: text('role').notNull(),
   content: text('content').notNull(),
   embedding: vector('embedding'),
-  locationId: uuid('location_id').references(() => locations.id, { onDelete: 'set null' }),
+  locationId: text('location_id').references(() => locations.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
 export const chatParticipants = pgTable('chat_participants', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  chatId: uuid('chat_id').notNull().references(() => chats.id, { onDelete: 'cascade' }),
-  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  id: text('id').primaryKey(),
+  chatId: text('chat_id').notNull().references(() => chats.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   role: text('role').notNull().default('collaborator'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 }, (t) => ({
@@ -72,17 +72,17 @@ export const chatParticipants = pgTable('chat_participants', {
 }));
 
 export const systemPrompts = pgTable('system_prompts', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   prompt: text('prompt').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
 export const visualizations = pgTable('visualizations', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  chatId: uuid('chat_id').references(() => chats.id, { onDelete: 'cascade' }),
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  chatId: text('chat_id').references(() => chats.id, { onDelete: 'cascade' }),
   type: text('type').notNull().default('map_layer'),
   data: jsonb('data').notNull(),
   geometry: geometry('geometry'),
@@ -90,9 +90,9 @@ export const visualizations = pgTable('visualizations', {
 });
 
 export const calendarNotes = pgTable('calendar_notes', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  chatId: uuid('chat_id').references(() => chats.id, { onDelete: 'cascade' }),
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  chatId: text('chat_id').references(() => chats.id, { onDelete: 'cascade' }),
   date: timestamp('date', { withTimezone: true }).notNull(),
   content: text('content').notNull(),
   locationTags: jsonb('location_tags'),
@@ -183,8 +183,8 @@ export const visualizationsRelations = relations(visualizations, ({ one }) => ({
 }));
 
 export const promptGenerationJobs = pgTable('prompt_generation_jobs', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   domain: text('domain').notNull(),
   status: text('status').notNull().default('pending'), // pending | processing | complete | error
   resultPrompt: text('result_prompt'),

@@ -56,10 +56,10 @@ export const Header = () => {
       <div className="absolute left-1 flex items-center">
         {isLoaded && !isSignedIn && (
           <SignInButton mode="modal">
-            <Button variant="ghost" size="icon" data-testid="logo-auth-trigger" onClick={(e) => e.stopPropagation()}>
+            <Button variant="ghost" size="icon" aria-label="Sign in" data-testid="logo-auth-trigger" onClick={(e) => e.stopPropagation()}>
               <Image
                 src="/images/logo.svg"
-                alt="Logo"
+                alt=""
                 width={20}
                 height={20}
                 className="h-5 w-auto"

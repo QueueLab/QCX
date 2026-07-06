@@ -4,7 +4,9 @@ import { revalidatePath, unstable_noStore as noStore } from 'next/cache';
 import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
 import { eq, ilike } from 'drizzle-orm';
+import { nanoid } from '@/lib/utils';
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user';
+import { auth, currentUser } from '@clerk/nextjs/server';
 
 export type UserRole = "admin" | "editor" | "viewer";
 
@@ -75,6 +77,7 @@ export async function addUser(newUser: { email: string; role: UserRole }): Promi
     }
 
     const [insertedUser] = await db.insert(users).values({
+      id: nanoid(),
       email: newUser.email,
       role: newUser.role,
     }).returning({
@@ -211,20 +214,26 @@ export async function searchUsers(query: string) {
 }
 
 /**
- * Syncs a Clerk user to the internal users table.
+ * Syncs the authenticated Clerk user to the internal users table.
  */
-export async function syncUser(userData: { id: string; email: string | null }) {
+export async function syncUser() {
   try {
+    const { userId } = await auth();
+    if (!userId) return { error: 'Not authenticated' };
+
+    const user = await currentUser();
+    const email = user?.primaryEmailAddress?.emailAddress || null;
+
     await db.insert(users)
       .values({
-        id: userData.id,
-        email: userData.email,
+        id: userId,
+        email: email,
         role: 'viewer',
       })
       .onConflictDoUpdate({
         target: users.id,
         set: {
-          email: userData.email,
+          email: email,
         },
       });
     return { success: true };
