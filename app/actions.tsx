@@ -12,7 +12,8 @@ import type { FeatureCollection } from 'geojson'
 import { Spinner } from '@/components/ui/spinner'
 import { Section } from '@/components/section'
 import { FollowupPanel } from '@/components/followup-panel'
-import { inquire, researcher, taskManager, querySuggestor, resolutionSearch, type DrawnFeature } from '@/lib/agents'
+import { inquire, researcher, taskManager, querySuggestor, type DrawnFeature } from '@/lib/agents'
+import { send } from '@vercel/queue';
 import { writer } from '@/lib/agents/writer'
 import { saveChat, getSystemPrompt } from '@/lib/actions/chat'
 import { Chat, AIMessage } from '@/lib/types'
@@ -101,96 +102,12 @@ async function submit(formData?: FormData, skip?: boolean) {
 
     async function processResolutionSearch() {
       try {
-        const streamResult = await resolutionSearch(messages, timezone, drawnFeatures, location);
-
-        let fullSummary = '';
-        for await (const partialObject of streamResult.partialObjectStream) {
-          if (partialObject.summary) {
-            fullSummary = partialObject.summary;
-            summaryStream.update(fullSummary);
-          }
-        }
-
-        const analysisResult = await streamResult.object;
-        summaryStream.done(analysisResult.summary || 'Analysis complete.');
-
-        if (analysisResult.geoJson) {
-          uiStream.append(
-            <GeoJsonLayer
-              id={groupeId}
-              data={analysisResult.geoJson as FeatureCollection}
-            />
-          );
-        }
-
-        messages.push({ role: 'assistant', content: analysisResult.summary || 'Analysis complete.' });
-
-        const sanitizedMessages: CoreMessage[] = messages.map((m: any) => {
-          if (Array.isArray(m.content)) {
-            return {
-              ...m,
-              content: m.content.filter((part: any) => part.type !== 'image')
-            } as CoreMessage
-          }
-          return m
-        })
-
-        const currentMessages = aiState.get().messages;
-        const sanitizedHistory = currentMessages.map((m: any) => {
-          if (m.role === "user" && Array.isArray(m.content)) {
-            return {
-              ...m,
-              content: m.content.map((part: any) =>
-                part.type === "image" ? { ...part, image: "IMAGE_PROCESSED" } : part
-              )
-            }
-          }
-          return m
-        });
-        const relatedQueries = await querySuggestor(uiStream, sanitizedMessages);
-        uiStream.append(
-          <Section title="Follow-up">
-            <FollowupPanel />
-          </Section>
-        );
-
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        aiState.done({
-          ...aiState.get(),
-          messages: [
-            ...aiState.get().messages,
-            {
-              id: groupeId,
-              role: 'assistant',
-              content: analysisResult.summary || 'Analysis complete.',
-              type: 'response'
-            },
-            {
-              id: groupeId,
-              role: 'assistant',
-              content: JSON.stringify({
-                ...analysisResult,
-                image: dataUrl,
-                mapboxImage: mapboxDataUrl,
-                googleImage: googleDataUrl
-              }),
-              type: 'resolution_search_result'
-            },
-            {
-              id: groupeId,
-              role: 'assistant',
-              content: JSON.stringify(relatedQueries),
-              type: 'related'
-            },
-            {
-              id: groupeId,
-              role: 'assistant',
-              content: 'followup',
-              type: 'followup'
-            }
-          ]
-        });
+        await send('resolution-search', { messages, timezone, drawnFeatures, location });
+        summaryStream.update('Resolution search task enqueued. Please check back later for results.');
+        summaryStream.done();
+        isGenerating.done(false);
+        uiStream.done();
+        return; // Exit early as the actual processing will happen in the queue
       } catch (error) {
         console.error('Error in resolution search:', error);
         summaryStream.error(error);

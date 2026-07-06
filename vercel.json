@@ -1,0 +1,9 @@
+{
+  "functions": {
+    "app/api/queues/resolution-search/route.ts": {
+      "experimentalTriggers": [
+        { "type": "queue/v2beta", "topic": "resolution-search" }
+      ]
+    }
+  }
+}
