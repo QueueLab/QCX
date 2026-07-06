@@ -20,6 +20,7 @@ import { MapLoadingProvider } from '@/components/map-loading-context';
 import ConditionalLottie from '@/components/conditional-lottie';
 import { MapProvider as MapContextProvider } from '@/components/map/map-context'
 import { SWUpdateNotification } from '@/components/sw-update-notification'
+import { ClerkProvider } from '@clerk/nextjs'
 import { UserSync } from '@/components/user-sync'
 
 const fontSans = FontSans({
@@ -76,70 +77,72 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                const htmxEvents = [
-                  'sseError', 'sseOpen', 'swapError', 'targetError', 'timeout',
-                  'validation:validate', 'validation:failed', 'validation:halted',
-                  'xhr:abort', 'xhr:loadend', 'xhr:loadstart'
-                ];
-                htmxEvents.forEach(event => {
-                  const funcName = 'func ' + event;
-                  if (typeof window[funcName] === 'undefined') {
-                    window[funcName] = function() { 
-                      console.warn('HTMX event handler "' + funcName + '" was called but not defined. Providing safety fallback.');
-                    };
-                  }
-                });
-              })();
-            `,
-          }}
-        />
-      </head>
-      <body
-        className={cn(
-          'font-sans antialiased',
-          fontSans.variable,
-          fontPoppins.variable
-        )}
-      >
-        <CalendarToggleProvider>
-          <HistoryToggleProvider>
-            <MapToggleProvider>
-              <ProfileToggleProvider>
-                <UsageToggleProvider>
-                  <ThemeProvider
-                    attribute="class"
-                    defaultTheme="earth"
-                    enableSystem
-                    disableTransitionOnChange
-                    themes={['light', 'dark', 'earth']}
-                  >
-                    <MapContextProvider>
-                      <MapLoadingProvider>
-                        <Header />
-                        <UserSync />
-                        <ConditionalLottie />
-                        {children}
-                        <HistorySidebar />
-                        <Footer />
-                        <Toaster />
-                        <SWUpdateNotification />
-                      </MapLoadingProvider>
-                    </MapContextProvider>
-                  </ThemeProvider>
-                </UsageToggleProvider>
-              </ProfileToggleProvider>
-            </MapToggleProvider>
-          </HistoryToggleProvider>
-        </CalendarToggleProvider>
-        <Analytics />
-        <SpeedInsights />
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en" suppressHydrationWarning>
+        <head>
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+                (function() {
+                  const htmxEvents = [
+                    'sseError', 'sseOpen', 'swapError', 'targetError', 'timeout',
+                    'validation:validate', 'validation:failed', 'validation:halted',
+                    'xhr:abort', 'xhr:loadend', 'xhr:loadstart'
+                  ];
+                  htmxEvents.forEach(event => {
+                    const funcName = 'func ' + event;
+                    if (typeof window[funcName] === 'undefined') {
+                      window[funcName] = function() {
+                        console.warn('HTMX event handler "' + funcName + '" was called but not defined. Providing safety fallback.');
+                      };
+                    }
+                  });
+                })();
+              `,
+            }}
+          />
+        </head>
+        <body
+          className={cn(
+            'font-sans antialiased',
+            fontSans.variable,
+            fontPoppins.variable
+          )}
+        >
+          <CalendarToggleProvider>
+            <HistoryToggleProvider>
+              <MapToggleProvider>
+                <ProfileToggleProvider>
+                  <UsageToggleProvider>
+                    <ThemeProvider
+                      attribute="class"
+                      defaultTheme="earth"
+                      enableSystem
+                      disableTransitionOnChange
+                      themes={['light', 'dark', 'earth']}
+                    >
+                      <MapContextProvider>
+                        <MapLoadingProvider>
+                          <Header />
+                          <UserSync />
+                          <ConditionalLottie />
+                          {children}
+                          <HistorySidebar />
+                          <Footer />
+                          <Toaster />
+                          <SWUpdateNotification />
+                        </MapLoadingProvider>
+                      </MapContextProvider>
+                    </ThemeProvider>
+                  </UsageToggleProvider>
+                </ProfileToggleProvider>
+              </MapToggleProvider>
+            </HistoryToggleProvider>
+          </CalendarToggleProvider>
+          <Analytics />
+          <SpeedInsights />
+        </body>
+      </html>
+    </ClerkProvider>
   )
 }

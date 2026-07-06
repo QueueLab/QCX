@@ -20,7 +20,7 @@ import { useUsageToggle } from './usage-toggle-context'
 import { useProfileToggle } from './profile-toggle-context'
 import { useHistoryToggle } from './history-toggle-context'
 import { useState, useEffect } from 'react'
-import { SignInButton, SignedIn, SignedOut, UserButton } from '@clerk/nextjs'
+import { SignInButton, UserButton, useUser } from '@clerk/nextjs'
 
 export const Header = () => {
   const { toggleCalendar } = useCalendarToggle()
@@ -28,6 +28,7 @@ export const Header = () => {
   const { toggleUsage, isUsageOpen } = useUsageToggle()
   const { activeView, closeProfileView } = useProfileToggle()
   const { toggleHistory } = useHistoryToggle()
+  const { isSignedIn, isLoaded } = useUser()
 
   const handleUsageToggle = () => {
     // If we're about to open usage and profile is open, close profile first
@@ -53,7 +54,7 @@ export const Header = () => {
       </div>
       
       <div className="absolute left-1 flex items-center">
-        <SignedOut>
+        {isLoaded && !isSignedIn && (
           <SignInButton mode="modal">
             <Button variant="ghost" size="icon" data-testid="logo-auth-trigger">
               <Image
@@ -65,8 +66,8 @@ export const Header = () => {
               />
             </Button>
           </SignInButton>
-        </SignedOut>
-        <SignedIn>
+        )}
+        {isLoaded && isSignedIn && (
           <div className="flex items-center justify-center h-10 w-10">
             <UserButton
               appearance={{
@@ -76,9 +77,14 @@ export const Header = () => {
               }}
             />
           </div>
-        </SignedIn>
+        )}
+        {!isLoaded && (
+          <div className="h-10 w-10 flex items-center justify-center">
+             <div className="h-5 w-5 animate-pulse bg-muted rounded-full" />
+          </div>
+        )}
 
-        <Button variant="ghost" size="icon" onClick={toggleHistory} data-testid="logo-history-toggle">
+        <Button variant="ghost" size="icon" onClick={toggleHistory} data-testid="logo-history-toggle" className="ml-2">
            <span className="sr-only">History</span>
            <Search className="h-5 w-5" />
         </Button>
