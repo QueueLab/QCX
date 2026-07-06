@@ -20,6 +20,7 @@ import { MapLoadingProvider } from '@/components/map-loading-context';
 import ConditionalLottie from '@/components/conditional-lottie';
 import { MapProvider as MapContextProvider } from '@/components/map/map-context'
 import { SWUpdateNotification } from '@/components/sw-update-notification'
+import { UserSync } from '@/components/user-sync'
 
 const fontSans = FontSans({
   subsets: ['latin'],
@@ -121,6 +122,7 @@ export default function RootLayout({
                     <MapContextProvider>
                       <MapLoadingProvider>
                         <Header />
+                        <UserSync />
                         <ConditionalLottie />
                         {children}
                         <HistorySidebar />

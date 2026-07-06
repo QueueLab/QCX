@@ -20,6 +20,7 @@ import { useUsageToggle } from './usage-toggle-context'
 import { useProfileToggle } from './profile-toggle-context'
 import { useHistoryToggle } from './history-toggle-context'
 import { useState, useEffect } from 'react'
+import { SignInButton, SignedIn, SignedOut, UserButton } from '@clerk/nextjs'
 
 export const Header = () => {
   const { toggleCalendar } = useCalendarToggle()
@@ -52,16 +53,37 @@ export const Header = () => {
       </div>
       
       <div className="absolute left-1 flex items-center">
+        <SignedOut>
+          <SignInButton mode="modal">
+            <Button variant="ghost" size="icon" data-testid="logo-auth-trigger">
+              <Image
+                src="/images/logo.svg"
+                alt="Logo"
+                width={20}
+                height={20}
+                className="h-5 w-auto"
+              />
+            </Button>
+          </SignInButton>
+        </SignedOut>
+        <SignedIn>
+          <div className="flex items-center justify-center h-10 w-10">
+            <UserButton
+              appearance={{
+                elements: {
+                  userButtonAvatarBox: "h-6 w-6"
+                }
+              }}
+            />
+          </div>
+        </SignedIn>
+
         <Button variant="ghost" size="icon" onClick={toggleHistory} data-testid="logo-history-toggle">
-          <Image
-            src="/images/logo.svg"
-            alt="Logo"
-            width={20}
-            height={20}
-            className="h-5 w-auto"
-          />
+           <span className="sr-only">History</span>
+           <Search className="h-5 w-5" />
         </Button>
-        <h1 className="text-2xl font-poppins font-semibold text-primary">
+
+        <h1 className="text-2xl font-poppins font-semibold text-primary ml-2">
           QCX
         </h1>
       </div>

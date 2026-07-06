@@ -209,3 +209,27 @@ export async function searchUsers(query: string) {
     return [];
   }
 }
+
+/**
+ * Syncs a Clerk user to the internal users table.
+ */
+export async function syncUser(userData: { id: string; email: string | null }) {
+  try {
+    await db.insert(users)
+      .values({
+        id: userData.id,
+        email: userData.email,
+        role: 'viewer',
+      })
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          email: userData.email,
+        },
+      });
+    return { success: true };
+  } catch (error: any) {
+    console.error('[Action: syncUser] Error:', error.message);
+    return { error: error.message };
+  }
+}
