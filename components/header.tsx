@@ -56,7 +56,7 @@ export const Header = () => {
       <div className="absolute left-1 flex items-center">
         {isLoaded && !isSignedIn && (
           <SignInButton mode="modal">
-            <Button variant="ghost" size="icon" data-testid="logo-auth-trigger">
+            <Button variant="ghost" size="icon" data-testid="logo-auth-trigger" onClick={(e) => e.stopPropagation()}>
               <Image
                 src="/images/logo.svg"
                 alt="Logo"
@@ -84,12 +84,7 @@ export const Header = () => {
           </div>
         )}
 
-        <Button variant="ghost" size="icon" onClick={toggleHistory} data-testid="logo-history-toggle" className="ml-2">
-           <span className="sr-only">History</span>
-           <Search className="h-5 w-5" />
-        </Button>
-
-        <h1 className="text-2xl font-poppins font-semibold text-primary ml-2">
+        <h1 className="text-2xl font-poppins font-semibold text-primary ml-2 cursor-pointer" onClick={toggleHistory}>
           QCX
         </h1>
       </div>
