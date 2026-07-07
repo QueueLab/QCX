@@ -1,11 +1,12 @@
 'use client'
 import { useState, useEffect } from "react"
-import { User, Settings, Paintbrush, Shield, CircleUserRound, LogOut } from "lucide-react"
+import { User, Settings, Shield, CircleUserRound, LogOut } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { ProfileToggleEnum, useProfileToggle } from "./profile-toggle-context"
 import { useUsageToggle } from "./usage-toggle-context"
 import { useClerk, useUser, SignInButton } from "@clerk/nextjs"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 
 export function ProfileToggle() {
   const { toggleProfileSection, activeView } = useProfileToggle()
@@ -14,7 +15,7 @@ export function ProfileToggle() {
   const [isMobile, setIsMobile] = useState(false)
   
   // Call hooks unconditionally
-  const { isLoaded, isSignedIn } = useUser()
+  const { isLoaded, isSignedIn, user } = useUser()
   const { signOut } = useClerk()
 
   useEffect(() => {
@@ -52,10 +53,22 @@ export function ProfileToggle() {
     })
   }
 
+  const ProfileIcon = () => {
+    if (isLoaded && isSignedIn && user?.imageUrl) {
+      return (
+        <Avatar className="h-[1.2rem] w-[1.2rem]">
+          <AvatarImage src={user.imageUrl} alt={user.fullName || 'User'} />
+          <AvatarFallback><CircleUserRound className="h-full w-full" /></AvatarFallback>
+        </Avatar>
+      )
+    }
+    return <CircleUserRound className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
+  }
+
   if (isMobile) {
     return (
       <Button variant="ghost" size="icon" className="relative" data-testid="profile-toggle" disabled>
-        <CircleUserRound className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
+        <ProfileIcon />
         <span className="sr-only">Open profile menu</span>
       </Button>
     )
@@ -65,7 +78,7 @@ export function ProfileToggle() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="relative" data-testid="profile-toggle">
-          <CircleUserRound className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
+          <ProfileIcon />
           <span className="sr-only">Open profile menu</span>
         </Button>
       </DropdownMenuTrigger>
@@ -77,10 +90,6 @@ export function ProfileToggle() {
         <DropdownMenuItem onClick={() => handleSectionToggle(ProfileToggleEnum.Settings)} data-testid="profile-settings">
           <Settings className="mr-2 h-4 w-4" />
           <span>Settings</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleSectionToggle(ProfileToggleEnum.Appearance)} data-testid="profile-appearance">
-          <Paintbrush className="mr-2 h-4 w-4" />
-          <span>Appearance</span>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => handleSectionToggle(ProfileToggleEnum.Security)} data-testid="profile-security">
           <Shield className="mr-2 h-4 w-4" />

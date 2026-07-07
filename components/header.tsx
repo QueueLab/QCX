@@ -17,7 +17,6 @@ import { useUsageToggle } from './usage-toggle-context'
 import { useProfileToggle } from './profile-toggle-context'
 import { useHistoryToggle } from './history-toggle-context'
 import { useState, useEffect } from 'react'
-import { SignInButton, UserButton, useUser } from '@clerk/nextjs'
 
 export const Header = () => {
   const { toggleCalendar } = useCalendarToggle()
@@ -25,9 +24,6 @@ export const Header = () => {
   const { toggleUsage, isUsageOpen } = useUsageToggle()
   const { activeView, closeProfileView } = useProfileToggle()
   const { toggleHistory } = useHistoryToggle()
-
-  // Call hooks unconditionally
-  const { isLoaded, isSignedIn } = useUser()
 
   const handleUsageToggle = () => {
     // If we're about to open usage and profile is open, close profile first
@@ -53,39 +49,18 @@ export const Header = () => {
       </div>
       
       <div className="absolute left-1 flex items-center">
-        <div className="mr-2">
-          {isLoaded && !isSignedIn && (
-            <SignInButton mode="modal">
-              <Button variant="ghost" size="icon" data-testid="auth-login-trigger">
-                <Image
-                  src="/images/logo.svg"
-                  alt="Logo"
-                  width={20}
-                  height={20}
-                  className="h-5 w-auto"
-                />
-              </Button>
-            </SignInButton>
-          )}
-          {isLoaded && isSignedIn && (
-            <UserButton />
-          )}
-          {!isLoaded && (
-            <Button variant="ghost" size="icon" disabled>
-                <Image
-                  src="/images/logo.svg"
-                  alt="Logo"
-                  width={20}
-                  height={20}
-                  className="h-5 w-auto opacity-50"
-                />
-            </Button>
-          )}
-        </div>
+        <Button variant="ghost" size="icon" onClick={toggleHistory} data-testid="logo-history-toggle">
+          <Image
+            src="/images/logo.svg"
+            alt="Logo"
+            width={20}
+            height={20}
+            className="h-5 w-auto"
+          />
+        </Button>
         <h1
           className="text-2xl font-poppins font-semibold text-primary cursor-pointer select-none"
           onClick={toggleHistory}
-          data-testid="logo-history-toggle"
         >
           QCX
         </h1>
@@ -113,27 +88,6 @@ export const Header = () => {
 
       {/* Mobile menu buttons */}
       <div className="flex md:hidden gap-2">
-        <div className="flex items-center mr-2">
-          {isLoaded && !isSignedIn && (
-            <SignInButton mode="modal">
-              <Button variant="ghost" size="icon">
-                <Image
-                  src="/images/logo.svg"
-                  alt="Logo"
-                  width={20}
-                  height={20}
-                  className="h-5 w-auto"
-                />
-              </Button>
-            </SignInButton>
-          )}
-          {isLoaded && isSignedIn && (
-            <UserButton />
-          )}
-          {!isLoaded && (
-            <div className="h-5 w-5 rounded-full bg-muted animate-pulse" />
-          )}
-        </div>
         <Button variant="ghost" size="icon" onClick={handleUsageToggle}>
           <TentTree className="h-[1.2rem] w-[1.2rem]" />
         </Button>
