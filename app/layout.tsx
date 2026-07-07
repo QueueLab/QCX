@@ -1,3 +1,5 @@
+import { ClerkProvider } from "@clerk/nextjs"
+import { UserSync } from "@/components/user-sync"
 import type { Metadata, Viewport } from 'next'
 import { Inter as FontSans, Poppins } from 'next/font/google'
 import './globals.css'
@@ -75,6 +77,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
+    <ClerkProvider>
     <html lang="en" suppressHydrationWarning>
       <head>
         <script
@@ -120,6 +123,7 @@ export default function RootLayout({
                   >
                     <MapContextProvider>
                       <MapLoadingProvider>
+                        <UserSync />
                         <Header />
                         <ConditionalLottie />
                         {children}
@@ -139,5 +143,6 @@ export default function RootLayout({
         <SpeedInsights />
       </body>
     </html>
+    </ClerkProvider>
   )
 }

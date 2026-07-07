@@ -7,9 +7,6 @@ import { cn } from '@/lib/utils'
 import HistoryContainer from './history-container'
 import { Button } from '@/components/ui/button'
 import {
-  Search,
-  CircleUserRound,
-  Map,
   CalendarDays,
   TentTree
 } from 'lucide-react'
@@ -61,7 +58,10 @@ export const Header = () => {
             className="h-5 w-auto"
           />
         </Button>
-        <h1 className="text-2xl font-poppins font-semibold text-primary">
+        <h1
+          className="text-2xl font-poppins font-semibold text-primary cursor-pointer select-none"
+          onClick={toggleHistory}
+        >
           QCX
         </h1>
       </div>
@@ -88,7 +88,6 @@ export const Header = () => {
 
       {/* Mobile menu buttons */}
       <div className="flex md:hidden gap-2">
-        
         <Button variant="ghost" size="icon" onClick={handleUsageToggle}>
           <TentTree className="h-[1.2rem] w-[1.2rem]" />
         </Button>

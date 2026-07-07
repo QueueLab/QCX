@@ -1,23 +1,19 @@
-import { useState, useEffect } from 'react';
-import { getSupabaseBrowserClient } from '../supabase/browser-client';
-import type { User } from '@supabase/supabase-js';
+import { useUser } from '@clerk/nextjs';
 
 export function useCurrentUser() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const supabase = getSupabaseBrowserClient();
+  const { user, isLoaded } = useUser();
 
-  useEffect(() => {
-    async function fetchUser() {
-      const { data, error } = await supabase.auth.getUser();
-      if (data) {
-        setUser(data.user);
+  // Map Clerk user to the structure expected by consumers if necessary
+  // For now, we'll return a simplified version
+  return {
+    user: user ? {
+      id: user.id,
+      email: user.emailAddresses[0]?.emailAddress,
+      user_metadata: {
+        name: user.fullName,
+        avatar_url: user.imageUrl
       }
-      setLoading(false);
-    }
-
-    fetchUser();
-  }, [supabase.auth]);
-
-  return { user, loading };
+    } : null,
+    loading: !isLoaded
+  };
 }
