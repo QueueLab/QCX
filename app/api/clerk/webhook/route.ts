@@ -58,15 +58,35 @@ export async function POST(req: Request) {
     const email = email_addresses[0]?.email_address
 
     if (clerkUserId) {
-        // Upsert user using Clerk ID as the primary key
-        await db.insert(users).values({
-            id: clerkUserId,
-            email,
-            role: 'viewer'
-        }).onConflictDoUpdate({
-            target: users.id,
-            set: { email }
-        });
+        // Upsert user based on clerkUserId
+        const [existingUser] = await db.select()
+          .from(users)
+          .where(eq(users.clerkUserId, clerkUserId))
+          .limit(1);
+
+        if (existingUser) {
+          await db.update(users)
+            .set({ email })
+            .where(eq(users.clerkUserId, clerkUserId));
+        } else {
+            // Check by email first to link
+            const [existingEmailUser] = await db.select()
+                .from(users)
+                .where(eq(users.email, email))
+                .limit(1);
+
+            if (existingEmailUser) {
+                await db.update(users)
+                    .set({ clerkUserId: clerkUserId })
+                    .where(eq(users.id, existingEmailUser.id));
+            } else {
+                await db.insert(users).values({
+                    clerkUserId: clerkUserId,
+                    email,
+                    role: 'viewer'
+                });
+            }
+        }
     }
   }
 
@@ -74,7 +94,7 @@ export async function POST(req: Request) {
     const { id: clerkUserId } = evt.data as any
     if (clerkUserId) {
         // Delete user record - cascade will handle the rest
-        await db.delete(users).where(eq(users.id, clerkUserId));
+        await db.delete(users).where(eq(users.clerkUserId, clerkUserId));
     }
   }
 

@@ -22,21 +22,25 @@ export async function getClerkUserIdOnServer(): Promise<string | null> {
 }
 
 /**
- * Resolves a Clerk User ID to our internal database ID.
+ * Resolves a Clerk User ID to our internal database UUID.
  * If the user doesn't exist in our DB yet, it will create one.
- * With Clerk integration, the internal database ID IS the Clerk User ID.
  *
  * @param clerkUserId The Clerk user ID to resolve
- * @returns {Promise<string | null>} The user ID for the database
+ * @returns {Promise<string | null>} Our internal database UUID for the user
  */
 export async function resolveClerkUserToDbUser(clerkUserId: string): Promise<string | null> {
+  if (AUTH_DISABLED_FLAG && clerkUserId === MOCK_USER_ID) {
+    // Return a consistent UUID for the mock user
+    return '00000000-0000-0000-0000-000000000000';
+  }
+
   if (!clerkUserId) return null;
 
   try {
-    // 1. Try to find the user by id (which is the clerkUserId)
+    // 1. Try to find the user by clerkUserId
     const [existingUser] = await db.select({ id: users.id })
       .from(users)
-      .where(eq(users.id, clerkUserId))
+      .where(eq(users.clerkUserId, clerkUserId))
       .limit(1);
 
     if (existingUser) {
@@ -45,56 +49,50 @@ export async function resolveClerkUserToDbUser(clerkUserId: string): Promise<str
 
     // 2. If not found, fetch user details from Clerk and create a new record
     const clerkUser = await currentUser();
-    if (!clerkUser) return clerkUserId; // Fallback to just returning the ID if we can't get more info
+    if (!clerkUser) return null;
 
     const email = clerkUser.emailAddresses[0]?.emailAddress;
 
-    // 2.1 Check if user with this email already exists (legacy migration support)
-    // In a clean Clerk-only setup, this might not be strictly necessary if all IDs are Clerk IDs
+    // 2.1 Check if user with this email already exists
     if (email) {
-      const [existingEmailUser] = await db.select({ id: users.id })
+      const [existingEmailUser] = await db.select({ id: users.id, clerkUserId: users.clerkUserId })
         .from(users)
         .where(eq(users.email, email))
         .limit(1);
 
       if (existingEmailUser) {
-         // This is a bit tricky: if the existing user has a UUID as ID, we can't easily "change" it
-         // without breaking foreign keys, unless we are in the middle of a migration.
-         // Since we just changed users.id to text, we could theoretically update it,
-         // but that's risky.
-         // For now, if we find a match by email but the ID is different, we'll return the clerkUserId
-         // and expect the webhook or sync process to handle merging if needed.
-         if (existingEmailUser.id === clerkUserId) return existingEmailUser.id;
+        // Link the existing user to this Clerk ID if not already linked
+        if (!existingEmailUser.clerkUserId) {
+          await db.update(users)
+            .set({ clerkUserId })
+            .where(eq(users.id, existingEmailUser.id));
+        }
+        return existingEmailUser.id;
       }
     }
 
     // 2.2 Create new user if no match found
-    await db.insert(users).values({
-      id: clerkUserId,
+    const [newUser] = await db.insert(users).values({
+      clerkUserId,
       email,
       role: 'viewer',
-    }).onConflictDoUpdate({
-        target: users.id,
-        set: { email }
-    });
+    }).returning({ id: users.id });
 
-    return clerkUserId;
+    return newUser.id;
   } catch (error) {
     console.error('[Auth] Error resolving Clerk user to DB user:', error);
-    return clerkUserId; // Fallback to clerkUserId even on error to allow operations to proceed
+    return null;
   }
 }
 
 /**
- * Retrieves the current user's internal database ID in server-side contexts.
- * With Clerk, the internal ID is the Clerk ID.
+ * Retrieves the current user's internal database ID (UUID) in server-side contexts.
  *
- * @returns {Promise<string | null>} The internal user ID if authenticated, otherwise null.
+ * @returns {Promise<string | null>} The internal user UUID if authenticated, otherwise null.
  */
 export async function getCurrentUserIdOnServer(): Promise<string | null> {
   const clerkUserId = await getClerkUserIdOnServer();
   if (!clerkUserId) return null;
 
-  // We still call resolve to ensure the record exists in the 'users' table
   return await resolveClerkUserToDbUser(clerkUserId);
 }
