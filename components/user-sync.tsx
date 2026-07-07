@@ -12,7 +12,7 @@ export function UserSync() {
 
   useEffect(() => {
     if (isLoaded && isSignedIn) {
-      syncUser();
+      syncUser().catch(err => console.error("[Auth] User sync failed:", err));
     }
   }, [isLoaded, isSignedIn]);
 

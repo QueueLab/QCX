@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from "react"
-import { User, Settings, Shield, CircleUserRound, LogOut } from "lucide-react"
+import { User, Settings, Shield, CircleUserRound, LogOut, LogIn } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { ProfileToggleEnum, useProfileToggle } from "./profile-toggle-context"
@@ -11,7 +11,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 export function ProfileToggle() {
   const { toggleProfileSection, activeView } = useProfileToggle()
   const { isUsageOpen, closeUsage } = useUsageToggle()
-  const [alignValue, setAlignValue] = useState<'start' | 'end'>("end")
+  const [alignValue, setAlignValue] = useState<'start' | 'end'>("start")
   const [isMobile, setIsMobile] = useState(false)
   
   // Call hooks unconditionally
@@ -22,11 +22,7 @@ export function ProfileToggle() {
     const handleResize = () => {
       const mobile = window.innerWidth < 768
       setIsMobile(mobile)
-      if (mobile) {
-        setAlignValue("start")
-      } else {
-        setAlignValue("start")
-      }
+      setAlignValue("start")
     }
     handleResize()
   
@@ -48,9 +44,7 @@ export function ProfileToggle() {
   }
 
   const handleSignOut = () => {
-    signOut(() => {
-      window.location.href = "/"
-    })
+    signOut({ redirectUrl: "/" })
   }
 
   const ProfileIcon = () => {
@@ -103,9 +97,9 @@ export function ProfileToggle() {
           </DropdownMenuItem>
         )}
         {isLoaded && !isSignedIn && (
-          <SignInButton mode="modal">
+          <SignInButton mode="modal" asChild>
             <DropdownMenuItem>
-              <LogOut className="mr-2 h-4 w-4" />
+              <LogIn className="mr-2 h-4 w-4" />
               <span>Sign in</span>
             </DropdownMenuItem>
           </SignInButton>

@@ -70,13 +70,25 @@ export async function resolveClerkUserToDbUser(clerkUserId: string): Promise<str
     }
 
     // 2.2 Create new user if no match found
-    const [newUser] = await db.insert(users).values({
-      clerkUserId,
-      email,
-      role: 'viewer',
-    }).returning({ id: users.id });
+    try {
+      const [newUser] = await db.insert(users).values({
+        clerkUserId,
+        email,
+        role: 'viewer',
+      }).returning({ id: users.id });
 
-    return newUser.id;
+      return newUser.id;
+    } catch (insertError) {
+      // Handle race condition: if another request created the user concurrently,
+      // re-fetch and return the ID instead of failing.
+      const [retryUser] = await db.select({ id: users.id })
+        .from(users)
+        .where(eq(users.clerkUserId, clerkUserId))
+        .limit(1);
+
+      if (retryUser) return retryUser.id;
+      throw insertError;
+    }
   } catch (error) {
     console.error('[Auth] Error resolving Clerk user to DB user:', error);
     return null;

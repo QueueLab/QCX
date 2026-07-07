@@ -3,39 +3,33 @@ import { headers } from 'next/headers'
 import { WebhookEvent } from '@clerk/nextjs/server'
 import { db } from '@/lib/db'
 import { users } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { eq, and, isNotNull } from 'drizzle-orm'
 
 export async function POST(req: Request) {
-  // You can find this in the Clerk Dashboard -> Webhooks -> choose the endpoint
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET
 
   if (!WEBHOOK_SECRET) {
     throw new Error('Please add CLERK_WEBHOOK_SECRET from Clerk Dashboard to .env or .env.local')
   }
 
-  // Get the headers
   const headerPayload = await headers()
   const svix_id = headerPayload.get('svix-id')
   const svix_timestamp = headerPayload.get('svix-timestamp')
   const svix_signature = headerPayload.get('svix-signature')
 
-  // If there are no headers, error out
   if (!svix_id || !svix_timestamp || !svix_signature) {
     return new Response('Error occured -- no svix headers', {
       status: 400,
     })
   }
 
-  // Get the body
-  const payload = await req.json()
-  const body = JSON.stringify(payload)
+  // Get the raw body for signature verification
+  const body = await req.text()
 
-  // Create a new Svix instance with your secret.
   const wh = new Webhook(WEBHOOK_SECRET)
 
   let evt: WebhookEvent
 
-  // Verify the payload with the headers
   try {
     evt = wh.verify(body, {
       'svix-id': svix_id,
@@ -49,17 +43,15 @@ export async function POST(req: Request) {
     })
   }
 
-  // Do something with the payload
-  // For this guide, you can log the payload to your console
-  const { id } = evt.data
   const eventType = evt.type
 
   if (eventType === 'user.created' || eventType === 'user.updated') {
-    const { id, email_addresses, first_name, last_name } = evt.data as any
-    const email = email_addresses[0]?.email_address
+    const { id, email_addresses } = evt.data as any
+    const email = email_addresses?.[0]?.email_address
 
     if (id) {
-        // Upsert user
+      try {
+        // Atomic-ish check and update/insert
         const [existingUser] = await db.select()
           .from(users)
           .where(eq(users.clerkUserId, id))
@@ -67,33 +59,47 @@ export async function POST(req: Request) {
 
         if (existingUser) {
           await db.update(users)
-            .set({ email })
+            .set({ email: email || existingUser.email })
             .where(eq(users.clerkUserId, id));
         } else {
-            // Check by email first to link
+          // If not found by Clerk ID, try linking by email if email exists
+          let linked = false;
+          if (email) {
             const [existingEmailUser] = await db.select()
-                .from(users)
-                .where(eq(users.email, email))
-                .limit(1);
+              .from(users)
+              .where(eq(users.email, email))
+              .limit(1);
 
             if (existingEmailUser) {
-                await db.update(users)
-                    .set({ clerkUserId: id })
-                    .where(eq(users.id, existingEmailUser.id));
-            } else {
-                await db.insert(users).values({
-                    clerkUserId: id,
-                    email,
-                    role: 'viewer'
-                });
+              await db.update(users)
+                .set({ clerkUserId: id })
+                .where(eq(users.id, existingEmailUser.id));
+              linked = true;
             }
-        }
-    }
-  }
+          }
 
-  if (eventType === 'user.deleted') {
-    // Optionally handle user deletion
-    // For safety, we might not want to delete user data entirely
+          if (!linked) {
+            // Final fallback: insert new user.
+            // Use onConflictDoUpdate to handle race conditions where user was created between select and insert.
+            await db.insert(users)
+              .values({
+                clerkUserId: id,
+                email,
+                role: 'viewer'
+              })
+              .onConflictDoUpdate({
+                target: [users.clerkUserId],
+                set: { email: email }
+              });
+          }
+        }
+      } catch (dbError) {
+        console.error('Error syncing user in webhook:', dbError);
+        // We return 200 to Clerk even on DB error to avoid retries if it's a conflict we can't solve
+        // but Clerk handles 5xx as retriable. Here we might want to return 200 if it's a duplicate.
+        return new Response('Sync error', { status: 200 });
+      }
+    }
   }
 
   return new Response('', { status: 200 })
