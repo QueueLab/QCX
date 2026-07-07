@@ -5,7 +5,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Button } from "@/components/ui/button"
 import { ProfileToggleEnum, useProfileToggle } from "./profile-toggle-context"
 import { useUsageToggle } from "./usage-toggle-context"
-import { useClerk, useUser, SignInButton } from "@clerk/nextjs"
+import { useClerk, useUser } from "@clerk/nextjs"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 
 export function ProfileToggle() {
@@ -16,7 +16,7 @@ export function ProfileToggle() {
   
   // Call hooks unconditionally
   const { isLoaded, isSignedIn, user } = useUser()
-  const { signOut } = useClerk()
+  const { signOut, openSignIn } = useClerk()
 
   useEffect(() => {
     const handleResize = () => {
@@ -45,6 +45,10 @@ export function ProfileToggle() {
 
   const handleSignOut = () => {
     signOut({ redirectUrl: "/" })
+  }
+
+  const handleSignIn = () => {
+    openSignIn()
   }
 
   const ProfileIcon = () => {
@@ -97,12 +101,10 @@ export function ProfileToggle() {
           </DropdownMenuItem>
         )}
         {isLoaded && !isSignedIn && (
-          <SignInButton mode="modal" asChild>
-            <DropdownMenuItem>
-              <LogIn className="mr-2 h-4 w-4" />
-              <span>Sign in</span>
-            </DropdownMenuItem>
-          </SignInButton>
+          <DropdownMenuItem onClick={handleSignIn}>
+            <LogIn className="mr-2 h-4 w-4" />
+            <span>Sign in</span>
+          </DropdownMenuItem>
         )}
       </DropdownMenuContent>
     </DropdownMenu>
