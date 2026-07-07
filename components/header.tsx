@@ -59,7 +59,7 @@ export const Header = () => {
           />
         </Button>
         <h1
-          className="text-2xl font-poppins font-semibold text-primary cursor-pointer select-none"
+          className="text-2xl font-poppins font-semibold text-primary cursor-pointer select-none ml-2"
           onClick={toggleHistory}
         >
           QCX
