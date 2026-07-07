@@ -59,6 +59,8 @@ export async function getUsers(): Promise<{ users: User[] }> {
 /**
  * Adds a new user to the database.
  * Restricted to admins.
+ * Note: With Clerk, users are usually created via Clerk.
+ * This action might need to provide a temporary ID or be updated to work with Clerk's workflow.
  */
 export async function addUser(newUser: { email: string; role: UserRole }): Promise<{ user?: User; error?: string }> {
   try {
@@ -75,6 +77,7 @@ export async function addUser(newUser: { email: string; role: UserRole }): Promi
     }
 
     const [insertedUser] = await db.insert(users).values({
+      id: `temp_${Date.now()}`, // Placeholder ID, as users.id is now required and not auto-generated
       email: newUser.email,
       role: newUser.role,
     }).returning({

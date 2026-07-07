@@ -49,51 +49,33 @@ export async function POST(req: Request) {
     })
   }
 
-  // Do something with the payload
-  // For this guide, you can log the payload to your console
+  // Handle the payload
   const { id } = evt.data
   const eventType = evt.type
 
   if (eventType === 'user.created' || eventType === 'user.updated') {
-    const { id, email_addresses, first_name, last_name } = evt.data as any
+    const { id: clerkUserId, email_addresses } = evt.data as any
     const email = email_addresses[0]?.email_address
 
-    if (id) {
-        // Upsert user
-        const [existingUser] = await db.select()
-          .from(users)
-          .where(eq(users.clerkUserId, id))
-          .limit(1);
-
-        if (existingUser) {
-          await db.update(users)
-            .set({ email })
-            .where(eq(users.clerkUserId, id));
-        } else {
-            // Check by email first to link
-            const [existingEmailUser] = await db.select()
-                .from(users)
-                .where(eq(users.email, email))
-                .limit(1);
-
-            if (existingEmailUser) {
-                await db.update(users)
-                    .set({ clerkUserId: id })
-                    .where(eq(users.id, existingEmailUser.id));
-            } else {
-                await db.insert(users).values({
-                    clerkUserId: id,
-                    email,
-                    role: 'viewer'
-                });
-            }
-        }
+    if (clerkUserId) {
+        // Upsert user using Clerk ID as the primary key
+        await db.insert(users).values({
+            id: clerkUserId,
+            email,
+            role: 'viewer'
+        }).onConflictDoUpdate({
+            target: users.id,
+            set: { email }
+        });
     }
   }
 
   if (eventType === 'user.deleted') {
-    // Optionally handle user deletion
-    // For safety, we might not want to delete user data entirely
+    const { id: clerkUserId } = evt.data as any
+    if (clerkUserId) {
+        // Delete user record - cascade will handle the rest
+        await db.delete(users).where(eq(users.id, clerkUserId));
+    }
   }
 
   return new Response('', { status: 200 })
