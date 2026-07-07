@@ -8,26 +8,47 @@ export function useCurrentUser() {
   const { user, isLoaded } = useUser();
   const [dbId, setDbId] = useState<string | null>(null);
   const [dbLoading, setDbLoading] = useState(false);
+  const [syncFailed, setSyncFailed] = useState(false);
 
   useEffect(() => {
-    if (isLoaded && user) {
+    let isMounted = true;
+
+    if (isLoaded && user?.id) {
       setDbLoading(true);
+      setSyncFailed(false);
+
       syncUser()
         .then((id) => {
-          if (id) setDbId(id);
+          if (isMounted) {
+            if (id) {
+              setDbId(id);
+            } else {
+              setSyncFailed(true);
+            }
+          }
         })
-        .catch((err) => console.error('[Auth] Failed to sync user ID:', err))
-        .finally(() => setDbLoading(false));
-    } else {
+        .catch((err) => {
+          console.error('[Auth] Failed to sync user ID:', err);
+          if (isMounted) setSyncFailed(true);
+        })
+        .finally(() => {
+          if (isMounted) setDbLoading(false);
+        });
+    } else if (isLoaded && !user) {
       setDbId(null);
       setDbLoading(false);
+      setSyncFailed(false);
     }
-  }, [isLoaded, user]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isLoaded, user?.id]);
 
   // Map Clerk user to the structure expected by consumers
   return {
     user: user ? {
-      id: dbId || user.id, // Use DB UUID if available, fallback to Clerk ID
+      id: dbId, // Explicitly return DB UUID or null (don't fallback to Clerk ID)
       clerkId: user.id,
       email: user.emailAddresses[0]?.emailAddress,
       user_metadata: {
@@ -35,6 +56,7 @@ export function useCurrentUser() {
         avatar_url: user.imageUrl
       }
     } : null,
-    loading: !isLoaded || dbLoading
+    loading: !isLoaded || dbLoading,
+    syncFailed
   };
 }

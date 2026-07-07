@@ -93,11 +93,11 @@ export async function POST(req: Request) {
               });
           }
         }
-      } catch (dbError) {
+      } catch (dbError: any) {
         console.error('Error syncing user in webhook:', dbError);
-        // We return 200 to Clerk even on DB error to avoid retries if it's a conflict we can't solve
-        // but Clerk handles 5xx as retriable. Here we might want to return 200 if it's a duplicate.
-        return new Response('Sync error', { status: 200 });
+
+        // Return 500 for unexpected errors to trigger Clerk retries
+        return new Response('Internal Database Error', { status: 500 });
       }
     }
   }

@@ -41,14 +41,8 @@ export const Header = () => {
   return (
     <>
       <PurchaseCreditsPopup isOpen={isPurchaseOpen} onClose={() => setIsPurchaseOpen(false)} />
-    <header className="fixed w-full p-1 md:p-2 hidden md:flex justify-between items-center z-[60] backdrop-blur bg-background/95 border-b border-border/40">
-      <div>
-        <a href="/">
-          <span className="sr-only">Chat</span>
-        </a>
-      </div>
-      
-      <div className="absolute left-1 flex items-center">
+    <header className="fixed w-full p-1 md:p-2 flex justify-between items-center z-[60] backdrop-blur bg-background/95 border-b border-border/40">
+      <div className="flex items-center">
         <Button variant="ghost" size="icon" onClick={toggleHistory} data-testid="logo-history-toggle">
           <Image
             src="/images/logo.svg"
@@ -59,7 +53,7 @@ export const Header = () => {
           />
         </Button>
         <h1
-          className="text-2xl font-poppins font-semibold text-primary cursor-pointer select-none"
+          className="text-2xl font-poppins font-semibold text-primary cursor-pointer select-none ml-2"
           onClick={toggleHistory}
         >
           QCX
@@ -92,6 +86,7 @@ export const Header = () => {
           <TentTree className="h-[1.2rem] w-[1.2rem]" />
         </Button>
         <ProfileToggle/>
+        <HistoryContainer location="header" />
       </div>
     </header>
     </>
