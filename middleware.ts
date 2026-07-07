@@ -1,25 +1,12 @@
-import { NextResponse } from "next/server"
-import type { NextRequest } from "next/server"
+import { clerkMiddleware } from "@clerk/nextjs/server";
 
-export function middleware(request: NextRequest) {
-  // Skip middleware for server actions to avoid breaking them
-  if (request.headers.get('next-action')) {
-    return NextResponse.next()
-  }
-
-  // Example: Check if the user is authenticated for protected routes
-  const isAuthenticated = true // Replace with actual auth check
-
-  // If the request is for the settings page and the user is not authenticated
-  if (request.nextUrl.pathname.startsWith("/settings") && !isAuthenticated) {
-    // Redirect to the login page
-    return NextResponse.redirect(new URL("/login", request.url))
-  }
-
-  return NextResponse.next()
-}
+export default clerkMiddleware();
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
-}
-
+  matcher: [
+    // Skip Next.js internals and all static files, unless found in search params
+    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    // Always run for API routes
+    '/(api|trpc)(.*)',
+  ],
+};

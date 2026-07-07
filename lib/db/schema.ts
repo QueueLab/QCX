@@ -25,6 +25,7 @@ export const users = pgTable('users', {
   role: text('role').default('viewer'),
   selectedModel: text('selected_model'),
   systemPrompt: text('system_prompt'),
+  clerkUserId: text('clerk_user_id').unique(),
 });
 
 export const chats = pgTable('chats', {

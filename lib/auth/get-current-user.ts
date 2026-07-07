@@ -1,10 +1,7 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr';
-import { cookies } from 'next/headers';
-import type { User, Session } from '@supabase/supabase-js';
-
-// Ensure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are available
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+import { auth, currentUser } from '@clerk/nextjs/server';
+import { db } from '@/lib/db';
+import { users } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 
 const AUTH_DISABLED_FLAG =
   process.env.AUTH_DISABLED_FOR_DEV === 'true' &&
@@ -12,116 +9,89 @@ const AUTH_DISABLED_FLAG =
 const MOCK_USER_ID = 'dev-user-001'; // A consistent mock user ID for dev mode
 
 /**
- * Retrieves the Supabase user and session object in server-side contexts
- * (Route Handlers, Server Actions, Server Components).
- * Uses '@supabase/ssr' for cookie-based session management.
- * If AUTH_DISABLED_FOR_DEV is true, returns a mock user.
+ * Retrieves the current user's Clerk ID in server-side contexts.
  *
- * @returns {Promise<{ user: User | null; session: Session | null; error: any | null }>}
+ * @returns {Promise<string | null>} The Clerk user ID if authenticated, otherwise null.
  */
-export async function getSupabaseUserAndSessionOnServer(): Promise<{
-  user: User | null;
-  session: Session | null;
-  error: any | null;
-}> {
+export async function getClerkUserIdOnServer(): Promise<string | null> {
   if (AUTH_DISABLED_FLAG) {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[Auth] AUTH_DISABLED_FOR_DEV is true. Returning mock user session.');
-    }
-    // Construct a mock user and session object that matches the expected structure
-    const mockUser: User = {
-      id: MOCK_USER_ID,
-      app_metadata: { provider: 'email', providers: ['email'] },
-      user_metadata: { name: 'Dev User' },
-      aud: 'authenticated',
-      created_at: new Date().toISOString(),
-      email: 'dev@example.com',
-      email_confirmed_at: new Date().toISOString(),
-      confirmed_at: new Date().toISOString(),
-      last_sign_in_at: new Date().toISOString(),
-      role: 'authenticated',
-      updated_at: new Date().toISOString(),
-    };
-    const mockSession: Session = {
-      access_token: 'mock-access-token',
-      refresh_token: 'mock-refresh-token',
-      expires_in: 3600,
-      expires_at: Math.floor(Date.now() / 1000) + 3600,
-      token_type: 'bearer',
-      user: mockUser,
-    };
-    return { user: mockUser, session: mockSession, error: null };
+    return MOCK_USER_ID;
   }
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    console.error('[Auth] Supabase URL or Anon Key is not set for server-side auth.');
-    return { user: null, session: null, error: new Error('Missing Supabase environment variables') };
-  }
-
-  const cookieStore = cookies();
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      async get(name: string): Promise<string | undefined> {
-        const cookie = (await cookieStore).get(name); // Use the correct get method
-        return cookie?.value; // Return the value or undefined
-      },
-      async set(name: string, value: string, options: CookieOptions): Promise<void> {
-        try {
-          const store = await cookieStore;
-          store.set({ name, value, ...options }); // Set cookie with options
-        } catch (error) {
-          // console.warn(`[Auth] Failed to set cookie ${name}:`, error);
-        }
-      },
-      async remove(name: string, options: CookieOptions): Promise<void> {
-        try {
-          const store = await cookieStore;
-          store.set({ name, value: '', ...options, maxAge: 0 }); // Delete cookie by setting maxAge to 0
-        } catch (error) {
-          // console.warn(`[Auth] Failed to delete cookie ${name}:`, error);
-        }
-      },
-    },
-  });
-
-  const {
-    data: { session },
-    error,
-  } = await supabase.auth.getSession();
-
-  if (error) {
-    console.error('[Auth] Error getting Supabase session on server:', error.message);
-    return { user: null, session: null, error };
-  }
-
-  if (!session) {
-    // console.log('[Auth] No active Supabase session found.');
-    return { user: null, session: null, error: null };
-  }
-
-  return { user: session.user, session, error: null };
+  const { userId } = await auth();
+  return userId;
 }
 
 /**
- * Retrieves the current user's ID in server-side contexts.
- * Wrapper around getSupabaseUserAndSessionOnServer.
- * If AUTH_DISABLED_FOR_DEV is true, returns a mock user ID.
+ * Resolves a Clerk User ID to our internal database UUID.
+ * If the user doesn't exist in our DB yet, it will create one.
  *
- * @returns {Promise<string | null>} The user ID if a session exists or mock is enabled, otherwise null.
+ * @param clerkUserId The Clerk user ID to resolve
+ * @returns {Promise<string | null>} Our internal database UUID for the user
  */
-export async function getCurrentUserIdOnServer(): Promise<string | null> {
-  if (AUTH_DISABLED_FLAG) {
-    // This log is helpful for debugging during development
-    if (process.env.NODE_ENV === 'development') {
-        console.log(`[Auth] AUTH_DISABLED_FOR_DEV is true. Using mock user ID: ${MOCK_USER_ID}`);
-    }
-    return MOCK_USER_ID;
+export async function resolveClerkUserToDbUser(clerkUserId: string): Promise<string | null> {
+  if (AUTH_DISABLED_FLAG && clerkUserId === MOCK_USER_ID) {
+    // Return a consistent UUID for the mock user
+    return '00000000-0000-0000-0000-000000000000';
   }
 
-  const { user, error } = await getSupabaseUserAndSessionOnServer();
-  if (error) {
-    // Error is already logged in getSupabaseUserAndSessionOnServer
+  try {
+    // 1. Try to find the user by clerkUserId
+    const [existingUser] = await db.select({ id: users.id })
+      .from(users)
+      .where(eq(users.clerkUserId, clerkUserId))
+      .limit(1);
+
+    if (existingUser) {
+      return existingUser.id;
+    }
+
+    // 2. If not found, fetch user details from Clerk and create a new record
+    const clerkUser = await currentUser();
+    if (!clerkUser) return null;
+
+    const email = clerkUser.emailAddresses[0]?.emailAddress;
+
+    // 2.1 Check if user with this email already exists (maybe from Supabase auth)
+    if (email) {
+      const [existingEmailUser] = await db.select({ id: users.id, clerkUserId: users.clerkUserId })
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1);
+
+      if (existingEmailUser) {
+        // Link the existing user to this Clerk ID if not already linked
+        if (!existingEmailUser.clerkUserId) {
+          await db.update(users)
+            .set({ clerkUserId })
+            .where(eq(users.id, existingEmailUser.id));
+        }
+        return existingEmailUser.id;
+      }
+    }
+
+    // 2.2 Create new user if no match found
+    const [newUser] = await db.insert(users).values({
+      clerkUserId,
+      email,
+      role: 'viewer',
+    }).returning({ id: users.id });
+
+    return newUser.id;
+  } catch (error) {
+    console.error('[Auth] Error resolving Clerk user to DB user:', error);
     return null;
   }
-  return user?.id || null;
+}
+
+/**
+ * Retrieves the current user's internal database ID (UUID) in server-side contexts.
+ * This is a drop-in replacement for the previous getCurrentUserIdOnServer.
+ *
+ * @returns {Promise<string | null>} The internal user UUID if authenticated, otherwise null.
+ */
+export async function getCurrentUserIdOnServer(): Promise<string | null> {
+  const clerkUserId = await getClerkUserIdOnServer();
+  if (!clerkUserId) return null;
+
+  return await resolveClerkUserToDbUser(clerkUserId);
 }
