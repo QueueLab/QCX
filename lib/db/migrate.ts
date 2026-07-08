@@ -1,35 +1,29 @@
-import { drizzle } from 'drizzle-orm/node-postgres';
-import { migrate } from 'drizzle-orm/node-postgres/migrator';
-import { Pool } from 'pg';
+import postgres from 'postgres';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import * as dotenv from 'dotenv';
 
-dotenv.config({ path: '.env.local' });
-
 async function runMigrations() {
-  if (!process.env.DATABASE_URL) {
-    throw new Error('DATABASE_URL environment variable is not set for migrations');
+  const connectionString = process.env.POSTGRES_URL;
+  if (!connectionString) {
+    throw new Error('POSTGRES_URL is not set for migrations');
   }
 
-  const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
-      rejectUnauthorized: false, // Ensure this is appropriate for your Supabase connection
-    },
-    // max: 1, // Optional: restrict to 1 connection for migration
+  const sql = postgres(connectionString, {
+    max: 1, // Single connection for migration
   });
 
-  const db = drizzle(pool);
+  const db = drizzle(sql);
 
   console.log('Running database migrations...');
   try {
-    // Point to the directory containing your migration files
     await migrate(db, { migrationsFolder: './drizzle/migrations' });
     console.log('Migrations completed successfully.');
   } catch (error) {
     console.error('Error running migrations:', error);
-    process.exit(1); // Exit with error code
+    process.exit(1);
   } finally {
-    await pool.end(); // Ensure the connection pool is closed
+    await sql.end();
   }
 }
 
@@ -37,5 +31,5 @@ if (process.env.EXECUTE_MIGRATIONS === 'true') {
   runMigrations();
 } else {
   console.log('Skipping migrations. Set EXECUTE_MIGRATIONS=true to run them.');
-  console.log('To run migrations, use the "npm run db:migrate" or "bun run db:migrate" script, which sets this variable.');
+  console.log('To run migrations, use the "bun run db:migrate" script, which sets this variable.');
 }

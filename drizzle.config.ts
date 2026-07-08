@@ -1,10 +1,7 @@
 import type { Config } from 'drizzle-kit';
-import * as dotenv from 'dotenv';
-
-dotenv.config({ path: '.env.local' });
-
-if (!process.env.DATABASE_URL) {
-  throw new Error('DATABASE_URL environment variable is not set');
+const dbUrl = process.env.POSTGRES_URL;
+if (!dbUrl) {
+  throw new Error('POSTGRES_URL is not set');
 }
 
 export default {
@@ -12,7 +9,7 @@ export default {
   out: './drizzle/migrations',
   dialect: 'postgresql',
   dbCredentials: {
-    url: process.env.DATABASE_URL, // Changed from connectionString to url
+    url: dbUrl,
   },
   verbose: true,
   strict: true,

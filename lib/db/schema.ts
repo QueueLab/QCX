@@ -26,6 +26,14 @@ export const users = pgTable('users', {
   selectedModel: text('selected_model'),
   systemPrompt: text('system_prompt'),
   clerkUserId: text('clerk_user_id').unique(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  avatarUrl: text('avatar_url'),
+  firstName: text('first_name'),
+  lastName: text('last_name'),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+  username: text('username'),
+  phoneNumber: text('phone_number'),
+  metadata: jsonb('metadata'),
 });
 
 export const chats = pgTable('chats', {
