@@ -10,53 +10,67 @@ dotenv.config({ path: '.env.local' });
 // TCP driver fails with "Cannot read properties of undefined (reading 'searchParams')".
 //
 // Drizzle ORM natively supports this via `drizzle-orm/postgres-js`.
-// See: https://orm.drizzle.team/docs/get-started-postgresql
 
 /**
- * Lazily-initialized SQL client.
- * Only creates the connection on first use, preventing issues during
- * Next.js build/static optimization on Vercel where DATABASE_URL may
- * not be available at module load time.
+ * Check if we're in a runtime context (not build/static analysis).
+ * During Next.js static optimization, process.env.DATABASE_URL is undefined.
+ * We detect this and return early to avoid crashing the build.
  */
+function isRuntimeContext(): boolean {
+  return !!process.env.DATABASE_URL;
+}
+
 let _sql: ReturnType<typeof postgres> | null = null;
 let _db: ReturnType<typeof drizzle> | null = null;
 
-function getSql(): ReturnType<typeof postgres> {
+function getSql(): ReturnType<typeof postgres> | null {
+  if (!isRuntimeContext()) {
+    return null;
+  }
+
   if (!_sql) {
-    const connectionString = process.env.DATABASE_URL;
-
-    if (!connectionString) {
-      throw new Error(
-        'DATABASE_URL is not configured. Ensure the Vercel project has the DATABASE_URL environment variable set.'
-      );
-    }
-
-    // postgres-js handles connection strings natively with TLS
+    const connectionString = process.env.DATABASE_URL!;
     _sql = postgres(connectionString, {
-      max: 10, // Connection pool max connections
-      idle_timeout: 20, // Close idle connections after 20 seconds
+      max: 10,
+      idle_timeout: 20,
     });
   }
   return _sql;
 }
 
 /**
- * Lazily-initialized Drizzle instance.
- * Safe to import in any file — the database connection is only established
- * on first use, not at module load time. This prevents the "searchParams"
- * crash that occurred with the pg driver on Vercel serverless lambdas.
+ * Get or create the Drizzle database instance.
+ * Returns a stub during build time that throws when actually invoked.
+ * This prevents Next.js static optimization from crashing.
  */
-export const db = new Proxy(
-  drizzle(null as any, { schema, logger: process.env.NODE_ENV === 'development' }),
-  {
-    get(target, prop) {
-      // Force initialization of the sql client before any property access
-      getSql();
-      if (!_sql) throw new Error('DATABASE_URL not available');
-
-      // Re-create the drizzle instance with the real client
-      _db = drizzle(_sql, { schema, logger: process.env.NODE_ENV === 'development' });
-      return Reflect.get(_db!, prop, _db);
-    },
+export const db = (function () {
+  // If DATABASE_URL is not available (build time), return a stub
+  if (!isRuntimeContext()) {
+    // Create a stub object that mimics the Drizzle interface but throws
+    // at runtime when any database operation is actually attempted.
+    // During build, Next.js won't actually execute these — it just collects
+    // page metadata. The stub prevents module-load-time crashes.
+    const stub: any = new Proxy({}, {
+      get(_, prop) {
+        if (prop === Symbol.toPrimitive || prop === 'then') {
+          return undefined;
+        }
+        return function (...args: any[]) {
+          throw new Error(
+            `DATABASE_URL is not configured. Cannot execute ${String(prop)}(). ` +
+            'Ensure the Vercel project has the DATABASE_URL environment variable set.'
+          );
+        };
+      },
+    });
+    return stub;
   }
-);
+
+  // Runtime: create the real database instance
+  const sql = getSql();
+  if (!sql) {
+    throw new Error('DATABASE_URL not available at runtime');
+  }
+
+  return drizzle(sql, { schema, logger: process.env.NODE_ENV === 'development' });
+})();
