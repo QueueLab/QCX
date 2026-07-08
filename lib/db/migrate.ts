@@ -6,11 +6,12 @@ import * as dotenv from 'dotenv';
 dotenv.config({ path: '.env.local' });
 
 async function runMigrations() {
-  if (!process.env.DATABASE_URL) {
-    throw new Error('DATABASE_URL environment variable is not set for migrations');
+  const connectionString = process.env.POSTGRES_URL || process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error('Neither POSTGRES_URL nor DATABASE_URL is set for migrations');
   }
 
-  const sql = postgres(process.env.DATABASE_URL, {
+  const sql = postgres(connectionString, {
     max: 1, // Single connection for migration
   });
 
