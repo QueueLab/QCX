@@ -5,6 +5,7 @@ import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
 import { eq, ilike } from 'drizzle-orm';
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user';
+import { v4 as uuidv4 } from 'uuid';
 
 export type UserRole = "admin" | "editor" | "viewer";
 
@@ -75,6 +76,7 @@ export async function addUser(newUser: { email: string; role: UserRole }): Promi
     }
 
     const [insertedUser] = await db.insert(users).values({
+      id: uuidv4(), // Manual ID generation since db default is gone
       email: newUser.email,
       role: newUser.role,
     }).returning({
