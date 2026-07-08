@@ -3,12 +3,10 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import * as dotenv from 'dotenv';
 
-dotenv.config({ path: '.env.local' });
-
 async function runMigrations() {
-  const connectionString = process.env.POSTGRES_URL || process.env.DATABASE_URL;
+  const connectionString = process.env.POSTGRES_URL;
   if (!connectionString) {
-    throw new Error('Neither POSTGRES_URL nor DATABASE_URL is set for migrations');
+    throw new Error('POSTGRES_URL is not set for migrations');
   }
 
   const sql = postgres(connectionString, {

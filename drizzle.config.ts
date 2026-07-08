@@ -1,11 +1,7 @@
 import type { Config } from 'drizzle-kit';
-import * as dotenv from 'dotenv';
-
-dotenv.config({ path: '.env.local' });
-
-const dbUrl = process.env.POSTGRES_URL || process.env.DATABASE_URL;
+const dbUrl = process.env.POSTGRES_URL;
 if (!dbUrl) {
-  throw new Error('Neither POSTGRES_URL nor DATABASE_URL is set');
+  throw new Error('POSTGRES_URL is not set');
 }
 
 export default {

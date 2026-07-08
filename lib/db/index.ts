@@ -1,24 +1,15 @@
 import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
-import * as dotenv from 'dotenv';
 import * as schema from './schema';
-
-dotenv.config({ path: '.env.local' });
-
-// The `postgres` package is a pure-JavaScript PostgreSQL driver that works
-// in serverless environments (Vercel, Cloudflare, Edge) where the native `pg`
-// TCP driver fails with "Cannot read properties of undefined (reading 'searchParams')".
-//
-// Drizzle ORM natively supports this via `drizzle-orm/postgres-js`.
 
 /**
  * Get the database connection string.
  * On Vercel, the environment variable is `POSTGRES_URL`.
- * Locally, it may be `DATABASE_URL` in .env.local.
- * This function checks both for compatibility across all environments.
+ * Only `POSTGRES_URL` is used — `DATABASE_URL` is never checked
+ * to avoid the `.env` placeholder interfering with Vercel deploys.
  */
 function getConnectionUrl(): string | undefined {
-  return process.env.POSTGRES_URL || process.env.DATABASE_URL;
+  return process.env.POSTGRES_URL;
 }
 
 /**
@@ -29,8 +20,6 @@ function getConnectionUrl(): string | undefined {
 function hasValidConnectionUrl(): boolean {
   const url = getConnectionUrl();
   if (!url) return false;
-  // Reject placeholder URLs that Vercel or local setups might use
-  if (url.includes('user:password@host:port')) return false;
   return true;
 }
 
@@ -55,8 +44,8 @@ function getSql(): ReturnType<typeof postgres> | null {
 /**
  * Get or create the Drizzle database instance.
  *
- * During Next.js build/static optimization, when DATABASE_URL/POSTGRES_URL
- * is not available or is a placeholder, this returns a stub that throws
+ * During Next.js build/static optimization, when POSTGRES_URL
+ * is not available, this returns a stub that throws
  * when an actual database operation is attempted. This prevents the build
  * from crashing while keeping runtime behavior correct.
  */
@@ -68,15 +57,10 @@ export const db = (function () {
         if (prop === Symbol.toPrimitive || prop === 'then') {
           return undefined;
         }
-        const source = process.env.POSTGRES_URL
-          ? 'POSTGRES_URL'
-          : process.env.DATABASE_URL
-          ? 'DATABASE_URL'
-          : 'no database URL';
         return function (...args: any[]) {
           throw new Error(
-            `Cannot execute ${String(prop)}() — ${source} is not a valid connection string. ` +
-            'Ensure the database URL environment variable is set correctly.'
+            `Cannot execute ${String(prop)}() — POSTGRES_URL is not set. ` +
+            'Ensure POSTGRES_URL is configured in Vercel environment variables.'
           );
         };
       },
