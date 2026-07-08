@@ -22,23 +22,22 @@ export async function getClerkUserIdOnServer(): Promise<string | null> {
 }
 
 /**
- * Resolves a Clerk User ID to our internal database UUID.
+ * Resolves a Clerk User ID to our internal database ID.
  * If the user doesn't exist in our DB yet, it will create one.
  *
  * @param clerkUserId The Clerk user ID to resolve
- * @returns {Promise<string | null>} Our internal database UUID for the user
+ * @returns {Promise<string | null>} Our internal database ID for the user
  */
 export async function resolveClerkUserToDbUser(clerkUserId: string): Promise<string | null> {
   if (AUTH_DISABLED_FLAG && clerkUserId === MOCK_USER_ID) {
-    // Return a consistent UUID for the mock user
-    return '00000000-0000-0000-0000-000000000000';
+    return MOCK_USER_ID;
   }
 
   try {
-    // 1. Try to find the user by clerkUserId
+    // 1. Try to find the user by ID (which IS the clerkUserId)
     const [existingUser] = await db.select({ id: users.id })
       .from(users)
-      .where(eq(users.clerkUserId, clerkUserId))
+      .where(eq(users.id, clerkUserId))
       .limit(1);
 
     if (existingUser) {
@@ -51,27 +50,23 @@ export async function resolveClerkUserToDbUser(clerkUserId: string): Promise<str
 
     const email = clerkUser.emailAddresses[0]?.emailAddress;
 
-    // 2.1 Check if user with this email already exists (maybe from Supabase auth)
+    // 2.1 Check if user with this email already exists
     if (email) {
-      const [existingEmailUser] = await db.select({ id: users.id, clerkUserId: users.clerkUserId })
+      const [existingEmailUser] = await db.select({ id: users.id })
         .from(users)
         .where(eq(users.email, email))
         .limit(1);
 
       if (existingEmailUser) {
-        // Link the existing user to this Clerk ID if not already linked
-        if (!existingEmailUser.clerkUserId) {
-          await db.update(users)
-            .set({ clerkUserId })
-            .where(eq(users.id, existingEmailUser.id));
-        }
-        return existingEmailUser.id;
+        // Link the existing user by updating its ID if it was a UUID
+        await db.update(users).set({ id: clerkUserId }).where(eq(users.id, existingEmailUser.id));
+        return clerkUserId;
       }
     }
 
     // 2.2 Create new user if no match found
     const [newUser] = await db.insert(users).values({
-      clerkUserId,
+      id: clerkUserId,
       email,
       role: 'viewer',
     }).returning({ id: users.id });
@@ -84,10 +79,9 @@ export async function resolveClerkUserToDbUser(clerkUserId: string): Promise<str
 }
 
 /**
- * Retrieves the current user's internal database ID (UUID) in server-side contexts.
- * This is a drop-in replacement for the previous getCurrentUserIdOnServer.
+ * Retrieves the current user's internal database ID (Clerk ID) in server-side contexts.
  *
- * @returns {Promise<string | null>} The internal user UUID if authenticated, otherwise null.
+ * @returns {Promise<string | null>} The internal user ID if authenticated, otherwise null.
  */
 export async function getCurrentUserIdOnServer(): Promise<string | null> {
   const clerkUserId = await getClerkUserIdOnServer();

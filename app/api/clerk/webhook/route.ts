@@ -50,39 +50,40 @@ export async function POST(req: Request) {
   }
 
   // Do something with the payload
-  // For this guide, you can log the payload to your console
   const { id } = evt.data
   const eventType = evt.type
 
   if (eventType === 'user.created' || eventType === 'user.updated') {
-    const { id, email_addresses, first_name, last_name } = evt.data as any
+    const { id, email_addresses } = evt.data as any
     const email = email_addresses[0]?.email_address
 
     if (id) {
-        // Upsert user
+        // Upsert user using Clerk ID as the primary key 'id'
         const [existingUser] = await db.select()
           .from(users)
-          .where(eq(users.clerkUserId, id))
+          .where(eq(users.id, id))
           .limit(1);
 
         if (existingUser) {
           await db.update(users)
             .set({ email })
-            .where(eq(users.clerkUserId, id));
+            .where(eq(users.id, id));
         } else {
-            // Check by email first to link
+            // Check by email first (in case of migration or previous Supabase user)
             const [existingEmailUser] = await db.select()
                 .from(users)
                 .where(eq(users.email, email))
                 .limit(1);
 
             if (existingEmailUser) {
-                await db.update(users)
-                    .set({ clerkUserId: id })
-                    .where(eq(users.id, existingEmailUser.id));
+                // If found by email but ID is different, we have a conflict.
+                // For a clean transition, we could update the ID, but primary keys are stable.
+                // In this simplified model, we'll just insert if not exact ID match.
+                // Or we update the email to null on the old user if we want to "take over" the email.
+                await db.update(users).set({ id: id }).where(eq(users.id, existingEmailUser.id));
             } else {
                 await db.insert(users).values({
-                    clerkUserId: id,
+                    id: id,
                     email,
                     role: 'viewer'
                 });
@@ -93,7 +94,6 @@ export async function POST(req: Request) {
 
   if (eventType === 'user.deleted') {
     // Optionally handle user deletion
-    // For safety, we might not want to delete user data entirely
   }
 
   return new Response('', { status: 200 })
