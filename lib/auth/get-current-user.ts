@@ -1,7 +1,7 @@
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, or, isNull } from 'drizzle-orm';
 
 const AUTH_DISABLED_FLAG =
   process.env.AUTH_DISABLED_FOR_DEV === 'true' &&
@@ -24,6 +24,7 @@ export async function getClerkUserIdOnServer(): Promise<string | null> {
 /**
  * Resolves a Clerk User ID to our internal database UUID.
  * If the user doesn't exist in our DB yet, it will create one.
+ * Also syncs the full Clerk profile (name, email, avatar) to the DB record.
  *
  * @param clerkUserId The Clerk user ID to resolve
  * @returns {Promise<string | null>} Our internal database UUID for the user
@@ -42,6 +43,8 @@ export async function resolveClerkUserToDbUser(clerkUserId: string): Promise<str
       .limit(1);
 
     if (existingUser) {
+      // Sync profile data from Clerk to keep the record up to date
+      await syncUserProfile(clerkUserId);
       return existingUser.id;
     }
 
@@ -49,9 +52,12 @@ export async function resolveClerkUserToDbUser(clerkUserId: string): Promise<str
     const clerkUser = await currentUser();
     if (!clerkUser) return null;
 
-    const email = clerkUser.emailAddresses[0]?.emailAddress;
+    const email = clerkUser.emailAddresses[0]?.emailAddress || null;
+    const firstName = clerkUser.firstName || null;
+    const lastName = clerkUser.lastName || null;
+    const avatarUrl = clerkUser.imageUrl || null;
 
-    // 2.1 Check if user with this email already exists (maybe from Supabase auth)
+    // 2.1 Check if user with this email already exists (maybe from Supabase auth or edge function)
     if (email) {
       const [existingEmailUser] = await db.select({ id: users.id, clerkUserId: users.clerkUserId })
         .from(users)
@@ -62,7 +68,12 @@ export async function resolveClerkUserToDbUser(clerkUserId: string): Promise<str
         // Link the existing user to this Clerk ID if not already linked
         if (!existingEmailUser.clerkUserId) {
           await db.update(users)
-            .set({ clerkUserId })
+            .set({
+              clerkUserId,
+              firstName,
+              lastName,
+              avatarUrl,
+            })
             .where(eq(users.id, existingEmailUser.id));
         }
         return existingEmailUser.id;
@@ -74,12 +85,43 @@ export async function resolveClerkUserToDbUser(clerkUserId: string): Promise<str
       clerkUserId,
       email,
       role: 'viewer',
+      firstName,
+      lastName,
+      avatarUrl,
     }).returning({ id: users.id });
 
     return newUser.id;
   } catch (error) {
     console.error('[Auth] Error resolving Clerk user to DB user:', error);
     return null;
+  }
+}
+
+/**
+ * Syncs the current Clerk user's profile data (name, avatar) to the database.
+ * Called to keep the DB record in sync with Clerk profile updates.
+ */
+async function syncUserProfile(clerkUserId: string): Promise<void> {
+  try {
+    const clerkUser = await currentUser();
+    if (!clerkUser) return;
+
+    const firstName = clerkUser.firstName || null;
+    const lastName = clerkUser.lastName || null;
+    const avatarUrl = clerkUser.imageUrl || null;
+    const email = clerkUser.emailAddresses[0]?.emailAddress || null;
+
+    await db.update(users)
+      .set({
+        ...(firstName !== null && { firstName }),
+        ...(lastName !== null && { lastName }),
+        ...(avatarUrl !== null && { avatarUrl }),
+        ...(email !== null && { email }),
+      })
+      .where(eq(users.clerkUserId, clerkUserId));
+  } catch (error) {
+    // Silently fail — this is a best-effort sync
+    console.warn('[Auth] Error syncing user profile:', error);
   }
 }
 

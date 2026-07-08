@@ -57,3 +57,5 @@ aef_index.csv
 .env.local
 .env.production.local
 *.log
+deno.json
+edge_function/
