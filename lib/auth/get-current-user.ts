@@ -17,8 +17,13 @@ export async function getClerkUserIdOnServer(): Promise<string | null> {
   if (AUTH_DISABLED_FLAG) {
     return MOCK_USER_ID;
   }
-  const { userId } = await auth();
-  return userId;
+  try {
+    const { userId } = await auth();
+    return userId;
+  } catch (error) {
+    console.error('[Auth] Error getting Clerk user ID:', error);
+    return null;
+  }
 }
 
 /**
@@ -47,7 +52,10 @@ export async function resolveClerkUserToDbUser(clerkUserId: string): Promise<str
 
     // 2. If not found, fetch user details from Clerk and create a new record
     const clerkUser = await currentUser();
-    if (!clerkUser) return null;
+    if (!clerkUser) {
+        console.warn('[Auth] No Clerk user found for ID:', clerkUserId);
+        return null;
+    }
 
     const email = clerkUser.emailAddresses[0]?.emailAddress;
 

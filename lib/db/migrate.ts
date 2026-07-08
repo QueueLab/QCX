@@ -1,6 +1,7 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { Pool } from 'pg';
+import { parse } from 'pg-connection-string';
 import * as dotenv from 'dotenv';
 
 dotenv.config({ path: '.env.local' });
@@ -10,12 +11,17 @@ async function runMigrations() {
     throw new Error('DATABASE_URL environment variable is not set for migrations');
   }
 
+  const connectionString = process.env.DATABASE_URL;
+  const parsedConfig = parse(connectionString);
+
   const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
-      rejectUnauthorized: false, // Ensure this is appropriate for your Supabase connection
-    },
-    // max: 1, // Optional: restrict to 1 connection for migration
+    host: parsedConfig.host || undefined,
+    port: parsedConfig.port ? parseInt(parsedConfig.port, 10) : undefined,
+    user: parsedConfig.user || undefined,
+    password: parsedConfig.password || undefined,
+    database: parsedConfig.database || undefined,
+    ssl: connectionString.includes('supabase.co') ? { rejectUnauthorized: false } : undefined,
+    max: 1,
   });
 
   const db = drizzle(pool);
