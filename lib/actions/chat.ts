@@ -235,7 +235,7 @@ export async function updateDrawingContext(chatId: string, contextData: { drawnF
   const newDrawingMessage: DbNewMessage = {
     userId: userId,
     chatId: chatId,
-    role: 'data',
+    role: 'tool',
     content: JSON.stringify(contextData),
     createdAt: new Date(),
   };
