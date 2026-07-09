@@ -22,9 +22,19 @@ interface ResolutionCarouselProps {
   mapboxImage?: string | null
   googleImage?: string | null
   initialImage?: string | null
+  mapboxImageLabel?: string
+  googleImageLabel?: string
+  analysisFocus?: string
 }
 
-export function ResolutionCarousel({ mapboxImage, googleImage, initialImage }: ResolutionCarouselProps) {
+export function ResolutionCarousel({
+  mapboxImage,
+  googleImage,
+  initialImage,
+  mapboxImageLabel,
+  googleImageLabel,
+  analysisFocus
+}: ResolutionCarouselProps) {
   const actions = useActions<typeof AI>() as any
   const [, setMessages] = useUIState<typeof AI>()
   const [isAnalyzing, setIsAnalyzing] = React.useState(false)
@@ -75,12 +85,12 @@ export function ResolutionCarousel({ mapboxImage, googleImage, initialImage }: R
   }
 
   // Individual slides
-  if (mapboxImage) slides.push({ type: 'image', src: mapboxImage, showAnalysis: false, label: 'MAPBOX' })
-  if (googleImage) slides.push({ type: 'image', src: googleImage, showAnalysis: true, label: 'GOOGLE SATELLITE' })
+  if (mapboxImage) slides.push({ type: 'image', src: mapboxImage, showAnalysis: false, label: mapboxImageLabel || 'MAPBOX' })
+  if (googleImage) slides.push({ type: 'image', src: googleImage, showAnalysis: true, label: googleImageLabel || 'GOOGLE SATELLITE' })
 
   // Fallback
   if (slides.length === 0 && initialImage) {
-    slides.push({ type: 'image', src: initialImage, showAnalysis: false, label: 'MAP CAPTURE' })
+    slides.push({ type: 'image', src: initialImage, showAnalysis: false, label: analysisFocus || 'MAP CAPTURE' })
   }
 
   if (slides.length === 0) return null
@@ -102,6 +112,9 @@ export function ResolutionCarousel({ mapboxImage, googleImage, initialImage }: R
               {isAnalyzing ? 'ANALYZING...' : 'QCX-TERRA ANALYSIS'}
             </Button>
           )}
+          <div className="mt-1 text-[10px] text-muted-foreground uppercase tracking-widest text-center">
+            {item.label}
+          </div>
         </div>
       )
     }
@@ -115,7 +128,13 @@ export function ResolutionCarousel({ mapboxImage, googleImage, initialImage }: R
             <CarouselItem key={index}>
               <div className="flex flex-col items-center p-1">
                 {slide.type === 'compare' ? (
-                  <CompareSlider leftImage={slide.left} rightImage={slide.right} className="w-full" />
+                  <CompareSlider
+                    leftImage={slide.left}
+                    rightImage={slide.right}
+                    className="w-full"
+                    leftLabel={mapboxImageLabel}
+                    rightLabel={googleImageLabel}
+                  />
                 ) : (
                   <>
                     <ResolutionImage src={slide.src} className="mb-0 mt-0 w-full" />

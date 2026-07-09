@@ -19,13 +19,21 @@ export const resolutionSearchSchema = z.object({
         .or(z.array(z.array(z.array(z.number()))))
         .describe('Coordinates for the geometry'),
       name: z.string().describe('Name of the feature or point of interest'),
-      description: z.string().optional().describe('Description of the feature')
+      description: z.string().optional().describe('Description of the feature'),
+      featureCategory: z.enum(['poi', 'land_feature', 'infrastructure', 'drawn_area', 'other'])
+        .optional()
+        .describe('The category of the feature. Use poi for landmarks, land_feature for natural elements, infrastructure for man-made structures, and drawn_area for user-defined regions.'),
+      displayLabel: z.string().optional().describe('A short label for map display or tooltips')
     }))
   }).optional().describe('A collection of points of interest and classified land features to be overlaid on the map.'),
 
   // Flattened top-level fields for better xAI compatibility
   extractedLatitude: z.number().optional().describe('The extracted latitude of the center of the image.'),
   extractedLongitude: z.number().optional().describe('The extracted longitude of the center of the image.'),
+
+  mapboxImageLabel: z.string().optional().describe('A location-specific label for the Mapbox image (e.g., "DOWNTOWN SAN FRANCISCO").'),
+  googleImageLabel: z.string().optional().describe('A location-specific label for the Google Satellite image (e.g., "SATELLITE VIEW - MISSION DISTRICT").'),
+  analysisFocus: z.string().optional().describe('A description of the overall analysis focus or user-drawn feature (e.g., "ANALYSIS OF COASTAL EROSION").'),
 
   cogApplicable: z.boolean().optional().describe('Whether Cloud Optimized GeoTIFF (COG) data is applicable for this area.'),
   cogDescription: z.string().optional().describe('Description of COG data availability or benefits.'),

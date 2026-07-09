@@ -143,7 +143,9 @@ async function submit(formData?: FormData, skip?: boolean) {
               },
               properties: {
                 name: f.name,
-                description: f.description
+                description: f.description,
+                featureCategory: f.featureCategory,
+                displayLabel: f.displayLabel
               }
             }))
           };
@@ -182,7 +184,9 @@ async function submit(formData?: FormData, skip?: boolean) {
           }
           return m
         });
-        const relatedQueries = await querySuggestor(uiStream, sanitizedMessages);
+        const detectedFeatures = analysisResult.geoJson?.features?.map((f: any) => `${f.name} (${f.featureCategory || "other"})`).join(", ");
+        const detectedFeaturesSummary = detectedFeatures ? `Detected: ${detectedFeatures}` : undefined;
+        const relatedQueries = await querySuggestor(uiStream, sanitizedMessages, detectedFeaturesSummary);
         uiStream.append(
           <Section title="Follow-up">
             <FollowupPanel />
@@ -209,7 +213,10 @@ async function submit(formData?: FormData, skip?: boolean) {
                 geoJson: geoJson, // Use reconstructed GeoJSON for storage/UI
                 image: dataUrl,
                 mapboxImage: mapboxDataUrl,
-                googleImage: googleDataUrl
+                googleImage: googleDataUrl,
+                mapboxImageLabel: analysisResult.mapboxImageLabel,
+                googleImageLabel: analysisResult.googleImageLabel,
+                analysisFocus: analysisResult.analysisFocus
               }),
               type: 'resolution_search_result'
             },
@@ -244,6 +251,9 @@ async function submit(formData?: FormData, skip?: boolean) {
           mapboxImage={mapboxDataUrl || undefined}
           googleImage={googleDataUrl || undefined}
           initialImage={dataUrl}
+          mapboxImageLabel={undefined}
+          googleImageLabel={undefined}
+          analysisFocus={undefined}
         />
         <BotMessage content={summaryStream.value} />
       </Section>
@@ -647,6 +657,9 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
               const image = analysisResult.image as string;
               const mapboxImage = analysisResult.mapboxImage as string;
               const googleImage = analysisResult.googleImage as string;
+              const mapboxImageLabel = analysisResult.mapboxImageLabel as string;
+              const googleImageLabel = analysisResult.googleImageLabel as string;
+              const analysisFocus = analysisResult.analysisFocus as string;
 
               return {
                 id,
@@ -656,6 +669,9 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                       mapboxImage={mapboxImage}
                       googleImage={googleImage}
                       initialImage={image}
+                      mapboxImageLabel={mapboxImageLabel}
+                      googleImageLabel={googleImageLabel}
+                      analysisFocus={analysisFocus}
                     />
                     {geoJson && (
                       <GeoJsonLayer id={id} data={geoJson} />
