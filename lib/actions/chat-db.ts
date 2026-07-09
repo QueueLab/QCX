@@ -120,7 +120,7 @@ export async function saveChat(chatData: NewChat, messagesData: Omit<NewMessage,
       const messagesToInsert: typeof messages.$inferInsert[] = [];
 
       for (const msg of messagesData) {
-        let id = msg.id;
+        let id = msg.id ?? crypto.randomUUID();
 
         // If we've already seen this ID in this batch, generate a unique one
         while (seenIds.has(id)) {
