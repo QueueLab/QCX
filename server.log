@@ -71,3 +71,6 @@ Chat DB actions loaded. Ensure getCurrentUserId() is correctly implemented for s
  ✓ Compiled in 1094ms
  ✓ Compiled in 1332ms
  ✓ Compiled in 215ms
+ ✓ Compiled in 601ms
+ ✓ Compiled in 267ms
+ ✓ Compiled in 86ms

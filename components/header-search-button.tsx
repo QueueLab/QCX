@@ -150,6 +150,11 @@ export function HeaderSearchButton() {
       formData.append('timezone', mapData.currentTimezone || 'UTC')
       formData.append('drawnFeatures', JSON.stringify(mapData.drawnFeatures || []))
 
+      if (mapData.cursorLocation) {
+        formData.append('cursorLat', mapData.cursorLocation.lat.toString())
+        formData.append('cursorLng', mapData.cursorLocation.lng.toString())
+      }
+
       const center = mapProvider === 'mapbox' && map ? map.getCenter() : mapData.cameraState?.center;
       if (center) {
         formData.append('latitude', center.lat.toString())

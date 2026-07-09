@@ -58,6 +58,9 @@ async function submit(formData?: FormData, skip?: boolean) {
     const lat = formData?.get('latitude') ? parseFloat(formData.get('latitude') as string) : undefined;
     const lng = formData?.get('longitude') ? parseFloat(formData.get('longitude') as string) : undefined;
     const location = (lat !== undefined && lng !== undefined) ? { lat, lng } : undefined;
+    const cursorLat = formData.get("cursorLat") ? parseFloat(formData.get("cursorLat") as string) : undefined;
+    const cursorLng = formData.get("cursorLng") ? parseFloat(formData.get("cursorLng") as string) : undefined;
+    const cursorLocation = (cursorLat !== undefined && cursorLng !== undefined) ? { lat: cursorLat, lng: cursorLng } : undefined;
 
     if (!file) {
       throw new Error('No file provided for resolution search.');
@@ -101,7 +104,7 @@ async function submit(formData?: FormData, skip?: boolean) {
 
     async function processResolutionSearch() {
       try {
-        const streamResult = await resolutionSearch(messages, timezone, drawnFeatures, location);
+        const streamResult = await resolutionSearch(messages, timezone, drawnFeatures, location, cursorLocation);
 
         let fullSummary = '';
         for await (const partialObject of streamResult.partialObjectStream) {

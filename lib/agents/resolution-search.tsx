@@ -62,7 +62,13 @@ async function getReverseGeocode(lat: number, lng: number): Promise<string> {
   }
 }
 
-export async function resolutionSearch(messages: CoreMessage[], timezone: string = 'UTC', drawnFeatures?: DrawnFeature[], location?: { lat: number, lng: number }) {
+export async function resolutionSearch(
+  messages: CoreMessage[],
+  timezone: string = 'UTC',
+  drawnFeatures?: DrawnFeature[],
+  location?: { lat: number, lng: number },
+  cursorLocation?: { lat: number, lng: number }
+) {
   const now = new Date();
   
   // OPTIMIZATION: Format local time with timezone context
@@ -81,9 +87,12 @@ export async function resolutionSearch(messages: CoreMessage[], timezone: string
   let locationName = 'this location';
   let newsContext = '';
   
-  if (location?.lat && location?.lng) {
+  const searchLat = cursorLocation?.lat || location?.lat;
+  const searchLng = cursorLocation?.lng || location?.lng;
+
+  if (searchLat && searchLng) {
     try {
-      locationName = await getReverseGeocode(location.lat, location.lng);
+      locationName = await getReverseGeocode(searchLat, searchLng);
       
       // OPTIMIZATION: Fetch news in parallel with AI analysis
       const newsData = await fetchLocationNews(locationName, timezone);
@@ -114,6 +123,10 @@ This temporal information is important for understanding the current state and a
 ${location ? `**Geographic Coordinates:**
 The coordinates provided for this image are: Latitude ${location.lat}, Longitude ${location.lng}.
 Location: ${locationName}` : ''}
+
+${cursorLocation ? `**Pointer Focus:**
+The user is specifically pointing at/clicking on the following coordinate: Latitude ${cursorLocation.lat}, Longitude ${cursorLocation.lng}.
+Prioritize analysis of the features exactly at or immediately surrounding this point.` : ''}
 
 ${newsContext ? `**Recent Context:**
 ${newsContext}

@@ -29,6 +29,7 @@ export interface MapData {
     longitude: number;
     title?: string;
   }>;
+  cursorLocation?: { lat: number; lng: number } | null; // Added to track user click/pointer
 }
 
 interface MapDataContextType {

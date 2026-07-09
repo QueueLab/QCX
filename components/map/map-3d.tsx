@@ -26,6 +26,20 @@ export const Map3D = forwardRef(
     const [map3DElement, map3dRef] =
       useCallbackRef<google.maps.maps3d.Map3DElement>();
 
+    useEffect(() => {
+      if (!map3DElement) return;
+      const listener = (e: any) => {
+        if (e.position) {
+          setMapData(prev => ({
+            ...prev,
+            cursorLocation: { lat: e.position.lat, lng: e.position.lng }
+          }));
+        }
+      };
+      map3DElement.addEventListener("gmp-click", listener);
+      return () => map3DElement.removeEventListener("gmp-click", listener);
+    }, [map3DElement, setMapData]);
+
     useMap3DCameraEvents(map3DElement, p => {
       const { center, range, heading, tilt } = p.detail;
       const lat = center.lat();
