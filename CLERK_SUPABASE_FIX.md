@@ -28,7 +28,7 @@ All three paths operated in isolation. None of them linked the Supabase UUID to 
 
 2. **Updated `handle_new_user` trigger**: Now extracts the Clerk user ID from `auth.jwt()` metadata and stores it in `clerk_user_id`.
 
-3. **Updated `clerk_id()` function**: Correctly extracts the Clerk user ID from the JWT `sub` claim: `SELECT auth.jwt() ->> 'sub'`.
+3. **Updated `clerk_id()` function (v1, later reverted)**: Initially attempted to extract the Clerk user ID from the JWT `sub` claim: `SELECT auth.jwt() ->> 'sub'`. However, this returned the Supabase `auth.users.id` (UUID), not the Clerk user ID string, causing all RLS policies to fail.
 
 4. **Updated `is_clerk_user(user_id)` function**: Properly checks that the user's `clerk_user_id` matches the current session's Clerk ID.
 
@@ -71,10 +71,63 @@ When a user authenticates with Clerk:
 5. When querying chats, RLS policies check `is_clerk_user(user_id)` which now correctly returns `true` because `clerk_user_id` is properly set.
 6. The user can now see their chat history.
 
-## Deployment Notes
+---
 
-- The Supabase changes are **already live** in QCX-BACKEND (project: `mofqapxwyphzjrqegjeq`).
-- The edge function is deployed as version 13 and is ACTIVE.
-- The Next.js codebase changes are committed and ready for deployment.
-- The Drizzle migration (`0003_clerk_auth_sync.sql`) should be run via `npm run db:migrate` or `bun run db:migrate` (which sets `EXECUTE_MIGRATIONS=true`).
-- The `edge_function/` directory contains the deployed edge function source for reference.
+# Fix v2: clerk_id() Function Correction
+
+## Problem Summary (v2)
+
+The initial `clerk_id()` function from Fix v1 returned the wrong value. It used `SELECT auth.jwt() ->> 'sub'` which returns the Supabase `auth.users.id` (a UUID like `85a812de-...`), but the `clerk_user_id` column stores Clerk user IDs (strings like `user_3GEXlPN...`). Since these two ID formats will never match, the `is_clerk_user()` function and all RLS policies that depend on it always returned `false`, blocking all Clerk-authenticated users from accessing data.
+
+## Root Cause
+
+In Supabase, `auth.jwt() ->> 'sub'` returns the Supabase internal user ID (UUID from `auth.users.id`). It does NOT return the Clerk user ID. Clerk and Supabase have separate identity systems:
+
+- **Supabase**: Uses UUIDs (e.g., `85a812de-f4e4-4cba-aee7-24efe4d663e3`)
+- **Clerk**: Uses prefixed strings (e.g., `user_3GEXlPNzzZIDVjF2kCadMx5NvNf`)
+
+The `public.users` table bridges these by storing both: `id` (UUID, same as `auth.users.id`) and `clerk_user_id` (Clerk string).
+
+## Fix Applied
+
+### QCX-BACKEND (Supabase) — Migration 0004
+
+1. **Rewrote `clerk_id()` function**: Instead of returning `auth.jwt() ->> 'sub'`, it now looks up the Clerk ID from the `public.users` table using the current session's `auth.uid()`:
+
+   ```sql
+   SELECT public.users.clerk_user_id
+   FROM public.users
+   WHERE public.users.id = auth.uid()
+   LIMIT 1;
+   ```
+
+   This correctly returns the Clerk user ID string (e.g., `user_3GEXlPNzzZIDVjF2kCadMx5NvNf`) for the currently authenticated user.
+
+2. **Verified `is_clerk_user()` function**: No changes needed — it already correctly calls `public.clerk_id()` and compares against `clerk_user_id`. With the fixed `clerk_id()` function, this now works correctly.
+
+3. **Re-applied all 12 RLS policies** across 8 tables to ensure they use the corrected `clerk_id()` and `is_clerk_user()` functions.
+
+## Verification
+
+All components verified after fix:
+- `clerk_id()` function: returns Clerk user ID string (not Supabase UUID)
+- `is_clerk_user()` function: correctly returns `true` for Clerk-authenticated users
+- RLS policies: 12 policies across 8 tables, all using corrected `is_clerk_user()`
+- Correct SQL query pattern: `SELECT id FROM users WHERE clerk_user_id = '<clerk-id>'` works
+
+## How It Works After the Fix (v2)
+
+When a Clerk-authenticated user makes a request:
+
+1. **Clerk** authenticates the user and provides a JWT.
+2. **Supabase** receives the request with a valid session. `auth.uid()` returns the Supabase UUID (e.g., `85a812de-...`).
+3. **`clerk_id()`** looks up `public.users.clerk_user_id` where `public.users.id = auth.uid()`, returning the Clerk ID (e.g., `user_3GEX...`).
+4. **RLS policies** check `clerk_user_id = clerk_id()` — now comparing `user_3GEX...` = `user_3GEX...` → `true`.
+5. The user can access their chats, messages, and all other data.
+
+## Deployment Notes (v2)
+
+- Migration `0004_fix_clerk_id_function.sql` applied to QCX-BACKEND (project: `mofqapxwyphzjrqegjeq`).
+- All 12 RLS policies re-applied with corrected function references.
+- The migration is tracked in the repo's Drizzle migration system.
+- Run via `npm run db:migrate` or `bun run db:migrate` to apply to local/dev environments.
