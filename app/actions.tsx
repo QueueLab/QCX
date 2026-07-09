@@ -6,21 +6,22 @@ import {
   getAIState,
   getMutableAIState
 } from 'ai/rsc'
-import { CoreMessage, ToolResultPart } from 'ai'
-import { nanoid } from 'nanoid'
+import { CoreMessage, ToolResultPart, TextPart, ImagePart } from 'ai'
+import { nanoid } from '@/lib/utils'
 import type { FeatureCollection } from 'geojson'
 import { Spinner } from '@/components/ui/spinner'
 import { Section } from '@/components/section'
 import { FollowupPanel } from '@/components/followup-panel'
 import { inquire, researcher, taskManager, querySuggestor, resolutionSearch, type DrawnFeature } from '@/lib/agents'
 import { writer } from '@/lib/agents/writer'
-import { saveChat, getSystemPrompt } from '@/lib/actions/chat'
+import { saveChat, getSystemPrompt, generateReportContext } from '@/lib/actions/chat'
 import { Chat, AIMessage } from '@/lib/types'
 import { UserMessage } from '@/components/user-message'
 import { BotMessage } from '@/components/message'
 import { SearchSection } from '@/components/search-section'
 import SearchRelated from '@/components/search-related'
 import { GeoJsonLayer } from '@/components/map/geojson-layer'
+import { ResolutionCarousel } from '@/components/resolution-carousel'
 import { ResolutionImage } from '@/components/resolution-image'
 import { CopilotDisplay } from '@/components/copilot-display'
 import RetrieveSection from '@/components/retrieve-section'
@@ -49,19 +50,44 @@ async function submit(formData?: FormData, skip?: boolean) {
     console.error('Failed to parse drawnFeatures:', e);
   }
 
+  if (action === 'generate_report_context') {
+    const messagesString = formData?.get('messages');
+    if (typeof messagesString !== 'string') {
+      return { title: 'QCX Intelligence Analysis', summary: 'Automated executive summary is currently unavailable.' };
+    }
+    try {
+      const messages = JSON.parse(messagesString) as AIMessage[];
+      return await generateReportContext(messages);
+    } catch (e) {
+      console.error('Failed to parse messages for report context:', e);
+      return { title: 'QCX Intelligence Analysis', summary: 'Automated executive summary is currently unavailable.' };
+    }
+  }
+
   if (action === 'resolution_search') {
-    const file = formData?.get('file') as File;
+    const file_mapbox = formData?.get('file_mapbox') as File;
+    const file_google = formData?.get('file_google') as File;
+    const file = (formData?.get('file') as File) || file_mapbox || file_google;
     const timezone = (formData?.get('timezone') as string) || 'UTC';
+    const lat = formData?.get('latitude') ? parseFloat(formData.get('latitude') as string) : undefined;
+    const lng = formData?.get('longitude') ? parseFloat(formData.get('longitude') as string) : undefined;
+    const location = (lat !== undefined && lng !== undefined) ? { lat, lng } : undefined;
 
     if (!file) {
       throw new Error('No file provided for resolution search.');
     }
 
+    const mapboxBuffer = file_mapbox ? await file_mapbox.arrayBuffer() : null;
+    const mapboxDataUrl = mapboxBuffer ? `data:${file_mapbox.type};base64,${Buffer.from(mapboxBuffer).toString('base64')}` : null;
+
+    const googleBuffer = file_google ? await file_google.arrayBuffer() : null;
+    const googleDataUrl = googleBuffer ? `data:${file_google.type};base64,${Buffer.from(googleBuffer).toString('base64')}` : null;
+
     const buffer = await file.arrayBuffer();
     const dataUrl = `data:${file.type};base64,${Buffer.from(buffer).toString('base64')}`;
 
     const messages: CoreMessage[] = [...(aiState.get().messages as any[])].filter(
-      message =>
+      (message: any) =>
         message.role !== 'tool' &&
         message.type !== 'followup' &&
         message.type !== 'related' &&
@@ -89,7 +115,7 @@ async function submit(formData?: FormData, skip?: boolean) {
 
     async function processResolutionSearch() {
       try {
-        const streamResult = await resolutionSearch(messages, timezone, drawnFeatures);
+        const streamResult = await resolutionSearch(messages, timezone, drawnFeatures, location);
 
         let fullSummary = '';
         for await (const partialObject of streamResult.partialObjectStream) {
@@ -102,18 +128,37 @@ async function submit(formData?: FormData, skip?: boolean) {
         const analysisResult = await streamResult.object;
         summaryStream.done(analysisResult.summary || 'Analysis complete.');
 
-        if (analysisResult.geoJson) {
+        // Reconstruct standard GeoJSON from flattened schema if present
+        let geoJson: FeatureCollection | null = null;
+        if (analysisResult.geoJson && analysisResult.geoJson.features) {
+          geoJson = {
+            type: 'FeatureCollection',
+            features: analysisResult.geoJson.features.map(f => ({
+              type: 'Feature',
+              geometry: {
+                type: f.geometryType as any,
+                coordinates: f.coordinates as any
+              },
+              properties: {
+                name: f.name,
+                description: f.description
+              }
+            }))
+          };
+        }
+
+        if (geoJson) {
           uiStream.append(
             <GeoJsonLayer
               id={groupeId}
-              data={analysisResult.geoJson as FeatureCollection}
+              data={geoJson}
             />
           );
         }
 
         messages.push({ role: 'assistant', content: analysisResult.summary || 'Analysis complete.' });
 
-        const sanitizedMessages: CoreMessage[] = messages.map(m => {
+        const sanitizedMessages: CoreMessage[] = messages.map((m: any) => {
           if (Array.isArray(m.content)) {
             return {
               ...m,
@@ -124,7 +169,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         })
 
         const currentMessages = aiState.get().messages;
-        const sanitizedHistory = currentMessages.map(m => {
+        const sanitizedHistory = currentMessages.map((m: any) => {
           if (m.role === "user" && Array.isArray(m.content)) {
             return {
               ...m,
@@ -159,7 +204,10 @@ async function submit(formData?: FormData, skip?: boolean) {
               role: 'assistant',
               content: JSON.stringify({
                 ...analysisResult,
-                image: dataUrl
+                geoJson: geoJson, // Use reconstructed GeoJSON for storage/UI
+                image: dataUrl,
+                mapboxImage: mapboxDataUrl,
+                googleImage: googleDataUrl
               }),
               type: 'resolution_search_result'
             },
@@ -190,7 +238,11 @@ async function submit(formData?: FormData, skip?: boolean) {
 
     uiStream.update(
       <Section title="response">
-        <ResolutionImage src={dataUrl} />
+        <ResolutionCarousel
+          mapboxImage={mapboxDataUrl || undefined}
+          googleImage={googleDataUrl || undefined}
+          initialImage={dataUrl}
+        />
         <BotMessage content={summaryStream.value} />
       </Section>
     );
@@ -203,43 +255,26 @@ async function submit(formData?: FormData, skip?: boolean) {
     };
   }
 
-  const messages: CoreMessage[] = [...(aiState.get().messages as any[])].filter(
-    message =>
-      message.role !== 'tool' &&
-      message.type !== 'followup' &&
-      message.type !== 'related' &&
-      message.type !== 'end' &&
-      message.type !== 'resolution_search_result'
-  ).map(m => {
-    if (Array.isArray(m.content)) {
-      return {
-        ...m,
-        content: m.content.filter((part: any) =>
-          part.type !== "image" || (typeof part.image === "string" && part.image.startsWith("data:"))
-        )
-      } as any
-    }
-    return m
+  const file = !skip ? (formData?.get('file') as File) : undefined
+  console.log('File extraction:', {
+    exists: !!file,
+    name: file?.name,
+    type: file?.type,
+    size: file?.size
   })
-
-  const groupeId = nanoid()
-  const useSpecificAPI = process.env.USE_SPECIFIC_API_FOR_WRITER === 'true'
-  const maxMessages = useSpecificAPI ? 5 : 10
-  messages.splice(0, Math.max(messages.length - maxMessages, 0))
-
   const userInput = skip
     ? `{"action": "skip"}`
     : ((formData?.get('related_query') as string) ||
       (formData?.get('input') as string))
 
-  if (userInput.toLowerCase().trim() === 'what is a planet computer?' || userInput.toLowerCase().trim() === 'what is qcx-terra?') {
+  if (userInput && (userInput.toLowerCase().trim() === 'what is a planet computer?' || userInput.toLowerCase().trim() === 'what is qcx-terra?')) {
     const definition = userInput.toLowerCase().trim() === 'what is a planet computer?'
       ? `A planet computer is a proprietary environment aware system that interoperates weather forecasting, mapping and scheduling using cutting edge multi-agents to streamline automation and exploration on a planet. Available for our Pro and Enterprise customers. [QCX Pricing](https://www.queue.cx/#pricing)`
-
       : `QCX-Terra is a model garden of pixel level precision geospatial foundational models for efficient land feature predictions from satellite imagery. Available for our Pro and Enterprise customers. [QCX Pricing] (https://www.queue.cx/#pricing)`;
 
     const content = JSON.stringify(Object.fromEntries(formData!));
     const type = 'input';
+    const groupeId = nanoid();
 
     aiState.update({
       ...aiState.get(),
@@ -299,10 +334,9 @@ async function submit(formData?: FormData, skip?: boolean) {
       id: nanoid(),
       isGenerating: isGenerating.value,
       component: uiStream.value,
-      isCollapsed: isCollapsed.value,
+      isCollapsed: isCollapsed.value
     };
   }
-  const file = !skip ? (formData?.get('file') as File) : undefined
 
   if (!userInput && !file) {
     isGenerating.done(false)
@@ -314,43 +348,118 @@ async function submit(formData?: FormData, skip?: boolean) {
     }
   }
 
-  const messageParts: {
-    type: 'text' | 'image'
-    text?: string
-    image?: string
-    mimeType?: string
-  }[] = []
+  let filteredImagesCount = 0
+  let retainedImagesCount = 0
+  const messages: CoreMessage[] = [...(aiState.get().messages as any[])]
+    .filter(
+      (message: any) =>
+        message.role !== 'tool' &&
+        message.type !== 'followup' &&
+        message.type !== 'related' &&
+        message.type !== 'end' &&
+        message.type !== 'resolution_search_result'
+    )
+    .map((m: any) => {
+      if (Array.isArray(m.content)) {
+        const filteredContent = m.content.filter((part: any) => {
+          if (part.type === 'image') {
+            const isValid =
+              typeof part.image === 'string' &&
+              (part.image.startsWith('data:') ||
+                part.image === 'IMAGE_PROCESSED')
+            if (isValid) {
+              retainedImagesCount++
+            } else {
+              filteredImagesCount++
+            }
+            return isValid
+          }
+          return true
+        })
+        return {
+          ...m,
+          content: filteredContent
+        } as any
+      }
+      return m
+    })
+  console.log('Historical messages image filter:', {
+    filteredImagesCount,
+    retainedImagesCount,
+    totalMessages: messages.length
+  })
+
+  const groupeId = nanoid()
+  const useSpecificAPI = process.env.USE_SPECIFIC_API_FOR_WRITER === 'true'
+  const maxMessages = useSpecificAPI ? 5 : 10
+  messages.splice(0, Math.max(messages.length - maxMessages, 0))
+
+  const messageParts: (TextPart | ImagePart)[] = []
 
   if (userInput) {
     messageParts.push({ type: 'text', text: userInput })
   }
 
   if (file) {
-    const buffer = await file.arrayBuffer()
-    if (file.type.startsWith('image/')) {
-      const dataUrl = `data:${file.type};base64,${Buffer.from(
-        buffer
-      ).toString('base64')}`
-      messageParts.push({
-        type: 'image',
-        image: dataUrl,
-        mimeType: file.type
-      })
-    } else if (file.type === 'text/plain') {
-      const textContent = Buffer.from(buffer).toString('utf-8')
-      const existingTextPart = messageParts.find(p => p.type === 'text')
-      if (existingTextPart) {
-        existingTextPart.text = `${textContent}\n\n${existingTextPart.text}`
-      } else {
-        messageParts.push({ type: 'text', text: textContent })
+    const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+    if (file.size > MAX_FILE_SIZE) {
+      console.error('File size exceeds 10MB limit:', file.size)
+    } else {
+      try {
+        const buffer = await file.arrayBuffer()
+        console.log('File buffer loaded:', { size: buffer.byteLength })
+        if (file.type.startsWith('image/')) {
+          const dataUrl = `data:${file.type};base64,${Buffer.from(
+            buffer
+          ).toString('base64')}`
+          console.log('Image processed:', {
+            dataUrlPrefix: dataUrl.substring(0, 50),
+            totalLength: dataUrl.length
+          })
+          const imagePart: ImagePart = {
+            type: 'image',
+            image: dataUrl,
+            mimeType: file.type
+          }
+          console.log('Pushing image part (debug shape):', {
+            ...imagePart,
+            image: dataUrl.substring(0, 50) + '...'
+          })
+          messageParts.push(imagePart)
+        } else if (file.type === 'text/plain') {
+          const textContent = Buffer.from(buffer).toString('utf-8')
+          const existingTextPart = messageParts.find(
+            (p): p is TextPart => p.type === 'text'
+          )
+          if (existingTextPart) {
+            existingTextPart.text = `${textContent}\n\n${existingTextPart.text}`
+          } else {
+            messageParts.push({ type: 'text', text: textContent })
+          }
+        }
+      } catch (error) {
+        console.error('Error processing file:', error)
       }
     }
   }
 
   const hasImage = messageParts.some(part => part.type === 'image')
+  console.log('messageParts structure:', {
+    parts: messageParts.map(p => ({
+      type: p.type,
+      length: p.type === 'text' ? p.text.length : undefined
+    })),
+    hasImage
+  })
   const content: CoreMessage['content'] = hasImage
-    ? messageParts as CoreMessage['content']
-    : messageParts.map(part => part.text).join('\n')
+    ? messageParts
+    : messageParts.map(part => (part.type === 'text' ? part.text : '')).join('\n')
+  console.log('Final content structure:', {
+    hasImage,
+    contentType: typeof content,
+    isArray: Array.isArray(content),
+    partsCount: Array.isArray(content) ? content.length : 'N/A'
+  })
 
   const type = skip
     ? undefined
@@ -725,12 +834,18 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
               const analysisResult = JSON.parse(content as string);
               const geoJson = analysisResult.geoJson as FeatureCollection;
               const image = analysisResult.image as string;
+              const mapboxImage = analysisResult.mapboxImage as string;
+              const googleImage = analysisResult.googleImage as string;
 
               return {
                 id,
                 component: (
                   <>
-                    {image && <ResolutionImage src={image} />}
+                    <ResolutionCarousel
+                      mapboxImage={mapboxImage}
+                      googleImage={googleImage}
+                      initialImage={image}
+                    />
                     {geoJson && (
                       <GeoJsonLayer id={id} data={geoJson} />
                     )}

@@ -15,6 +15,12 @@ export function generateUUID(): string {
   return uuidv4();
 }
 
+/**
+ * Re-export generateUUID as nanoid for shorter naming and compatibility with existing code.
+ * Returns a UUID v4 string.
+ */
+export { generateUUID as nanoid };
+
 export async function getModel(requireVision: boolean = false) {
   const selectedModel = await getSelectedModel();
 
@@ -45,18 +51,19 @@ export async function getModel(requireVision: boolean = false) {
             throw new Error('Selected model is not configured.');
         }
       case 'Gemini 3':
+      case 'Gemini 3.1 Pro':
         if (gemini3ProApiKey) {
           const google = createGoogleGenerativeAI({
             apiKey: gemini3ProApiKey,
           });
           try {
-            return google('gemini-3-pro-preview');
+            return google('gemini-3.1-pro-preview');
           } catch (error) {
-            console.error('Selected model "Gemini 3" is configured but failed to initialize.', error);
+            console.error('Selected model "Gemini 3.1 Pro" is configured but failed to initialize.', error);
             throw new Error('Failed to initialize selected model.');
           }
         } else {
-            console.error('User selected "Gemini 3" but GEMINI_3_PRO_API_KEY is not set.');
+            console.error('User selected "Gemini 3.1 Pro" but GEMINI_3_PRO_API_KEY is not set.');
             throw new Error('Selected model is not configured.');
         }
       case 'GPT-5.1':
@@ -90,9 +97,9 @@ export async function getModel(requireVision: boolean = false) {
       apiKey: gemini3ProApiKey,
     });
     try {
-      return google('gemini-3-pro-preview');
+      return google('gemini-3.1-pro-preview');
     } catch (error) {
-      console.warn('Gemini 3 Pro API unavailable, falling back to next provider:', error);
+      console.warn('Gemini 3.1 Pro API unavailable, falling back to next provider:', error);
     }
   }
 
@@ -116,23 +123,4 @@ export async function getModel(requireVision: boolean = false) {
     apiKey: openaiApiKey,
   });
   return openai('gpt-4o');
-}
-
-export function getGoogleStaticMapUrl(latitude: number, longitude: number): string {
-  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
-  if (!apiKey) {
-    throw new Error('GOOGLE_MAPS_API_KEY is missing');
-  }
-
-  const url = new URL('https://maps.googleapis.com/maps/api/staticmap');
-  const params = new URLSearchParams({
-    center: `${latitude},${longitude}`,
-    zoom: '14',
-    size: '600x300',
-    maptype: 'roadmap',
-    markers: `color:red|${latitude},${longitude}`,
-    key: apiKey
-  });
-  url.search = params.toString();
-  return url.toString();
 }

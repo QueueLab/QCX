@@ -1,155 +1,211 @@
-// File: lib/actions/users.ts
 'use server';
 
 import { revalidatePath, unstable_noStore as noStore } from 'next/cache';
-import fs from 'fs/promises';
-import path from 'path';
+import { db } from '@/lib/db';
+import { users } from '@/lib/db/schema';
+import { eq, ilike } from 'drizzle-orm';
+import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user';
 
-// This is a placeholder for a database or other storage.
-// In a real application, you would interact with your database here.
-
-// Define UserRole and User types
 export type UserRole = "admin" | "editor" | "viewer";
 
 export interface User {
   id: string;
-  email: string;
-  role: UserRole;
+  email: string | null;
+  role: UserRole | null;
 }
 
-let usersStore: Record<string, Array<User>> = {
-  'default-user': [ // Simulate a default user having some initial users
-    { id: '1', email: 'admin@example.com', role: 'admin' },
-    { id: '2', email: 'editor@example.com', role: 'editor' },
-  ],
-};
-
-// Simulate a delay to mimic network latency
-const simulateDBDelay = () => new Promise(resolve => setTimeout(resolve, 500));
-
-export async function getUsers(userId: string = 'default-user'): Promise<{ users: User[] }> {
-  await simulateDBDelay();
-  if (!usersStore[userId]) {
-    usersStore[userId] = [];
+/**
+ * Ensures the current user is an admin.
+ * Throws an error if not authorized.
+ */
+async function requireAdmin() {
+  const userId = await getCurrentUserIdOnServer();
+  if (!userId) {
+    throw new Error('Unauthorized: User not authenticated');
   }
-  console.log(`[Action: getUsers] Fetched users for ${userId}:`, usersStore[userId]);
-  return { users: usersStore[userId] };
+
+  const [user] = await db.select({ role: users.role })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  if (!user || user.role !== 'admin') {
+    throw new Error('Unauthorized: Admin access required');
+  }
 }
 
-export async function addUser(userId: string = 'default-user', newUser: { email: string; role: UserRole }): Promise<{ user?: User; error?: string }> {
-  await simulateDBDelay();
-  if (!usersStore[userId]) {
-    usersStore[userId] = [];
-  }
+/**
+ * Retrieves all users from the database.
+ * Restricted to admins.
+ */
+export async function getUsers(): Promise<{ users: User[] }> {
+  noStore();
+  try {
+    await requireAdmin();
+    const result = await db.select({
+      id: users.id,
+      email: users.email,
+      role: users.role,
+    }).from(users);
 
-  // Check if user already exists (simple check, real DB would handle this better)
-  if (usersStore[userId].some(user => user.email === newUser.email)) {
-    console.warn(`[Action: addUser] User ${newUser.email} already exists for ${userId}`);
-    return { error: 'User with this email already exists.' };
+    // Type cast since we know roles in DB match UserRole or null
+    return { users: result as User[] };
+  } catch (error: any) {
+    console.error('[Action: getUsers] Error:', error.message);
+    return { users: [] };
   }
-
-  const userToAdd: User = { ...newUser, id: Math.random().toString(36).substr(2, 9) };
-  usersStore[userId].push(userToAdd);
-  console.log(`[Action: addUser] Added user ${newUser.email} for ${userId}:`, userToAdd);
-  revalidatePath('/settings'); // Assuming settings page path, adjust if needed
-  return { user: userToAdd };
 }
 
-export async function updateUserRole(userId: string = 'default-user', userEmail: string, newRole: UserRole): Promise<{ user?: User; error?: string }> {
-  await simulateDBDelay();
-  if (!usersStore[userId]) {
-    return { error: 'User list not found.' };
-  }
+/**
+ * Adds a new user to the database.
+ * Restricted to admins.
+ */
+export async function addUser(newUser: { email: string; role: UserRole }): Promise<{ user?: User; error?: string }> {
+  try {
+    await requireAdmin();
 
-  const userIndex = usersStore[userId].findIndex(user => user.email === userEmail);
-  if (userIndex === -1) {
-    console.warn(`[Action: updateUserRole] User ${userEmail} not found for ${userId}`);
-    return { error: 'User not found.' };
-  }
+    // Check if email already exists to provide a clear error message
+    const [existing] = await db.select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, newUser.email))
+      .limit(1);
 
-  usersStore[userId][userIndex].role = newRole;
-  console.log(`[Action: updateUserRole] Updated role for ${userEmail} to ${newRole} for ${userId}`);
-  revalidatePath('/settings');
-  return { user: usersStore[userId][userIndex] };
+    if (existing) {
+      return { error: 'A user with this email already exists.' };
+    }
+
+    const [insertedUser] = await db.insert(users).values({
+      email: newUser.email,
+      role: newUser.role,
+    }).returning({
+      id: users.id,
+      email: users.email,
+      role: users.role,
+    });
+
+    revalidatePath('/settings');
+    return { user: insertedUser as User };
+  } catch (error: any) {
+    console.error('[Action: addUser] Error:', error.message);
+    return { error: error.message || 'Failed to add user.' };
+  }
 }
 
-export async function removeUser(userId: string = 'default-user', userEmail: string): Promise<{ success?: boolean; error?: string }> {
-  await simulateDBDelay();
-  if (!usersStore[userId]) {
-    return { error: 'User list not found.' };
+/**
+ * Updates a user's role by their email.
+ * Restricted to admins.
+ */
+export async function updateUserRole(userEmail: string, newRole: UserRole): Promise<{ user?: User; error?: string }> {
+  try {
+    await requireAdmin();
+    const [updatedUser] = await db.update(users)
+      .set({ role: newRole })
+      .where(eq(users.email, userEmail))
+      .returning({
+        id: users.id,
+        email: users.email,
+        role: users.role,
+      });
+
+    if (!updatedUser) {
+      return { error: 'User not found.' };
+    }
+
+    revalidatePath('/settings');
+    return { user: updatedUser as User };
+  } catch (error: any) {
+    console.error('[Action: updateUserRole] Error:', error.message);
+    return { error: error.message || 'Failed to update user role.' };
   }
-
-  const initialLength = usersStore[userId].length;
-  usersStore[userId] = usersStore[userId].filter(user => user.email !== userEmail);
-
-  if (usersStore[userId].length === initialLength) {
-    console.warn(`[Action: removeUser] User ${userEmail} not found for ${userId}`);
-    return { error: 'User not found.' };
-  }
-
-  console.log(`[Action: removeUser] Removed user ${userEmail} for ${userId}`);
-  revalidatePath('/settings');
-  return { success: true };
 }
 
-// Example of how the settings form might use these actions (conceptual)
-export async function updateSettingsAndUsers(
-  userId: string = 'default-user',
-  formData: { users: Array<Omit<User, 'id'> & { id?: string }> } // Looser type for incoming, stricter for store
-): Promise<{ success: boolean; message?: string; users?: User[] }> {
-  // formData would contain systemPrompt, selectedModel, and the users array
-  console.log('[Action: updateSettingsAndUsers] Received data:', formData);
+/**
+ * Removes a user from the database by their email.
+ * Restricted to admins.
+ */
+export async function removeUser(userEmail: string): Promise<{ success?: boolean; error?: string }> {
+  try {
+    await requireAdmin();
+    const result = await db.delete(users).where(eq(users.email, userEmail)).returning();
 
-  // Simulate saving systemPrompt and selectedModel
-  // ... (logic for other settings)
+    if (result.length === 0) {
+      return { error: 'User not found.' };
+    }
 
-  // For users, the frontend form already constructs the 'users' array.
-  // Here, we could compare the incoming users list with the stored one
-  // and make granular calls to addUser, updateUserRole, removeUser if needed,
-  // or simply replace the user list if that's the desired behavior.
-  // For simplicity in this simulation, let's assume the form sends the complete new user list.
-
-  await simulateDBDelay();
-  usersStore[userId] = formData.users.map((u): User => ({
-    id: u.id || Math.random().toString(36).substr(2, 9),
-    email: u.email,
-    role: u.role, // Assumes u.role is already UserRole, validation should occur before this action
-  }));
-
-  console.log(`[Action: updateSettingsAndUsers] Updated users for ${userId}:`, usersStore[userId]);
-  revalidatePath('/settings');
-  return { success: true, message: 'Settings and users updated successfully.', users: usersStore[userId] };
+    revalidatePath('/settings');
+    return { success: true };
+  } catch (error: any) {
+    console.error('[Action: removeUser] Error:', error.message);
+    return { error: error.message || 'Failed to remove user.' };
+  }
 }
 
-const modelConfigPath = path.resolve(process.cwd(), 'config', 'model.json');
-
+/**
+ * Fetches the selected model for the current user.
+ */
 export async function getSelectedModel(): Promise<string | null> {
   noStore();
-  console.log(`[DEBUG] getSelectedModel - Reading from path: "${modelConfigPath}"`);
+  const userId = await getCurrentUserIdOnServer();
+  if (!userId) return null;
+
   try {
-    const data = await fs.readFile(modelConfigPath, 'utf8');
-    console.log(`[DEBUG] getSelectedModel - Raw file content: "${data}"`);
-    const config = JSON.parse(data);
-    return config.selectedModel || null;
+    const result = await db.select({ selectedModel: users.selectedModel })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    return result[0]?.selectedModel || null;
   } catch (error) {
-    console.error('Error reading model config:', error);
-    console.log(`[DEBUG] getSelectedModel - Error reading file:`, error);
+    console.error('[Action: getSelectedModel] Error:', error);
     return null;
   }
 }
 
+/**
+ * Saves the selected model for the current user.
+ */
 export async function saveSelectedModel(model: string): Promise<{ success: boolean; error?: string }> {
-  console.log(`[DEBUG] saveSelectedModel - Received model selection: "${model}"`);
-  console.log(`[DEBUG] saveSelectedModel - Writing to path: "${modelConfigPath}"`);
+  const userId = await getCurrentUserIdOnServer();
+  if (!userId) return { success: false, error: 'Not authenticated' };
+
   try {
-    const data = JSON.stringify({ selectedModel: model }, null, 2);
-    await fs.writeFile(modelConfigPath, data, 'utf8');
-    console.log(`[DEBUG] saveSelectedModel - Successfully wrote to file.`);
+    await db.update(users)
+      .set({ selectedModel: model })
+      .where(eq(users.id, userId));
+
     revalidatePath('/settings');
     return { success: true };
   } catch (error) {
-    console.error('Error saving model config:', error);
-    console.log(`[DEBUG] saveSelectedModel - Error writing to file:`, error);
+    console.error('[Action: saveSelectedModel] Error:', error);
     return { success: false, error: 'Failed to save selected model.' };
+  }
+}
+
+/**
+ * Searches users by email.
+ * Restricted to authenticated users.
+ */
+export async function searchUsers(query: string) {
+  noStore();
+  if (!query) return [];
+
+  const userId = await getCurrentUserIdOnServer();
+  if (!userId) {
+    throw new Error('Unauthorized');
+  }
+
+  try {
+    const result = await db.select({
+      id: users.id,
+      email: users.email,
+    })
+    .from(users)
+    .where(ilike(users.email, `%${query}%`))
+    .limit(10);
+
+    return result;
+  } catch (error) {
+    console.error('[Action: searchUsers] Error:', error);
+    return [];
   }
 }

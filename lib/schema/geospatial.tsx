@@ -1,124 +1,64 @@
 import { z } from 'zod';
 
-// Improved schema using discriminatedUnion for better type safety and conditional requirements
-// - Enforces required fields based on queryType (e.g., destination for directions/distance)
-// - Renames 'query' to 'location' for clarity in most cases, but uses 'origin' and 'destination' for directions/distance
-// - Makes 'coordinates' required for 'reverse' and optional for 'search' (as proximity)
-// - Adds 'mode' for directions (e.g., driving, walking) assuming tool support can be added
-// - Integrates 'radius' and 'maxResults' for 'search', assuming future tool arg expansion
-// - Keeps 'includeMap' consistent across all
-// - Defaults queryType removed; now required to encourage explicit typing
-// - For 'map', treats as general query similar to geocode/search
+// Flat schema. JSON Schema output is a single object with optional fields,
+// so OpenAI-compatible endpoints (xAI) accept it. Field requirements per
+// queryType are conveyed to the LLM via the queryType description; runtime
+// behavior in the tool's execute() already tolerates missing fields per
+// queryType, so loosening the schema introduces no new failure modes.
 
-export const geospatialQuerySchema = z.discriminatedUnion('queryType', [
-    z.object({
-    queryType: z.literal('search'),
-    query: z.string()
-      .min(1, "Query cannot be empty")
-      .describe("Search term for places/POIs"),
-    coordinates: z.object({
-      latitude: z.number().min(-90).max(90),
-      longitude: z.number().min(-180).max(180)
-    })
-      .optional()
-      .describe("Optional reference point for proximity search"),
-    radius: z.number()
-      .positive()
-      .optional()
-      .describe("Search radius in kilometers"),
-    maxResults: z.number()
-      .int()
-      .positive()
-      .max(20)
-      .optional()
-      .default(5)
-      .describe("Maximum number of results to return"),
-    includeMap: z.boolean()
-      .optional()
-      .default(true)
-      .describe("Whether to include a map preview/URL in the response"),
-  }),
-  z.object({
-    queryType: z.literal('geocode'),
-    location: z.string()
-      .min(1, "Location cannot be empty")
-      .describe("The location to geocode - address, place name, or landmark"),
-    includeMap: z.boolean()
-      .optional()
-      .default(true)
-      .describe("Whether to include a map preview/URL in the response"),
-    maxResults: z.number()
-      .int()
-      .positive()
-      .max(20)
-      .optional()
-      .default(5)
-      .describe("Maximum number of results to return"),
-  }),
-  z.object({
-    queryType: z.literal('reverse'),
-    coordinates: z.object({
-      latitude: z.number().min(-90).max(90),
-      longitude: z.number().min(-180).max(180)
-    })
-      .describe("Coordinates for reverse geocoding"),
-    includeMap: z.boolean()
-      .optional()
-      .default(true)
-      .describe("Whether to include a map preview/URL in the response"),
-    maxResults: z.number()
-      .int()
-      .positive()
-      .max(20)
-      .optional()
-      .default(5)
-      .describe("Maximum number of results to return"),
-  }),
-  z.object({
-    queryType: z.literal('directions'),
-    origin: z.string()
-      .min(1, "Origin cannot be empty")
-      .describe("Starting location for directions"),
-    destination: z.string()
-      .min(1, "Destination cannot be empty")
-      .describe("Ending location for directions"),
-    mode: z.enum(['driving', 'walking', 'cycling', 'transit'])
-      .optional()
-      .default('driving')
-      .describe("Transportation mode for directions"),
-    includeMap: z.boolean()
-      .optional()
-      .default(true)
-      .describe("Whether to include a map preview/URL in the response"),
-  }),
-  z.object({
-    queryType: z.literal('distance'),
-    origin: z.string()
-      .min(1, "Origin cannot be empty")
-      .describe("Starting location for distance calculation"),
-    destination: z.string()
-      .min(1, "Destination cannot be empty")
-      .describe("Ending location for distance calculation"),
-    mode: z.enum(['driving', 'walking', 'cycling', 'transit'])
-      .optional()
-      .default('driving')
-      .describe("Transportation mode for distance"),
-    includeMap: z.boolean()
-      .optional()
-      .default(true)
-      .describe("Whether to include a map preview/URL in the response"),
-  }),
-  z.object({
-    queryType: z.literal('map'),
-    location: z.string()
-      .min(1, "Location cannot be empty")
-      .describe("Location or area for map request"),
-    includeMap: z.boolean()
-      .optional()
-      .default(true)
-      .describe("Whether to include a map preview/URL in the response"),
+export const geospatialQuerySchema = z.object({
+  queryType: z.enum(['search', 'geocode', 'reverse', 'directions', 'distance', 'map'])
+    .describe(
+      "Type of geospatial query. Set the corresponding fields: " +
+      "'search' → query (optionally coordinates, radius, maxResults); " +
+      "'geocode' → location (optionally maxResults); " +
+      "'reverse' → coordinates (optionally maxResults); " +
+      "'directions' → origin + destination (optionally mode); " +
+      "'distance' → origin + destination (optionally mode); " +
+      "'map' → location."
+    ),
+  query: z.string()
+    .min(1)
+    .optional()
+    .describe("Search term for places/POIs (used by 'search')"),
+  location: z.string()
+    .min(1)
+    .optional()
+    .describe("Location to geocode or render as a map (used by 'geocode' and 'map')"),
+  coordinates: z.object({
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180)
   })
-]);
+    .optional()
+    .describe("Coordinates (required for 'reverse', optional proximity hint for 'search')"),
+  origin: z.string()
+    .min(1)
+    .optional()
+    .describe("Starting location (used by 'directions' and 'distance')"),
+  destination: z.string()
+    .min(1)
+    .optional()
+    .describe("Ending location (used by 'directions' and 'distance')"),
+  mode: z.enum(['driving', 'walking', 'cycling', 'transit'])
+    .optional()
+    .default('driving')
+    .describe("Transportation mode (used by 'directions' and 'distance')"),
+  radius: z.number()
+    .positive()
+    .optional()
+    .describe("Search radius in kilometers (used by 'search')"),
+  maxResults: z.number()
+    .int()
+    .positive()
+    .max(20)
+    .optional()
+    .default(5)
+    .describe("Maximum number of results to return"),
+  includeMap: z.boolean()
+    .optional()
+    .default(true)
+    .describe("Whether to include a map preview/URL in the response"),
+});
 
 export type GeospatialQuery = z.infer<typeof geospatialQuerySchema>;
 

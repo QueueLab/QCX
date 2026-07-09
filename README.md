@@ -44,10 +44,10 @@ https://deepwiki.com/QueueLab/QCX
 ### 2. Install dependencies
 
 ```
-install bun package manager 
+install bun package manager
 bun install
 bun run build
-bun run dev 
+bun run dev
 ```
 
 ### 3. Setting up Upstash Redis
@@ -92,5 +92,5 @@ You can now visit http://localhost:3000.
 
 ## Verified models
 
-List of non reasoning verified models 
+List of non reasoning verified models
 Grok-3-mini

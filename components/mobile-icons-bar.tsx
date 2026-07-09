@@ -19,6 +19,8 @@ import { MapToggle } from './map-toggle'
 import { ModeToggle } from './mode-toggle'
 import { ProfileToggle } from './profile-toggle'
 import { useCalendarToggle } from './calendar-toggle-context'
+import { useUsageToggle } from './usage-toggle-context'
+import { useProfileToggle } from './profile-toggle-context'
 
 interface MobileIconsBarProps {
   onAttachmentClick: () => void;
@@ -29,6 +31,16 @@ export const MobileIconsBar: React.FC<MobileIconsBarProps> = ({ onAttachmentClic
   const [, setMessages] = useUIState<typeof AI>()
   const { clearChat } = useActions()
   const { toggleCalendar } = useCalendarToggle()
+  const { toggleUsage, isUsageOpen } = useUsageToggle()
+  const { activeView, closeProfileView } = useProfileToggle()
+
+  const handleUsageToggle = () => {
+    // If we're about to open usage and profile is open, close profile first
+    if (!isUsageOpen && activeView) {
+      closeProfileView()
+    }
+    toggleUsage()
+  }
 
   const handleNewChat = async () => {
     setMessages([])
@@ -45,15 +57,10 @@ export const MobileIconsBar: React.FC<MobileIconsBarProps> = ({ onAttachmentClic
       <Button variant="ghost" size="icon" onClick={toggleCalendar} title="Open Calendar" data-testid="mobile-calendar-button">
         <CalendarDays className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>
-
-      {/* Portal target for resolution search button on mobile */}
-      <div id="mobile-header-search-portal" />
-
-      <a href="https://buy.stripe.com/14A3cv7K72TR3go14Nasg02" target="_blank" rel="noopener noreferrer">
-        <Button variant="ghost" size="icon">
-          <TentTree className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
-        </Button>
-      </a>
+      <div id="mobile-header-search-portal" className="contents" />
+      <Button variant="ghost" size="icon" onClick={handleUsageToggle}>
+        <TentTree className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
+      </Button>
       <Button variant="ghost" size="icon" onClick={onAttachmentClick} data-testid="mobile-attachment-button">
         <Paperclip className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>
