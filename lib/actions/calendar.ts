@@ -93,7 +93,7 @@ export async function saveNote(noteData: NewCalendarNote | CalendarNote): Promis
                 const calendarContextMessage: NewMessage = {
                     chatId: newNote.chatId,
                     userId: userId,
-                    role: 'data',
+                    role: 'tool',
                     content: JSON.stringify({
                         type: 'calendar_note',
                         note: newNote,
