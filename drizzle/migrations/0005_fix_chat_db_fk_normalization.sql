@@ -11,6 +11,10 @@
 -- correct public.users FKs, but pre-existing FKs from the original schema
 -- (pointing to auth.users) may still exist in some deployments.
 -- This migration ensures all FKs are corrected.
+--
+-- FK creation uses NOT VALID to avoid blocking writes during creation,
+-- then VALIDATE CONSTRAINT is called separately to enforce the constraint
+-- only after existing data is verified. See migration 0006 for index creation.
 
 -- Step 1: Drop all affected foreign key constraints referencing auth.users
 ALTER TABLE public.chats
@@ -34,40 +38,53 @@ ALTER TABLE public.chat_participants
 ALTER TABLE public.prompt_generation_jobs
   DROP CONSTRAINT IF EXISTS prompt_generation_jobs_user_id_fkey;
 
--- Step 2: Add new foreign key constraints referencing public.users.id
+-- Step 2: Add new foreign key constraints referencing public.users.id (NOT VALID)
 ALTER TABLE public.chats
   ADD CONSTRAINT chats_user_id_fkey
-    FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+    FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE NOT VALID;
 
 ALTER TABLE public.messages
   ADD CONSTRAINT messages_user_id_fkey
-    FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+    FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE NOT VALID;
 
 ALTER TABLE public.system_prompts
   ADD CONSTRAINT system_prompts_user_id_fkey
-    FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+    FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE NOT VALID;
 
 ALTER TABLE public.locations
   ADD CONSTRAINT locations_user_id_fkey
-    FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+    FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE NOT VALID;
 
 ALTER TABLE public.visualizations
   ADD CONSTRAINT visualizations_user_id_fkey
-    FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+    FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE NOT VALID;
 
 ALTER TABLE public.chat_participants
   ADD CONSTRAINT chat_participants_user_id_fkey
-    FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+    FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE NOT VALID;
 
 ALTER TABLE public.prompt_generation_jobs
   ADD CONSTRAINT prompt_generation_jobs_user_id_fkey
-    FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+    FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE NOT VALID;
 
--- Step 3: Add indexes on user_id columns for query performance
-CREATE INDEX IF NOT EXISTS idx_chats_user_id ON public.chats(user_id);
-CREATE INDEX IF NOT EXISTS idx_messages_user_id ON public.messages(user_id);
-CREATE INDEX IF NOT EXISTS idx_system_prompts_user_id ON public.system_prompts(user_id);
-CREATE INDEX IF NOT EXISTS idx_locations_user_id ON public.locations(user_id);
-CREATE INDEX IF NOT EXISTS idx_visualizations_user_id ON public.visualizations(user_id);
-CREATE INDEX IF NOT EXISTS idx_chat_participants_user_id ON public.chat_participants(user_id);
-CREATE INDEX IF NOT EXISTS idx_prompt_generation_jobs_user_id ON public.prompt_generation_jobs(user_id);
+-- Step 3: Validate all constraints (safe to run after data is verified)
+ALTER TABLE public.chats
+  VALIDATE CONSTRAINT chats_user_id_fkey;
+
+ALTER TABLE public.messages
+  VALIDATE CONSTRAINT messages_user_id_fkey;
+
+ALTER TABLE public.system_prompts
+  VALIDATE CONSTRAINT system_prompts_user_id_fkey;
+
+ALTER TABLE public.locations
+  VALIDATE CONSTRAINT locations_user_id_fkey;
+
+ALTER TABLE public.visualizations
+  VALIDATE CONSTRAINT visualizations_user_id_fkey;
+
+ALTER TABLE public.chat_participants
+  VALIDATE CONSTRAINT chat_participants_user_id_fkey;
+
+ALTER TABLE public.prompt_generation_jobs
+  VALIDATE CONSTRAINT prompt_generation_jobs_user_id_fkey;
