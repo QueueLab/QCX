@@ -92,7 +92,7 @@ export function CalendarNotepad({ chatId }: CalendarNotepadProps) {
   };
 
   return (
-    <div data-testid="calendar-notepad" className="bg-card text-card-foreground shadow-lg rounded-lg p-4 max-w-2xl mx-auto my-4 border">
+    <div data-testid="calendar-notepad" className="bg-card text-card-foreground shadow-lg rounded-lg p-4 max-w-2xl mx-auto my-4 border overflow-hidden">
       <div className="flex items-center justify-between mb-4">
         <button
           onClick={() => setDateOffset(dateOffset - 7)}
@@ -151,10 +151,10 @@ export function CalendarNotepad({ chatId }: CalendarNotepadProps) {
       <div className="space-y-4">
         {notes.length > 0 ? (
           notes.map((note) => (
-            <div key={note.id} className="p-3 bg-muted rounded-md">
+            <div key={note.id} className="p-3 bg-muted rounded-md overflow-hidden">
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">
+                  <p className="text-xs truncate text-muted-foreground mb-1">
                     {new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </p>
                   <p className="text-sm whitespace-pre-wrap break-words">{note.content}</p>

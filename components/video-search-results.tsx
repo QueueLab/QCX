@@ -118,7 +118,7 @@ export function VideoSearchResults({ results }: VideoSearchResultsProps) {
           <DialogContent className="sm:max-w-3xl max-h-[80vh] overflow-auto">
             <DialogHeader>
               <DialogTitle>Search Videos</DialogTitle>
-              <DialogDescription className="text-sm">
+              <DialogDescription className="text-sm line-clamp-2">
                 {results.searchParameters.q}
               </DialogDescription>
             </DialogHeader>

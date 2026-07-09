@@ -21,7 +21,6 @@ import {
 import { useEffect, useState } from 'react'
 import { PlusCircle } from 'lucide-react'
 import { motion } from 'framer-motion'
-import 'glassmorphic/glassmorphic.css'
 
 interface SearchResultsImageSectionProps {
   images: string[]
@@ -98,7 +97,9 @@ export const SearchResultsImageSection: React.FC<
           <DialogContent className="sm:max-w-3xl max-h-[80vh] overflow-auto glassmorphic">
             <DialogHeader>
               <DialogTitle>Search Images</DialogTitle>
-              <DialogDescription className="text-sm">{query}</DialogDescription>
+              <DialogDescription className="text-sm line-clamp-2">
+                {query}
+              </DialogDescription>
             </DialogHeader>
             <div className="py-4">
               <Carousel
