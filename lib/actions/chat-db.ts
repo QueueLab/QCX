@@ -112,13 +112,30 @@ export async function saveChat(chatData: NewChat, messagesData: Omit<NewMessage,
       throw new Error('Failed to establish chatId for chat operation.');
     }
 
-    // Save messages
+    // Save messages — deduplicate by ID first, then generate unique IDs for any remaining duplicates
+    // This prevents "ON CONFLICT DO UPDATE cannot affect row a second time" when the AI state
+    // contains multiple messages sharing the same ID (e.g., groupeId used for response + related + followup).
     if (messagesData && messagesData.length > 0) {
-      const messagesToInsert = messagesData.map(msg => ({
-        ...msg,
-        chatId: chatId!, // Ensure chatId is set for all messages
-        userId: msg.userId || chatData.userId!, // Ensure userId is set
-      }));
+      const seenIds = new Set<string>();
+      const messagesToInsert: typeof messages.$inferInsert[] = [];
+
+      for (const msg of messagesData) {
+        let id = msg.id;
+
+        // If we've already seen this ID in this batch, generate a unique one
+        while (seenIds.has(id)) {
+          id = `${id}-${Math.random().toString(36).substring(2, 8)}`;
+        }
+        seenIds.add(id);
+
+        messagesToInsert.push({
+          ...msg,
+          id,
+          chatId: chatId!,
+          userId: msg.userId || chatData.userId!,
+        });
+      }
+
       await tx.insert(messages).values(messagesToInsert).onConflictDoUpdate({ target: messages.id, set: { content: sql`EXCLUDED.content`, role: sql`EXCLUDED.role` } });
     }
     return chatId;
