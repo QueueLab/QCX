@@ -47,12 +47,16 @@ export const MobileIconsBar: React.FC<MobileIconsBarProps> = ({ onAttachmentClic
   }
 
   return (
-    <div className="mobile-icons-bar-content">
+    <div className="mobile-icons-bar-content flex items-center justify-around w-full">
       <Button variant="ghost" size="icon" onClick={handleNewChat} data-testid="mobile-new-chat-button">
         <Plus className="h-[1.2rem] w-[1.2rem]" />
       </Button>
-      <ProfileToggle />
-      <MapToggle />
+      <div className="flex-1 flex justify-center">
+        <ProfileToggle />
+      </div>
+      <div className="flex-1 flex justify-center">
+        <MapToggle />
+      </div>
       <Button variant="ghost" size="icon" onClick={toggleCalendar} title="Open Calendar" data-testid="mobile-calendar-button">
         <CalendarDays className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>

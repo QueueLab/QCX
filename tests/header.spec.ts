@@ -9,9 +9,9 @@ test.describe('Header and Navigation', () => {
   });
 
   test('should toggle the theme in settings', async ({ page }) => {
+    // Theme selector is now placed above the settings tabs
     await page.click('[data-testid="profile-toggle"]');
     await page.click('[data-testid="profile-settings"]');
-    await page.click('[data-testid="theme-tab-trigger"]');
 
     await page.click('[data-testid="theme-select-dark"]');
     const html = page.locator('html');

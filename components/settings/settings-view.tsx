@@ -8,6 +8,7 @@ import { DownloadReportButton } from "@/components/download-report-button"
 
 export default function SettingsView() {
   const { toggleProfileSection, activeView } = useProfileToggle();
+  // Appearance now shows the theme selector (above tabs) with system-prompt as default tab
   const initialTab = activeView === ProfileToggleEnum.Security ? "user-management" : "system-prompt";
 
   const handleClose = () => {

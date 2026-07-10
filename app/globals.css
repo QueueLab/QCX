@@ -154,6 +154,15 @@
     flex-shrink: 0;
   }
 
+  /* Ensure flex-1 wrappers inside icons bar don't expand too much */
+  .mobile-icons-bar-content .flex-1 {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
   /*
   .mobile-chat-section {
     flex: 1; 

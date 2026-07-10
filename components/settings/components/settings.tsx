@@ -172,13 +172,49 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)}>
         <div className="space-y-6">
+          {/* Theme selector placed above the tabs */}
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Theme Selection</CardTitle>
+              <CardDescription>Select the theme for your planetary copilot</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-4">
+                {[
+                  { name: 'Light', value: 'light', icon: Sun },
+                  { name: 'Dark', value: 'dark', icon: Moon },
+                  { name: 'Earth', value: 'earth', icon: Earth },
+                ].map((t) => {
+                  const Icon = t.icon
+                  const isActive = mounted && theme === t.value
+                  return (
+                    <button
+                      key={t.value}
+                      type="button"
+                      data-testid={`theme-select-${t.value}`}
+                      onClick={() => setTheme(t.value)}
+                      className={cn(
+                        "flex flex-col items-center justify-center p-6 rounded-xl border-2 transition-all gap-3 text-center",
+                        isActive
+                          ? "bg-accent/40 border-primary text-primary shadow-sm"
+                          : "bg-card border-muted hover:border-muted-foreground/50 text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      <Icon className="h-8 w-8" />
+                      <span className="text-sm font-medium">{t.name}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
           <Tabs.Root value={currentTab} onValueChange={setCurrentTab} className="w-full">
-            <Tabs.List className="grid w-full grid-cols-2 md:grid-cols-5 gap-2">
+            <Tabs.List className="grid w-full grid-cols-2 md:grid-cols-4 gap-2">
               <Tabs.Trigger value="system-prompt" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">System Prompt</Tabs.Trigger>
               <Tabs.Trigger value="model" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">Model Selection</Tabs.Trigger>
               <Tabs.Trigger value="user-management" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">User Management</Tabs.Trigger>
               <Tabs.Trigger value="map" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">Map</Tabs.Trigger>
-              <Tabs.Trigger value="theme" data-testid="theme-tab-trigger" className="col-span-2 md:col-span-1 inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">Theme</Tabs.Trigger>
             </Tabs.List>
             <AnimatePresence mode="wait">
               <motion.div
@@ -240,43 +276,7 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
                   </Card>
                 </Tabs.Content>
 
-                <Tabs.Content value="theme" className="mt-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Theme Selection</CardTitle>
-                      <CardDescription>Select the theme for your planetary copilot</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-3 gap-4">
-                        {[
-                          { name: 'Light', value: 'light', icon: Sun },
-                          { name: 'Dark', value: 'dark', icon: Moon },
-                          { name: 'Earth', value: 'earth', icon: Earth },
-                        ].map((t) => {
-                          const Icon = t.icon
-                          const isActive = mounted && theme === t.value
-                          return (
-                            <button
-                              key={t.value}
-                              type="button"
-                              data-testid={`theme-select-${t.value}`}
-                              onClick={() => setTheme(t.value)}
-                              className={cn(
-                                "flex flex-col items-center justify-center p-6 rounded-xl border-2 transition-all gap-3 text-center",
-                                isActive
-                                  ? "bg-accent/40 border-primary text-primary shadow-sm"
-                                  : "bg-card border-muted hover:border-muted-foreground/50 text-muted-foreground hover:text-foreground"
-                              )}
-                            >
-                              <Icon className="h-8 w-8" />
-                              <span className="text-sm font-medium">{t.name}</span>
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Tabs.Content>
+
               </motion.div>
             </AnimatePresence>
           </Tabs.Root>
