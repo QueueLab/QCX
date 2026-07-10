@@ -65,9 +65,16 @@ export function ProfileToggle() {
     return <CircleUserRound className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
   }
 
+  // Mobile: show profile icon as a direct button that opens the profile view
   if (isMobile) {
     return (
-      <Button variant="ghost" size="icon" className="relative" data-testid="profile-toggle" disabled>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="relative"
+        data-testid="profile-toggle"
+        onClick={() => handleSectionToggle(ProfileToggleEnum.Settings)}
+      >
         <ProfileIcon />
         <span className="sr-only">Open profile menu</span>
       </Button>

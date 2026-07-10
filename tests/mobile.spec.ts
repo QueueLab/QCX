@@ -9,9 +9,9 @@ test.describe('Mobile UI', () => {
     await page.locator('[data-testid="chat-input"]').waitFor({ state: 'visible', timeout: 30000 });
   });
 
-  test('profile toggle button should be disabled', async ({ page }) => {
-    // Check that the profile toggle is disabled on mobile
-    await expect(page.locator('.mobile-icons-bar-content [data-testid="profile-toggle"]')).toBeDisabled();
+  test('profile toggle button should be enabled on mobile', async ({ page }) => {
+    // Check that the profile toggle is enabled and clickable on mobile
+    await expect(page.locator('.mobile-icons-bar-content [data-testid="profile-toggle"]')).toBeEnabled();
   });
 
   test('should have an enabled submit button', async ({ page }) => {

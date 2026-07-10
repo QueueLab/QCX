@@ -5,6 +5,9 @@ test.describe('Responsive design - Desktop', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
+    try {
+      await page.locator('text=Later').click({ timeout: 3000 });
+    } catch (e) {}
   });
 
   test('should display desktop layout', async ({ page }) => {
@@ -18,7 +21,7 @@ test.describe('Responsive design - Desktop', () => {
   });
 
   test('should display full header with all elements', async ({ page }) => {
-    await expect(page.locator('[data-testid="theme-toggle"]')).toBeVisible();
+    await expect(page.locator('[data-testid="history-button"]').first()).toBeVisible();
     await expect(page.locator('[data-testid="profile-toggle"]')).toBeVisible();
     await expect(page.locator('[data-testid="calendar-toggle"]')).toBeVisible();
   });
@@ -44,6 +47,9 @@ test.describe('Responsive design - Tablet', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
+    try {
+      await page.locator('text=Later').click({ timeout: 3000 });
+    } catch (e) {}
   });
 
   test('should display tablet layout', async ({ page }) => {
@@ -96,6 +102,9 @@ test.describe('Responsive design - Mobile', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
+    try {
+      await page.locator('text=Later').click({ timeout: 3000 });
+    } catch (e) {}
   });
 
   test('should display mobile layout', async ({ page }) => {
@@ -195,6 +204,9 @@ test.describe('Responsive design - Small Mobile', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
+    try {
+      await page.locator('text=Later').click({ timeout: 3000 });
+    } catch (e) {}
   });
 
   test('should work on very small screens', async ({ page }) => {
@@ -229,6 +241,9 @@ test.describe('Responsive design - Large Desktop', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
+    try {
+      await page.locator('text=Later').click({ timeout: 3000 });
+    } catch (e) {}
   });
 
   test('should utilize large screen space', async ({ page }) => {

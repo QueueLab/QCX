@@ -7,7 +7,9 @@ import { useRouter } from 'next/navigation'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import * as z from 'zod'
-import { Loader2, Save, RotateCcw } from 'lucide-react'
+import { Loader2, Save, RotateCcw, Sun, Moon, Earth } from 'lucide-react'
+import { useTheme } from 'next-themes'
+import { cn } from '@/lib/utils'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -71,6 +73,12 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
   const [currentTab, setCurrentTab] = useState(initialTab);
   const { mapProvider, setMapProvider } = useSettingsStore();
   const { user, loading: authLoading } = useCurrentUser();
+  const { theme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     setCurrentTab(initialTab);
@@ -153,6 +161,7 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
 
   function onReset() {
     form.reset(defaultValues)
+    setTheme('earth')
     toast({
       title: "Settings reset",
       description: "Your settings have been reset to default values.",
@@ -163,8 +172,45 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)}>
         <div className="space-y-6">
+          {/* Theme selector placed above the tabs */}
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Theme Selection</CardTitle>
+              <CardDescription>Select the theme for your planetary copilot</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-4">
+                {[
+                  { name: 'Light', value: 'light', icon: Sun },
+                  { name: 'Dark', value: 'dark', icon: Moon },
+                  { name: 'Earth', value: 'earth', icon: Earth },
+                ].map((t) => {
+                  const Icon = t.icon
+                  const isActive = mounted && theme === t.value
+                  return (
+                    <button
+                      key={t.value}
+                      type="button"
+                      data-testid={`theme-select-${t.value}`}
+                      onClick={() => setTheme(t.value)}
+                      className={cn(
+                        "flex flex-col items-center justify-center p-6 rounded-xl border-2 transition-all gap-3 text-center",
+                        isActive
+                          ? "bg-accent/40 border-primary text-primary shadow-sm"
+                          : "bg-card border-muted hover:border-muted-foreground/50 text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      <Icon className="h-8 w-8" />
+                      <span className="text-sm font-medium">{t.name}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
           <Tabs.Root value={currentTab} onValueChange={setCurrentTab} className="w-full">
-            <Tabs.List className="grid w-full grid-cols-4 gap-x-2">
+            <Tabs.List className="grid w-full grid-cols-2 md:grid-cols-4 gap-2">
               <Tabs.Trigger value="system-prompt" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">System Prompt</Tabs.Trigger>
               <Tabs.Trigger value="model" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">Model Selection</Tabs.Trigger>
               <Tabs.Trigger value="user-management" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">User Management</Tabs.Trigger>
@@ -229,6 +275,8 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
                     </CardContent>
                   </Card>
                 </Tabs.Content>
+
+
               </motion.div>
             </AnimatePresence>
           </Tabs.Root>
