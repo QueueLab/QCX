@@ -23,6 +23,7 @@ import { getSystemPrompt, saveSystemPrompt } from "../../../lib/actions/chat"
 import { getSelectedModel, saveSelectedModel } from "../../../lib/actions/users"
 import { useCurrentUser } from "@/lib/auth/use-current-user"
 import { SettingsSkeleton } from './settings-skeleton'
+import { useTheme } from 'next-themes'
 
 // Define the form schema with enum validation for roles
 const settingsFormSchema = z.object({
@@ -62,6 +63,48 @@ const defaultValues: Partial<SettingsFormValues> = {
 
 interface SettingsProps {
   initialTab?: string;
+}
+
+function ThemeSelector() {
+  const { theme, setTheme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const currentTheme = mounted ? (theme === 'system' ? resolvedTheme : theme) : 'light';
+
+  const themes = [
+    { key: 'light', label: 'Light', icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
+      </svg>
+    )},
+    { key: 'dark', label: 'Dark', icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+      </svg>
+    )},
+  ];
+
+  return (
+    <div className="flex gap-3 w-full">
+      {themes.map((t) => (
+        <Button
+          key={t.key}
+          variant={currentTheme === t.key ? "default" : "outline"}
+          className={`flex-1 h-20 flex-col gap-2 text-sm transition-all ${
+            currentTheme === t.key ? "shadow-md" : "opacity-80 hover:opacity-100"
+          }`}
+          onClick={() => setTheme(t.key)}
+        >
+          <span className="opacity-70">{t.icon}</span>
+          <span className="font-medium">{t.label}</span>
+        </Button>
+      ))}
+    </div>
+  );
 }
 
 export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
@@ -164,11 +207,12 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
       <form onSubmit={form.handleSubmit(onSubmit)}>
         <div className="space-y-6">
           <Tabs.Root value={currentTab} onValueChange={setCurrentTab} className="w-full">
-            <Tabs.List className="grid w-full grid-cols-4 gap-x-2">
+            <Tabs.List className="grid w-full grid-cols-5 gap-x-2">
               <Tabs.Trigger value="system-prompt" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">System Prompt</Tabs.Trigger>
               <Tabs.Trigger value="model" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">Model Selection</Tabs.Trigger>
               <Tabs.Trigger value="user-management" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">User Management</Tabs.Trigger>
               <Tabs.Trigger value="map" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">Map</Tabs.Trigger>
+              <Tabs.Trigger value="appearance" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">Appearance</Tabs.Trigger>
             </Tabs.List>
             <AnimatePresence mode="wait">
               <motion.div
@@ -226,6 +270,17 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
                           <Label htmlFor="google">Google Maps</Label>
                         </div>
                       </RadioGroup>
+                    </CardContent>
+                  </Card>
+                </Tabs.Content>
+                <Tabs.Content value="appearance" className="mt-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Appearance</CardTitle>
+                      <CardDescription>Choose your preferred theme for the application</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <ThemeSelector />
                     </CardContent>
                   </Card>
                 </Tabs.Content>
