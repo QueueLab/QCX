@@ -185,7 +185,12 @@ export async function clearChats(
       return { error: 'Failed to clear chats from database.' }
     }
     revalidatePath('/')
-    redirect('/')
+    revalidatePath('/search', 'layout')
+    // Do NOT redirect here — let the client handle navigation.
+    // redirect('/') in a server action called from a client transition
+    // can cause crashes when the current page is a deleted chat (/search/[id]).
+    // The client components (clear-history.tsx and chat-history-client.tsx)
+    // will handle redirecting to '/' after success.
   } catch (error) {
     console.error('Error clearing chats from DB:', error)
     return { error: 'Failed to clear chat history' }
@@ -213,6 +218,8 @@ export async function saveChat(chat: OldChatType, userId: string): Promise<strin
     userId: effectiveUserId,
     role: msg.role,
     content: typeof msg.content === 'object' ? JSON.stringify(msg.content) : msg.content,
+    messageType: msg.type || null,
+    messageName: msg.name || null,
     createdAt: msg.createdAt ? new Date(msg.createdAt) : new Date(),
   }));
 

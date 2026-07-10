@@ -74,8 +74,6 @@ export async function getChatsPage(
 /**
  * Saves a chat and its messages. If the chat exists, it updates it.
  * This function should handle both creating new chats and appending messages.
- * The PR implies complex logic for saving, including message IDs.
- * This is a simplified version; PR #533 might have more granular message saving.
  * @param chatData - The chat data to save.
  * @param messagesData - An array of messages to save with the chat.
  * @returns The saved chat ID.
@@ -97,10 +95,14 @@ export async function saveChat(chatData: NewChat, messagesData: Omit<NewMessage,
         const newChatResult = await tx.insert(chats).values(chatData).returning({ id: chats.id });
         chatId = newChatResult[0].id;
       } else {
-        // Optionally update chat metadata here if needed, e.g., title
-        if (chatData.title) {
-          await tx.update(chats).set({ title: chatData.title, visibility: chatData.visibility, updatedAt: chatData.updatedAt }).where(eq(chats.id, chatId));
-        }
+        // Update chat metadata (title, visibility, path, updatedAt) on every save
+        // to ensure the chat record stays current with the latest state
+        await tx.update(chats).set({
+          title: chatData.title,
+          visibility: chatData.visibility,
+          path: chatData.path,
+          updatedAt: chatData.updatedAt,
+        }).where(eq(chats.id, chatId));
       }
     } else { // No chat ID, create new chat
       const newChatResult = await tx.insert(chats).values(chatData).returning({ id: chats.id });
@@ -108,7 +110,6 @@ export async function saveChat(chatData: NewChat, messagesData: Omit<NewMessage,
     }
 
     if (!chatId) {
-      // console.error('Failed to establish chatId within transaction.'); // Optional: for server logs
       throw new Error('Failed to establish chatId for chat operation.');
     }
 
@@ -136,7 +137,16 @@ export async function saveChat(chatData: NewChat, messagesData: Omit<NewMessage,
         });
       }
 
-      await tx.insert(messages).values(messagesToInsert).onConflictDoUpdate({ target: messages.id, set: { content: sql`EXCLUDED.content`, role: sql`EXCLUDED.role` } });
+      await tx.insert(messages).values(messagesToInsert).onConflictDoUpdate({
+        target: messages.id,
+        set: {
+          content: sql`EXCLUDED.content`,
+          role: sql`EXCLUDED.role`,
+          message_type: sql`EXCLUDED.message_type`,
+          message_name: sql`EXCLUDED.message_name`,
+          createdAt: sql`EXCLUDED.created_at`,
+        }
+      });
     }
     return chatId;
   });
@@ -145,8 +155,6 @@ export async function saveChat(chatData: NewChat, messagesData: Omit<NewMessage,
 
 /**
  * Creates a single message within a chat.
- * PR #533 has commits like "feat: Add message update and trailing deletion logic",
- * suggesting more granular message operations. This is a basic create.
  * @param messageData - The message data to save.
  * @returns The created message object or null if error.
  */
@@ -189,10 +197,15 @@ export async function deleteChat(id: string, userId: string): Promise<boolean> {
 
 /**
  * Clears the chat history for a given user (deletes all their chats).
+ * Includes retry logic for transient database connection errors
+ * that can occur on serverless platforms (Vercel cold starts,
+ * connection pool exhaustion).
  * @param userId - The ID of the user whose chat history to clear.
+ * @param retryCount - Internal retry counter (do not set manually).
  * @returns True if history was cleared, false otherwise.
  */
-export async function clearHistory(userId: string): Promise<boolean> {
+export async function clearHistory(userId: string, retryCount: number = 0): Promise<boolean> {
+  const MAX_RETRIES = 2;
   if (!userId) {
     console.error('clearHistory called without userId.');
     return false;
@@ -203,6 +216,12 @@ export async function clearHistory(userId: string): Promise<boolean> {
     return true;
   } catch (error) {
     console.error('Error clearing history:', error);
+    if (retryCount < MAX_RETRIES) {
+      console.warn(`Retrying clearHistory (${retryCount + 1}/${MAX_RETRIES})...`);
+      // Wait before retrying (exponential backoff)
+      await new Promise(resolve => setTimeout(resolve, 500 * Math.pow(2, retryCount)));
+      return clearHistory(userId, retryCount + 1);
+    }
     return false;
   }
 }
@@ -210,7 +229,7 @@ export async function clearHistory(userId: string): Promise<boolean> {
 /**
  * Retrieves all messages for a given chat ID, ordered by creation time.
  * @param chatId - The ID of the chat whose messages to retrieve.
- * @returns An array of message objects.
+ * @returns An array of message objects including messageType and messageName.
  */
 export async function getMessagesByChatId(chatId: string): Promise<Message[]> {
   if (!chatId) {
@@ -229,12 +248,3 @@ export async function getMessagesByChatId(chatId: string): Promise<Message[]> {
     return [];
   }
 }
-
-// More granular functions might be needed based on PR #533 specifics:
-// - updateMessage(messageId: string, updates: Partial<NewMessage>): Promise<Message | null>
-// - deleteMessage(messageId: string, userId: string): Promise<boolean>
-// - deleteTrailingMessages(chatId: string, lastKeptMessageId: string): Promise<void>
-// These are placeholders for now and can be implemented if subsequent steps show they are directly part of PR #533's changes.
-// The PR mentions "feat: Add message update and trailing deletion logic" and "refactor(chat): Adjust message edit logic".
-
-console.log('Chat DB actions loaded. Ensure getCurrentUserId() is correctly implemented for server-side usage if applicable.');

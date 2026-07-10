@@ -34,7 +34,7 @@ export function ChatHistoryClient({}: ChatHistoryClientProps) {
   const [isClearPending, startClearTransition] = useTransition();
   const [isAlertDialogOpen, setIsAlertDialogOpen] = useState(false);
   const [isCreditsVisible, setIsCreditsVisible] = useState(false);
-  const { isHistoryOpen } = useHistoryToggle();
+  const { isHistoryOpen, setHistoryOpen } = useHistoryToggle();
   const router = useRouter();
 
   useEffect(() => {
@@ -71,10 +71,7 @@ export function ChatHistoryClient({}: ChatHistoryClientProps) {
   const handleClearHistory = async () => {
     startClearTransition(async () => {
       try {
-        // We need a new API endpoint for clearing history
-        // Example: DELETE /api/chats (or POST /api/clear-history)
-        // This endpoint will call clearHistory(userId) from chat-db.ts
-        const response = await fetch('/api/chats/all', { // Placeholder for the actual clear endpoint
+        const response = await fetch('/api/chats/all', {
           method: 'DELETE',
         });
 
@@ -86,9 +83,15 @@ export function ChatHistoryClient({}: ChatHistoryClientProps) {
         toast.success('History cleared');
         setChats([]); // Clear chats from UI
         setIsAlertDialogOpen(false);
-        router.refresh(); // Refresh to reflect changes, potentially redirect if on a chat page
-        // Consider redirecting to '/' if current page is a chat that got deleted.
-        // The old clearChats action did redirect('/');
+        // Close the history sheet BEFORE redirecting to avoid a race condition
+        // where the sheet tries to re-fetch the deleted chat list.
+        setHistoryOpen(false);
+        // Use router.replace instead of router.push + router.refresh to avoid
+        // a race between navigation and refresh that can crash when the current
+        // page (/search/[id]) was just deleted.
+        setTimeout(() => {
+          router.replace('/');
+        }, 100);
       } catch (err) {
         if (err instanceof Error) {
           toast.error(err.message);

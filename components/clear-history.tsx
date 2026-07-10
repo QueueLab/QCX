@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,6 +15,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { clearChats } from '@/lib/actions/chat'
+import { useHistoryToggle } from './history-toggle-context'
 import { toast } from 'sonner'
 import { Spinner } from './ui/spinner'
 
@@ -24,6 +26,8 @@ type ClearHistoryProps = {
 export function ClearHistory({ empty }: ClearHistoryProps) {
   const [open, setOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
+  const router = useRouter()
+  const { setHistoryOpen } = useHistoryToggle()
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
@@ -51,6 +55,13 @@ export function ClearHistory({ empty }: ClearHistoryProps) {
                   toast.error(result.error)
                 } else {
                   toast.success('History cleared')
+                  // Close the history sheet BEFORE redirecting to avoid a race condition
+                  setHistoryOpen(false)
+                  // Use router.replace instead of router.push to avoid a race between
+                  // navigation and refresh that can crash when the current page was deleted
+                  setTimeout(() => {
+                    router.replace('/')
+                  }, 100)
                 }
                 setOpen(false)
               })
