@@ -21,7 +21,7 @@ import { HistorySidebar } from '@/components/history-sidebar'
 import { MapLoadingProvider } from '@/components/map-loading-context';
 import ConditionalLottie from '@/components/conditional-lottie';
 import { MapProvider as MapContextProvider } from '@/components/map/map-context'
-import { SWUpdateNotification } from '@/components/sw-update-notification'
+// import { SWUpdateNotification } from '@/components/sw-update-notification'
 
 const fontSans = FontSans({
   subsets: ['latin'],
@@ -130,7 +130,7 @@ export default function RootLayout({
                         <HistorySidebar />
                         <Footer />
                         <Toaster />
-                        <SWUpdateNotification />
+                        {/* <SWUpdateNotification /> */}
                       </MapLoadingProvider>
                     </MapContextProvider>
                   </ThemeProvider>
