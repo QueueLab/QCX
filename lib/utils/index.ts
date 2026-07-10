@@ -21,23 +21,6 @@ export function generateUUID(): string {
  */
 export { generateUUID as nanoid };
 
-/**
- * UUID validation regex for v4 format (RFC 4122).
- * Enforces version 4 and the RFC variant bits.
- * Supports standard (xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx) and
- * optional brace-wrapped ({xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx}) formats.
- */
-const UUID_V4_REGEX = /^\{?[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\}?$/i;
-
-/**
- * Validates whether a string is a valid UUID v4 format.
- * @param id - The string to validate.
- * @returns true if the string matches the UUID v4 format.
- */
-export function isValidUUID(id: string): boolean {
-  return UUID_V4_REGEX.test(id);
-}
-
 export async function getModel(requireVision: boolean = false) {
   const selectedModel = await getSelectedModel();
 
