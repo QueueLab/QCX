@@ -64,8 +64,6 @@ export const messages = pgTable('messages', {
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   role: text('role').notNull(),
   content: text('content').notNull(),
-  messageType: text('message_type'), // Stores the AI message 'type' field (response, input, related, followup, etc.)
-  messageName: text('message_name'), // Stores the AI message 'name' field (tool name, etc.)
   embedding: vector('embedding'),
   locationId: uuid('location_id').references(() => locations.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
