@@ -19,7 +19,8 @@ import { db } from '@/lib/db'
 import { users } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
-import { getModel, normalizeMessageContent } from '../utils'
+import { getModel, normalizeMessageContent, generateUUID, isValidUUID } from '../utils'
+
 import { executiveSummaryAgent } from '../agents/report/executive-summary'
 import { strategicSynthesisAgent } from '../agents/report/strategic-synthesis'
 
@@ -209,7 +210,8 @@ export async function saveChat(chat: OldChatType, userId: string): Promise<strin
   };
 
   const newMessagesData: Omit<DbNewMessage, 'chatId'>[] = chat.messages.map(msg => ({
-    id: msg.id,
+    // Ensure every message has a valid UUID before sending to DB
+    id: msg.id && isValidUUID(msg.id) ? msg.id : generateUUID(),
     userId: effectiveUserId,
     role: msg.role,
     content: typeof msg.content === 'object' ? JSON.stringify(msg.content) : msg.content,
