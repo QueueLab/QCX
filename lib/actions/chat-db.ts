@@ -122,9 +122,9 @@ export async function saveChat(chatData: NewChat, messagesData: Omit<NewMessage,
       for (const msg of messagesData) {
         let id = msg.id ?? crypto.randomUUID();
 
-        // If we've already seen this ID in this batch, generate a unique one
+        // If we've already seen this ID in this batch, generate a new UUID
         while (seenIds.has(id)) {
-          id = `${id}-${Math.random().toString(36).substring(2, 8)}`;
+          id = crypto.randomUUID();
         }
         seenIds.add(id);
 
