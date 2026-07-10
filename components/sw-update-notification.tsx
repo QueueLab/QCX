@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
 
 export function SWUpdateNotification() {
-  useEffect(() => {
+  const [hasShown, setHasShown] = useState(false);
+
+  const showToast = useCallback(() => {
     if (
       typeof window !== 'undefined' &&
       'serviceWorker' in navigator &&
@@ -14,19 +15,30 @@ export function SWUpdateNotification() {
       const serwist = window.serwist;
 
       const onWaiting = () => {
-        toast.info('A new version is available!', {
-          description: 'Click reload to update to the latest version.',
-          duration: Infinity,
-          action: {
-            label: 'Reload',
-            onClick: () => {
-              serwist.addEventListener("controlling", () => {
-                window.location.reload();
-              });
-              serwist.messageSkipWaiting();
+        // Only show the toast once per session to avoid popping up too often
+        if (!hasShown) {
+          setHasShown(true);
+          toast.info('A new version is available!', {
+            description: 'Click reload to update to the latest version.',
+            duration: 15000, // Auto-dismiss after 15 seconds instead of staying forever
+            position: 'bottom-left', // Show on the left side instead of right
+            action: {
+              label: 'Reload',
+              onClick: () => {
+                serwist.addEventListener("controlling", () => {
+                  window.location.reload();
+                });
+                serwist.messageSkipWaiting();
+              },
             },
-          },
-        });
+            cancel: {
+              label: 'Cancel',
+              onClick: () => {
+                // User dismissed the notification
+              },
+            },
+          });
+        }
       };
 
       serwist.addEventListener("waiting", onWaiting);
@@ -35,7 +47,11 @@ export function SWUpdateNotification() {
         serwist.removeEventListener("waiting", onWaiting);
       };
     }
-  }, []);
+  }, [hasShown]);
+
+  useEffect(() => {
+    showToast();
+  }, [showToast]);
 
   return null;
 }
