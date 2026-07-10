@@ -79,12 +79,6 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
   useEffect(() => {
     setMounted(true)
   }, [])
-  const { theme, setTheme } = useTheme()
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   useEffect(() => {
     setCurrentTab(initialTab);
@@ -242,44 +236,6 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
                           <Label htmlFor="google">Google Maps</Label>
                         </div>
                       </RadioGroup>
-                    </CardContent>
-                  </Card>
-                </Tabs.Content>
-
-                <Tabs.Content value="theme" className="mt-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Theme Selection</CardTitle>
-                      <CardDescription>Select the theme for your planetary copilot</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-3 gap-4">
-                        {[
-                          { name: 'Light', value: 'light', icon: Sun },
-                          { name: 'Dark', value: 'dark', icon: Moon },
-                          { name: 'Earth', value: 'earth', icon: Earth },
-                        ].map((t) => {
-                          const Icon = t.icon
-                          const isActive = mounted && theme === t.value
-                          return (
-                            <button
-                              key={t.value}
-                              type="button"
-                              data-testid={`theme-select-${t.value}`}
-                              onClick={() => setTheme(t.value)}
-                              className={cn(
-                                "flex flex-col items-center justify-center p-6 rounded-xl border-2 transition-all gap-3 text-center",
-                                isActive
-                                  ? "bg-accent/40 border-primary text-primary shadow-sm"
-                                  : "bg-card border-muted hover:border-muted-foreground/50 text-muted-foreground hover:text-foreground"
-                              )}
-                            >
-                              <Icon className="h-8 w-8" />
-                              <span className="text-sm font-medium">{t.name}</span>
-                            </button>
-                          )
-                        })}
-                      </div>
                     </CardContent>
                   </Card>
                 </Tabs.Content>

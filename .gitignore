@@ -59,6 +59,3 @@ aef_index.csv
 *.log
 deno.json
 edge_function/
-
-# clerk configuration (can include secrets)
-/.clerk/
