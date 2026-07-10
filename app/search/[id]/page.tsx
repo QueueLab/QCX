@@ -44,18 +44,25 @@ export default async function SearchPage({ params }: SearchPageProps) {
   // Fetch messages for the chat
   const dbMessages: DrizzleMessage[] = await getChatMessages(chat.id);
 
-  // Transform DrizzleMessages to AIMessages
+  // Transform DrizzleMessages to AIMessages — restore persisted type and name
   const initialMessages: AIMessage[] = dbMessages.map((dbMsg): AIMessage => {
+    const dbMsgWithMeta = dbMsg as DrizzleMessage & { messageType: string | null; messageName: string | null };
+    // Validate the messageType against the known AIMessage['type'] values
+    const validTypes: AIMessage['type'][] = [
+      'response', 'related', 'skip', 'inquiry', 'input',
+      'input_related', 'tool', 'followup', 'end', 'drawing_context',
+      'resolution_search_result', 'definition'
+    ];
+    const safeType = (dbMsgWithMeta.messageType && validTypes.includes(dbMsgWithMeta.messageType as AIMessage['type']))
+      ? (dbMsgWithMeta.messageType as AIMessage['type'])
+      : undefined;
     return {
       id: dbMsg.id,
-      role: dbMsg.role as AIMessage['role'], // Cast role, ensure AIMessage['role'] includes all dbMsg.role possibilities
+      role: dbMsg.role as AIMessage['role'],
       content: dbMsg.content,
+      type: safeType,
+      name: dbMsgWithMeta.messageName || undefined,
       createdAt: dbMsg.createdAt ? new Date(dbMsg.createdAt) : undefined,
-      // 'type' and 'name' are not in the basic Drizzle 'messages' schema.
-      // These would be undefined unless specific logic is added to derive them.
-      // For instance, if a message with role 'tool' should have a 'name',
-      // or if some messages have a specific 'type' based on content or other flags.
-      // This mapping assumes standard user/assistant messages primarily.
     };
   });
 

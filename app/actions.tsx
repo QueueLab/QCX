@@ -503,7 +503,11 @@ export const AI = createAI<AIState, UIState>({
   onSetAIState: async ({ state }) => {
     'use server'
 
-    if (!state.messages.some(e => e.type === 'response')) {
+    // Only save chats that have actual messages (skip empty chats)
+    // Previously, we only saved when there was a 'response' type message,
+    // which excluded definition-only chats and other special flows.
+    // Now we save any chat with messages, regardless of message type.
+    if (!state.messages || state.messages.length === 0) {
       return
     }
 

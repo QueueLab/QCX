@@ -2,36 +2,53 @@
 import { NextResponse } from 'next/server';
 import { clearHistory as dbClearHistory } from '@/lib/actions/chat-db';
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user';
-import { revalidatePath } from 'next/cache'; // For revalidating after clearing
+import { revalidatePath } from 'next/cache';
 
+/**
+ * Clears all chat history for the authenticated user.
+ * Includes retry logic for transient database connection errors
+ * that can occur on serverless platforms (Vercel cold starts,
+ * connection pool exhaustion).
+ */
 export async function DELETE() {
-  try {
-    const userId = await getCurrentUserIdOnServer();
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const MAX_RETRIES = 3;
+  const RETRY_DELAY_MS = 500;
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const userId = await getCurrentUserIdOnServer();
+      if (!userId) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const success = await dbClearHistory(userId);
+      if (success) {
+        revalidatePath('/');
+        revalidatePath('/search', 'layout');
+        return NextResponse.json({ message: 'History cleared successfully' }, { status: 200 });
+      } else {
+        // If this is the last attempt, return a failure response
+        if (attempt === MAX_RETRIES) {
+          return NextResponse.json({ error: 'Failed to clear history after multiple attempts' }, { status: 500 });
+        }
+        console.warn(`clearHistory returned false (attempt ${attempt}/${MAX_RETRIES}), retrying...`);
+      }
+    } catch (error) {
+      console.error(`Error clearing history via API (attempt ${attempt}/${MAX_RETRIES}):`, error);
+      if (attempt === MAX_RETRIES) {
+        let errorMessage = 'Internal Server Error clearing history';
+        if (error instanceof Error) {
+          errorMessage = error.message;
+        }
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
+      }
     }
 
-    const success = await dbClearHistory(userId);
-    if (success) {
-      revalidatePath('/'); // Revalidate home or relevant pages
-      revalidatePath('/search'); // Revalidate search path
-      return NextResponse.json({ message: 'History cleared successfully' }, { status: 200 });
-    } else {
-      // This case might be redundant if dbClearHistory throws an error on failure,
-      // but kept for explicitness if it returns false for "no error but nothing done".
-      return NextResponse.json({ error: 'Failed to clear history' }, { status: 500 });
+    // Wait before retrying
+    if (attempt < MAX_RETRIES) {
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
     }
-  } catch (error) {
-    console.error('Error clearing history via API:', error);
-    let errorMessage = 'Internal Server Error clearing history';
-    if (error instanceof Error && error.message) {
-        // Use the error message from dbClearHistory if available (e.g., "User ID is required")
-        // This depends on dbClearHistory actually throwing or returning specific error messages.
-        // The current dbClearHistory in chat.ts returns {error: ...} which won't be caught here as an Error instance directly.
-        // However, the dbClearHistory in chat-db.ts returns boolean.
-        // Let's assume if dbClearHistory from chat-db.ts (which returns boolean) fails, it's a generic 500.
-        // If it were to throw, that would be caught.
-    }
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
+
+  return NextResponse.json({ error: 'Failed to clear history' }, { status: 500 });
 }
