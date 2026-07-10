@@ -66,7 +66,7 @@ export const Header = () => {
         </h1>
       </div>
       
-      <div className="flex-1 hidden md:flex justify-center gap-10 items-center z-10">
+      <div className="flex-1 hidden md:flex justify-evenly items-center z-10 px-4">
         <ProfileToggle/>
         
         <MapToggle />

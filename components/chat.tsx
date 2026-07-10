@@ -187,19 +187,21 @@ export function Chat({ id }: ChatProps) {
   return (
     <MapDataProvider> {/* Add Provider */}
       <HeaderSearchButton />
-      <div className="flex justify-start items-start">
+      <div className="flex justify-start items-start w-full">
         {/* This is the new div for scrolling */}
-        <div className="w-1/2 flex flex-col space-y-3 md:space-y-4 px-8 sm:px-12 pt-16 md:pt-20 pb-4 h-[calc(100vh-0.5in)] overflow-y-auto">
+        <div className="w-1/2 flex flex-col space-y-3 md:space-y-4 px-4 sm:px-8 lg:px-12 pt-8 sm:pt-12 md:pt-16 pb-4 h-[calc(100vh-0.5in)] overflow-y-auto">
         {isCalendarOpen ? (
           <CalendarNotepad chatId={id} />
         ) : (
           <>
-            <ChatPanel 
-              messages={messages} 
-              input={input} 
-              setInput={setInput} 
-              onSuggestionsChange={setSuggestions}
-            />
+            <div className="space-y-2 md:space-y-4">
+              <ChatPanel 
+                messages={messages} 
+                input={input} 
+                setInput={setInput} 
+                onSuggestionsChange={setSuggestions}
+              />
+            </div>
             <div className="relative min-h-[100px]">
               <div className={cn("transition-all duration-300", suggestions ? "blur-md pointer-events-none" : "")}>
                 {showEmptyScreen ? (

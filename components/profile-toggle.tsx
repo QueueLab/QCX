@@ -67,7 +67,7 @@ export function ProfileToggle() {
 
   if (isMobile) {
     return (
-      <Button variant="ghost" size="icon" className="relative" data-testid="profile-toggle" disabled>
+      <Button variant="ghost" size="icon" className="relative" data-testid="profile-toggle" onClick={() => handleSectionToggle(ProfileToggleEnum.Account)}>
         <ProfileIcon />
         <span className="sr-only">Open profile menu</span>
       </Button>
