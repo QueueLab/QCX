@@ -144,24 +144,14 @@
 
   .mobile-icons-bar-content {
     display: flex;
-    gap: 10px;
+    gap: 8px;
     padding: 0 5px;
-    min-width: max-content;
-    /* justify-content: space-between; */
+    width: 100%;
+    justify-content: space-evenly;
   }
 
   .mobile-icons-bar-content > * {
     flex-shrink: 0;
-  }
-
-  /* Tablet overrides (spaced-out) */
-  @media (min-width: 768px) {
-    .mobile-icons-bar-content {
-      min-width: 0;
-      width: 100%;
-      justify-content: space-between;
-      gap: 0; /* Remove gap if using space-between */
-    }
   }
 
   /*
