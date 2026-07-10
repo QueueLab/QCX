@@ -1,6 +1,6 @@
 'use client'
 import { Button } from '@/components/ui/button'
-import { ChevronLeft, History as HistoryIcon } from 'lucide-react'
+import { ChevronLeft, Menu } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useHistoryToggle } from './history-toggle-context'
 
@@ -20,7 +20,7 @@ export function History({ location }: HistoryProps) {
       data-testid="history-button"
       onClick={toggleHistory}
     >
-      {location === 'header' ? <HistoryIcon size={20} /> : <ChevronLeft size={16} />}
+      {location === 'header' ? <Menu /> : <ChevronLeft size={16} />}
     </Button>
   )
 }

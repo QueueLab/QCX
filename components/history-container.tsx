@@ -7,7 +7,7 @@ type HistoryContainerProps = {
 
 const HistoryContainer: React.FC<HistoryContainerProps> = ({ location }) => {
   return (
-    <div className="block">
+    <div className="sm:hidden block">
       <History location={location} />
     </div>
   )
