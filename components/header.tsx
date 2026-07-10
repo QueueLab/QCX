@@ -49,7 +49,7 @@ export const Header = () => {
       </div>
       
       <div className="absolute left-1 flex items-center">
-        <Button variant="ghost" size="icon" onClick={toggleHistory} data-testid="logo-history-toggle">
+        <a href="/" className="flex items-center gap-2">
           <Image
             src="/images/logo.svg"
             alt="Logo"
@@ -57,13 +57,12 @@ export const Header = () => {
             height={20}
             className="h-5 w-auto"
           />
-        </Button>
-        <h1
-          className="text-2xl font-poppins font-semibold text-primary cursor-pointer select-none"
-          onClick={toggleHistory}
-        >
-          QCX
-        </h1>
+          <h1
+            className="text-2xl font-poppins font-semibold text-primary cursor-pointer select-none"
+          >
+            QCX
+          </h1>
+        </a>
       </div>
       
       <div className="flex-1 hidden md:flex justify-center gap-10 items-center z-10">
@@ -81,9 +80,9 @@ export const Header = () => {
           <TentTree className="h-[1.2rem] w-[1.2rem]" />
         </Button>
         
-        <ModeToggle />
-        
         <HistoryContainer location="header" />
+
+        <ModeToggle />
       </div>
 
       {/* Mobile menu buttons */}
