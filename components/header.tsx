@@ -2,7 +2,7 @@
 import React from 'react'
 import Image from 'next/image'
 import { useCalendarToggle } from './calendar-toggle-context'
-import { ModeToggle } from './mode-toggle'
+import { History } from './history'
 import { cn } from '@/lib/utils'
 import HistoryContainer from './history-container'
 import { Button } from '@/components/ui/button'
@@ -81,7 +81,7 @@ export const Header = () => {
           <TentTree className="h-[1.2rem] w-[1.2rem]" />
         </Button>
         
-        <ModeToggle />
+        <History location="header" />
         
         <HistoryContainer location="header" />
       </div>
