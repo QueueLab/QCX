@@ -14,22 +14,16 @@ import { MapToggle } from './map-toggle'
 import { ProfileToggle } from './profile-toggle'
 import { PurchaseCreditsPopup } from './purchase-credits-popup'
 import { useUsageToggle } from './usage-toggle-context'
-import { useProfileToggle } from './profile-toggle-context'
 import { useHistoryToggle } from './history-toggle-context'
 import { useState, useEffect } from 'react'
 
 export const Header = () => {
   const { toggleCalendar } = useCalendarToggle()
   const [isPurchaseOpen, setIsPurchaseOpen] = useState(false)
-  const { toggleUsage, isUsageOpen } = useUsageToggle()
-  const { activeView, closeProfileView } = useProfileToggle()
+  const { toggleUsage } = useUsageToggle()
   const { toggleHistory } = useHistoryToggle()
 
   const handleUsageToggle = () => {
-    // If we're about to open usage and profile is open, close profile first
-    if (!isUsageOpen && activeView) {
-      closeProfileView()
-    }
     toggleUsage()
   }
 
@@ -47,7 +41,7 @@ export const Header = () => {
           <span className="sr-only">Chat</span>
         </a>
       </div>
-      
+
       <div className="absolute left-1 flex items-center">
         <Button variant="ghost" size="icon" onClick={toggleHistory} data-testid="logo-history-toggle">
           <Image
@@ -65,33 +59,25 @@ export const Header = () => {
           QCX
         </h1>
       </div>
-      
+
       <div className="flex-1 hidden md:flex justify-center gap-10 items-center z-10">
-        <ProfileToggle/>
-        
+        <ProfileToggle />
+
         <MapToggle />
-        
+
         <Button variant="ghost" size="icon" onClick={toggleCalendar} title="Open Calendar" data-testid="calendar-toggle">
           <CalendarDays className="h-[1.2rem] w-[1.2rem]" />
         </Button>
-        
-        <div id="header-search-portal" className="contents" />
-        
-        <Button variant="ghost" size="icon" onClick={handleUsageToggle}>
-          <TentTree className="h-[1.2rem] w-[1.2rem]" />
-        </Button>
-        
-        <History location="header" />
-        
-        <HistoryContainer location="header" />
-      </div>
 
-      {/* Mobile menu buttons */}
-      <div className="flex md:hidden gap-2">
+        <div id="header-search-portal" className="contents" />
+
         <Button variant="ghost" size="icon" onClick={handleUsageToggle}>
           <TentTree className="h-[1.2rem] w-[1.2rem]" />
         </Button>
-        <ProfileToggle/>
+
+        <History location="header" />
+
+        <HistoryContainer location="header" />
       </div>
     </header>
     </>

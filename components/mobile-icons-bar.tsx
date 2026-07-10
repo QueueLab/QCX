@@ -6,8 +6,6 @@ import { AI } from '@/app/actions'
 import { Button } from '@/components/ui/button'
 import {
   Search,
-  CircleUserRound,
-  Map,
   CalendarDays,
   TentTree,
   Paperclip,
@@ -19,7 +17,6 @@ import { MapToggle } from './map-toggle'
 import { ProfileToggle } from './profile-toggle'
 import { useCalendarToggle } from './calendar-toggle-context'
 import { useUsageToggle } from './usage-toggle-context'
-import { useProfileToggle } from './profile-toggle-context'
 
 interface MobileIconsBarProps {
   onAttachmentClick: () => void;
@@ -30,16 +27,7 @@ export const MobileIconsBar: React.FC<MobileIconsBarProps> = ({ onAttachmentClic
   const [, setMessages] = useUIState<typeof AI>()
   const { clearChat } = useActions()
   const { toggleCalendar } = useCalendarToggle()
-  const { toggleUsage, isUsageOpen } = useUsageToggle()
-  const { activeView, closeProfileView } = useProfileToggle()
-
-  const handleUsageToggle = () => {
-    // If we're about to open usage and profile is open, close profile first
-    if (!isUsageOpen && activeView) {
-      closeProfileView()
-    }
-    toggleUsage()
-  }
+  const { toggleUsage } = useUsageToggle()
 
   const handleNewChat = async () => {
     setMessages([])
@@ -47,21 +35,20 @@ export const MobileIconsBar: React.FC<MobileIconsBarProps> = ({ onAttachmentClic
   }
 
   return (
-    <div className="mobile-icons-bar-content flex items-center justify-around w-full">
+    <div className="mobile-icons-bar-content flex items-center w-full">
       <Button variant="ghost" size="icon" onClick={handleNewChat} data-testid="mobile-new-chat-button">
         <Plus className="h-[1.2rem] w-[1.2rem]" />
       </Button>
-      <div className="flex-1 flex justify-center">
-        <ProfileToggle />
-      </div>
-      <div className="flex-1 flex justify-center">
-        <MapToggle />
-      </div>
+      <ProfileToggle />
+      <MapToggle />
       <Button variant="ghost" size="icon" onClick={toggleCalendar} title="Open Calendar" data-testid="mobile-calendar-button">
         <CalendarDays className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>
-      <div id="mobile-header-search-portal" className="contents" />
-      <Button variant="ghost" size="icon" onClick={handleUsageToggle}>
+      {/* Reserved placeholder for the late-mounted search button portal */}
+      <div id="mobile-header-search-portal" className="inline-flex items-center justify-center" style={{ minWidth: '2.5rem', width: '2.5rem', height: '2.5rem' }}>
+        {/* Portal target; search button mounts here when available */}
+      </div>
+      <Button variant="ghost" size="icon" onClick={toggleUsage}>
         <TentTree className="h-[1.2rem] w-[1.2rem] transition-all rotate-0 scale-100" />
       </Button>
       <Button variant="ghost" size="icon" onClick={onAttachmentClick} data-testid="mobile-attachment-button">
