@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import { chats, messages, users } from '@/lib/db/schema';
+import { chats, messages, users, chatParticipants } from '@/lib/db/schema';
 import { eq, desc, and, sql, asc } from 'drizzle-orm'; // Added asc
 import { alias } from 'drizzle-orm/pg-core';
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'; // We'll use this to ensure user-specific actions
@@ -13,8 +13,8 @@ export type NewChat = typeof chats.$inferInsert;
 export type NewMessage = typeof messages.$inferInsert;
 
 /**
- * Retrieves a specific chat by its ID, ensuring it belongs to the current user
- * or is public.
+ * Retrieves a specific chat by its ID, ensuring it belongs to the current user,
+ * is a participant of, or is public.
  * @param id - The ID of the chat to retrieve.
  * @param userId - The ID of the user requesting the chat.
  * @returns The chat object if found and accessible, otherwise null.
@@ -32,7 +32,10 @@ export async function getChat(id: string, userId: string): Promise<Chat | null> 
     .where(
       and(
         eq(chats.id, id),
-        sql`${chats.userId} = ${userId} OR ${chats.visibility} = 'public'`
+        sql`${chats.userId} = ${userId} OR ${chats.visibility} = 'public' OR EXISTS (
+          SELECT 1 FROM ${chatParticipants}
+          WHERE ${chatParticipants.chatId} = ${chats.id} AND ${chatParticipants.userId} = ${userId}
+        )`
       )
     )
     .limit(1);
@@ -40,7 +43,7 @@ export async function getChat(id: string, userId: string): Promise<Chat | null> 
 }
 
 /**
- * Retrieves a paginated list of chats for a given user.
+ * Retrieves a paginated list of chats for a given user (either owned or participated).
  * @param userId - The ID of the user whose chats to retrieve.
  * @param limit - The maximum number of chats to return.
  * @param offset - The number of chats to skip (for pagination).
@@ -58,7 +61,12 @@ export async function getChatsPage(
   const result = await db
     .select()
     .from(chats)
-    .where(eq(chats.userId, userId))
+    .where(
+      sql`${chats.userId} = ${userId} OR EXISTS (
+        SELECT 1 FROM ${chatParticipants}
+        WHERE ${chatParticipants.chatId} = ${chats.id} AND ${chatParticipants.userId} = ${userId}
+      )`
+    )
     .orderBy(desc(chats.createdAt))
     .limit(limit)
     .offset(offset);
@@ -183,6 +191,39 @@ export async function deleteChat(id: string, userId: string): Promise<boolean> {
     return result.length > 0;
   } catch (error) {
     console.error('Error deleting chat:', error);
+    return false;
+  }
+}
+
+/**
+ * Updates an existing chat's properties (title, visibility).
+ * @param id - The ID of the chat to update.
+ * @param userId - The ID of the user requesting update, for authorization.
+ * @param updates - Object containing fields to update.
+ * @returns True if update was successful, false otherwise.
+ */
+export async function updateChat(
+  id: string,
+  userId: string,
+  updates: { title?: string; visibility?: string }
+): Promise<boolean> {
+  if (!userId) {
+    console.error('updateChat called without userId.');
+    return false;
+  }
+  try {
+    const result = await db
+      .update(chats)
+      .set({
+        ...(updates.title !== undefined && { title: updates.title }),
+        ...(updates.visibility !== undefined && { visibility: updates.visibility }),
+        updatedAt: new Date(),
+      })
+      .where(and(eq(chats.id, id), eq(chats.userId, userId))) // Ensure user owns the chat
+      .returning({ id: chats.id });
+    return result.length > 0;
+  } catch (error) {
+    console.error('Error updating chat:', error);
     return false;
   }
 }

@@ -111,6 +111,25 @@ export const calendarNotes = pgTable('calendar_notes', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
+export const documents = pgTable('documents', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  chatId: uuid('chat_id').references(() => chats.id, { onDelete: 'cascade' }),
+  storagePath: text('storage_path').notNull(),
+  mime: text('mime'),
+  status: text('status').default('pending'), // pending | processing | complete | error
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const documentChunks = pgTable('document_chunks', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  documentId: uuid('document_id').notNull().references(() => documents.id, { onDelete: 'cascade' }),
+  chunkText: text('chunk_text').notNull(),
+  embedding: vector('embedding'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   chats: many(chats),
@@ -121,6 +140,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   locations: many(locations),
   visualizations: many(visualizations),
   promptGenerationJobs: many(promptGenerationJobs),
+  documents: many(documents),
 }));
 
 export const chatsRelations = relations(chats, ({ one, many }) => ({
@@ -133,6 +153,7 @@ export const chatsRelations = relations(chats, ({ one, many }) => ({
   participants: many(chatParticipants),
   locations: many(locations),
   visualizations: many(visualizations),
+  documents: many(documents),
 }));
 
 export const messagesRelations = relations(messages, ({ one }) => ({
@@ -217,5 +238,24 @@ export const calendarNotesRelations = relations(calendarNotes, ({ one }) => ({
   chat: one(chats, {
     fields: [calendarNotes.chatId],
     references: [chats.id],
+  }),
+}));
+
+export const documentsRelations = relations(documents, ({ one, many }) => ({
+  user: one(users, {
+    fields: [documents.userId],
+    references: [users.id],
+  }),
+  chat: one(chats, {
+    fields: [documents.chatId],
+    references: [chats.id],
+  }),
+  chunks: many(documentChunks),
+}));
+
+export const documentChunksRelations = relations(documentChunks, ({ one }) => ({
+  document: one(documents, {
+    fields: [documentChunks.documentId],
+    references: [documents.id],
   }),
 }));

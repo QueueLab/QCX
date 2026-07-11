@@ -22,6 +22,7 @@ import { updateDrawingContext } from '@/lib/actions/chat'; // Import the server 
 import dynamic from 'next/dynamic'
 import { HeaderSearchButton } from './header-search-button'
 import { useIsStandalone } from '@/lib/hooks/use-is-standalone'
+import { getSupabaseBrowserClient } from '@/lib/supabase/browser-client'
 
 type ChatProps = {
   id?: string // This is the chatId
@@ -89,6 +90,48 @@ export function Chat({ id }: ChatProps) {
       return () => clearTimeout(timer);
     }
   }, [aiState.messages.length, router, isStandalone, lastMessage?.type])
+
+  // Subscribe to real-time database changes for messages and collaborators
+  useEffect(() => {
+    if (!id) return
+
+    const supabase = getSupabaseBrowserClient()
+
+    // Subscribe to messages changes
+    const channel = supabase
+      .channel(`chat-realtime-${id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'messages',
+          filter: `chat_id=eq.${id}`
+        },
+        (payload) => {
+          console.log('[Realtime] Message updated:', payload)
+          router.refresh()
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'chat_participants',
+          filter: `chat_id=eq.${id}`
+        },
+        (payload) => {
+          console.log('[Realtime] Collaborator updated:', payload)
+          router.refresh()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [id, router])
 
   // Get mapData to access drawnFeatures
   // OPTIMIZATION: Memoize mapData to prevent unnecessary re-renders
@@ -228,3 +271,4 @@ export function Chat({ id }: ChatProps) {
     </MapDataProvider>
   );
 }
+export default Chat

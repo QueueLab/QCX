@@ -5,6 +5,7 @@ import type { AI, UIState } from '@/app/actions'
 import { useUIState, useActions, readStreamableValue } from 'ai/rsc'
 import { cn } from '@/lib/utils'
 import { UserMessage } from './user-message'
+import { Spinner } from './ui/spinner'
 import { Button } from './ui/button'
 import { ArrowRight, Plus, Paperclip, X, Sprout } from 'lucide-react'
 import Textarea from 'react-textarea-autosize'
@@ -14,6 +15,7 @@ import { PartialRelated } from '@/lib/schema/related'
 import { getSuggestions } from '@/lib/actions/suggest'
 import { useMapData } from './map/map-data-context'
 import SuggestionsDropdown from './suggestions-dropdown'
+import { getSupabaseBrowserClient } from '@/lib/supabase/browser-client'
 
 interface ChatPanelProps {
   messages: UIState
@@ -33,6 +35,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
   const { mapProvider } = useSettingsStore()
   const [isMobile, setIsMobile] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
   const [suggestions, setSuggestionsState] = useState<PartialRelated | null>(null)
   const setSuggestions = useCallback((s: PartialRelated | null) => {
     setSuggestionsState(s)
@@ -100,6 +103,12 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
         type: 'image',
         image: URL.createObjectURL(selectedFile)
       })
+    } else if (selectedFile) {
+      // For non-image files, display a text notice in client history
+      content.push({
+        type: 'text',
+        text: `[Attached Document: ${selectedFile.name}]`
+      })
     }
 
     setMessages(currentMessages => [
@@ -112,7 +121,36 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
 
     const formData = new FormData(e.currentTarget)
     if (selectedFile) {
-      formData.append('file', selectedFile)
+      if (selectedFile.type.startsWith('image/')) {
+        formData.append('file', selectedFile)
+      } else {
+        // Non-image document: Upload to Supabase storage first
+        setIsUploading(true)
+        try {
+          const supabase = getSupabaseBrowserClient()
+          const fileExt = selectedFile.name.split('.').pop()
+          const storagePath = `${crypto.randomUUID()}.${fileExt}`
+
+          const { data, error } = await supabase.storage
+            .from('chat-attachments')
+            .upload(storagePath, selectedFile)
+
+          if (error) {
+            throw error
+          }
+
+          formData.append('documentStoragePath', storagePath)
+          formData.append('documentMime', selectedFile.type || 'text/plain')
+          formData.append('documentName', selectedFile.name)
+        } catch (uploadError) {
+          console.error('[Chat Panel] Failed to upload document to Supabase Storage:', uploadError)
+          alert('Failed to upload document. Please try again.')
+          setIsUploading(false)
+          return
+        } finally {
+          setIsUploading(false)
+        }
+      }
     }
 
     // Include drawn features in the form data
@@ -213,7 +251,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
             ref={fileInputRef}
             onChange={handleFileChange}
             className="hidden"
-            accept="text/plain,image/png,image/jpeg,image/webp"
+            accept="text/plain,text/markdown,application/pdf,application/json,image/png,image/jpeg,image/webp"
           />
           {!isMobile && (
             <Button
@@ -224,6 +262,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
                 'absolute top-1/2 transform -translate-y-1/2 left-3'
               )}
               onClick={handleAttachmentClick}
+              disabled={isUploading}
               data-testid="desktop-attachment-button"
             >
               <Paperclip size={isMobile ? 18 : 20} />
@@ -235,9 +274,10 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
             rows={1}
             maxRows={isMobile ? 3 : 5}
             tabIndex={0}
-            placeholder="Explore"
+            placeholder={isUploading ? "Uploading document..." : "Explore"}
             spellCheck={false}
             value={input}
+            disabled={isUploading}
             data-testid="chat-input"
             className={cn(
               'resize-none w-full min-h-12 rounded-fill border border-input pl-14 pr-12 pt-3 pb-1 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
@@ -281,11 +321,11 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
               'absolute top-1/2 transform -translate-y-1/2',
               isMobile ? 'right-1' : 'right-2'
             )}
-            disabled={input.length === 0 && !selectedFile}
+            disabled={(input.length === 0 && !selectedFile) || isUploading}
             aria-label="Send message"
             data-testid="chat-submit"
           >
-            <ArrowRight size={isMobile ? 18 : 20} />
+            {isUploading ? <Spinner /> : <ArrowRight size={isMobile ? 18 : 20} />}
           </Button>
         </div>
       </form>
@@ -295,7 +335,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
             <span className="text-sm text-muted-foreground truncate max-w-xs">
               {selectedFile.name}
             </span>
-            <Button variant="ghost" size="icon" onClick={clearAttachment} data-testid="clear-attachment-button">
+            <Button variant="ghost" size="icon" onClick={clearAttachment} disabled={isUploading} data-testid="clear-attachment-button">
               <X size={16} />
             </Button>
           </div>

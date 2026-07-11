@@ -6,7 +6,9 @@ export const config = {
   matcher: [
     // Skip Next.js internals and all static files, unless found in search params
     '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-    // Always run for API routes
+    // Always run for API routes and Next.js server actions (auth context needed for server actions)
     '/(api|trpc)(.*)',
+    // Include Next.js action routes so clerkMiddleware sets up auth context for server actions
+    '/_next/action/(.*)',
   ],
 };

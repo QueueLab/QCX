@@ -6,7 +6,8 @@ import {
   getAIState,
   getMutableAIState
 } from 'ai/rsc'
-import { CoreMessage, ToolResultPart, TextPart, ImagePart } from 'ai'
+import { CoreMessage, ToolResultPart, TextPart, ImagePart, embedMany } from 'ai'
+import { openai } from '@ai-sdk/openai'
 import { nanoid } from '@/lib/utils'
 import type { FeatureCollection } from 'geojson'
 import { Spinner } from '@/components/ui/spinner'
@@ -29,10 +30,24 @@ import RetrieveSection from '@/components/retrieve-section'
 import { VideoSearchSection } from '@/components/video-search-section'
 import { MapQueryHandler } from '@/components/map/map-query-handler'
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
+import { createClient } from '@/lib/supabase/client'
+import { db } from '@/lib/db'
+import { documents, documentChunks } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
 
 // Define the type for related queries
 type RelatedQueries = {
   items: { query: string }[]
+}
+
+function chunkText(text: string, chunkSize = 800, overlap = 100): string[] {
+  const chunks: string[] = []
+  let i = 0
+  while (i < text.length) {
+    chunks.push(text.slice(i, i + chunkSize))
+    i += chunkSize - overlap
+  }
+  return chunks
 }
 
 async function submit(formData?: FormData, skip?: boolean) {
@@ -325,6 +340,97 @@ async function submit(formData?: FormData, skip?: boolean) {
   }
 
   const userId = await getCurrentUserIdOnServer()
+
+  // Handle document attachment if uploaded via browser client to Storage
+  const documentStoragePath = formData?.get('documentStoragePath') as string
+  const documentMime = formData?.get('documentMime') as string
+  const documentName = formData?.get('documentName') as string
+
+  if (documentStoragePath && userId) {
+    let docId: string | null = null
+    try {
+      const supabase = createClient()
+
+      // First, create the document row
+      const [docRow] = await db.insert(documents).values({
+        userId: userId,
+        chatId: aiState.get().chatId,
+        storagePath: documentStoragePath,
+        mime: documentMime,
+        status: 'processing'
+      }).returning({ id: documents.id })
+      docId = docRow.id
+
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from('chat-attachments')
+        .download(documentStoragePath)
+
+      if (downloadError) {
+        throw downloadError
+      }
+
+      if (!fileData) {
+        throw new Error('Downloaded file data is null')
+      }
+
+      // Validate the actual file: trust the downloaded content over the submitted MIME
+      const buffer = await fileData.arrayBuffer()
+      const byteLength = buffer.byteLength
+
+      // Reject oversized files (max 5 MB)
+      const MAX_FILE_SIZE = 5 * 1024 * 1024
+      if (byteLength > MAX_FILE_SIZE) {
+        throw new Error(`File too large: ${byteLength} bytes exceeds ${MAX_FILE_SIZE} byte limit`)
+      }
+
+      // Validate MIME type against allowed types
+      const ALLOWED_MIMES = ['text/plain', 'text/markdown', 'application/pdf', 'text/csv', 'application/json']
+      const actualMime = fileData.type || documentMime || ''
+      if (!ALLOWED_MIMES.includes(actualMime)) {
+        throw new Error(`Unsupported MIME type: ${actualMime}`)
+      }
+
+      const text = await fileData.text()
+
+      const chunks = chunkText(text)
+      // Cap chunks to prevent runaway embedding costs (max 50 chunks)
+      const MAX_CHUNKS = 50
+      const cappedChunks = chunks.slice(0, MAX_CHUNKS)
+
+      if (cappedChunks.length > 0) {
+        const { embeddings } = await embedMany({
+          model: openai.embedding('text-embedding-ada-002'),
+          values: cappedChunks,
+        })
+
+        const chunkRows = cappedChunks.map((chunk, idx) => ({
+          documentId: docRow.id,
+          chunkText: chunk,
+          embedding: embeddings[idx]
+        }))
+
+        await db.insert(documentChunks).values(chunkRows)
+      }
+
+      await db.update(documents)
+        .set({ status: 'complete' })
+        .where(eq(documents.id, docRow.id))
+
+    } catch (err) {
+      console.error('[Document Ingestion] Failed to ingest document:', err)
+      // Update the existing row to error status instead of inserting a duplicate
+      if (docId) {
+        try {
+          await db.update(documents)
+            .set({ status: 'error' })
+            .where(eq(documents.id, docId))
+        } catch (e) {
+          console.error('[Document Ingestion] Failed to update document to error status:', e)
+        }
+      }
+    }
+  }
+
   const currentSystemPrompt = userId ? await getSystemPrompt(userId) : null
   const maxMessages = 10
   const messages = aiState.get().messages.map(message => ({
@@ -722,6 +828,22 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                   ),
                   isCollapsed: isCollapsed.value
                 }
+              case 'documentRetrieve': {
+                const adaptedResults = {
+                  results: toolOutput.map((r: any) => ({
+                    title: `Document Match (Similarity: ${(r.similarity * 100).toFixed(1)}%)`,
+                    content: r.chunkText,
+                    url: ''
+                  })),
+                  query: '',
+                  images: []
+                }
+                return {
+                  id,
+                  component: <RetrieveSection data={adaptedResults} />,
+                  isCollapsed: isCollapsed.value
+                }
+              }
               default:
                 console.warn(
                   `Unhandled tool result in getUIStateFromAIState: ${name}`
