@@ -196,7 +196,7 @@ export const locationsRelations = relations(locations, ({ one, many }) => ({
   }),
   chat: one(chats, {
     fields: [locations.chatId],
-    references: [locations.id],
+    references: [chats.id],
   }),
   messages: many(messages),
 }));

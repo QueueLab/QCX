@@ -5,6 +5,7 @@ import type { AI, UIState } from '@/app/actions'
 import { useUIState, useActions, readStreamableValue } from 'ai/rsc'
 import { cn } from '@/lib/utils'
 import { UserMessage } from './user-message'
+import { Spinner } from './ui/spinner'
 import { Button } from './ui/button'
 import { ArrowRight, Plus, Paperclip, X, Sprout } from 'lucide-react'
 import Textarea from 'react-textarea-autosize'
@@ -324,7 +325,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
             aria-label="Send message"
             data-testid="chat-submit"
           >
-            {isUploading ? <Spinner className="w-4 h-4 animate-spin" /> : <ArrowRight size={isMobile ? 18 : 20} />}
+            {isUploading ? <Spinner /> : <ArrowRight size={isMobile ? 18 : 20} />}
           </Button>
         </div>
       </form>
