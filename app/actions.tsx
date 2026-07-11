@@ -347,8 +347,20 @@ async function submit(formData?: FormData, skip?: boolean) {
   const documentName = formData?.get('documentName') as string
 
   if (documentStoragePath && userId) {
+    let docId: string | null = null
     try {
       const supabase = createClient()
+
+      // First, create the document row
+      const [docRow] = await db.insert(documents).values({
+        userId: userId,
+        chatId: aiState.get().chatId,
+        storagePath: documentStoragePath,
+        mime: documentMime,
+        status: 'processing'
+      }).returning({ id: documents.id })
+      docId = docRow.id
+
       const { data: fileData, error: downloadError } = await supabase.storage
         .from('chat-attachments')
         .download(documentStoragePath)
@@ -357,24 +369,41 @@ async function submit(formData?: FormData, skip?: boolean) {
         throw downloadError
       }
 
-      const text = fileData ? await fileData.text() : ''
+      if (!fileData) {
+        throw new Error('Downloaded file data is null')
+      }
 
-      const [docRow] = await db.insert(documents).values({
-        userId: userId,
-        chatId: aiState.get().chatId,
-        storagePath: documentStoragePath,
-        mime: documentMime,
-        status: 'processing'
-      }).returning({ id: documents.id })
+      // Validate the actual file: trust the downloaded content over the submitted MIME
+      const buffer = await fileData.arrayBuffer()
+      const byteLength = buffer.byteLength
+
+      // Reject oversized files (max 5 MB)
+      const MAX_FILE_SIZE = 5 * 1024 * 1024
+      if (byteLength > MAX_FILE_SIZE) {
+        throw new Error(`File too large: ${byteLength} bytes exceeds ${MAX_FILE_SIZE} byte limit`)
+      }
+
+      // Validate MIME type against allowed types
+      const ALLOWED_MIMES = ['text/plain', 'text/markdown', 'application/pdf', 'text/csv', 'application/json']
+      const actualMime = fileData.type || documentMime || ''
+      if (!ALLOWED_MIMES.includes(actualMime)) {
+        throw new Error(`Unsupported MIME type: ${actualMime}`)
+      }
+
+      const text = await fileData.text()
 
       const chunks = chunkText(text)
-      if (chunks.length > 0) {
+      // Cap chunks to prevent runaway embedding costs (max 50 chunks)
+      const MAX_CHUNKS = 50
+      const cappedChunks = chunks.slice(0, MAX_CHUNKS)
+
+      if (cappedChunks.length > 0) {
         const { embeddings } = await embedMany({
           model: openai.embedding('text-embedding-ada-002'),
-          values: chunks,
+          values: cappedChunks,
         })
 
-        const chunkRows = chunks.map((chunk, idx) => ({
+        const chunkRows = cappedChunks.map((chunk, idx) => ({
           documentId: docRow.id,
           chunkText: chunk,
           embedding: embeddings[idx]
@@ -389,16 +418,15 @@ async function submit(formData?: FormData, skip?: boolean) {
 
     } catch (err) {
       console.error('[Document Ingestion] Failed to ingest document:', err)
-      try {
-        await db.insert(documents).values({
-          userId: userId,
-          chatId: aiState.get().chatId,
-          storagePath: documentStoragePath,
-          mime: documentMime,
-          status: 'error'
-        })
-      } catch (e) {
-        console.error('[Document Ingestion] Failed to log failure in DB:', e)
+      // Update the existing row to error status instead of inserting a duplicate
+      if (docId) {
+        try {
+          await db.update(documents)
+            .set({ status: 'error' })
+            .where(eq(documents.id, docId))
+        } catch (e) {
+          console.error('[Document Ingestion] Failed to update document to error status:', e)
+        }
       }
     }
   }

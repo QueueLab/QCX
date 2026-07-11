@@ -156,8 +156,10 @@ Under the Clerk native Third-Party Auth integration with Supabase, there is **no
 ### 3. Application Integration
 The application uses Supabase JS clients initialized with a custom `fetch` handler. The `fetch` handler intercepts out-going requests to Supabase and appends the dynamic Clerk session JWT in the `Authorization` header as `Bearer <clerkToken>`.
 
-- **Client-Side (Browser)**: Retrieves token via Clerk's browser SDK: `window.Clerk.session.getToken({ template: 'supabase' })`.
-- **Server-Side (Next.js server/API/Actions)**: Retrieves token via `@clerk/nextjs/server` `auth()` helper: `auth().getToken({ template: 'supabase' })`.
+- **Client-Side (Browser)**: Retrieves token via Clerk's browser SDK: `window.Clerk.session.getToken()`.
+- **Server-Side (Next.js server/API/Actions)**: Retrieves token via `@clerk/nextjs/server` `auth()` helper: `auth().getToken()`.
+
+Both clients use `persistSession: false` since Clerk manages the session lifecycle independently. Tokens are sent without the `{ template: 'supabase' }` option because Supabase validates Clerk tokens directly against the Clerk JWKS.
 
 ---
 

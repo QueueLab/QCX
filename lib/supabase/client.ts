@@ -11,7 +11,7 @@ export const createClient = () => {
         let clerkToken = null;
         try {
           const authObj = await auth();
-          clerkToken = await authObj.getToken({ template: 'supabase' });
+          clerkToken = await authObj.getToken();
         } catch (e) {
           console.warn('[Supabase Server Client] Failed to get Clerk token from server session:', e);
         }

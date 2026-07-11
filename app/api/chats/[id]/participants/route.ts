@@ -13,8 +13,15 @@ export async function GET(
     }
 
     const { id: chatId } = await params;
-    const participants = await listParticipants(chatId);
-    return NextResponse.json({ participants }, { status: 200 });
+    const result = await listParticipants(chatId);
+
+    if (result === null) {
+      // Access denied — user is not authorized to view this chat
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    // result is an empty array means authorized but no collaborators
+    return NextResponse.json({ participants: result }, { status: 200 });
   } catch (error) {
     console.error('Error listing participants via API:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
@@ -32,13 +39,14 @@ export async function POST(
     }
 
     const { id: chatId } = await params;
-    const { emailOrClerkId, role } = await request.json();
+    const { emailOrClerkId } = await request.json();
 
     if (!emailOrClerkId) {
       return NextResponse.json({ error: 'Missing emailOrClerkId' }, { status: 400 });
     }
 
-    const success = await addParticipant(chatId, emailOrClerkId, role || 'collaborator');
+    // Ignore untrusted role from request — always use 'collaborator'
+    const success = await addParticipant(chatId, emailOrClerkId, 'collaborator');
     if (success) {
       return NextResponse.json({ message: 'Participant added successfully' }, { status: 200 });
     } else {

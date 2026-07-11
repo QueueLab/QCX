@@ -360,9 +360,9 @@ export async function removeParticipant(chatId: string, targetUserId: string): P
   return true
 }
 
-export async function listParticipants(chatId: string): Promise<any[]> {
+export async function listParticipants(chatId: string): Promise<any[] | null> {
   const currentUserId = await getCurrentUserIdOnServer()
-  if (!currentUserId) return []
+  if (!currentUserId) return null
 
   // Verify current user is owner or collaborator of the chat
   const [hasAccess] = await db.select()
@@ -377,7 +377,7 @@ export async function listParticipants(chatId: string): Promise<any[]> {
       )
     )
     .limit(1)
-  if (!hasAccess) return []
+  if (!hasAccess) return null
 
   const result = await db.select({
     id: chatParticipants.id,
