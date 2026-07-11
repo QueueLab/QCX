@@ -10,14 +10,16 @@ import {
   saveChat as dbSaveChat,
   createMessage as dbCreateMessage,
   getMessagesByChatId as dbGetMessagesByChatId,
+  deleteChat as dbDeleteChat,
+  updateChat as dbUpdateChat,
   type Chat as DrizzleChat,
   type Message as DrizzleMessage,
   type NewChat as DbNewChat,
   type NewMessage as DbNewMessage
 } from '@/lib/actions/chat-db'
 import { db } from '@/lib/db'
-import { users } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { users, chats, chatParticipants } from '@/lib/db/schema'
+import { eq, or, and, sql } from 'drizzle-orm'
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
 import { getModel, normalizeMessageContent } from '../utils'
 import { executiveSummaryAgent } from '../agents/report/executive-summary'
@@ -210,7 +212,7 @@ export async function saveChat(chat: OldChatType, userId: string): Promise<strin
 
   const newMessagesData: Omit<DbNewMessage, 'chatId'>[] = chat.messages.map(msg => ({
     id: msg.id,
-    userId: effectiveUserId,
+    userId: msg.userId || effectiveUserId, // verify ownership per message
     role: msg.role,
     content: typeof msg.content === 'object' ? JSON.stringify(msg.content) : msg.content,
     createdAt: msg.createdAt ? new Date(msg.createdAt) : new Date(),
@@ -287,4 +289,108 @@ export async function getSystemPrompt(
     console.error('getSystemPrompt: Error:', error)
     return null
   }
+}
+
+export async function deleteChat(id: string): Promise<boolean> {
+  const userId = await getCurrentUserIdOnServer()
+  if (!userId) {
+    console.error('deleteChat: User not authenticated.')
+    return false
+  }
+  const success = await dbDeleteChat(id, userId)
+  if (success) {
+    revalidatePath('/')
+  }
+  return success
+}
+
+export async function updateChat(
+  id: string,
+  updates: { title?: string; visibility?: string }
+): Promise<boolean> {
+  const userId = await getCurrentUserIdOnServer()
+  if (!userId) {
+    console.error('updateChat: User not authenticated.')
+    return false
+  }
+  const success = await dbUpdateChat(id, userId, updates)
+  if (success) {
+    revalidatePath('/')
+  }
+  return success
+}
+
+export async function addParticipant(chatId: string, emailOrClerkId: string, role = 'collaborator'): Promise<boolean> {
+  const currentUserId = await getCurrentUserIdOnServer()
+  if (!currentUserId) return false
+
+  // Verify current user is owner of the chat
+  const [chat] = await db.select().from(chats).where(and(eq(chats.id, chatId), eq(chats.userId, currentUserId))).limit(1)
+  if (!chat) return false
+
+  // Find target user by email or clerk ID
+  const [targetUser] = await db.select({ id: users.id })
+    .from(users)
+    .where(or(eq(users.email, emailOrClerkId), eq(users.clerkUserId, emailOrClerkId)))
+    .limit(1)
+  if (!targetUser) return false
+
+  await db.insert(chatParticipants).values({
+    chatId,
+    userId: targetUser.id,
+    role
+  }).onConflictDoNothing()
+
+  revalidatePath('/')
+  return true
+}
+
+export async function removeParticipant(chatId: string, targetUserId: string): Promise<boolean> {
+  const currentUserId = await getCurrentUserIdOnServer()
+  if (!currentUserId) return false
+
+  // Verify current user is owner of the chat
+  const [chat] = await db.select().from(chats).where(and(eq(chats.id, chatId), eq(chats.userId, currentUserId))).limit(1)
+  if (!chat) return false
+
+  await db.delete(chatParticipants)
+    .where(and(eq(chatParticipants.chatId, chatId), eq(chatParticipants.userId, targetUserId)))
+
+  revalidatePath('/')
+  return true
+}
+
+export async function listParticipants(chatId: string): Promise<any[]> {
+  const currentUserId = await getCurrentUserIdOnServer()
+  if (!currentUserId) return []
+
+  // Verify current user is owner or collaborator of the chat
+  const [hasAccess] = await db.select()
+    .from(chats)
+    .where(
+      and(
+        eq(chats.id, chatId),
+        sql`${chats.userId} = ${currentUserId} OR EXISTS (
+          SELECT 1 FROM ${chatParticipants}
+          WHERE ${chatParticipants.chatId} = ${chatId} AND ${chatParticipants.userId} = ${currentUserId}
+        )`
+      )
+    )
+    .limit(1)
+  if (!hasAccess) return []
+
+  const result = await db.select({
+    id: chatParticipants.id,
+    role: chatParticipants.role,
+    userId: chatParticipants.userId,
+    email: users.email,
+    firstName: users.firstName,
+    lastName: users.lastName,
+    avatarUrl: users.avatarUrl
+  })
+  .from(chatParticipants)
+  .innerJoin(users, eq(chatParticipants.userId, users.id))
+  .where(eq(chatParticipants.chatId, chatId))
+
+  return result
 }

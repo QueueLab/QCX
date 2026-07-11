@@ -1,20 +1,17 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import { Button } from './ui/button'
-import { Share } from 'lucide-react'
+import { Share, UserPlus, Trash2 } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
-  DialogFooter,
   DialogHeader,
   DialogTrigger,
   DialogDescription,
   DialogTitle
 } from './ui/dialog'
-// import { shareChat } from '@/lib/actions/chat'; // TODO: Re-evaluate/reimplement sharing with Supabase
 import { toast } from 'sonner'
-import { useCopyToClipboard } from '@/lib/hooks/use-copy-to-clipboard'
 import { Spinner } from './ui/spinner'
 
 interface ChatShareProps {
@@ -24,50 +21,85 @@ interface ChatShareProps {
 
 export function ChatShare({ chatId, className }: ChatShareProps) {
   const [open, setOpen] = useState(false)
-  const [pending, startTransition] = useTransition()
-  const { copyToClipboard } = useCopyToClipboard({ timeout: 1000 })
-  const [shareUrl, setShareUrl] = useState('')
+  const [emailInput, setEmailInput] = useState('')
+  const [isPending, startTransition] = useTransition()
+  const [participants, setParticipants] = useState<any[]>([])
+  const [isLoadingParticipants, setIsLoadingParticipants] = useState(false)
 
-  // const handleShare = async () => {
-  //   startTransition(() => {
-  //     setOpen(true)
-  //   })
-  //   // TODO: Re-evaluate/reimplement sharing with Supabase
-  //   // const result = await shareChat(chatId)
-  //   // if (!result) {
-  //   //   toast.error('Failed to share chat')
-  //   //   return
-  //   // }
+  const fetchParticipants = async () => {
+    setIsLoadingParticipants(true)
+    try {
+      const res = await fetch(`/api/chats/${chatId}/participants`)
+      if (res.ok) {
+        const data = await res.json()
+        setParticipants(data.participants || [])
+      }
+    } catch (e) {
+      console.error('Error fetching participants:', e)
+    } finally {
+      setIsLoadingParticipants(false)
+    }
+  }
 
-  //   // if (!result.sharePath) {
-  //   //   toast.error('Could not copy link to clipboard')
-  //   //   return
-  //   // }
+  useEffect(() => {
+    if (open) {
+      fetchParticipants()
+    }
+  }, [open, chatId])
 
-  //   // const url = new URL(result.sharePath, window.location.href)
-  //   // setShareUrl(url.toString())
-  //   toast.info("Sharing functionality is currently disabled.");
-  //   setOpen(false); // Close dialog if opened by trigger
-  // }
+  const handleAddCollaborator = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!emailInput.trim()) return
 
-  // const handleCopy = () => {
-  //   if (shareUrl) {
-  //     copyToClipboard(shareUrl)
-  //     toast.success('Link copied to clipboard')
-  //     setOpen(false)
-  //   } else {
-  //     toast.error('No link to copy')
-  //   }
-  // }
+    startTransition(async () => {
+      try {
+        const res = await fetch(`/api/chats/${chatId}/participants`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ emailOrClerkId: emailInput.trim() })
+        })
 
-  // TODO: Re-evaluate/reimplement sharing with Supabase. For now, disable the UI.
-  if (true) { // Conditionally disable the share button/dialog
-    return null; // Or return a disabled button: <Button className={className} variant="ghost" size="icon" disabled><Share size={14} /></Button>
+        if (!res.ok) {
+          const errorData = await res.json()
+          throw new Error(errorData.error || 'Failed to add participant')
+        }
+
+        toast.success('Collaborator invited!')
+        setEmailInput('')
+        fetchParticipants()
+      } catch (err: any) {
+        toast.error(err.message || 'Error inviting collaborator')
+      }
+    })
+  }
+
+  const handleRemoveCollaborator = async (targetUserId: string) => {
+    try {
+      const res = await fetch(`/api/chats/${chatId}/participants`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ targetUserId })
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json()
+        throw new Error(errorData.error || 'Failed to remove participant')
+      }
+
+      toast.success('Collaborator removed')
+      fetchParticipants()
+    } catch (err: any) {
+      toast.error(err.message || 'Error removing collaborator')
+    }
   }
 
   return (
     <div className={className}>
-      {/* <Dialog
+      <Dialog
         open={open}
         onOpenChange={open => setOpen(open)}
         aria-labelledby="share-dialog-title"
@@ -78,37 +110,69 @@ export function ChatShare({ chatId, className }: ChatShareProps) {
             className="rounded-full"
             size="icon"
             variant={'ghost'}
-            // onClick={() => setOpen(true)} // Original trigger
-            onClick={() => { // Temporarily disable direct opening, or let handleShare manage it
-                toast.info("Sharing functionality is currently disabled.");
-            }}
           >
             <Share size={14} />
           </Button>
         </DialogTrigger>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Share link to search result</DialogTitle>
-            <DialogDescription>
-              Anyone with the link will be able to view this search result.
+            <DialogTitle id="share-dialog-title">Share & Collaborate</DialogTitle>
+            <DialogDescription id="share-dialog-description">
+              Invite other QCX users to view and append to this chat in real-time.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="items-center">
-            {!shareUrl && (
-              // <Button onClick={handleShare} disabled={pending} size="sm">
-              //   {pending ? <Spinner /> : 'Get link'}
-              // </Button>
-              <Button disabled={true} size="sm">Get link (Disabled)</Button>
+
+          <form onSubmit={handleAddCollaborator} className="flex items-center gap-2 mt-4">
+            <input
+              type="text"
+              placeholder="Email or Clerk user ID"
+              value={emailInput}
+              onChange={e => setEmailInput(e.target.value)}
+              className="flex-1 min-w-0 bg-background text-foreground border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              disabled={isPending}
+            />
+            <Button type="submit" disabled={isPending || !emailInput.trim()} size="sm">
+              {isPending ? <Spinner /> : <><UserPlus className="mr-2" size={14} /> Invite</>}
+            </Button>
+          </form>
+
+          <div className="mt-6">
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+              Collaborators ({participants.length})
+            </h4>
+            {isLoadingParticipants ? (
+              <div className="flex justify-center py-4">
+                <Spinner />
+              </div>
+            ) : participants.length === 0 ? (
+              <p className="text-sm text-muted-foreground italic py-2">
+                No collaborators invited yet.
+              </p>
+            ) : (
+              <div className="space-y-2 max-h-[180px] overflow-y-auto pr-1">
+                {participants.map(p => (
+                  <div key={p.userId} className="flex items-center justify-between p-2 bg-muted/50 border border-border/40 rounded-lg">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {p.firstName || p.lastName ? `${p.firstName || ''} ${p.lastName || ''}`.trim() : 'Anonymous'}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">{p.email}</p>
+                    </div>
+                    <button
+                      onClick={() => handleRemoveCollaborator(p.userId)}
+                      className="p-1 text-muted-foreground hover:text-destructive transition-colors"
+                      title="Remove Collaborator"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
             )}
-            {shareUrl && (
-              // <Button onClick={handleCopy} disabled={pending} size="sm">
-              //   {'Copy link'}
-              // </Button>
-              <Button disabled={true} size="sm">Copy link (Disabled)</Button>
-            )}
-          </DialogFooter>
+          </div>
         </DialogContent>
-      </Dialog> */}
+      </Dialog>
     </div>
   )
 }
+export default ChatShare

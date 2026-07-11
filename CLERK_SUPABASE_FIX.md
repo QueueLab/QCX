@@ -131,3 +131,41 @@ When a Clerk-authenticated user makes a request:
 - All 12 RLS policies re-applied with corrected function references.
 - The migration is tracked in the repo's Drizzle migration system.
 - Run via `npm run db:migrate` or `bun run db:migrate` to apply to local/dev environments.
+
+---
+
+# Clerk-Supabase Native Third-Party Auth (Clerk) Settings Setup Note
+
+## Native Third-Party Auth Setup Steps (No Shared JWT Secret Needed)
+
+Under the Clerk native Third-Party Auth integration with Supabase, there is **no need** for a shared JWT secret. Supabase validates tokens issued directly by Clerk using Clerk's JSON Web Key Set (JWKS) URL.
+
+### 1. Clerk Dashboard Configuration
+1. Go to your **Clerk Dashboard**.
+2. Navigate to **JWT Templates** (or **Integrations** -> **Supabase** if using Clerk's legacy integration, but for Native Third-Party Auth, navigate to **Configure** -> **API Keys** -> **JWT Templates** if you wish to configure scopes/claims, or simply use Clerk's native JWT signature).
+3. Under Clerk's Native Third-Party Auth, Supabase directly retrieves the JSON Web Key Set (JWKS) from Clerk to verify signature of any standard token issued by Clerk. Therefore, standard session tokens from Clerk can be sent directly to Supabase.
+
+### 2. Supabase Dashboard Configuration
+1. Go to your **Supabase Project Dashboard**.
+2. Navigate to **Authentication** -> **Third-Party Auth**.
+3. Enable **Clerk** Third-Party Auth integration.
+4. Set the following fields:
+   - **Clerk JWKS URL**: Enter your Clerk JWKS URL (e.g., `https://clerk.<your-domain>.com/.well-known/jwks.json` or development URL like `https://<your-dev-domain>.clerk.accounts.dev/.well-known/jwks.json`).
+5. Save the settings.
+
+### 3. Application Integration
+The application uses Supabase JS clients initialized with a custom `fetch` handler. The `fetch` handler intercepts out-going requests to Supabase and appends the dynamic Clerk session JWT in the `Authorization` header as `Bearer <clerkToken>`.
+
+- **Client-Side (Browser)**: Retrieves token via Clerk's browser SDK: `window.Clerk.session.getToken({ template: 'supabase' })`.
+- **Server-Side (Next.js server/API/Actions)**: Retrieves token via `@clerk/nextjs/server` `auth()` helper: `auth().getToken({ template: 'supabase' })`.
+
+---
+
+## Dual-Write Consistency and Access Control Guarantees
+
+In a multi-user, real-time collaboration environment, dual-write consistency issues can arise between the primary application database (Drizzle) and the auth/edge function sync in the Supabase backend (QCX-BACKEND). To prevent desynchronization from breaking RLS-authorized Realtime and Storage access, we implement several safety measures:
+
+1. **Stamping Ownership on Individual Messages**: In `saveChat`, instead of stamping all messages with the chat owner's ID, each message is stamped with the `userId` of the individual user that sent it (`userId: msg.userId || effectiveUserId`). This prevents concurrent collaborators' messages from being rewritten or misattributed.
+2. **Deterministic Deduplication**: Messages inside a batch transaction are deduplicated using their unique `id` and upserted via `onConflictDoUpdate` (`ON CONFLICT (id) DO UPDATE SET content = EXCLUDED.content, role = EXCLUDED.role`). This ensures concurrent writes from different collaborators do not conflict or cause duplicate messages.
+3. **Graceful User Existence Check**: Webhook path (/api/clerk/webhook) syncs new users to BOTH the primary Drizzle database and the Supabase backend. Furthermore, `getCurrentUserIdOnServer()` uses `resolveClerkUserToDbUser` which deterministically creates or links profile-aligned user records on-demand whenever an action is executed. This guarantees a user is always represented in both stores before attempting database operations.
+4. **Resilient Realtime Subscriptions**: Supabase Realtime subscriptions follow the exact same RLS policies deployed in QCX-BACKEND. By ensuring that `is_clerk_user()` and the `chat_participants` access checks are fully reactive, collaborators instantly receive changes they have permission to see, and are automatically unsubscribed/unauthorized on the fly if their access role changes.
