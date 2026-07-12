@@ -43,13 +43,6 @@
       "when": 1783699200000,
       "tag": "0005_add_documents_rag",
       "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1783789573796,
-      "tag": "0009_add_message_type_name",
-      "breakpoints": true
     }
   ]
 }

@@ -67,8 +67,6 @@ export const messages = pgTable('messages', {
   embedding: vector('embedding'),
   locationId: uuid('location_id').references(() => locations.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  type: text('type'),
-  name: text('name'),
 });
 
 export const chatParticipants = pgTable('chat_participants', {
