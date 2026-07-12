@@ -661,7 +661,7 @@ export const AI = createAI<AIState, UIState>({
       userId: actualUserId,
       path,
       title,
-      messages: updatedMessages
+      messages: updatedMessages.filter(msg => !(msg.content === 'end' && msg.type === 'end'))
     }
     await saveChat(chat, actualUserId)
   }
@@ -710,6 +710,8 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                 id,
                 component: <CopilotDisplay content={content as string} />
               }
+            default:
+              return null
           }
           break
         case 'assistant':
@@ -770,6 +772,8 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                 )
               }
             }
+            default:
+              return null
           }
           break
         case 'tool':
@@ -868,5 +872,5 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
           }
       }
     })
-    .filter(message => message !== null) as UIState
+    .filter(message => message !== null && message !== undefined) as UIState
 }
