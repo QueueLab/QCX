@@ -19,9 +19,9 @@ export type NewMessage = typeof messages.$inferInsert;
  * @param userId - The ID of the user requesting the chat.
  * @returns The chat object if found and accessible, otherwise null.
  */
-export async function getChat(id: string, userId?: string | null): Promise<Chat | null> {
+export async function getChat(id: string, userId: string): Promise<Chat | null> {
   if (!userId) {
-    console.warn('getChat called without userId. Querying public chat fallback.');
+    console.warn('getChat called without userId');
     // Potentially allow fetching public chats if userId is null for anonymous users
     const result = await db.select().from(chats).where(and(eq(chats.id, id), eq(chats.visibility, 'public'))).limit(1);
     return result[0] || null;
@@ -144,15 +144,7 @@ export async function saveChat(chatData: NewChat, messagesData: Omit<NewMessage,
         });
       }
 
-      await tx.insert(messages).values(messagesToInsert).onConflictDoUpdate({
-        target: messages.id,
-        set: {
-          content: sql`EXCLUDED.content`,
-          role: sql`EXCLUDED.role`,
-          type: sql`EXCLUDED.type`,
-          name: sql`EXCLUDED.name`
-        }
-      });
+      await tx.insert(messages).values(messagesToInsert).onConflictDoUpdate({ target: messages.id, set: { content: sql`EXCLUDED.content`, role: sql`EXCLUDED.role` } });
     }
     return chatId;
   });
@@ -274,7 +266,7 @@ export async function getMessagesByChatId(chatId: string): Promise<Message[]> {
       .orderBy(asc(messages.createdAt)); // Order messages chronologically
     return result;
   } catch (error) {
-    console.error(`Error fetching messages for chat ${chatId} in getMessagesByChatId:`, { chatId, error });
+    console.error(`Error fetching messages for chat ${chatId}:`, error);
     return [];
   }
 }

@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: SearchPageProps) {
   // TODO: Metadata generation might need authenticated user if chats are private
   // For now, assuming getChat can be called or it handles anon access for metadata appropriately
   const userId = await getCurrentUserIdOnServer(); // Attempt to get user for metadata
-  const chat = await getChat(id, userId || undefined); // Pass userId or undefined if none (allows public fallback)
+  const chat = await getChat(id, userId || 'anonymous'); // Pass userId or 'anonymous' if none
   return {
     title: chat?.title?.toString().slice(0, 50) || 'Search',
   };
@@ -48,11 +48,14 @@ export default async function SearchPage({ params }: SearchPageProps) {
   const initialMessages: AIMessage[] = dbMessages.map((dbMsg): AIMessage => {
     return {
       id: dbMsg.id,
-      role: dbMsg.role as AIMessage['role'],
+      role: dbMsg.role as AIMessage['role'], // Cast role, ensure AIMessage['role'] includes all dbMsg.role possibilities
       content: dbMsg.content,
       createdAt: dbMsg.createdAt ? new Date(dbMsg.createdAt) : undefined,
-      type: dbMsg.type ? (dbMsg.type as AIMessage['type']) : undefined,
-      name: dbMsg.name || undefined,
+      // 'type' and 'name' are not in the basic Drizzle 'messages' schema.
+      // These would be undefined unless specific logic is added to derive them.
+      // For instance, if a message with role 'tool' should have a 'name',
+      // or if some messages have a specific 'type' based on content or other flags.
+      // This mapping assumes standard user/assistant messages primarily.
     };
   });
 
