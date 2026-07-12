@@ -137,21 +137,17 @@ export async function getChats(userId?: string | null): Promise<DrizzleChat[]> {
     const { chats } = await dbGetChatsPage(userId, 20, 0)
     return chats
   } catch (error) {
-    console.error('Error fetching chats from DB:', error)
+    console.error('Error fetching chats from DB for user:', { userId, error })
     return []
   }
 }
 
-export async function getChat(id: string, userId: string): Promise<DrizzleChat | null> {
-  if (!userId) {
-    console.warn('getChat called without userId.')
-    return null;
-  }
+export async function getChat(id: string, userId?: string | null): Promise<DrizzleChat | null> {
   try {
-    const chat = await dbGetChat(id, userId)
+    const chat = await dbGetChat(id, userId || undefined)
     return chat
   } catch (error) {
-    console.error(`Error fetching chat ${id} from DB:`, error)
+    console.error(`Error fetching chat ${id} for user ${userId} from DB:`, { id, userId, error })
     return null
   }
 }
@@ -167,7 +163,7 @@ export async function getChatMessages(chatId: string): Promise<DrizzleMessage[]>
   try {
     return dbGetMessagesByChatId(chatId);
   } catch (error) {
-    console.error(`Error fetching messages for chat ${chatId} in getChatMessages:`, error);
+    console.error(`Error fetching messages for chat ${chatId} in getChatMessages:`, { chatId, error });
     return [];
   }
 }
@@ -216,6 +212,8 @@ export async function saveChat(chat: OldChatType, userId: string): Promise<strin
     role: msg.role,
     content: typeof msg.content === 'object' ? JSON.stringify(msg.content) : msg.content,
     createdAt: msg.createdAt ? new Date(msg.createdAt) : new Date(),
+    type: msg.type,
+    name: msg.name,
   }));
 
   try {

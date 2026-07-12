@@ -1,6 +1,6 @@
 'use server'
 
-import { and, desc, eq, isNull, sql } from 'drizzle-orm'
+import { and, desc, eq, isNull, sql, gte, lte } from 'drizzle-orm'
 import { db } from '@/lib/db'
 import { calendarNotes } from '@/lib/db/schema'
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
@@ -27,12 +27,14 @@ export async function getNotes(date: Date, chatId: string | null): Promise<Calen
   endDate.setHours(23, 59, 59, 999)
 
   try {
+    // NOTE: Avoid using raw sql template date interpolation (e.g. sql`${calendarNotes.date} >= ${startDate}`)
+    // which bypasses Drizzle's column-aware value mapping and relies on postgres.js untyped binding,
+    // leading to Date-vs-string parameter mismatches. Prefer Drizzle's typed comparators like gte/lte
+    // or explicit .toISOString() conversion.
     const whereConditions = [
       eq(calendarNotes.userId, userId),
-      and(
-        sql`${calendarNotes.date} >= ${startDate}`,
-        sql`${calendarNotes.date} <= ${endDate}`
-      )
+      gte(calendarNotes.date, startDate),
+      lte(calendarNotes.date, endDate)
     ];
 
     if (chatId) {
@@ -51,7 +53,15 @@ export async function getNotes(date: Date, chatId: string | null): Promise<Calen
     return notes;
 
   } catch (error) {
-    console.error('Error fetching notes:', error)
+    console.error('Error fetching notes in getNotes:', {
+      operation: 'getNotes',
+      userId,
+      chatId,
+      date,
+      startDate,
+      endDate,
+      error
+    })
     return []
   }
 }
@@ -78,7 +88,13 @@ export async function saveNote(noteData: NewCalendarNote | CalendarNote): Promis
                 .returning();
             return updatedNote;
         } catch (error) {
-            console.error('Error updating note:', error);
+            console.error('Error updating note in saveNote:', {
+              operation: 'updateNote',
+              userId,
+              noteId: noteData.id,
+              date: noteData.date,
+              error
+            });
             return null;
         }
     } else {
@@ -104,7 +120,12 @@ export async function saveNote(noteData: NewCalendarNote | CalendarNote): Promis
 
             return newNote;
         } catch (error) {
-            console.error('Error creating note:', error);
+            console.error('Error creating note in saveNote:', {
+              operation: 'createNote',
+              userId,
+              date: noteData.date,
+              error
+            });
             return null;
         }
     }
