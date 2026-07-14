@@ -145,9 +145,9 @@
   .mobile-icons-bar-content {
     display: flex;
     gap: 8px;
-    padding: 0 5px;
-    width: 100%;
-    justify-content: center;
+    padding: 0 10px;
+    min-width: max-content;
+    justify-content: flex-start;
   }
 
   .mobile-icons-bar-content > * {

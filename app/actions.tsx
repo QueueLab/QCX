@@ -82,9 +82,18 @@ async function submit(formData?: FormData, skip?: boolean) {
   }
 
   if (action === 'resolution_search') {
-    const file_mapbox = formData?.get('file_mapbox') as File;
-    const file_google = formData?.get('file_google') as File;
-    const file = (formData?.get('file') as File) || file_mapbox || file_google;
+    const isFile = (val: any): val is File => {
+      return val && typeof val === 'object' && typeof val.arrayBuffer === 'function' && val.size > 0;
+    };
+
+    const file_mapbox_raw = formData?.get('file_mapbox');
+    const file_google_raw = formData?.get('file_google');
+    const file_raw = formData?.get('file');
+
+    const file_mapbox = isFile(file_mapbox_raw) ? file_mapbox_raw : null;
+    const file_google = isFile(file_google_raw) ? file_google_raw : null;
+    const file = isFile(file_raw) ? file_raw : (file_mapbox || file_google);
+
     const timezone = (formData?.get('timezone') as string) || 'UTC';
     const lat = formData?.get('latitude') ? parseFloat(formData.get('latitude') as string) : undefined;
     const lng = formData?.get('longitude') ? parseFloat(formData.get('longitude') as string) : undefined;
