@@ -11,7 +11,8 @@ import 'mapbox-gl/dist/mapbox-gl.css'
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css'
 import { useMapToggle, MapToggleEnum } from '../map-toggle-context'
 import { useMapData } from './map-data-context'; // Add this import
-import { useMapLoading } from '../map-loading-context'; // Import useMapLoading
+import { useMapLoading } from '../map-loading-context'
+import { GeoJsonLayer } from './geojson-layer'; // Import useMapLoading
 import { useMap } from './map-context'
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN as string;
@@ -550,11 +551,8 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         updateMapPosition(lat, lng);
       }
     }
-    // TODO: Handle mapData.mapFeature for drawing routes, polygons, etc. in a future step.
-    // For example:
-    // if (mapData.mapFeature && mapData.mapFeature.route_geometry && typeof drawRoute === 'function') {
-    //   drawRoute(mapData.mapFeature.route_geometry); // Implement drawRoute function if needed
-    // }
+    // mapFeature route rendering is now handled declaratively by GeoJsonLayer
+    // mounted conditionally in the component return
   }, [mapData.targetPosition, mapData.mapFeature, updateMapPosition]);
 
   // Long-press handlers
@@ -593,6 +591,19 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp} // Clear timer if mouse leaves container while pressed
       />
+      {mapData.mapFeature?.routeGeoJSON && (
+        <GeoJsonLayer
+          id="map-feature-route"
+          data={{
+            type: 'FeatureCollection',
+            features: [{
+              type: 'Feature',
+              geometry: mapData.mapFeature.routeGeoJSON,
+              properties: {}
+            }]
+          }}
+        />
+      )}
     </div>
   )
 }
