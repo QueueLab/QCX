@@ -1,4 +1,3 @@
-import { Button } from '@/components/ui/button';
 import { Globe, Thermometer, Laptop, HelpCircle } from 'lucide-react';
 
 const exampleMessages = [
@@ -33,23 +32,23 @@ export function EmptyScreen({
 }) {
   return (
     <div className={`mx-auto w-full transition-all overflow-hidden ${className}`}>
-      <div className="bg-background p-2">
-        <div className="mt-4 flex flex-col items-start space-y-2 mb-4">
+      <div className="p-2">
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
           {exampleMessages.map((item) => {
             const Icon = item.icon;
             return (
-              <Button
-                key={item.message} // Use a unique property as the key.
-                variant="link"
-                className="h-auto p-0 text-base flex items-center gap-1.5 whitespace-normal text-left break-words max-w-[calc(100vw-2rem)] sm:max-w-full"
-                name={item.message}
+              <button
+                key={item.message}
                 onClick={async () => {
                   submitMessage(item.message);
                 }}
+                className="flex items-center gap-3 p-3 text-sm text-left border border-border bg-card hover:bg-accent/50 rounded-xl transition-all w-full text-foreground/80 hover:text-foreground font-medium shadow-sm"
               >
-                <Icon size={16} className="text-muted-foreground flex-shrink-0" />
-                {item.heading}
-              </Button>
+                <div className="p-2 bg-secondary rounded-lg text-muted-foreground flex-shrink-0">
+                  <Icon size={16} />
+                </div>
+                <span className="line-clamp-2">{item.heading}</span>
+              </button>
             );
           })}
         </div>
