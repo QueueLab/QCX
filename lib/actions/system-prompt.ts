@@ -4,7 +4,7 @@ import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user';
 import { z } from 'zod';
 import { createJob, updateJob, getJobByIdAndUserId } from './system-prompt-db';
 import { getFirecrawlClient } from '@/lib/agents/tools/firecrawl';
-import { getModel } from '@/lib/utils';
+import { getModel } from '@/lib/utils/server';
 import { generateText } from 'ai';
 
 const domainSchema = z.string().min(1).refine((val) => {

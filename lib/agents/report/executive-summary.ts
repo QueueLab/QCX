@@ -1,5 +1,5 @@
 import { generateText } from 'ai'
-import { getModel } from '@/lib/utils'
+import { getModel } from '@/lib/utils/server'
 
 export async function executiveSummaryAgent(crossSessionContext: string, activeMessages: any[]) {
   try {
