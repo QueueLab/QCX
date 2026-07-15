@@ -15,7 +15,7 @@ export function generateUUID(): string {
  * Returns a UUID v4 string.
  */
 export { generateUUID as nanoid };
-export { getModel } from './server'
+
 
 /**
  * Normalizes and sanitizes message content to plain text.
