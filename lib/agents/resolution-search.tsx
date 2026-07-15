@@ -1,5 +1,5 @@
 import { CoreMessage, streamObject } from 'ai'
-import { getModel } from '@/lib/utils'
+import { getModel } from '@/lib/utils/server'
 import { tavily } from '@tavily/core'
 import { resolutionSearchSchema } from '@/lib/schema/resolution-search'
 

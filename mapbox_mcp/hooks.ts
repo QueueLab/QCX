@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { generateText } from 'ai';
-import { getModel } from '@/lib/utils';
+import { getModel } from '@/lib/utils/server';
 
 // Define Tool type locally if needed
 type Tool = {
