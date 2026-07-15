@@ -104,10 +104,10 @@ async function submit(formData?: FormData, skip?: boolean) {
     }
 
     const mapboxBuffer = file_mapbox ? await file_mapbox.arrayBuffer() : null;
-    const mapboxDataUrl = mapboxBuffer ? `data:${file_mapbox.type};base64,${Buffer.from(mapboxBuffer).toString('base64')}` : null;
+    const mapboxDataUrl = (file_mapbox && mapboxBuffer) ? `data:${file_mapbox.type};base64,${Buffer.from(mapboxBuffer).toString('base64')}` : null;
 
     const googleBuffer = file_google ? await file_google.arrayBuffer() : null;
-    const googleDataUrl = googleBuffer ? `data:${file_google.type};base64,${Buffer.from(googleBuffer).toString('base64')}` : null;
+    const googleDataUrl = (file_google && googleBuffer) ? `data:${file_google.type};base64,${Buffer.from(googleBuffer).toString('base64')}` : null;
 
     const buffer = await file.arrayBuffer();
     const dataUrl = `data:${file.type};base64,${Buffer.from(buffer).toString('base64')}`;
