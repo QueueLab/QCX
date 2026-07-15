@@ -128,6 +128,9 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
         setIsUploading(true)
         try {
           const supabase = getSupabaseBrowserClient()
+          if (!supabase) {
+            throw new Error('Supabase client could not be initialized.')
+          }
           const fileExt = selectedFile.name.split('.').pop()
           const storagePath = `${crypto.randomUUID()}.${fileExt}`
 
