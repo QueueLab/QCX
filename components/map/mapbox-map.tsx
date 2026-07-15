@@ -372,86 +372,75 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   // Initialize map (only once)
   useEffect(() => {
     if (mapContainer.current && !map.current) {
-      try {
-        if (!process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN) {
-          throw new Error('An API access token is required to use Mapbox GL. Please configure NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN.');
+      let initialCenter: [number, number] = [position?.longitude ?? 0, position?.latitude ?? 0];
+      let initialZoom = 2;
+      let initialPitch = 0;
+      let initialBearing = 0;
+
+      if (mapData.cameraState) {
+        const { center, range, tilt, heading, zoom, pitch, bearing } = mapData.cameraState;
+        initialCenter = [center.lng, center.lat];
+        if (zoom !== undefined) {
+          initialZoom = zoom;
+        } else if (range !== undefined) {
+          initialZoom = Math.log2(40000000 / range);
         }
+        initialPitch = pitch ?? tilt ?? 0;
+        initialBearing = bearing ?? heading ?? 0;
+      } else if (typeof window !== 'undefined' && window.innerWidth < 768) {
+        initialZoom = 1.3;
+      }
 
-        let initialCenter: [number, number] = [position?.longitude ?? 0, position?.latitude ?? 0];
-        let initialZoom = 2;
-        let initialPitch = 0;
-        let initialBearing = 0;
+      currentMapCenterRef.current = { center: initialCenter, zoom: initialZoom, pitch: initialPitch };
 
-        if (mapData.cameraState) {
-          const { center, range, tilt, heading, zoom, pitch, bearing } = mapData.cameraState;
-          initialCenter = [center.lng, center.lat];
-          if (zoom !== undefined) {
-            initialZoom = zoom;
-          } else if (range !== undefined) {
-            initialZoom = Math.log2(40000000 / range);
-          }
-          initialPitch = pitch ?? tilt ?? 0;
-          initialBearing = bearing ?? heading ?? 0;
-        } else if (typeof window !== 'undefined' && window.innerWidth < 768) {
-          initialZoom = 1.3;
-        }
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: 'mapbox://styles/mapbox/satellite-streets-v12',
+        center: initialCenter,
+        zoom: initialZoom,
+        pitch: initialPitch,
+        bearing: initialBearing,
+        maxZoom: 22,
+        attributionControl: true,
+        preserveDrawingBuffer: true
+      })
 
-        currentMapCenterRef.current = { center: initialCenter, zoom: initialZoom, pitch: initialPitch };
+      // Register event listeners
+      map.current.on('moveend', captureMapCenter)
+      map.current.on('mousedown', handleUserInteraction)
+      map.current.on('touchstart', handleUserInteraction)
+      map.current.on('wheel', handleUserInteraction)
+      map.current.on('drag', handleUserInteraction)
+      map.current.on('zoom', handleUserInteraction)
 
-        map.current = new mapboxgl.Map({
-          container: mapContainer.current,
-          style: 'mapbox://styles/mapbox/satellite-streets-v12',
-          center: initialCenter,
-          zoom: initialZoom,
-          pitch: initialPitch,
-          bearing: initialBearing,
-          maxZoom: 22,
-          attributionControl: true,
-          preserveDrawingBuffer: true
+      map.current.on('load', () => {
+        if (!map.current) return
+        setMap(map.current) // Set map instance in context
+
+        // Add terrain and sky
+        map.current.addSource('mapbox-dem', {
+          type: 'raster-dem',
+          url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
+          tileSize: 512,
+          maxzoom: 14,
         })
 
-        // Register event listeners
-        map.current.on('moveend', captureMapCenter)
-        map.current.on('mousedown', handleUserInteraction)
-        map.current.on('touchstart', handleUserInteraction)
-        map.current.on('wheel', handleUserInteraction)
-        map.current.on('drag', handleUserInteraction)
-        map.current.on('zoom', handleUserInteraction)
+        map.current.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 })
 
-        map.current.on('load', () => {
-          if (!map.current) return
-          setMap(map.current) // Set map instance in context
-
-          // Add terrain and sky
-          map.current.addSource('mapbox-dem', {
-            type: 'raster-dem',
-            url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
-            tileSize: 512,
-            maxzoom: 14,
-          })
-
-          map.current.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 })
-
-          map.current.addLayer({
-            id: 'sky',
-            type: 'sky',
-            paint: {
-              'sky-type': 'atmosphere',
-              'sky-atmosphere-sun': [0.0, 0.0],
-              'sky-atmosphere-sun-intensity': 15,
-            },
-          })
-
-          initializedRef.current = true
-          setIsMapReady(true)
-          setIsMapLoaded(true) // Set map loaded state to true
+        map.current.addLayer({
+          id: 'sky',
+          type: 'sky',
+          paint: {
+            'sky-type': 'atmosphere',
+            'sky-atmosphere-sun': [0.0, 0.0],
+            'sky-atmosphere-sun-intensity': 15,
+          },
         })
-      } catch (error) {
-        console.error('Failed to initialize Mapbox Map:', error)
+
         initializedRef.current = true
         setIsMapReady(true)
-        setIsMapLoaded(true) // Set loaded/ready so overlay disappears and app remains functional
-      }
+        setIsMapLoaded(true) // Set map loaded state to true
+      })
     }
 
     return () => {

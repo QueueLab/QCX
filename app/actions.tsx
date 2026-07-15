@@ -209,7 +209,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         aiState.done({
           ...aiState.get(),
           messages: [
-            ...sanitizedHistory,
+            ...aiState.get().messages,
             {
               id: groupeId,
               role: 'assistant',

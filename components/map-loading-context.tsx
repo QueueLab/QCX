@@ -1,5 +1,5 @@
 'use client';
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode } from 'react';
 
 interface MapLoadingContextType {
   isMapLoaded: boolean;
@@ -10,15 +10,6 @@ const MapLoadingContext = createContext<MapLoadingContextType | undefined>(undef
 
 export const MapLoadingProvider = ({ children }: { children: ReactNode }) => {
   const [isMapLoaded, setIsMapLoaded] = useState(false);
-
-  useEffect(() => {
-    // Automatic fallback to map loaded after 1 second to prevent blocking tests or local setups without keys
-    const timer = setTimeout(() => {
-      setIsMapLoaded(true);
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, []);
-
   return (
     <MapLoadingContext.Provider value={{ isMapLoaded, setIsMapLoaded }}>
       {children}

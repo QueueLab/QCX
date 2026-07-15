@@ -6,11 +6,10 @@ export function SettingsSkeleton() {
   return (
     <div className="space-y-6">
       <Tabs.Root defaultValue="system-prompt" className="w-full">
-        <Tabs.List className="grid w-full grid-cols-2 md:grid-cols-4 gap-2">
-          <Tabs.Trigger value="system-prompt">System</Tabs.Trigger>
-          <Tabs.Trigger value="model">Models</Tabs.Trigger>
-          <Tabs.Trigger value="user-management">Users</Tabs.Trigger>
-          <Tabs.Trigger value="map">Map</Tabs.Trigger>
+        <Tabs.List className="grid w-full grid-cols-3">
+          <Tabs.Trigger value="system-prompt">System Prompt</Tabs.Trigger>
+          <Tabs.Trigger value="users">User Management</Tabs.Trigger>
+          <Tabs.Trigger value="model">Model Selection</Tabs.Trigger>
         </Tabs.List>
 
         <Tabs.Content value="system-prompt">

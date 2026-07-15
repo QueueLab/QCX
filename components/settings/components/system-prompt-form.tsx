@@ -145,7 +145,7 @@ export function SystemPromptForm({ form }: SystemPromptFormProps) {
         name="systemPrompt"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>System</FormLabel>
+            <FormLabel>System Prompt</FormLabel>
             <FormControl>
               <Textarea
                 placeholder="Enter the system prompt for your planetary copilot..."

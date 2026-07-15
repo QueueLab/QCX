@@ -96,7 +96,6 @@ export function Chat({ id }: ChatProps) {
     if (!id) return
 
     const supabase = getSupabaseBrowserClient()
-    if (!supabase) return
 
     // Subscribe to messages changes
     const channel = supabase

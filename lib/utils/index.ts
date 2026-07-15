@@ -41,8 +41,7 @@ export async function getModel(requireVision: boolean = false) {
             baseURL: 'https://api.x.ai/v1',
           });
           try {
-            const modelId = requireVision ? 'grok-vision-beta' : 'grok-2-1212';
-            return xai(modelId);
+            return xai('grok-2-1212');
           } catch (error) {
             console.error('Selected model "Grok 4.2" is configured but failed to initialize.', error);
             throw new Error('Failed to initialize selected model.');
@@ -87,8 +86,7 @@ export async function getModel(requireVision: boolean = false) {
       baseURL: 'https://api.x.ai/v1',
     });
     try {
-      const modelId = requireVision ? 'grok-vision-beta' : 'grok-latest';
-      return xai(modelId);
+      return xai('grok-latest');
     } catch (error) {
       console.warn('xAI API unavailable, falling back to next provider:');
     }

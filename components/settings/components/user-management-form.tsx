@@ -73,7 +73,7 @@ export function UserManagementForm({ form }: UserManagementFormProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Users</CardTitle>
+        <CardTitle>User Management</CardTitle>
         <CardDescription>Add, remove, or edit user access and roles.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
