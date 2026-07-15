@@ -66,16 +66,31 @@ export async function resolutionSearch(messages: CoreMessage[], timezone: string
   const now = new Date();
   
   // OPTIMIZATION: Format local time with timezone context
-  const localTime = now.toLocaleString('en-US', {
-    timeZone: timezone,
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
+  let localTime = '';
+  try {
+    localTime = now.toLocaleString('en-US', {
+      timeZone: timezone,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  } catch (e) {
+    console.error(`Invalid timezone specified: ${timezone}, falling back to UTC`, e);
+    localTime = now.toLocaleString('en-US', {
+      timeZone: 'UTC',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  }
 
   // OPTIMIZATION: Get location name for news search
   let locationName = 'this location';

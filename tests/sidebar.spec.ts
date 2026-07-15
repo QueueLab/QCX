@@ -3,6 +3,9 @@ import { test, expect } from '@playwright/test';
 test.describe('Sidebar and Chat History', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
+    try {
+      await page.locator('text=Later').click({ timeout: 3000 });
+    } catch (e) {}
     await page.waitForSelector('[data-testid="chat-input"]');
   });
 
