@@ -2,6 +2,10 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 export const getSupabaseBrowserClient = () => {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.warn('[Supabase Browser Client] Supabase URL or Anon Key is missing. Real-time subscription is disabled.');
+    return null;
+  }
   return createSupabaseClient(supabaseUrl, supabaseAnonKey, {
     global: {
       async fetch(url, options = {}) {

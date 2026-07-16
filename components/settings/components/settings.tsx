@@ -194,13 +194,13 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
                       data-testid={`theme-select-${t.value}`}
                       onClick={() => setTheme(t.value)}
                       className={cn(
-                        "flex flex-col items-center justify-center p-6 rounded-xl border-2 transition-all gap-3 text-center",
+                        "flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all gap-2 text-center",
                         isActive
                           ? "bg-accent/40 border-primary text-primary shadow-sm"
                           : "bg-card border-muted hover:border-muted-foreground/50 text-muted-foreground hover:text-foreground"
                       )}
                     >
-                      <Icon className="h-8 w-8" />
+                      <Icon className="h-6 w-6" />
                       <span className="text-sm font-medium">{t.name}</span>
                     </button>
                   )
@@ -211,9 +211,9 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
 
           <Tabs.Root value={currentTab} onValueChange={setCurrentTab} className="w-full">
             <Tabs.List className="grid w-full grid-cols-2 md:grid-cols-4 gap-2">
-              <Tabs.Trigger value="system-prompt" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">System Prompt</Tabs.Trigger>
-              <Tabs.Trigger value="model" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">Model Selection</Tabs.Trigger>
-              <Tabs.Trigger value="user-management" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">User Management</Tabs.Trigger>
+              <Tabs.Trigger value="system-prompt" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">System</Tabs.Trigger>
+              <Tabs.Trigger value="model" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">Models</Tabs.Trigger>
+              <Tabs.Trigger value="user-management" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">Users</Tabs.Trigger>
               <Tabs.Trigger value="map" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">Map</Tabs.Trigger>
             </Tabs.List>
             <AnimatePresence mode="wait">
@@ -227,7 +227,7 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
                 <Tabs.Content value="system-prompt" className="mt-6">
                   <Card>
                     <CardHeader>
-                      <CardTitle>System Prompt</CardTitle>
+                      <CardTitle>System</CardTitle>
                       <CardDescription>Customize the behavior and persona of your planetary copilot</CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -239,7 +239,7 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
                 <Tabs.Content value="model" className="mt-6">
                   <Card>
                     <CardHeader>
-                      <CardTitle>Model Selection</CardTitle>
+                      <CardTitle>Models</CardTitle>
                       <CardDescription>Choose the AI model that powers your planetary copilot</CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -285,7 +285,7 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
             <CardFooter className="flex justify-between pt-6">
               <Button type="button" variant="outline" onClick={onReset} disabled={isSaving}>
                 <RotateCcw className="mr-2 h-4 w-4" />
-                Reset to Defaults
+                Reset
               </Button>
               <Button type="submit" disabled={isSaving}>
                 {isSaving ? (
@@ -296,7 +296,7 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
                 ) : (
                   <>
                     <Save className="mr-2 h-4 w-4" />
-                    Save Changes
+                    Save
                   </>
                 )}
               </Button>
