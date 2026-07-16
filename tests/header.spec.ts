@@ -4,8 +4,12 @@ test.describe('Header and Navigation', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     try {
-      await page.locator('text=Later').click({ timeout: 3000 });
-    } catch (e) {}
+      const laterBtn = page.getByRole('button', { name: 'Later' });
+      await laterBtn.waitFor({ state: 'visible', timeout: 5000 });
+      await laterBtn.click({ force: true });
+    } catch (e) {
+      console.warn('Could not click "Later" button:', e);
+    }
   });
 
   test('should toggle the theme in settings', async ({ page }) => {

@@ -4,7 +4,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Button } from "@/components/ui/button"
 import { ProfileToggleEnum, useProfileToggle } from "./profile-toggle-context"
 import { useUsageToggle } from "./usage-toggle-context"
-import { useClerk, useUser, SignInButton } from "@clerk/nextjs"
+import { useClerk, useUser } from "@clerk/nextjs"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { useMediaQuery } from "@/hooks/use-media-query"
 
@@ -77,12 +77,10 @@ export function ProfileToggle() {
           </DropdownMenuItem>
         )}
         {isLoaded && !isSignedIn && (
-          <SignInButton mode="modal">
-            <DropdownMenuItem>
-              <LogOut className="mr-2 h-4 w-4" />
-              <span>Sign in</span>
-            </DropdownMenuItem>
-          </SignInButton>
+          <DropdownMenuItem onClick={() => window.location.href = "/sign-in"}>
+            <LogOut className="mr-2 h-4 w-4" />
+            <span>Sign in</span>
+          </DropdownMenuItem>
         )}
       </DropdownMenuContent>
     </DropdownMenu>

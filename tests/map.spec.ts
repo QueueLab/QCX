@@ -3,6 +3,13 @@ import { test, expect } from '@playwright/test';
 test.describe('Map functionality', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
+    try {
+      const laterBtn = page.getByRole('button', { name: 'Later' });
+      await laterBtn.waitFor({ state: 'visible', timeout: 5000 });
+      await laterBtn.click({ force: true });
+    } catch (e) {
+      console.warn('Could not click "Later" button:', e);
+    }
     // Wait for either the Mapbox or Google Map to be loaded
     await page.waitForSelector('.mapboxgl-canvas, gmp-map-3d');
   });
