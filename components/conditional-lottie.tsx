@@ -6,8 +6,10 @@ import { useProfileToggle } from '@/components/profile-toggle-context'; // Added
 import { useUsageToggle } from '@/components/usage-toggle-context';
 
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 
 const ConditionalLottie = () => {
+  const pathname = usePathname();
   const { isMapLoaded } = useMapLoading();
   const { activeView } = useProfileToggle(); // Added this line
   const { isUsageOpen } = useUsageToggle();
@@ -25,7 +27,12 @@ const ConditionalLottie = () => {
     }
   }, []);
 
-  if (isPlaywright) {
+  const isAuthPage = pathname?.startsWith('/sign-in') ||
+                     pathname?.startsWith('/discord-auth') ||
+                     pathname?.startsWith('/auth/discord') ||
+                     pathname?.startsWith('/sso-callback');
+
+  if (isPlaywright || isAuthPage) {
     return null;
   }
 
