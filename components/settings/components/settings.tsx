@@ -252,15 +252,15 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
                           return (
                             <div className="flex items-center gap-4 p-4 border rounded-xl bg-accent/20 border-primary/50">
                               <div className="h-12 w-12 rounded-full overflow-hidden bg-muted flex items-center justify-center">
-                                {discordAccount.avatarUrl ? (
-                                  <img src={discordAccount.avatarUrl} alt="Discord Avatar" className="h-full w-full object-cover" />
+                                {discordAccount.imageUrl ? (
+                                  <img src={discordAccount.imageUrl} alt="Discord Avatar" className="h-full w-full object-cover" />
                                 ) : (
                                   <span className="text-xl font-bold text-primary">D</span>
                                 )}
                               </div>
                               <div className="flex-1">
                                 <p className="font-semibold text-foreground">Connected as {discordAccount.username || 'Discord User'}</p>
-                                <p className="text-xs text-muted-foreground">ID: {discordAccount.externalId}</p>
+                                <p className="text-xs text-muted-foreground">ID: {discordAccount.providerUserId}</p>
                               </div>
                               <Button
                                 type="button"

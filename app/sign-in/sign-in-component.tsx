@@ -9,8 +9,9 @@ import { FcGoogle } from 'react-icons/fc'
 import Image from 'next/image'
 
 export default function SignInComponent() {
-  const { signIn, isLoaded: isSignInLoaded } = useSignIn()
+  const { signIn } = useSignIn()
   const { isSignedIn, isLoaded: isUserLoaded } = useUser()
+  const isSignInLoaded = !!signIn
   const router = useRouter()
   const searchParams = useSearchParams()
   const [error, setError] = useState<string | null>(null)
@@ -37,10 +38,10 @@ export default function SignInComponent() {
     setIsLoading(true)
     setError(null)
     try {
-      await signIn.authenticateWithRedirect({
+      await signIn.sso({
         strategy: 'oauth_google',
-        redirectUrl: '/sso-callback',
-        redirectUrlComplete: redirectUrl,
+        redirectCallbackUrl: '/sso-callback',
+        redirectUrl: redirectUrl,
       })
     } catch (err: any) {
       console.error('Google Sign-In Error:', err)

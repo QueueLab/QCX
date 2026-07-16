@@ -5,8 +5,9 @@ import { useSignIn, useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 
 function DiscordAuthRedirect() {
-  const { signIn, isLoaded: isSignInLoaded } = useSignIn()
+  const { signIn } = useSignIn()
   const { isSignedIn, isLoaded: isUserLoaded } = useUser()
+  const isSignInLoaded = !!signIn
   const router = useRouter()
 
   useEffect(() => {
@@ -16,10 +17,10 @@ function DiscordAuthRedirect() {
     }
 
     if (isSignInLoaded && signIn) {
-      signIn.authenticateWithRedirect({
+      signIn.sso({
         strategy: 'oauth_discord',
-        redirectUrl: '/sso-callback',
-        redirectUrlComplete: '/',
+        redirectCallbackUrl: '/sso-callback',
+        redirectUrl: '/',
       }).catch((err) => {
         console.error('Failed to redirect to Discord SSO:', err)
       })
