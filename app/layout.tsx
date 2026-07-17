@@ -79,9 +79,6 @@ export default function RootLayout({
   return (
     <ClerkProvider
       appearance={{
-        layout: {
-          socialButtonsVariant: 'blockButton',
-        },
         elements: {
           socialButtonsBlockButton__discord: {
             display: 'none',
