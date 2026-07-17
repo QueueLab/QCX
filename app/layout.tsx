@@ -77,7 +77,18 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <ClerkProvider>
+    <ClerkProvider
+      appearance={{
+        layout: {
+          socialButtonsVariant: 'blockButton',
+        },
+        elements: {
+          socialButtonsBlockButton__discord: {
+            display: 'none',
+          },
+        },
+      }}
+    >
     <html lang="en" suppressHydrationWarning>
       <head>
         <script
