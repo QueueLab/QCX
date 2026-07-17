@@ -25,6 +25,7 @@ import { getSystemPrompt, saveSystemPrompt } from "../../../lib/actions/chat"
 import { getSelectedModel, saveSelectedModel } from "../../../lib/actions/users"
 import { useCurrentUser } from "@/lib/auth/use-current-user"
 import { SettingsSkeleton } from './settings-skeleton'
+import { useUser } from '@clerk/nextjs'
 
 // Define the form schema with enum validation for roles
 const settingsFormSchema = z.object({
@@ -73,6 +74,7 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
   const [currentTab, setCurrentTab] = useState(initialTab);
   const { mapProvider, setMapProvider } = useSettingsStore();
   const { user, loading: authLoading } = useCurrentUser();
+  const { user: clerkUser } = useUser();
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
 
@@ -210,11 +212,12 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
           </Card>
 
           <Tabs.Root value={currentTab} onValueChange={setCurrentTab} className="w-full">
-            <Tabs.List className="grid w-full grid-cols-2 md:grid-cols-4 gap-2">
+            <Tabs.List className="grid w-full grid-cols-2 md:grid-cols-5 gap-2">
               <Tabs.Trigger value="system-prompt" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">System Prompt</Tabs.Trigger>
               <Tabs.Trigger value="model" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">Model Selection</Tabs.Trigger>
               <Tabs.Trigger value="user-management" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">User Management</Tabs.Trigger>
               <Tabs.Trigger value="map" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">Map</Tabs.Trigger>
+              <Tabs.Trigger value="account" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">Account</Tabs.Trigger>
             </Tabs.List>
             <AnimatePresence mode="wait">
               <motion.div
@@ -232,6 +235,92 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
                     </CardHeader>
                     <CardContent>
                       <SystemPromptForm form={form} />
+                    </CardContent>
+                  </Card>
+                </Tabs.Content>
+
+                <Tabs.Content value="account" className="mt-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Discord Account Linking</CardTitle>
+                      <CardDescription>Link your Discord account to QCX to access bot features and server sync.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {clerkUser?.externalAccounts.find(acc => acc.provider === 'discord') ? (
+                        (() => {
+                          const discordAccount = clerkUser.externalAccounts.find(acc => acc.provider === 'discord')!;
+                          return (
+                            <div className="flex items-center gap-4 p-4 border rounded-xl bg-accent/20 border-primary/50">
+                              <div className="h-12 w-12 rounded-full overflow-hidden bg-muted flex items-center justify-center">
+                                {discordAccount.imageUrl ? (
+                                  <img src={discordAccount.imageUrl} alt="Discord Avatar" className="h-full w-full object-cover" />
+                                ) : (
+                                  <span className="text-xl font-bold text-primary">D</span>
+                                )}
+                              </div>
+                              <div className="flex-1">
+                                <p className="font-semibold text-foreground">Connected as {discordAccount.username || 'Discord User'}</p>
+                                <p className="text-xs text-muted-foreground">ID: {discordAccount.providerUserId}</p>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="sm"
+                                onClick={async () => {
+                                  try {
+                                    await discordAccount.destroy();
+                                    await clerkUser.reload();
+                                    toast({
+                                      title: "Discord Unlinked",
+                                      description: "Your Discord account has been disconnected.",
+                                    });
+                                  } catch (err: any) {
+                                    toast({
+                                      title: "Error",
+                                      description: err.message || "Failed to disconnect Discord account.",
+                                      variant: "destructive",
+                                    });
+                                  }
+                                }}
+                              >
+                                Disconnect
+                              </Button>
+                            </div>
+                          );
+                        })()
+                      ) : (
+                        <div className="flex flex-col items-center justify-center py-6 text-center space-y-4">
+                          <p className="text-sm text-muted-foreground">
+                            You haven&apos;t connected your Discord account yet. Link it now to connect your SaaS profile.
+                          </p>
+                          <Button
+                            type="button"
+                            className="bg-[#5865F2] hover:bg-[#4752C4] text-white flex items-center gap-2 px-6 py-5 text-base font-semibold"
+                            onClick={async () => {
+                              try {
+                                const res = await clerkUser?.createExternalAccount({
+                                  strategy: 'oauth_discord',
+                                  redirectUrl: window.location.href,
+                                });
+                                if (res?.verification?.externalVerificationRedirectURL) {
+                                  window.location.href = res.verification.externalVerificationRedirectURL.href;
+                                }
+                              } catch (err: any) {
+                                toast({
+                                  title: "Connection Error",
+                                  description: err.message || "Failed to initiate Discord linking.",
+                                  variant: "destructive",
+                                });
+                              }
+                            }}
+                          >
+                            <svg className="h-5 w-5 fill-current" viewBox="0 0 127.14 96.36">
+                              <path d="M107.7,8.07A105.15,105.15,0,0,0,77.26,0a77.19,77.19,0,0,0-3.3,6.83A96.67,96.67,0,0,0,52.88,6.83,77.19,77.19,0,0,0,49.58,0,105.15,105.15,0,0,0,19.14,8.07C3,36.79-1.45,64.83.45,92.48a106.4,106.4,0,0,0,32.22,16.22,78,78,0,0,0,6.77-11,68.86,68.86,0,0,1-10.74-5.12c.91-.66,1.8-1.34,2.65-2a75.58,75.58,0,0,0,64,0c.86.69,1.75,1.37,2.65,2a68.86,68.86,0,0,1-10.74,5.12,78,78,0,0,0,6.77,11,106.4,106.4,0,0,0,32.22-16.22C129.21,64.83,124.2,36.79,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53S36.18,40.36,42.45,40.36,53.83,46,53.83,53,48.72,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.24,60,73.24,53S78.41,40.36,84.69,40.36,96.07,46,96.07,53,91,65.69,84.69,65.69Z"/>
+                            </svg>
+                            <span>Connect Discord Account</span>
+                          </Button>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </Tabs.Content>
