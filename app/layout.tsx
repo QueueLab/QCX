@@ -83,6 +83,15 @@ export default function RootLayout({
           socialButtonsBlockButton__discord: {
             display: 'none',
           },
+          socialButtonsBlockButton: {
+            width: '100%',
+            justifyContent: 'center',
+          },
+          socialButtonsBlockButtonContainer: {
+            width: '100%',
+            display: 'flex',
+            justifyContent: 'center',
+          },
         },
       }}
     >
