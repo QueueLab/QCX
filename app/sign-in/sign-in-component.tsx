@@ -6,7 +6,9 @@ import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { FcGoogle } from 'react-icons/fc'
+import { FaDiscord } from 'react-icons/fa'
 import Image from 'next/image'
+import Link from 'next/link'
 
 export default function SignInComponent() {
   const { signIn } = useSignIn()
@@ -90,6 +92,26 @@ export default function SignInComponent() {
             )}
             <span>Continue with Google</span>
           </Button>
+
+          <div className="relative my-4">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+            </div>
+          </div>
+
+          <Link href="/sign-in/discord" className="w-full">
+            <Button
+              variant="outline"
+              type="button"
+              className="w-full flex items-center justify-center gap-3 py-6 text-base font-semibold hover:bg-muted/80 border-border"
+            >
+              <FaDiscord className="h-5 w-5 text-[#5865F2]" />
+              <span>Continue with Discord</span>
+            </Button>
+          </Link>
         </CardContent>
       </Card>
     </div>
