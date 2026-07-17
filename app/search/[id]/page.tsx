@@ -46,16 +46,33 @@ export default async function SearchPage({ params }: SearchPageProps) {
 
   // Transform DrizzleMessages to AIMessages
   const initialMessages: AIMessage[] = dbMessages.map((dbMsg): AIMessage => {
+    let content = dbMsg.content;
+    let type = undefined;
+    let name = undefined;
+
+    // Attempt to extract type and name from the content if it's a JSON string
+    // This handles the metadata we've started embedding in the content field.
+    try {
+      if (content.startsWith('{') && content.endsWith('}')) {
+        const parsed = JSON.parse(content);
+        if (parsed && typeof parsed === 'object' && '__metadata' in parsed) {
+          const { __metadata, ...rest } = parsed;
+          content = JSON.stringify(rest);
+          type = __metadata.type;
+          name = __metadata.name;
+        }
+      }
+    } catch (e) {
+      // Fallback to original content if parsing fails
+    }
+
     return {
       id: dbMsg.id,
-      role: dbMsg.role as AIMessage['role'], // Cast role, ensure AIMessage['role'] includes all dbMsg.role possibilities
-      content: dbMsg.content,
+      role: dbMsg.role as AIMessage['role'],
+      content,
+      type: type as any,
+      name,
       createdAt: dbMsg.createdAt ? new Date(dbMsg.createdAt) : undefined,
-      // 'type' and 'name' are not in the basic Drizzle 'messages' schema.
-      // These would be undefined unless specific logic is added to derive them.
-      // For instance, if a message with role 'tool' should have a 'name',
-      // or if some messages have a specific 'type' based on content or other flags.
-      // This mapping assumes standard user/assistant messages primarily.
     };
   });
 

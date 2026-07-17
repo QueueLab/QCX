@@ -695,6 +695,14 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
               } catch (e) {
                 messageContent = content
               }
+
+              // Filter out image parts that were processed/sanitized
+              if (Array.isArray(messageContent)) {
+                messageContent = messageContent.filter(part => 
+                  part.type !== 'image' || (part.image && part.image !== 'IMAGE_PROCESSED')
+                );
+              }
+
               return {
                 id,
                 component: (
@@ -705,6 +713,9 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                   />
                 )
               }
+            case 'drawing_context':
+              return null // Drawing context is handled by the map, not rendered in chat
+
             case 'inquiry':
               return {
                 id,
