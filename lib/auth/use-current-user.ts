@@ -1,6 +1,20 @@
 import { useUser } from '@clerk/nextjs';
 
 export function useCurrentUser() {
+  if (process.env.NEXT_PUBLIC_PLAYWRIGHT_TEST === 'true') {
+    return {
+      user: {
+        id: "mock-user-id",
+        email: "mock_user@example.com",
+        user_metadata: {
+          name: "Mock User",
+          avatar_url: ""
+        }
+      },
+      loading: false
+    };
+  }
+
   const { user, isLoaded } = useUser();
 
   // Map Clerk user to the structure expected by consumers if necessary
