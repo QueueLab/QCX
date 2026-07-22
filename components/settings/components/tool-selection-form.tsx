@@ -19,13 +19,13 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Zap, Rocket, Cpu, Earth } from "lucide-react";
+import { Earth, Orbit } from "lucide-react";
 
-interface ModelSelectionFormProps {
+interface ToolSelectionFormProps {
   form: UseFormReturn<any>;
 }
 
-const models = [
+const tools = [
   {
     id: "QCX-Terra",
     name: "QCX-Terra",
@@ -35,54 +35,38 @@ const models = [
     badgeVariant: "default" as const,
   },
   {
-    id: "Grok 4.2",
-    name: "Grok 4.2",
-    description: "The latest from xAI, pushing the boundaries of reasoning and problem-solving.",
-    icon: Rocket,
-    badge: "New",
+    id: "SkyFi",
+    name: "SkyFi",
+    description: "On-demand satellite imagery and Earth intelligence analytics.",
+    icon: Orbit,
+    badge: "Satellite",
     badgeVariant: "secondary" as const,
-  },
-  {
-    id: "Gemini 3.1 Pro",
-    name: "Gemini 3.1 Pro",
-    description: "Google's latest reasoning model, excelling at multimodal understanding and complex agentic tasks.",
-    icon: Sparkles,
-    badge: "Advanced",
-    badgeVariant: "outline" as const,
-  },
-  {
-    id: "GPT-5.1",
-    name: "GPT-5.1",
-    description: "The cutting-edge of language models, offering unparalleled performance in creative and analytical tasks.",
-    icon: Zap,
-    badge: "Expert",
-    badgeVariant: "outline" as const,
   },
 ];
 
-export function ModelSelectionForm({ form }: ModelSelectionFormProps) {
+export function ToolSelectionForm({ form }: ToolSelectionFormProps) {
   return (
     <FormField
       control={form.control}
       name="selectedModel"
       render={({ field }) => (
         <FormItem className="space-y-4">
-          <div className="flex items-center justify-between">
-            <FormLabel>AI Model</FormLabel>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Quick Select:</span>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <FormLabel className="text-base font-semibold">Planetary Tool</FormLabel>
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">Quick Select:</span>
               <Select onValueChange={field.onChange} value={field.value}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Select model" />
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Select tool" />
                 </SelectTrigger>
                 <SelectContent>
-                  {models.map((model) => {
-                    const Icon = model.icon;
+                  {tools.map((tool) => {
+                    const Icon = tool.icon;
                     return (
-                      <SelectItem key={model.id} value={model.id}>
+                      <SelectItem key={tool.id} value={tool.id}>
                         <div className="flex items-center gap-2">
                           <Icon className="h-4 w-4" />
-                          <span>{model.name}</span>
+                          <span>{tool.name}</span>
                         </div>
                       </SelectItem>
                     );
@@ -97,18 +81,18 @@ export function ModelSelectionForm({ form }: ModelSelectionFormProps) {
               value={field.value}
               className="space-y-3"
             >
-              {models.map((model) => {
-                const Icon = model.icon;
+              {tools.map((tool) => {
+                const Icon = tool.icon;
                 return (
-                  <FormItem key={model.id} className="space-y-0">
+                  <FormItem key={tool.id} className="space-y-0">
                     <FormControl>
                       <RadioGroupItem
-                        value={model.id}
-                        id={model.id}
+                        value={tool.id}
+                        id={tool.id}
                         className="peer sr-only"
                       />
                     </FormControl>
-                    <FormLabel htmlFor={model.id} className="cursor-pointer">
+                    <FormLabel htmlFor={tool.id} className="cursor-pointer">
                       <Card className="border-2 transition-all peer-data-[state=checked]:border-primary">
                         <CardContent className="p-4 flex items-start gap-4">
                           <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
@@ -116,13 +100,13 @@ export function ModelSelectionForm({ form }: ModelSelectionFormProps) {
                           </div>
                           <div className="flex-1 space-y-1">
                             <div className="flex items-center gap-2">
-                              <h4 className="font-medium">{model.name}</h4>
-                              <Badge variant={model.badgeVariant}>
-                                {model.badge}
+                              <h4 className="font-medium">{tool.name}</h4>
+                              <Badge variant={tool.badgeVariant}>
+                                {tool.badge}
                               </Badge>
                             </div>
                             <p className="text-sm text-muted-foreground">
-                              {model.description}
+                              {tool.description}
                             </p>
                           </div>
                         </CardContent>
@@ -134,8 +118,8 @@ export function ModelSelectionForm({ form }: ModelSelectionFormProps) {
             </RadioGroup>
           </FormControl>
           <FormDescription>
-            Select the AI model that will power your planetary copilot.
-            Different models have different capabilities and performance
+            Select the tool that will power your planetary copilot.
+            Different tools have different capabilities and performance
             characteristics.
           </FormDescription>
           <FormMessage />
