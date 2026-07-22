@@ -1,6 +1,8 @@
 import { useUser } from '@clerk/nextjs';
 
 export function useCurrentUser() {
+  const { user, isLoaded } = useUser();
+
   if (process.env.NEXT_PUBLIC_PLAYWRIGHT_TEST === 'true') {
     return {
       user: {
@@ -14,8 +16,6 @@ export function useCurrentUser() {
       loading: false
     };
   }
-
-  const { user, isLoaded } = useUser();
 
   // Map Clerk user to the structure expected by consumers if necessary
   // For now, we'll return a simplified version
