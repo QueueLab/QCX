@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { SystemPromptForm } from './system-prompt-form'
-import { ModelSelectionForm } from './model-selection-form'
+import { ToolSelectionForm } from './tool-selection-form'
 import { UserManagementForm } from './user-management-form';
 import { Form } from "@/components/ui/form"
 import { useSettingsStore, MapProvider } from "@/lib/store/settings";
@@ -38,7 +38,7 @@ const settingsFormSchema = z.object({
       message: "System prompt cannot exceed 2000 characters.",
     }),
   selectedModel: z.string().refine(value => value.trim() !== '', {
-    message: "Please select a model.",
+    message: "Please select a tool.",
   }),
   users: z.array(
     z.object({
@@ -58,7 +58,7 @@ export type SettingsFormValues = z.infer<typeof settingsFormSchema>
 const defaultValues: Partial<SettingsFormValues> = {
   systemPrompt:
     "You are a planetary copilot, an AI assistant designed to help users with information about planets, space exploration, and astronomy. Provide accurate, educational, and engaging responses about our solar system and beyond.",
-  selectedModel: "Gemini 3.1 Pro",
+  selectedModel: "QCX-Terra",
   users: [],
   domain: "",
 }
@@ -71,7 +71,7 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
   const { toast } = useToast()
   const router = useRouter()
   const [isSaving, setIsSaving] = useState(false)
-  const [currentTab, setCurrentTab] = useState(initialTab);
+  const [currentTab, setCurrentTab] = useState(initialTab === "model" ? "tool" : initialTab);
   const { mapProvider, setMapProvider } = useSettingsStore();
   const { user, loading: authLoading } = useCurrentUser();
   const { user: clerkUser } = useUser();
@@ -83,7 +83,7 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
   }, [])
 
   useEffect(() => {
-    setCurrentTab(initialTab);
+    setCurrentTab(initialTab === "model" ? "tool" : initialTab);
   }, [initialTab]);
 
   const userId = user?.id;
@@ -196,13 +196,13 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
                       data-testid={`theme-select-${t.value}`}
                       onClick={() => setTheme(t.value)}
                       className={cn(
-                        "flex flex-col items-center justify-center p-6 rounded-xl border-2 transition-all gap-3 text-center",
+                        "flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all gap-2 text-center",
                         isActive
                           ? "bg-accent/40 border-primary text-primary shadow-sm"
                           : "bg-card border-muted hover:border-muted-foreground/50 text-muted-foreground hover:text-foreground"
                       )}
                     >
-                      <Icon className="h-8 w-8" />
+                      <Icon className="h-6 w-6" />
                       <span className="text-sm font-medium">{t.name}</span>
                     </button>
                   )
@@ -213,9 +213,9 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
 
           <Tabs.Root value={currentTab} onValueChange={setCurrentTab} className="w-full">
             <Tabs.List className="grid w-full grid-cols-2 md:grid-cols-5 gap-2">
-              <Tabs.Trigger value="system-prompt" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">System Prompt</Tabs.Trigger>
-              <Tabs.Trigger value="model" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">Model Selection</Tabs.Trigger>
-              <Tabs.Trigger value="user-management" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">User Management</Tabs.Trigger>
+              <Tabs.Trigger value="system-prompt" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">System</Tabs.Trigger>
+              <Tabs.Trigger value="tool" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">Tools</Tabs.Trigger>
+              <Tabs.Trigger value="user-management" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">Users</Tabs.Trigger>
               <Tabs.Trigger value="map" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">Map</Tabs.Trigger>
               <Tabs.Trigger value="account" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">Account</Tabs.Trigger>
             </Tabs.List>
@@ -230,11 +230,52 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
                 <Tabs.Content value="system-prompt" className="mt-6">
                   <Card>
                     <CardHeader>
-                      <CardTitle>System Prompt</CardTitle>
+                      <CardTitle>System</CardTitle>
                       <CardDescription>Customize the behavior and persona of your planetary copilot</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <SystemPromptForm form={form} />
+                    </CardContent>
+                  </Card>
+                </Tabs.Content>
+
+                <Tabs.Content value="tool" className="mt-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Tools</CardTitle>
+                      <CardDescription>Choose the tool that powers your planetary copilot</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <ToolSelectionForm form={form} />
+                    </CardContent>
+                  </Card>
+                </Tabs.Content>
+
+                <Tabs.Content value="user-management" className="mt-6">
+                  <UserManagementForm form={form} />
+                </Tabs.Content>
+                
+                <Tabs.Content value="map" className="mt-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Map Provider</CardTitle>
+                      <CardDescription>Choose the map provider to use in the application.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <RadioGroup
+                        value={mapProvider}
+                        onValueChange={(value) => setMapProvider(value as MapProvider)}
+                        className="space-y-2"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="mapbox" id="mapbox" />
+                          <Label htmlFor="mapbox">Mapbox</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="google" id="google" />
+                          <Label htmlFor="google">Google Maps</Label>
+                        </div>
+                      </RadioGroup>
                     </CardContent>
                   </Card>
                 </Tabs.Content>
@@ -286,7 +327,7 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
                                 Disconnect
                               </Button>
                             </div>
-                          );
+                          )
                         })()
                       ) : (
                         <div className="flex flex-col items-center justify-center py-6 text-center space-y-4">
@@ -324,48 +365,6 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
                     </CardContent>
                   </Card>
                 </Tabs.Content>
-
-                <Tabs.Content value="model" className="mt-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Model Selection</CardTitle>
-                      <CardDescription>Choose the AI model that powers your planetary copilot</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <ModelSelectionForm form={form} />
-                    </CardContent>
-                  </Card>
-                </Tabs.Content>
-
-                <Tabs.Content value="user-management" className="mt-6">
-                  <UserManagementForm form={form} />
-                </Tabs.Content>
-                <Tabs.Content value="map" className="mt-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Map Provider</CardTitle>
-                      <CardDescription>Choose the map provider to use in the application.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <RadioGroup
-                        value={mapProvider}
-                        onValueChange={(value) => setMapProvider(value as MapProvider)}
-                        className="space-y-2"
-                      >
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="mapbox" id="mapbox" />
-                          <Label htmlFor="mapbox">Mapbox</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="google" id="google" />
-                          <Label htmlFor="google">Google Maps</Label>
-                        </div>
-                      </RadioGroup>
-                    </CardContent>
-                  </Card>
-                </Tabs.Content>
-
-
               </motion.div>
             </AnimatePresence>
           </Tabs.Root>
@@ -374,7 +373,7 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
             <CardFooter className="flex justify-between pt-6">
               <Button type="button" variant="outline" onClick={onReset} disabled={isSaving}>
                 <RotateCcw className="mr-2 h-4 w-4" />
-                Reset to Defaults
+                Reset
               </Button>
               <Button type="submit" disabled={isSaving}>
                 {isSaving ? (
@@ -385,7 +384,7 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
                 ) : (
                   <>
                     <Save className="mr-2 h-4 w-4" />
-                    Save Changes
+                    Save
                   </>
                 )}
               </Button>

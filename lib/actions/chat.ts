@@ -210,13 +210,45 @@ export async function saveChat(chat: OldChatType, userId: string): Promise<strin
     updatedAt: new Date(),
   };
 
-  const newMessagesData: Omit<DbNewMessage, 'chatId'>[] = chat.messages.map(msg => ({
-    id: msg.id,
-    userId: msg.userId || effectiveUserId, // verify ownership per message
-    role: msg.role,
-    content: typeof msg.content === 'object' ? JSON.stringify(msg.content) : msg.content,
-    createdAt: msg.createdAt ? new Date(msg.createdAt) : new Date(),
-  }));
+  const newMessagesData: Omit<DbNewMessage, 'chatId'>[] = chat.messages.map(msg => {
+    let content = typeof msg.content === 'object' ? JSON.stringify(msg.content) : msg.content;
+
+    // If the message has a type or name, embed them as metadata in the content
+    // since the DB schema doesn't have dedicated columns for them yet.
+    if (msg.type || msg.name) {
+      try {
+        let parsedContent;
+        if (typeof msg.content === 'object') {
+          parsedContent = msg.content;
+        } else {
+          try {
+            parsedContent = JSON.parse(msg.content);
+          } catch (e) {
+            // If it's not JSON, we wrap it
+            parsedContent = { text: msg.content };
+          }
+        }
+
+        content = JSON.stringify({
+          ...parsedContent,
+          __metadata: {
+            type: msg.type,
+            name: msg.name
+          }
+        });
+      } catch (e) {
+        console.error('Failed to embed metadata in message content:', e);
+      }
+    }
+
+    return {
+      id: msg.id,
+      userId: msg.userId || effectiveUserId,
+      role: msg.role,
+      content,
+      createdAt: msg.createdAt ? new Date(msg.createdAt) : new Date(),
+    };
+  });
 
   try {
     const savedChatId = await dbSaveChat(newChatData, newMessagesData);
