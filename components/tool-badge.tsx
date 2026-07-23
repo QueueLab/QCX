@@ -1,5 +1,5 @@
 import React from 'react'
-import { Search } from 'lucide-react'
+import { Search, Orbit } from 'lucide-react'
 import { Badge } from './ui/badge'
 
 type ToolBadgeProps = {
@@ -14,7 +14,8 @@ export const ToolBadge: React.FC<ToolBadgeProps> = ({
   className
 }) => {
   const icon: Record<string, React.ReactNode> = {
-    search: <Search size={14} />
+    search: <Search size={14} />,
+    skyfiQueryTool: <Orbit size={14} />
   }
 
   return (

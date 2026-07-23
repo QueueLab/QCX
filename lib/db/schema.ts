@@ -130,8 +130,22 @@ export const documentChunks = pgTable('document_chunks', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
+export const skyfiOAuthTokens = pgTable('skyfi_oauth_tokens', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }).unique(),
+  accessToken: text('access_token'),
+  refreshToken: text('refresh_token'),
+  tokenExpiry: timestamp('token_expiry', { withTimezone: true }),
+  clientId: text('client_id'),
+  clientSecret: text('client_secret'),
+  codeVerifier: text('code_verifier'),
+  state: text('state'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
 // Relations
-export const usersRelations = relations(users, ({ many }) => ({
+export const usersRelations = relations(users, ({ one, many }) => ({
   chats: many(chats),
   messages: many(messages),
   calendarNotes: many(calendarNotes),
@@ -141,6 +155,14 @@ export const usersRelations = relations(users, ({ many }) => ({
   visualizations: many(visualizations),
   promptGenerationJobs: many(promptGenerationJobs),
   documents: many(documents),
+  skyfiOAuthToken: one(skyfiOAuthTokens),
+}));
+
+export const skyfiOAuthTokensRelations = relations(skyfiOAuthTokens, ({ one }) => ({
+  user: one(users, {
+    fields: [skyfiOAuthTokens.userId],
+    references: [users.id],
+  }),
 }));
 
 export const chatsRelations = relations(chats, ({ one, many }) => ({

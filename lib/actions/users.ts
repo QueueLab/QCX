@@ -209,3 +209,102 @@ export async function searchUsers(query: string) {
     return [];
   }
 }
+
+import { Client as MCPClientClass } from '@modelcontextprotocol/sdk/client/index.js';
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+
+/**
+ * Fetches the SkyFi config for the current user.
+ */
+export async function getSkyfiConfig(): Promise<{ apiKey?: string; initialized?: boolean } | null> {
+  const userId = await getCurrentUserIdOnServer();
+  if (!userId) return null;
+  try {
+    const result = await db.select({ metadata: users.metadata })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    const metadata = result[0]?.metadata as any;
+    return metadata?.skyfi || null;
+  } catch (error) {
+    console.error('[Action: getSkyfiConfig] Error:', error);
+    return null;
+  }
+}
+
+/**
+ * Saves the SkyFi config for the current user.
+ */
+export async function saveSkyfiConfig(config: { apiKey?: string; initialized?: boolean }): Promise<{ success: boolean; error?: string }> {
+  const userId = await getCurrentUserIdOnServer();
+  if (!userId) return { success: false, error: 'Not authenticated' };
+  try {
+    const result = await db.select({ metadata: users.metadata })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    const currentMetadata = (result[0]?.metadata as Record<string, any>) || {};
+
+    await db.update(users)
+      .set({
+        metadata: {
+          ...currentMetadata,
+          skyfi: config
+        }
+      })
+      .where(eq(users.id, userId));
+
+    revalidatePath('/settings');
+    return { success: true };
+  } catch (error) {
+    console.error('[Action: saveSkyfiConfig] Error:', error);
+    return { success: false, error: 'Failed to save SkyFi configuration.' };
+  }
+}
+
+/**
+ * Tests connection to the SkyFi MCP server using the provided API key.
+ */
+export async function testSkyfiConnection(apiKey: string): Promise<{ success: boolean; data?: string; error?: string }> {
+  if (!apiKey || !apiKey.trim()) {
+    return { success: false, error: 'API Key is required.' };
+  }
+
+  const serverUrl = new URL('https://mcp.skyfi.com/mcp');
+  let transport;
+  let client;
+
+  try {
+    transport = new StreamableHTTPClientTransport(serverUrl, {
+      requestInit: {
+        headers: {
+          'X-Skyfi-Api-Key': apiKey,
+        }
+      }
+    });
+    client = new MCPClientClass({ name: 'SkyfiTestClient', version: '1.0.0' });
+
+    await Promise.race([
+      client.connect(transport),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timeout after 10 seconds')), 10000)),
+    ]);
+
+    const result = await Promise.race([
+      client.callTool({ name: 'skyfi_whoami', arguments: {} }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Tool call timeout after 10 seconds')), 10000)),
+    ]);
+
+    await client.close();
+
+    const response = result as { content?: Array<{ text?: string }> };
+    const textBlock = response?.content?.[0]?.text || '';
+
+    return { success: true, data: textBlock };
+  } catch (err: any) {
+    console.error('[Action: testSkyfiConnection] Error:', err.message);
+    if (client) {
+      try { await client.close(); } catch {}
+    }
+    return { success: false, error: err.message || 'Failed to connect to SkyFi MCP.' };
+  }
+}
