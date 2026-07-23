@@ -21,7 +21,7 @@ import { useSettingsStore, MapProvider } from "@/lib/store/settings";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/hooks/use-toast"
-import { getSystemPrompt, saveSystemPrompt } from "../../../lib/actions/chat"
+import { getSystemPrompt, saveSystemPrompt, getUserDomain, saveUserDomain } from "../../../lib/actions/chat"
 import { getSelectedModel, saveSelectedModel } from "../../../lib/actions/users"
 import { useCurrentUser } from "@/lib/auth/use-current-user"
 import { SettingsSkeleton } from './settings-skeleton'
@@ -49,7 +49,34 @@ const settingsFormSchema = z.object({
   ),
   newUserEmail: z.string().email().optional().or(z.literal('')),
   newUserRole: z.enum(["admin", "editor", "viewer"]).optional(),
-  domain: z.string().url().optional().or(z.literal('')),
+  domain: z.string().optional().or(z.literal('')).refine((val) => {
+    if (!val) return true;
+    try {
+      const url = val.startsWith('http') ? val : `https://${val}`;
+      const parsed = new URL(url);
+      const hostname = parsed.hostname;
+
+      // Explicitly reject localhost and internal/local hostnames
+      if (hostname === 'localhost') return false;
+      if (hostname.endsWith('.local') || hostname.endsWith('.internal')) return false;
+
+      // Check private IP ranges: 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, and 127.0.0.1
+      const ipv4Regex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+      const match = hostname.match(ipv4Regex);
+      if (match) {
+        const octet1 = parseInt(match[1], 10);
+        const octet2 = parseInt(match[2], 10);
+        if (octet1 === 10) return false;
+        if (octet1 === 172 && octet2 >= 16 && octet2 <= 31) return false;
+        if (octet1 === 192 && octet2 === 168) return false;
+        if (octet1 === 127) return false; // Loopback
+      }
+
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }, { message: "Invalid domain or URL. Only public domains/URLs are allowed." }),
 })
 
 export type SettingsFormValues = z.infer<typeof settingsFormSchema>
@@ -97,9 +124,10 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
     async function fetchData() {
       if (!userId || authLoading) return;
 
-      const [existingPrompt, selectedModel] = await Promise.all([
+      const [existingPrompt, selectedModel, existingDomain] = await Promise.all([
         getSystemPrompt(userId),
         getSelectedModel(),
+        getUserDomain(userId),
       ]);
 
       if (existingPrompt) {
@@ -107,6 +135,9 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
       }
       if (selectedModel) {
         form.setValue("selectedModel", selectedModel, { shouldValidate: true, shouldDirty: false });
+      }
+      if (existingDomain) {
+        form.setValue("domain", existingDomain, { shouldValidate: true, shouldDirty: false });
       }
     }
     fetchData();
@@ -129,10 +160,11 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
     setIsSaving(true)
 
     try {
-      // Save the system prompt and selected model
-      const [promptSaveResult, modelSaveResult] = await Promise.all([
+      // Save the system prompt, selected model, and domain
+      const [promptSaveResult, modelSaveResult, domainSaveResult] = await Promise.all([
         saveSystemPrompt(userId, data.systemPrompt),
         saveSelectedModel(data.selectedModel),
+        saveUserDomain(userId, data.domain || ""),
       ]);
 
       if (promptSaveResult?.error) {
@@ -140,6 +172,9 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
       }
       if (modelSaveResult?.error) {
         throw new Error(modelSaveResult.error);
+      }
+      if (domainSaveResult?.error) {
+        throw new Error(domainSaveResult.error);
       }
 
       console.log("Submitted data:", data)
