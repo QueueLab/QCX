@@ -7,7 +7,7 @@ import { eq } from 'drizzle-orm';
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user';
 import { SkyfiOAuthProvider } from '@/lib/skyfi/provider';
 import crypto from 'crypto';
-import { redirect } from 'next/navigation';
+
 import { headers } from 'next/headers';
 
 export async function getRedirectUri(): Promise<string> {
@@ -81,10 +81,10 @@ async function ensureClientRegistered(provider: SkyfiOAuthProvider, forceRegiste
  * Starts the SkyFi OAuth connection flow.
  * Performs DCR, generates PKCE, and returns the authorization URL.
  */
-export async function startSkyfiConnection(): Promise<{ url?: string; error?: string }> {
+export async function startSkyfiConnection(): Promise<{ url?: string; error?: string; authRequired?: boolean }> {
   const userId = await getCurrentUserIdOnServer();
   if (!userId) {
-    redirect('/sign-in');
+    return { authRequired: true, error: 'Please sign in to connect your SkyFi account.' };
   }
 
   try {

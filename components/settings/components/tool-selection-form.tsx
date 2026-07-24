@@ -235,6 +235,10 @@ export function ToolSelectionForm({ form }: ToolSelectionFormProps) {
                         setIsConnecting(true);
                         try {
                           const res = await startSkyfiConnection();
+                          if (res.authRequired) {
+                            window.location.href = `/sign-in?redirect_url=${encodeURIComponent(window.location.href)}`;
+                            return;
+                          }
                           if (res.error) {
                             throw new Error(res.error);
                           }
