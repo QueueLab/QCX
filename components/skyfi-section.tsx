@@ -2,8 +2,10 @@
 
 import { Section } from './section'
 import { ToolBadge } from './tool-badge'
-import { BotMessage } from './message'
 import { SearchSkeleton } from './search-skeleton'
+import { MemoizedReactMarkdown } from './ui/markdown'
+import rehypeExternalLinks from 'rehype-external-links'
+import remarkGfm from 'remark-gfm'
 import { StreamableValue, useStreamableValue } from 'ai/rsc'
 
 export type SkyfiSectionProps = {
@@ -39,8 +41,17 @@ export function SkyfiSection({ result }: SkyfiSectionProps) {
             <ToolBadge tool="skyfiQueryTool">{`SkyFi MCP: ${queryType}`}</ToolBadge>
           </Section>
           <Section title="Results">
-            <div className={hasError ? "text-destructive font-mono text-xs bg-destructive/10 p-3 rounded-lg border border-destructive/20" : ""}>
-              <BotMessage content={resultText} />
+            <div className={cn(
+              "overflow-x-auto",
+              hasError ? "text-destructive font-mono text-xs bg-destructive/10 p-3 rounded-lg border border-destructive/20" : ""
+            )}>
+              <MemoizedReactMarkdown
+                rehypePlugins={[[rehypeExternalLinks, { target: '_blank' }]]}
+                remarkPlugins={[remarkGfm]}
+                className="prose-sm prose-neutral prose-a:text-accent-foreground/50"
+              >
+                {resultText}
+              </MemoizedReactMarkdown>
             </div>
           </Section>
         </>
@@ -51,4 +62,9 @@ export function SkyfiSection({ result }: SkyfiSectionProps) {
       )}
     </div>
   )
+}
+
+// Inline helper for classnames
+function cn(...classes: string[]) {
+  return classes.filter(Boolean).join(' ')
 }
