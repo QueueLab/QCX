@@ -217,6 +217,17 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
               <Tabs.Trigger value="tool" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">Tools</Tabs.Trigger>
               <Tabs.Trigger value="user-management" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">Users</Tabs.Trigger>
               <Tabs.Trigger value="map" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">Map</Tabs.Trigger>
+              {/*
+                ACCOUNT TAB — DO NOT ADD A UI BUTTON FOR DISCORD HERE.
+                Discord connect/disconnect is managed entirely in the backend via
+                Clerk OAuth (`createExternalAccount` / `destroy`). It is invoked
+                programmatically when needed (e.g. from bot commands or API flows)
+                and must NOT be exposed as a visible button or tab in the Settings UI.
+                Removing this trigger hides the tab from the UI while preserving
+                the full Discord linking functionality (card, connect, disconnect)
+                below for future programmatic or background use.
+              */}
+              <Tabs.Trigger value="account" className="hidden" aria-hidden="true" tabIndex={-1} disabled>Account</Tabs.Trigger>
             </Tabs.List>
             <AnimatePresence mode="wait">
               <motion.div
