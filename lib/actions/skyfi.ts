@@ -8,8 +8,19 @@ import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user';
 import { SkyfiOAuthProvider } from '@/lib/skyfi/provider';
 import crypto from 'crypto';
 import { redirect } from 'next/navigation';
+import { headers } from 'next/headers';
 
 export async function getRedirectUri(): Promise<string> {
+  try {
+    const headersList = await headers();
+    const host = headersList.get('host');
+    if (host) {
+      const protocol = host.startsWith('localhost') || host.startsWith('127.0.0.1') ? 'http' : 'https';
+      return `${protocol}://${host}/api/skyfi/callback`;
+    }
+  } catch (e) {
+    console.warn('[Skyfi] Failed to get host from headers, falling back to ENV:', e);
+  }
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
   return `${baseUrl}/api/skyfi/callback`;
 }

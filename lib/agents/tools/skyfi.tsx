@@ -11,10 +11,21 @@ import { skyfiQuerySchema } from '@/lib/schema/skyfi';
 import { DrawnFeature } from '@/lib/agents/resolution-search';
 import { z } from 'zod';
 import crypto from 'crypto';
+import { headers } from 'next/headers';
 
 export type McpClient = MCPClientClass;
 
-function getRedirectUri(): string {
+async function getRedirectUri(): Promise<string> {
+  try {
+    const headersList = await headers();
+    const host = headersList.get('host');
+    if (host) {
+      const protocol = host.startsWith('localhost') || host.startsWith('127.0.0.1') ? 'http' : 'https';
+      return `${protocol}://${host}/api/skyfi/callback`;
+    }
+  } catch (e) {
+    console.warn('[SkyfiTool] Failed to get host from headers, falling back to ENV:', e);
+  }
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
   return `${baseUrl}/api/skyfi/callback`;
 }
@@ -143,7 +154,7 @@ export const skyfiTool = ({
     }
 
     // Resolve OAuth tokens
-    const redirectUri = getRedirectUri();
+    const redirectUri = await getRedirectUri();
     const provider = new SkyfiOAuthProvider(userId, redirectUri);
     const tokens = await provider.tokens();
 
