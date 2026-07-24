@@ -85,6 +85,12 @@ export async function getCrossSessionContext(userId?: string): Promise<string> {
 
 export async function generateReportContext(messages: AIMessage[]) {
   try {
+    const userId = await getCurrentUserIdOnServer()
+    const [systemPrompt, domain] = await Promise.all([
+      userId ? getSystemPrompt(userId) : null,
+      userId ? getUserDomain(userId) : null
+    ])
+
     const crossSessionContext = await getCrossSessionContext()
 
     const activeMessages = messages
@@ -109,8 +115,8 @@ export async function generateReportContext(messages: AIMessage[]) {
     const strategicContent = activeMessages.filter(msg => msg.role === 'assistant')
 
     const [execSummary, strategicSynthesis] = await Promise.all([
-      executiveSummaryAgent(crossSessionContext, activeMessages),
-      strategicSynthesisAgent(sensorFusionFindings, strategicContent)
+      executiveSummaryAgent(crossSessionContext, activeMessages, systemPrompt, domain),
+      strategicSynthesisAgent(sensorFusionFindings, strategicContent, systemPrompt, domain)
     ])
 
     return {
@@ -153,6 +159,54 @@ export async function getChat(id: string, userId: string): Promise<DrizzleChat |
   } catch (error) {
     console.error(`Error fetching chat ${id} from DB:`, error)
     return null
+  }
+}
+
+export async function getUserDomain(
+  userId: string
+): Promise<string | null> {
+  if (!userId) return null
+
+  try {
+    const result = await db.select({ metadata: users.metadata })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    const metadata = result[0]?.metadata as { domain?: string } | null;
+    return metadata?.domain || null;
+  } catch (error) {
+    console.error('getUserDomain: Error:', error)
+    return null
+  }
+}
+
+export async function saveUserDomain(
+  userId: string,
+  domain: string
+): Promise<{ success?: boolean; error?: string }> {
+  if (!userId) return { error: 'User ID is required' }
+
+  try {
+    const result = await db.select({ metadata: users.metadata })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    const currentMetadata = (result[0]?.metadata || {}) as Record<string, any>;
+    await db.update(users)
+      .set({
+        metadata: {
+          ...currentMetadata,
+          domain: domain || null
+        }
+      })
+      .where(eq(users.id, userId));
+
+    return { success: true }
+  } catch (error) {
+    console.error('saveUserDomain: Error:', error)
+    return { error: 'Failed to save user domain' }
   }
 }
 

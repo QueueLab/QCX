@@ -45,49 +45,65 @@ export function SystemPromptForm({ form }: SystemPromptFormProps) {
     }
   }
 
+  const toastRef = React.useRef(toast)
+  useEffect(() => {
+    toastRef.current = toast
+  }, [toast])
+
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null
 
     if (jobId) {
       const pollStartTime = Date.now()
-      const MAX_POLL_DURATION = 120000 // 2 minutes
+      const MAX_POLL_DURATION = 150000 // 2.5 minutes
 
       interval = setInterval(async () => {
-        const elapsed = Date.now() - pollStartTime
-        if (elapsed > MAX_POLL_DURATION) {
-          if (interval) clearInterval(interval)
-          setJobId(null)
-          setIsGenerating(false)
-          toast({
-            title: "Generation timeout",
-            description: "The prompt generation took too long. Please try again.",
-            variant: "destructive",
-          })
-          return
-        }
-
-        const job = await getSystemPromptGenerationJob(jobId)
-
-        if (job.error || job.status === 'error') {
-          if (interval) clearInterval(interval)
-          setJobId(null)
-          setIsGenerating(false)
-          toast({
-            title: "Generation error",
-            description: job.errorMessage || job.error || "An error occurred during generation.",
-            variant: "destructive",
-          })
-        } else if (job.status === 'complete') {
-          if (interval) clearInterval(interval)
-          setJobId(null)
-          setIsGenerating(false)
-          if (job.resultPrompt) {
-            form.setValue("systemPrompt", job.resultPrompt, { shouldValidate: true, shouldDirty: true })
-            toast({
-              title: "Prompt generated",
-              description: "Your system prompt has been generated based on the domain content.",
+        try {
+          const elapsed = Date.now() - pollStartTime
+          if (elapsed > MAX_POLL_DURATION) {
+            if (interval) clearInterval(interval)
+            setJobId(null)
+            setIsGenerating(false)
+            toastRef.current({
+              title: "Generation timeout",
+              description: "The prompt generation took too long. Please try again.",
+              variant: "destructive",
             })
+            return
           }
+
+          const job = await getSystemPromptGenerationJob(jobId)
+
+          if (job.error || job.status === 'error') {
+            if (interval) clearInterval(interval)
+            setJobId(null)
+            setIsGenerating(false)
+            toastRef.current({
+              title: "Generation error",
+              description: job.errorMessage || job.error || "An error occurred during generation.",
+              variant: "destructive",
+            })
+          } else if (job.status === 'complete') {
+            if (interval) clearInterval(interval)
+            setJobId(null)
+            setIsGenerating(false)
+            if (job.resultPrompt) {
+              form.setValue("systemPrompt", job.resultPrompt, { shouldValidate: true, shouldDirty: true })
+              toastRef.current({
+                title: "Prompt generated",
+                description: "Your system prompt has been generated based on the domain content.",
+              })
+            }
+          }
+        } catch (pollErr: any) {
+          if (interval) clearInterval(interval)
+          setJobId(null)
+          setIsGenerating(false)
+          toastRef.current({
+            title: "Connection error",
+            description: "Failed to check generation status. Please check your connection and try again.",
+            variant: "destructive",
+          })
         }
       }, 3000)
     }
@@ -95,7 +111,7 @@ export function SystemPromptForm({ form }: SystemPromptFormProps) {
     return () => {
       if (interval) clearInterval(interval)
     }
-  }, [jobId, form, toast])
+  }, [jobId, form])
 
   return (
     <div className="space-y-6">

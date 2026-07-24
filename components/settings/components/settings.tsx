@@ -21,7 +21,7 @@ import { useSettingsStore, MapProvider } from "@/lib/store/settings";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/hooks/use-toast"
-import { getSystemPrompt, saveSystemPrompt } from "../../../lib/actions/chat"
+import { getSystemPrompt, saveSystemPrompt, getUserDomain, saveUserDomain } from "../../../lib/actions/chat"
 import { getSelectedModel, saveSelectedModel } from "../../../lib/actions/users"
 import { useCurrentUser } from "@/lib/auth/use-current-user"
 import { SettingsSkeleton } from './settings-skeleton'
@@ -49,7 +49,34 @@ const settingsFormSchema = z.object({
   ),
   newUserEmail: z.string().email().optional().or(z.literal('')),
   newUserRole: z.enum(["admin", "editor", "viewer"]).optional(),
-  domain: z.string().url().optional().or(z.literal('')),
+  domain: z.string().optional().or(z.literal('')).refine((val) => {
+    if (!val) return true;
+    try {
+      const url = val.startsWith('http') ? val : `https://${val}`;
+      const parsed = new URL(url);
+      const hostname = parsed.hostname;
+
+      // Explicitly reject localhost and internal/local hostnames
+      if (hostname === 'localhost') return false;
+      if (hostname.endsWith('.local') || hostname.endsWith('.internal')) return false;
+
+      // Check private IP ranges: 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, and 127.0.0.1
+      const ipv4Regex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+      const match = hostname.match(ipv4Regex);
+      if (match) {
+        const octet1 = parseInt(match[1], 10);
+        const octet2 = parseInt(match[2], 10);
+        if (octet1 === 10) return false;
+        if (octet1 === 172 && octet2 >= 16 && octet2 <= 31) return false;
+        if (octet1 === 192 && octet2 === 168) return false;
+        if (octet1 === 127) return false; // Loopback
+      }
+
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }, { message: "Invalid domain or URL. Only public domains/URLs are allowed." }),
 })
 
 export type SettingsFormValues = z.infer<typeof settingsFormSchema>
@@ -97,9 +124,10 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
     async function fetchData() {
       if (!userId || authLoading) return;
 
-      const [existingPrompt, selectedModel] = await Promise.all([
+      const [existingPrompt, selectedModel, existingDomain] = await Promise.all([
         getSystemPrompt(userId),
         getSelectedModel(),
+        getUserDomain(userId),
       ]);
 
       if (existingPrompt) {
@@ -107,6 +135,9 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
       }
       if (selectedModel) {
         form.setValue("selectedModel", selectedModel, { shouldValidate: true, shouldDirty: false });
+      }
+      if (existingDomain) {
+        form.setValue("domain", existingDomain, { shouldValidate: true, shouldDirty: false });
       }
     }
     fetchData();
@@ -129,10 +160,11 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
     setIsSaving(true)
 
     try {
-      // Save the system prompt and selected model
-      const [promptSaveResult, modelSaveResult] = await Promise.all([
+      // Save the system prompt, selected model, and domain
+      const [promptSaveResult, modelSaveResult, domainSaveResult] = await Promise.all([
         saveSystemPrompt(userId, data.systemPrompt),
         saveSelectedModel(data.selectedModel),
+        saveUserDomain(userId, data.domain || ""),
       ]);
 
       if (promptSaveResult?.error) {
@@ -140,6 +172,9 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
       }
       if (modelSaveResult?.error) {
         throw new Error(modelSaveResult.error);
+      }
+      if (domainSaveResult?.error) {
+        throw new Error(domainSaveResult.error);
       }
 
       console.log("Submitted data:", data)
@@ -212,22 +247,12 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
           </Card>
 
           <Tabs.Root value={currentTab} onValueChange={setCurrentTab} className="w-full">
-            <Tabs.List className="grid w-full grid-cols-2 md:grid-cols-4 gap-2">
+            <Tabs.List className="grid w-full grid-cols-2 md:grid-cols-5 gap-2">
               <Tabs.Trigger value="system-prompt" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">System</Tabs.Trigger>
               <Tabs.Trigger value="tool" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">Tools</Tabs.Trigger>
               <Tabs.Trigger value="user-management" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">Users</Tabs.Trigger>
               <Tabs.Trigger value="map" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">Map</Tabs.Trigger>
-              {/*
-                ACCOUNT TAB — DO NOT ADD A UI BUTTON FOR DISCORD HERE.
-                Discord connect/disconnect is managed entirely in the backend via
-                Clerk OAuth (`createExternalAccount` / `destroy`). It is invoked
-                programmatically when needed (e.g. from bot commands or API flows)
-                and must NOT be exposed as a visible button or tab in the Settings UI.
-                Removing this trigger hides the tab from the UI while preserving
-                the full Discord linking functionality (card, connect, disconnect)
-                below for future programmatic or background use.
-              */}
-              <Tabs.Trigger value="account" className="hidden" aria-hidden="true" tabIndex={-1} disabled>Account</Tabs.Trigger>
+              <Tabs.Trigger value="account" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">Account</Tabs.Trigger>
             </Tabs.List>
             <AnimatePresence mode="wait">
               <motion.div
@@ -286,6 +311,92 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
                           <Label htmlFor="google">Google Maps</Label>
                         </div>
                       </RadioGroup>
+                    </CardContent>
+                  </Card>
+                </Tabs.Content>
+
+                <Tabs.Content value="account" className="mt-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Discord Account Linking</CardTitle>
+                      <CardDescription>Link your Discord account to QCX to access bot features and server sync.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {clerkUser?.externalAccounts.find(acc => acc.provider === 'discord') ? (
+                        (() => {
+                          const discordAccount = clerkUser.externalAccounts.find(acc => acc.provider === 'discord')!;
+                          return (
+                            <div className="flex items-center gap-4 p-4 border rounded-xl bg-accent/20 border-primary/50">
+                              <div className="h-12 w-12 rounded-full overflow-hidden bg-muted flex items-center justify-center">
+                                {discordAccount.imageUrl ? (
+                                  <img src={discordAccount.imageUrl} alt="Discord Avatar" className="h-full w-full object-cover" />
+                                ) : (
+                                  <span className="text-xl font-bold text-primary">D</span>
+                                )}
+                              </div>
+                              <div className="flex-1">
+                                <p className="font-semibold text-foreground">Connected as {discordAccount.username || 'Discord User'}</p>
+                                <p className="text-xs text-muted-foreground">ID: {discordAccount.providerUserId}</p>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="sm"
+                                onClick={async () => {
+                                  try {
+                                    await discordAccount.destroy();
+                                    await clerkUser.reload();
+                                    toast({
+                                      title: "Discord Unlinked",
+                                      description: "Your Discord account has been disconnected.",
+                                    });
+                                  } catch (err: any) {
+                                    toast({
+                                      title: "Error",
+                                      description: err.message || "Failed to disconnect Discord account.",
+                                      variant: "destructive",
+                                    });
+                                  }
+                                }}
+                              >
+                                Disconnect
+                              </Button>
+                            </div>
+                          )
+                        })()
+                      ) : (
+                        <div className="flex flex-col items-center justify-center py-6 text-center space-y-4">
+                          <p className="text-sm text-muted-foreground">
+                            You haven&apos;t connected your Discord account yet. Link it now to connect your SaaS profile.
+                          </p>
+                          <Button
+                            type="button"
+                            className="bg-[#5865F2] hover:bg-[#4752C4] text-white flex items-center gap-2 px-6 py-5 text-base font-semibold"
+                            onClick={async () => {
+                              try {
+                                const res = await clerkUser?.createExternalAccount({
+                                  strategy: 'oauth_discord',
+                                  redirectUrl: window.location.href,
+                                });
+                                if (res?.verification?.externalVerificationRedirectURL) {
+                                  window.location.href = res.verification.externalVerificationRedirectURL.href;
+                                }
+                              } catch (err: any) {
+                                toast({
+                                  title: "Connection Error",
+                                  description: err.message || "Failed to initiate Discord linking.",
+                                  variant: "destructive",
+                                });
+                              }
+                            }}
+                          >
+                            <svg className="h-5 w-5 fill-current" viewBox="0 0 127.14 96.36">
+                              <path d="M107.7,8.07A105.15,105.15,0,0,0,77.26,0a77.19,77.19,0,0,0-3.3,6.83A96.67,96.67,0,0,0,52.88,6.83,77.19,77.19,0,0,0,49.58,0,105.15,105.15,0,0,0,19.14,8.07C3,36.79-1.45,64.83.45,92.48a106.4,106.4,0,0,0,32.22,16.22,78,78,0,0,0,6.77-11,68.86,68.86,0,0,1-10.74-5.12c.91-.66,1.8-1.34,2.65-2a75.58,75.58,0,0,0,64,0c.86.69,1.75,1.37,2.65,2a68.86,68.86,0,0,1-10.74,5.12,78,78,0,0,0,6.77,11,106.4,106.4,0,0,0,32.22-16.22C129.21,64.83,124.2,36.79,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53S36.18,40.36,42.45,40.36,53.83,46,53.83,53,48.72,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.24,60,73.24,53S78.41,40.36,84.69,40.36,96.07,46,96.07,53,91,65.69,84.69,65.69Z"/>
+                            </svg>
+                            <span>Connect Discord Account</span>
+                          </Button>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </Tabs.Content>
