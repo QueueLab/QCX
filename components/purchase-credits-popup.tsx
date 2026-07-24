@@ -30,7 +30,7 @@ export function PurchaseCreditsPopup({ isOpen, onClose }: PurchaseCreditsPopupPr
   const features = [
     'Resolution Search',
     'Upload and analyze unlimited files',
-    'Mapping tools',
+    'Mapping plugins',
     'Location Intelligence',
     'Community Support',
     'Exclusive Updates',

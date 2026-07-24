@@ -310,8 +310,8 @@ async function submit(formData?: FormData, skip?: boolean) {
 
   if (userInput && (userInput.toLowerCase().trim() === 'what is a planet computer?' || userInput.toLowerCase().trim() === 'what is qcx-terra?' || userInput.toLowerCase().trim() === 'how do i use the computer?')) {
     const definition = userInput.toLowerCase().trim() === 'how do i use the computer?' ? 'To use QCX-Terra, start by searching for a location or asking a geospatial question. You can also draw features on the map to focus your analysis. QCX-Terra uses multi-agent automation to streamline exploration and provide precise environmental insights.' : userInput.toLowerCase().trim() === 'what is a planet computer?'
-      ? `A planet computer is a proprietary environment aware system that interoperates weather forecasting, mapping and scheduling using cutting edge multi-agents to streamline automation and exploration on a planet. Available for our Pro and Enterprise customers. [QCX Pricing](https://www.queue.cx/#pricing)`
-      : `QCX-Terra is a model garden of pixel level precision geospatial foundational models for efficient land feature predictions from satellite imagery. Available for our Pro and Enterprise customers. [QCX Pricing] (https://www.queue.cx/#pricing)`;
+      ? `A planet computer is a proprietary environment aware system that interoperates weather forecasting, mapping and scheduling using cutting edge multi-agents to streamline automation and exploration on a planet. Available for our Go and Enterprise customers. [QCX Pricing](https://www.queue.cx/#pricing)`
+      : `QCX-Terra is a model garden of pixel level precision geospatial foundational models for efficient land feature predictions from satellite imagery. Available for our Go and Enterprise customers. [QCX Pricing] (https://www.queue.cx/#pricing)`;
 
     const content = JSON.stringify(Object.fromEntries(formData!));
     const type = 'input';

@@ -26,11 +26,11 @@ import { Earth, Orbit, ShieldCheck, Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
-interface ToolSelectionFormProps {
+interface PluginSelectionFormProps {
   form: UseFormReturn<any>;
 }
 
-const tools = [
+const plugins = [
   {
     id: "QCX-Terra",
     name: "QCX-Terra",
@@ -49,7 +49,7 @@ const tools = [
   },
 ];
 
-export function ToolSelectionForm({ form }: ToolSelectionFormProps) {
+export function PluginSelectionForm({ form }: PluginSelectionFormProps) {
   const selectedModel = form.watch("selectedModel");
   const { toast } = useToast();
   const [skyfiConnected, setSkyfiConnected] = useState(false);
@@ -83,21 +83,21 @@ export function ToolSelectionForm({ form }: ToolSelectionFormProps) {
       render={({ field }) => (
         <FormItem className="space-y-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <FormLabel className="text-base font-semibold">Planetary Tool</FormLabel>
+            <FormLabel className="text-base font-semibold">Planetary Plugin</FormLabel>
             <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
               <span className="text-sm text-muted-foreground whitespace-nowrap">Quick Select:</span>
               <Select onValueChange={field.onChange} value={field.value}>
                 <SelectTrigger className="w-full sm:w-[180px]">
-                  <SelectValue placeholder="Select tool" />
+                  <SelectValue placeholder="Select plugin" />
                 </SelectTrigger>
                 <SelectContent>
-                  {tools.map((tool) => {
-                    const Icon = tool.icon;
+                  {plugins.map((plugin) => {
+                    const Icon = plugin.icon;
                     return (
-                      <SelectItem key={tool.id} value={tool.id}>
+                      <SelectItem key={plugin.id} value={plugin.id}>
                         <div className="flex items-center gap-2">
                           <Icon className="h-4 w-4" />
-                          <span>{tool.name}</span>
+                          <span>{plugin.name}</span>
                         </div>
                       </SelectItem>
                     );
@@ -112,18 +112,18 @@ export function ToolSelectionForm({ form }: ToolSelectionFormProps) {
               value={field.value}
               className="space-y-3"
             >
-              {tools.map((tool) => {
-                const Icon = tool.icon;
+              {plugins.map((plugin) => {
+                const Icon = plugin.icon;
                 return (
-                  <FormItem key={tool.id} className="space-y-0">
+                  <FormItem key={plugin.id} className="space-y-0">
                     <FormControl>
                       <RadioGroupItem
-                        value={tool.id}
-                        id={tool.id}
+                        value={plugin.id}
+                        id={plugin.id}
                         className="peer sr-only"
                       />
                     </FormControl>
-                    <FormLabel htmlFor={tool.id} className="cursor-pointer">
+                    <FormLabel htmlFor={plugin.id} className="cursor-pointer">
                       <Card className="border-2 transition-all peer-data-[state=checked]:border-primary">
                         <CardContent className="p-4 flex items-start gap-4">
                           <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
@@ -131,13 +131,13 @@ export function ToolSelectionForm({ form }: ToolSelectionFormProps) {
                           </div>
                           <div className="flex-1 space-y-1">
                             <div className="flex items-center gap-2">
-                              <h4 className="font-medium">{tool.name}</h4>
-                              <Badge variant={tool.badgeVariant}>
-                                {tool.badge}
+                              <h4 className="font-medium">{plugin.name}</h4>
+                              <Badge variant={plugin.badgeVariant}>
+                                {plugin.badge}
                               </Badge>
                             </div>
                             <p className="text-sm text-muted-foreground">
-                              {tool.description}
+                              {plugin.description}
                             </p>
                           </div>
                         </CardContent>
@@ -149,8 +149,8 @@ export function ToolSelectionForm({ form }: ToolSelectionFormProps) {
             </RadioGroup>
           </FormControl>
           <FormDescription>
-            Select the tool that will power your planetary copilot.
-            Different tools have different capabilities and performance
+            Select the plugin that will power your planetary copilot.
+            Different plugins have different capabilities and performance
             characteristics.
           </FormDescription>
           <FormMessage />
