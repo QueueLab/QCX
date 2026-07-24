@@ -26,11 +26,11 @@ import { Earth, Orbit, ShieldCheck, Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
-interface PluginSelectionFormProps {
+interface ToolSelectionFormProps {
   form: UseFormReturn<any>;
 }
 
-const plugins = [
+const tools = [
   {
     id: "QCX-Terra",
     name: "QCX-Terra",
@@ -49,7 +49,7 @@ const plugins = [
   },
 ];
 
-export function PluginSelectionForm({ form }: PluginSelectionFormProps) {
+export function ToolSelectionForm({ form }: ToolSelectionFormProps) {
   const selectedModel = form.watch("selectedModel");
   const { toast } = useToast();
   const [skyfiConnected, setSkyfiConnected] = useState(false);
@@ -91,13 +91,13 @@ export function PluginSelectionForm({ form }: PluginSelectionFormProps) {
                   <SelectValue placeholder="Select plugin" />
                 </SelectTrigger>
                 <SelectContent>
-                  {plugins.map((plugin) => {
-                    const Icon = plugin.icon;
+                  {tools.map((tool) => {
+                    const Icon = tool.icon;
                     return (
-                      <SelectItem key={plugin.id} value={plugin.id}>
+                      <SelectItem key={tool.id} value={tool.id}>
                         <div className="flex items-center gap-2">
                           <Icon className="h-4 w-4" />
-                          <span>{plugin.name}</span>
+                          <span>{tool.name}</span>
                         </div>
                       </SelectItem>
                     );
@@ -112,18 +112,18 @@ export function PluginSelectionForm({ form }: PluginSelectionFormProps) {
               value={field.value}
               className="space-y-3"
             >
-              {plugins.map((plugin) => {
-                const Icon = plugin.icon;
+              {tools.map((tool) => {
+                const Icon = tool.icon;
                 return (
-                  <FormItem key={plugin.id} className="space-y-0">
+                  <FormItem key={tool.id} className="space-y-0">
                     <FormControl>
                       <RadioGroupItem
-                        value={plugin.id}
-                        id={plugin.id}
+                        value={tool.id}
+                        id={tool.id}
                         className="peer sr-only"
                       />
                     </FormControl>
-                    <FormLabel htmlFor={plugin.id} className="cursor-pointer">
+                    <FormLabel htmlFor={tool.id} className="cursor-pointer">
                       <Card className="border-2 transition-all peer-data-[state=checked]:border-primary">
                         <CardContent className="p-4 flex items-start gap-4">
                           <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
@@ -131,13 +131,13 @@ export function PluginSelectionForm({ form }: PluginSelectionFormProps) {
                           </div>
                           <div className="flex-1 space-y-1">
                             <div className="flex items-center gap-2">
-                              <h4 className="font-medium">{plugin.name}</h4>
-                              <Badge variant={plugin.badgeVariant}>
-                                {plugin.badge}
+                              <h4 className="font-medium">{tool.name}</h4>
+                              <Badge variant={tool.badgeVariant}>
+                                {tool.badge}
                               </Badge>
                             </div>
                             <p className="text-sm text-muted-foreground">
-                              {plugin.description}
+                              {tool.description}
                             </p>
                           </div>
                         </CardContent>

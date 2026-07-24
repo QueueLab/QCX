@@ -8,7 +8,7 @@ export function SettingsSkeleton() {
       <Tabs.Root defaultValue="system-prompt" className="w-full">
         <Tabs.List className="grid w-full grid-cols-2 md:grid-cols-4 gap-2">
           <Tabs.Trigger value="system-prompt">System</Tabs.Trigger>
-          <Tabs.Trigger value="plugin">Plugins</Tabs.Trigger>
+          <Tabs.Trigger value="tool">Plugins</Tabs.Trigger>
           <Tabs.Trigger value="user-management">Users</Tabs.Trigger>
           <Tabs.Trigger value="map">Map</Tabs.Trigger>
         </Tabs.List>

@@ -66,7 +66,7 @@ export default function SignInComponent() {
           </div>
           <CardTitle className="text-2xl font-poppins font-bold text-foreground">Welcome to QCX</CardTitle>
           <CardDescription className="text-sm text-muted-foreground">
-            Sign in to access your dashboard, map plugins, and history.
+            Sign in to access your dashboard, map tools, and history.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

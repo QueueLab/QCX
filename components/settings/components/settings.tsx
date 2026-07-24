@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { SystemPromptForm } from './system-prompt-form'
-import { PluginSelectionForm } from './plugin-selection-form'
+import { ToolSelectionForm } from './tool-selection-form'
 import { UserManagementForm } from './user-management-form';
 import { Form } from "@/components/ui/form"
 import { useSettingsStore, MapProvider } from "@/lib/store/settings";
@@ -71,9 +71,7 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
   const { toast } = useToast()
   const router = useRouter()
   const [isSaving, setIsSaving] = useState(false)
-  const [currentTab, setCurrentTab] = useState(
-    initialTab === "model" || initialTab === "tool" ? "plugin" : initialTab
-  );
+  const [currentTab, setCurrentTab] = useState(initialTab === "model" ? "tool" : initialTab);
   const { mapProvider, setMapProvider } = useSettingsStore();
   const { user, loading: authLoading } = useCurrentUser();
   const { user: clerkUser } = useUser();
@@ -85,9 +83,7 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
   }, [])
 
   useEffect(() => {
-    setCurrentTab(
-      initialTab === "model" || initialTab === "tool" ? "plugin" : initialTab
-    );
+    setCurrentTab(initialTab === "model" ? "tool" : initialTab);
   }, [initialTab]);
 
   const userId = user?.id;
@@ -218,7 +214,7 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
           <Tabs.Root value={currentTab} onValueChange={setCurrentTab} className="w-full">
             <Tabs.List className="grid w-full grid-cols-2 md:grid-cols-4 gap-2">
               <Tabs.Trigger value="system-prompt" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">System</Tabs.Trigger>
-              <Tabs.Trigger value="plugin" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">Plugins</Tabs.Trigger>
+              <Tabs.Trigger value="tool" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">Plugins</Tabs.Trigger>
               <Tabs.Trigger value="user-management" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">Users</Tabs.Trigger>
               <Tabs.Trigger value="map" className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 data-[state=active]:bg-primary/80">Map</Tabs.Trigger>
               {/*
@@ -253,14 +249,14 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
                   </Card>
                 </Tabs.Content>
 
-                <Tabs.Content value="plugin" className="mt-6">
+                <Tabs.Content value="tool" className="mt-6">
                   <Card>
                     <CardHeader>
                       <CardTitle>Plugins</CardTitle>
                       <CardDescription>Choose the plugin that powers your planetary copilot</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <PluginSelectionForm form={form} />
+                      <ToolSelectionForm form={form} />
                     </CardContent>
                   </Card>
                 </Tabs.Content>
