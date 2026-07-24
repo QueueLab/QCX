@@ -71,6 +71,20 @@
       "when": 1784838292039,
       "tag": "0009_add_skyfi_oauth_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1784897748431,
+      "tag": "0010_tough_the_professor",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1784900080766,
+      "tag": "0011_motionless_banshee",
+      "breakpoints": true
     }
   ]
 }

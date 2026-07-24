@@ -50,7 +50,9 @@ export async function resolveClerkUserToDbUser(clerkUserId: string): Promise<str
 
     // 2. If not found, fetch user details from Clerk and create a new record
     const clerkUser = await currentUser();
-    if (!clerkUser) return null;
+    if (!clerkUser) {
+      throw new Error('Clerk session found but failed to retrieve user profile from Clerk.');
+    }
 
     const email = clerkUser.emailAddresses[0]?.emailAddress || null;
     const firstName = clerkUser.firstName || null;
@@ -91,9 +93,9 @@ export async function resolveClerkUserToDbUser(clerkUserId: string): Promise<str
     }).returning({ id: users.id });
 
     return newUser.id;
-  } catch (error) {
+  } catch (error: any) {
     console.error('[Auth] Error resolving Clerk user to DB user:', error);
-    return null;
+    throw new Error(`Failed to resolve Clerk user to database user: ${error.message}`);
   }
 }
 
