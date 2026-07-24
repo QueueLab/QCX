@@ -1,5 +1,5 @@
 'use client'
-import { Settings, Shield, CircleUserRound, LogOut } from "lucide-react"
+import { User, Settings, Shield, CircleUserRound, LogOut } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { ProfileToggleEnum, useProfileToggle } from "./profile-toggle-context"
@@ -57,6 +57,10 @@ export function ProfileToggle() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="start" forceMount>
+        <DropdownMenuItem onClick={() => handleSectionToggle(ProfileToggleEnum.Account)} data-testid="profile-account">
+          <User className="mr-2 h-4 w-4" />
+          <span>Account</span>
+        </DropdownMenuItem>
         <DropdownMenuItem onClick={() => handleSectionToggle(ProfileToggleEnum.Settings)} data-testid="profile-settings">
           <Settings className="mr-2 h-4 w-4" />
           <span>Settings</span>

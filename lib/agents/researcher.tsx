@@ -13,12 +13,11 @@ import { getTools } from './tools'
 import { getModel } from '../utils'
 import { MapProvider } from '@/lib/store/settings'
 import { DrawnFeature } from './resolution-search'
-import { getSelectedModel } from '@/lib/actions/users'
 
 // This magic tag lets us write raw multi-line strings with backticks, arrows, etc.
 const raw = String.raw
 
-const getDefaultSystemPrompt = (date: string, drawnFeatures?: DrawnFeature[], selectedModel?: string | null) => raw`
+const getDefaultSystemPrompt = (date: string, drawnFeatures?: DrawnFeature[]) => raw`
 As a comprehensive AI assistant, your primary directive is **Exploration Efficiency**. You must use the provided tools judiciously to gather information and formulate a response.
 
 **Product Context:**
@@ -34,7 +33,7 @@ Use these user-drawn areas/lines as primary areas of interest for your analysis 
 **Exploration Efficiency Directives:**
 1. **Tool First:** Always check if a tool can directly or partially answer the user's query. Use the most specific tool available.
 2. **Geospatial Priority:** For any query involving locations, places, addresses, geographical features, finding businesses, distances, or directions → you **MUST** use the 'geospatialQueryTool'.
-${selectedModel === 'SkyFi' ? `3. **SkyFi Priority:** The user has selected **SkyFi** as their active planetary tool. For any query asking to query latest images, search past captures, check their SkyFi account or budget, or select Areas of Interest (AOIs) for SkyFi, you **MUST** use the 'skyfiQueryTool' instead of or in addition to general searches.` : `3. **Search Specificity:** When using the 'search' tool, formulate queries that are as specific as possible.`}
+3. **Search Specificity:** When using the 'search' tool, formulate queries that are as specific as possible.
 4. **Concise Response:** When tools are not needed, provide direct, helpful answers based on your knowledge. Match the user's language.
 5. **Citations:** Always cite source URLs when using information from tools.
 
@@ -52,18 +51,11 @@ ${selectedModel === 'SkyFi' ? `3. **SkyFi Priority:** The user has selected **Sk
   ONLY when the user explicitly provides one or more URLs and asks you to read, summarize, or extract content from them.
 - **Never use** this tool proactively.
 
-${selectedModel === 'SkyFi' ? `#### **3. SkyFi Satellite Imagery and AOI**
-- **Tool**: \`skyfiQueryTool\`
-- **When to use**:
-  • Any request to check SkyFi account status or budget (use 'whoami')
-  • Any request to geocode or set/select an Area of Interest (AOI) on SkyFi (use 'geocode')
-  • Any request to search satellite archive catalog or query latest/latss images (use 'search')
-  • Any request to validate, price, or place an order (use 'validate_order' / 'place_order')
-  • Any request to list previous satellite image orders (use 'list_orders')` : `#### **3. Location, Geography, Navigation, and Mapping Queries**
+#### **3. Location, Geography, Navigation, and Mapping Queries**
 - **Tool**: \`geospatialQueryTool\` → **MUST be used (no exceptions)** for:
   • Finding places, businesses, "near me", distances, directions
   • Travel times, routes, traffic, map generation
-  • Isochrones, travel-time matrices, multi-stop optimization`}
+  • Isochrones, travel-time matrices, multi-stop optimization
 
 #### **4. Searching Uploaded Documents and Attachments**
 - **Tool**: \`documentRetrieve\`
@@ -77,19 +69,16 @@ ${selectedModel === 'SkyFi' ? `#### **3. SkyFi Satellite Imagery and AOI**
 - “How long to walk from Central Park to Times Square?”
 - “Areas reachable in 30 minutes from downtown Portland”
 
-${selectedModel === 'SkyFi' ? `**Behavior when using \`skyfiQueryTool\`:**
-- Issue the tool call immediately.
-- Clearly present the search results, imagery options, or order prices returned by SkyFi in your final response.
-- Always ask for the user's explicit approval before placing any paid/billable orders.` : `**Behavior when using \`geospatialQueryTool\`:**
+**Behavior when using \`geospatialQueryTool\`:**
 - Issue the tool call immediately
 - In your final response: provide concise text only
 - → NEVER say “the map will update” or “markers are being added”
-- → Trust the system handles map rendering automatically`}
+- → Trust the system handles map rendering automatically
 
 #### **Summary of Decision Flow**
 1. User gave explicit URLs? → \`retrieve\`
 2. Query relates to uploaded documents, attachments, or custom user knowledge files? → \`documentRetrieve\` (mandatory)
-${selectedModel === 'SkyFi' ? `3. SkyFi account, satellite imagery search, geocoding AOI, or ordering? → \`skyfiQueryTool\` (mandatory)` : `3. Location/distance/direction/maps? → \`geospatialQueryTool\` (mandatory)`}
+3. Location/distance/direction/maps? → \`geospatialQueryTool\` (mandatory)
 4. Everything else needing external data? → \`search\`
 5. Otherwise → answer from knowledge
 
@@ -120,12 +109,11 @@ export async function researcher(
   )
 
   const currentDate = new Date().toLocaleString()
-  const selectedModel = await getSelectedModel();
 
   const systemPromptToUse =
     dynamicSystemPrompt?.trim()
       ? dynamicSystemPrompt
-      : getDefaultSystemPrompt(currentDate, drawnFeatures, selectedModel)
+      : getDefaultSystemPrompt(currentDate, drawnFeatures)
 
   // Check if any message contains an image
   const hasImage = messages.some(message =>
@@ -160,7 +148,7 @@ export async function researcher(
     maxTokens: 4096,
     system: systemPromptToUse,
     messages,
-    tools: getTools({ uiStream, fullResponse, mapProvider, selectedModel, drawnFeatures }),
+    tools: getTools({ uiStream, fullResponse, mapProvider }),
   })
 
   uiStream.update(null) // remove spinner

@@ -21,7 +21,6 @@ import { Chat, AIMessage } from '@/lib/types'
 import { UserMessage } from '@/components/user-message'
 import { BotMessage } from '@/components/message'
 import { SearchSection } from '@/components/search-section'
-import { SkyfiSection } from '@/components/skyfi-section'
 import SearchRelated from '@/components/search-related'
 import { GeoJsonLayer } from '@/components/map/geojson-layer'
 import { ResolutionCarousel } from '@/components/resolution-carousel'
@@ -854,12 +853,6 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
             )
             searchResults.done(JSON.stringify(toolOutput))
             switch (name) {
-              case 'skyfiQueryTool':
-                return {
-                  id,
-                  component: <SkyfiSection result={searchResults.value} />,
-                  isCollapsed: isCollapsed.value
-                }
               case 'search':
                 return {
                   id,

@@ -36,7 +36,7 @@ const domainSchema = z.string().min(1).refine((val) => {
   }
 }, { message: "Invalid domain or URL. Only public domains/URLs are allowed." });
 
-const STALENESS_THRESHOLD_MS = 1000 * 60 * 5; // 5 minutes
+const STALENESS_THRESHOLD_MS = 1000 * 60 * 3; // 3 minutes
 const WORKER_TIMEOUT_MS = 1000 * 60 * 2; // 2 minutes
 
 export async function startSystemPromptGeneration(domain: string) {
@@ -78,10 +78,18 @@ async function scrapeDomain(domain: string): Promise<string> {
       const scrapeResult = await firecrawl.scrapeUrl(targetUrl, {
         formats: ['markdown'],
       });
-      if (scrapeResult && 'markdown' in scrapeResult && scrapeResult.markdown) {
+      if (!scrapeResult) {
+        throw new Error('Firecrawl returned null or undefined response.');
+      }
+      if ('success' in scrapeResult && !scrapeResult.success) {
+        const errorMsg = (scrapeResult as any).error || 'Firecrawl success flag was false.';
+        throw new Error(errorMsg);
+      }
+      if ('markdown' in scrapeResult && scrapeResult.markdown) {
         return scrapeResult.markdown;
       }
-    } catch (e) {
+      throw new Error('Firecrawl response did not contain markdown content.');
+    } catch (e: any) {
       console.warn('Firecrawl scraping failed, falling back to standard fetch scraper:', e);
     }
   }
@@ -94,7 +102,7 @@ async function scrapeDomain(domain: string): Promise<string> {
       }
     });
     if (!response.ok) {
-      throw new Error(`Fetch failed with status ${response.status}`);
+      throw new Error(`Standard fetch request failed with status ${response.status}`);
     }
     const html = await response.text();
     // Basic extraction of visible text from HTML if it contains tags
@@ -109,11 +117,11 @@ async function scrapeDomain(domain: string): Promise<string> {
         .trim();
     }
     if (textContent.length < 100) {
-      throw new Error('Fallback fetch scraped insufficient content');
+      throw new Error('Fetched page has insufficient content (less than 100 characters)');
     }
     return textContent;
   } catch (error: any) {
-    throw new Error(`Scraping failed: ${error.message || error}`);
+    throw new Error(`Standard fetch scraping failed: ${error.message || error}`);
   }
 }
 
@@ -122,40 +130,67 @@ async function runBackgroundWorker(jobId: string, userId: string, domain: string
     setTimeout(() => reject(new Error('Job execution timeout')), WORKER_TIMEOUT_MS)
   );
 
+  let isSettled = false;
+
   try {
     await updateJob(jobId, userId, { status: 'processing' });
 
     const workPromise = (async () => {
-      const content = await scrapeDomain(domain);
+      let content = '';
+      try {
+        content = await scrapeDomain(domain);
+      } catch (err: any) {
+        throw new Error(`Domain scraping failed: ${err.message || err}`);
+      }
 
-      const model = await getModel();
-      const { text } = await generateText({
-        model,
-        system: 'You are an expert at creating concise and effective AI system prompts for business copilots.',
-        prompt: `Based on the following content scraped from ${domain}, generate a concise system prompt (10-2000 characters) for an AI business copilot. The prompt should define the business's identity, products/services, tone, and how it should assist users.
+      if (content.length < 100) {
+        throw new Error('Insufficient content scraped from domain (less than 100 characters)');
+      }
 
-        Content:
-        ${content.substring(0, 5000)}`, // Limit content size for LLM
-      });
+      let generatedPrompt = '';
+      try {
+        const model = await getModel();
+        const { text } = await generateText({
+          model,
+          system: 'You are an expert at creating concise and effective AI system prompts for business copilots.',
+          prompt: `Based on the following content scraped from ${domain}, generate a concise system prompt (10-2000 characters) for an AI business copilot. The prompt should define the business's identity, products/services, tone, and how it should assist users.
 
-      const finalPrompt = text.trim();
-      if (finalPrompt.length < 10 || finalPrompt.length > 2000) {
-        throw new Error('Generated prompt is outside the allowed length constraints');
+          Content:
+          ${content.substring(0, 5000)}`, // Limit content size for LLM
+        });
+        generatedPrompt = text.trim();
+      } catch (err: any) {
+        throw new Error(`LLM prompt generation failed: ${err.message || err}`);
+      }
+
+      if (generatedPrompt.length < 10 || generatedPrompt.length > 2000) {
+        throw new Error(`Generated prompt length (${generatedPrompt.length}) is outside the allowed constraints (10-2000 characters)`);
+      }
+
+      if (isSettled) {
+        console.warn(`workPromise finished but job ${jobId} was already settled (likely timed out). Discarding update.`);
+        return;
       }
 
       await updateJob(jobId, userId, {
         status: 'complete',
-        resultPrompt: finalPrompt,
+        resultPrompt: generatedPrompt,
       });
     })();
 
     await Promise.race([workPromise, timeoutPromise]);
+    isSettled = true;
   } catch (error: any) {
+    isSettled = true;
     console.error(`Background worker error for job ${jobId}:`, error);
-    await updateJob(jobId, userId, {
-      status: 'error',
-      errorMessage: error.message || 'An unexpected error occurred during generation',
-    });
+    try {
+      await updateJob(jobId, userId, {
+        status: 'error',
+        errorMessage: error.message || 'An unexpected error occurred during generation',
+      });
+    } catch (dbError) {
+      console.error(`Failed to update job status to error for job ${jobId}:`, dbError);
+    }
   }
 }
 
@@ -175,9 +210,18 @@ export async function getSystemPromptGenerationJob(jobId: string) {
     const lastUpdate = new Date(job.updatedAt).getTime();
     const now = new Date().getTime();
     if (now - lastUpdate > STALENESS_THRESHOLD_MS) {
+      const errorMessage = 'Job timed out or was abandoned. Please try again.';
+      try {
+        await updateJob(jobId, userId, {
+          status: 'error',
+          errorMessage,
+        });
+      } catch (dbError) {
+        console.error(`Failed to update stale job status to error for job ${jobId}:`, dbError);
+      }
       return {
         status: 'error',
-        errorMessage: 'Job timed out or was abandoned. Please try again.',
+        errorMessage,
       };
     }
   }
