@@ -83,12 +83,12 @@ export function ToolSelectionForm({ form }: ToolSelectionFormProps) {
       render={({ field }) => (
         <FormItem className="space-y-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <FormLabel className="text-base font-semibold">Planetary Tool</FormLabel>
+            <FormLabel className="text-base font-semibold">Planetary Plugin</FormLabel>
             <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
               <span className="text-sm text-muted-foreground whitespace-nowrap">Quick Select:</span>
               <Select onValueChange={field.onChange} value={field.value}>
                 <SelectTrigger className="w-full sm:w-[180px]">
-                  <SelectValue placeholder="Select tool" />
+                  <SelectValue placeholder="Select plugin" />
                 </SelectTrigger>
                 <SelectContent>
                   {tools.map((tool) => {
@@ -149,8 +149,8 @@ export function ToolSelectionForm({ form }: ToolSelectionFormProps) {
             </RadioGroup>
           </FormControl>
           <FormDescription>
-            Select the tool that will power your planetary copilot.
-            Different tools have different capabilities and performance
+            Select the plugin that will power your planetary copilot.
+            Different plugins have different capabilities and performance
             characteristics.
           </FormDescription>
           <FormMessage />
