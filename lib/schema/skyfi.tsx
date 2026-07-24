@@ -34,6 +34,10 @@ export const skyfiQuerySchema = z.object({
     .optional()
     .default(5)
     .describe("Maximum number of results to return"),
+  confirm: z.boolean()
+    .optional()
+    .default(false)
+    .describe("Must be set to true to authorize actual billable charges during 'place_order'. If false or missing, a validation dry-run will be run instead of placing the live order."),
 });
 
 export type SkyfiQuery = z.infer<typeof skyfiQuerySchema>;

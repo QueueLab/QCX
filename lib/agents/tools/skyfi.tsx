@@ -24,13 +24,6 @@ function geoJsonToWkt(geometry: any): string | null {
     const coords = geometry.coordinates[0];
     const ringStr = coords.map((c: any) => `${c[0]} ${c[1]}`).join(', ');
     return `POLYGON((${ringStr}))`;
-  } else if (geometry.type === 'LineString') {
-    const coords = geometry.coordinates;
-    const lineStr = coords.map((c: any) => `${c[0]} ${c[1]}`).join(', ');
-    return `LINESTRING(${lineStr})`;
-  } else if (geometry.type === 'Point') {
-    const coords = geometry.coordinates;
-    return `POINT(${coords[0]} ${coords[1]})`;
   }
   return null;
 }
@@ -178,13 +171,22 @@ export const skyfiTool = ({
         const latestPolygon = drawnFeatures.find(f => f.type === 'Polygon');
         if (latestPolygon) {
           resolvedAoiWkt = geoJsonToWkt(latestPolygon.geometry) || undefined;
-        } else {
-          resolvedAoiWkt = geoJsonToWkt(drawnFeatures[0].geometry) || undefined;
         }
+
+        if (!resolvedAoiWkt && (queryType === 'search' || queryType === 'validate_order' || queryType === 'place_order') && !location) {
+          const invalidAoiMessage = "Your drawn area is not a valid closed Polygon. SkyFi requires a closed Polygon to define your Area of Interest. Please use the map drawing tools to draw a closed Polygon.";
+          uiFeedbackStream.update(invalidAoiMessage);
+          uiFeedbackStream.done();
+          uiStream.update(<BotMessage content={uiFeedbackStream.value} />);
+          return { type: 'SKYFI_QUERY', success: false, error: 'Invalid AOI geometry', message: invalidAoiMessage };
+        }
+
         if (resolvedAoiWkt) {
           console.log('[SkyfiTool] Resolved WKT from user drawn features on map:', resolvedAoiWkt);
         }
       }
+
+      let dryRunValidateOnly = false;
 
       switch (queryType) {
         case 'whoami':
@@ -210,7 +212,13 @@ export const skyfiTool = ({
           };
           break;
         case 'place_order':
-          mcpToolName = 'skyfi_place_archive_order';
+          if (!params.confirm) {
+            console.log('[SkyfiTool] place_order requested without explicit confirm. Overriding to skyfi_validate_archive_order dry run...');
+            mcpToolName = 'skyfi_validate_archive_order';
+            dryRunValidateOnly = true;
+          } else {
+            mcpToolName = 'skyfi_place_archive_order';
+          }
           mcpArgs = {
             aoi: resolvedAoiWkt || extraParams?.aoi,
             ...extraParams
@@ -258,7 +266,11 @@ export const skyfiTool = ({
       const blocks = serviceResponse?.content || [];
       const textBlocks = blocks.map(b => (typeof b.text === 'string' ? b.text : null)).filter((t): t is string => !!t && t.trim().length > 0);
 
-      const rawText = textBlocks[0] || 'Success';
+      let rawText = textBlocks[0] || 'Success';
+
+      if (dryRunValidateOnly) {
+        rawText += `\n\n⚠️ **EXPLICIT CONFIRMATION REQUIRED** ⚠️\nThis is a dry-run estimate for a billable satellite imagery purchase. To proceed and complete this order, you must explicitly confirm. Please type "confirm" or reply that you would like to proceed with the purchase to authorize this charge.`;
+      }
 
       feedbackMessage = `Action '${queryType}' executed successfully.`;
       uiFeedbackStream.update(feedbackMessage);
@@ -270,9 +282,10 @@ export const skyfiTool = ({
       return {
         type: 'SKYFI_QUERY',
         success: true,
-        queryType,
+        queryType: dryRunValidateOnly ? 'validate_order' : queryType,
         result: rawText,
-        error: null
+        error: null,
+        confirmationRequired: dryRunValidateOnly
       };
     } catch (error: any) {
       const toolError = `SkyFi execution failed: ${error.message}`;

@@ -73,14 +73,52 @@ export class SkyfiOAuthProvider implements OAuthClientProvider {
       .where(eq(skyfiOAuthTokens.userId, this.userId))
       .limit(1);
 
-    if (row && row.accessToken) {
-      return {
-        access_token: row.accessToken,
-        refresh_token: row.refreshToken || undefined,
-        expires_at: row.tokenExpiry ? Math.floor(row.tokenExpiry.getTime() / 1000) : undefined,
-      };
+    if (!row || !row.accessToken) {
+      return undefined;
     }
-    return undefined;
+
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const expiresAt = row.tokenExpiry ? Math.floor(row.tokenExpiry.getTime() / 1000) : null;
+
+    // Check if token is expired or expiring in less than 60 seconds
+    if (expiresAt && expiresAt < nowSeconds + 60 && row.refreshToken && row.clientId) {
+      console.log('[SkyfiProvider] Token expired or expiring soon. Refreshing token...');
+      try {
+        const response = await fetch('https://mcp.skyfi.com/oauth/token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            grant_type: 'refresh_token',
+            client_id: row.clientId,
+            refresh_token: row.refreshToken,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('[SkyfiProvider] Token successfully refreshed.');
+          const newTokens: OAuthTokens = {
+            access_token: data.access_token,
+            refresh_token: data.refresh_token || row.refreshToken,
+            expires_at: data.expires_in ? Math.floor(Date.now() / 1000) + data.expires_in : undefined,
+          };
+          await this.saveTokens(newTokens);
+          return newTokens;
+        } else {
+          console.error('[SkyfiProvider] Failed to refresh token:', await response.text());
+        }
+      } catch (err: any) {
+        console.error('[SkyfiProvider] Error refreshing token:', err.message);
+      }
+    }
+
+    return {
+      access_token: row.accessToken,
+      refresh_token: row.refreshToken || undefined,
+      expires_at: expiresAt || undefined,
+    };
   }
 
   async saveTokens(tokens: OAuthTokens): Promise<void> {
