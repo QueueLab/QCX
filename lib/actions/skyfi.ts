@@ -29,13 +29,15 @@ export async function getRedirectUri(): Promise<string> {
  * Ensures the client is registered dynamically with the SkyFi MCP server.
  * Uses an AbortController with a 10s timeout to prevent hanging.
  */
-async function ensureClientRegistered(provider: SkyfiOAuthProvider): Promise<string> {
-  const currentInfo = await provider.clientInformation();
-  if (currentInfo?.client_id) {
-    return currentInfo.client_id;
+async function ensureClientRegistered(provider: SkyfiOAuthProvider, forceRegister: boolean = false): Promise<string> {
+  if (!forceRegister) {
+    const currentInfo = await provider.clientInformation();
+    if (currentInfo?.client_id) {
+      return currentInfo.client_id;
+    }
   }
 
-  console.log('[SkyFiAction] Client not registered. Registering dynamically...');
+  console.log('[SkyFiAction] Client not registered or force-register active. Registering dynamically...');
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -89,7 +91,7 @@ export async function startSkyfiConnection(): Promise<{ url?: string; error?: st
     const redirectUri = await getRedirectUri();
     const provider = new SkyfiOAuthProvider(userId, redirectUri);
 
-    const clientId = await ensureClientRegistered(provider);
+    const clientId = await ensureClientRegistered(provider, true);
 
     const verifier = generateCodeVerifier();
     const challenge = generateCodeChallenge(verifier);
