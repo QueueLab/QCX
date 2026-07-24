@@ -27,8 +27,8 @@ test.describe('Header and Navigation', () => {
 
   test('should open the profile menu', async ({ page }) => {
     await page.click('[data-testid="profile-toggle"]');
-    const accountMenu = page.locator('[data-testid="profile-account"]');
-    await expect(accountMenu).toBeVisible();
+    const settingsMenu = page.locator('[data-testid="profile-settings"]');
+    await expect(settingsMenu).toBeVisible();
   });
 
   test('should open the calendar', async ({ page }) => {
