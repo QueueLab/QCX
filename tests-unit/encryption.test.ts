@@ -1,8 +1,11 @@
+import crypto from 'crypto';
 import { encrypt, decrypt } from '../lib/utils/encryption';
 
 console.log("Starting encryption tests...");
 
-// Test basic encrypt/decrypt
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'my-super-secret-key-32-chars-long-or-more';
+
+// Test basic GCM encrypt/decrypt
 const originalText = "Hello, GCM authenticated encryption!";
 const encrypted = encrypt(originalText);
 
@@ -10,7 +13,7 @@ if (!encrypted) {
   throw new Error("Encryption failed: returned null");
 }
 
-console.log("Encrypted Text:", encrypted);
+console.log("Encrypted GCM Text:", encrypted);
 
 const parts = encrypted.split(':');
 if (parts.length !== 3) {
@@ -19,9 +22,25 @@ if (parts.length !== 3) {
 
 const decrypted = decrypt(encrypted);
 if (decrypted !== originalText) {
-  throw new Error(`Decryption failed! Expected: "${originalText}", got: "${decrypted}"`);
+  throw new Error(`GCM Decryption failed! Expected: "${originalText}", got: "${decrypted}"`);
 }
-console.log("Decryption verified successfully!");
+console.log("GCM Decryption verified successfully!");
+
+// Test legacy CBC decryption backwards compatibility
+const legacyText = "Hello, legacy CBC encryption!";
+const ivCbc = crypto.randomBytes(16);
+const key = crypto.createHash('sha256').update(ENCRYPTION_KEY).digest();
+const cipherCbc = crypto.createCipheriv('aes-256-cbc', key, ivCbc);
+let encryptedCbc = cipherCbc.update(legacyText, 'utf8', 'hex');
+encryptedCbc += cipherCbc.final('hex');
+const legacyPayload = `${ivCbc.toString('hex')}:${encryptedCbc}`;
+
+console.log("Legacy CBC payload:", legacyPayload);
+const decryptedLegacy = decrypt(legacyPayload);
+if (decryptedLegacy !== legacyText) {
+  throw new Error(`Legacy CBC Decryption failed! Expected: "${legacyText}", got: "${decryptedLegacy}"`);
+}
+console.log("Legacy CBC Decryption backwards compatibility verified successfully!");
 
 // Test integrity protection (GCM authentication tag verification)
 // Modify one byte of the ciphertext
