@@ -10,6 +10,7 @@ import { SkyfiOAuthProvider } from '@/lib/skyfi/provider';
 import { skyfiQuerySchema } from '@/lib/schema/skyfi';
 import { DrawnFeature } from '@/lib/agents/resolution-search';
 import { z } from 'zod';
+import crypto from 'crypto';
 
 export type McpClient = MCPClientClass;
 
@@ -29,14 +30,14 @@ function geoJsonToWkt(geometry: any): string | null {
 }
 
 /**
- * Establish connection to the SkyFi MCP server with the user's stored OAuth token.
+ * Establish connection to the SkyFi MCP server with the user's stored OAuth token and support AbortSignal.
  */
-async function getConnectedSkyfiMcpClient(accessToken: string): Promise<McpClient | null> {
+async function getConnectedSkyfiMcpClient(accessToken: string, signal?: AbortSignal): Promise<McpClient | null> {
   console.log('[SkyfiTool] Connecting to SkyFi MCP server via OAuth Bearer token...');
 
   const serverUrl = new URL('https://mcp.skyfi.com/mcp');
 
-  // Create transport with headers
+  // Create transport with headers and abort signal
   let transport;
   try {
     transport = new StreamableHTTPClientTransport(serverUrl, {
@@ -44,7 +45,8 @@ async function getConnectedSkyfiMcpClient(accessToken: string): Promise<McpClien
         headers: {
           'Authorization': `Bearer ${accessToken}`,
           'X-Skyfi-Api-Key': accessToken,
-        }
+        },
+        signal,
       }
     });
     console.log('[SkyfiTool] Transport created successfully');
@@ -116,7 +118,7 @@ export const skyfiTool = ({
   Always ask the user for permission before placing a billable order! Ensure you call 'validate_order' first to display the cost.`,
   parameters: skyfiQuerySchema,
   execute: async (params: z.infer<typeof skyfiQuerySchema>) => {
-    const { queryType, location, aoi, params: extraParams } = params;
+    const { queryType, location, aoi, params: extraParams, maxResults } = params;
     console.log('[SkyfiTool] Execute called with:', params);
 
     const uiFeedbackStream = createStreamableValue<string>();
@@ -148,14 +150,25 @@ export const skyfiTool = ({
     let feedbackMessage = `Connecting to SkyFi MCP server...`;
     uiFeedbackStream.update(feedbackMessage);
 
-    const mcpClient = await getConnectedSkyfiMcpClient(tokens.access_token);
+    // Setup abort controller for tool execution timeout (30 seconds)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      console.log('[SkyfiTool] Timeout triggered. Aborting underlying requests.');
+      controller.abort();
+    }, 30000);
+
+    const mcpClient = await getConnectedSkyfiMcpClient(tokens.access_token, controller.signal);
     if (!mcpClient) {
+      clearTimeout(timeoutId);
       feedbackMessage = 'Failed to connect to the SkyFi MCP server. Your login may have expired, please try reconnecting in Settings.';
       uiFeedbackStream.update(feedbackMessage);
       uiFeedbackStream.done();
       uiStream.update(<BotMessage content={uiFeedbackStream.value} />);
       return { type: 'SKYFI_QUERY', success: false, error: 'Connection failed' };
     }
+
+    let dryRunValidateOnly = false;
+    let stableIdempotencyKey = '';
 
     try {
       feedbackMessage = `Successfully connected to SkyFi. Executing '${queryType}' action...`;
@@ -174,6 +187,7 @@ export const skyfiTool = ({
         }
 
         if (!resolvedAoiWkt && (queryType === 'search' || queryType === 'validate_order' || queryType === 'place_order') && !location) {
+          clearTimeout(timeoutId);
           const invalidAoiMessage = "Your drawn area is not a valid closed Polygon. SkyFi requires a closed Polygon to define your Area of Interest. Please use the map drawing tools to draw a closed Polygon.";
           uiFeedbackStream.update(invalidAoiMessage);
           uiFeedbackStream.done();
@@ -186,7 +200,10 @@ export const skyfiTool = ({
         }
       }
 
-      let dryRunValidateOnly = false;
+      // Stable idempotency key derivation to prevent duplicate order placements
+      stableIdempotencyKey = crypto.createHash('sha256')
+        .update(`${userId}_${resolvedAoiWkt || ''}_${queryType}`)
+        .digest('hex');
 
       switch (queryType) {
         case 'whoami':
@@ -200,15 +217,16 @@ export const skyfiTool = ({
         case 'search':
           mcpToolName = 'skyfi_search_archive_with_map';
           mcpArgs = {
-            aoi: resolvedAoiWkt || extraParams?.aoi,
-            ...extraParams
+            maxResults: maxResults || 5,
+            ...extraParams,
+            aoi: resolvedAoiWkt || extraParams?.aoi
           };
           break;
         case 'validate_order':
           mcpToolName = 'skyfi_validate_archive_order';
           mcpArgs = {
-            aoi: resolvedAoiWkt || extraParams?.aoi,
-            ...extraParams
+            ...extraParams,
+            aoi: resolvedAoiWkt || extraParams?.aoi
           };
           break;
         case 'place_order':
@@ -220,8 +238,9 @@ export const skyfiTool = ({
             mcpToolName = 'skyfi_place_archive_order';
           }
           mcpArgs = {
-            aoi: resolvedAoiWkt || extraParams?.aoi,
-            ...extraParams
+            idempotencyKey: stableIdempotencyKey,
+            ...extraParams,
+            aoi: resolvedAoiWkt || extraParams?.aoi
           };
           break;
         case 'list_orders':
@@ -242,9 +261,9 @@ export const skyfiTool = ({
         const geocodeResult = await mcpClient.callTool({
           name: 'skyfi_geocode_aoi',
           arguments: { place: location }
-        }) as any;
+        });
 
-        const geocodeText = geocodeResult?.content?.[0]?.text || '';
+        const geocodeText = (geocodeResult as any)?.content?.[0]?.text || '';
         // Extract polygon WKT
         const wktMatch = geocodeText.match(/POLYGON\s*\(\([\s\S]+?\)\)/i) || geocodeText.match(/MULTIPOLYGON\s*\([\s\S]+?\)/i);
         if (wktMatch) {
@@ -257,10 +276,9 @@ export const skyfiTool = ({
 
       console.log('[SkyfiTool] Calling tool:', mcpToolName, 'with args:', mcpArgs);
 
-      const mcpResult = await Promise.race([
-        mcpClient.callTool({ name: mcpToolName, arguments: mcpArgs }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('SkyFi MCP Tool call timeout after 30 seconds')), 30000)),
-      ]);
+      const mcpResult = await mcpClient.callTool({ name: mcpToolName, arguments: mcpArgs });
+
+      clearTimeout(timeoutId);
 
       const serviceResponse = mcpResult as { content?: Array<{ text?: string | null } | { [k: string]: any }> };
       const blocks = serviceResponse?.content || [];
@@ -288,7 +306,18 @@ export const skyfiTool = ({
         confirmationRequired: dryRunValidateOnly
       };
     } catch (error: any) {
-      const toolError = `SkyFi execution failed: ${error.message}`;
+      clearTimeout(timeoutId);
+
+      const isAbortError = error.name === 'AbortError' || error.message?.includes('aborted') || error.message?.includes('timeout');
+      let toolError = `SkyFi execution failed: ${error.message}`;
+
+      if (isAbortError) {
+        toolError = `SkyFi execution failed: Request timed out after 30 seconds.`;
+        if (queryType === 'place_order' && !dryRunValidateOnly) {
+          toolError += ` The order request was aborted to prevent duplicate placements. Use the idempotency key: ${stableIdempotencyKey} if you attempt to retry.`;
+        }
+      }
+
       console.error('[SkyfiTool] Execution failed:', error);
       uiFeedbackStream.update(toolError);
       await closeClient(mcpClient);

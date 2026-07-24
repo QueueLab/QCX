@@ -7,6 +7,7 @@ import { MemoizedReactMarkdown } from './ui/markdown'
 import rehypeExternalLinks from 'rehype-external-links'
 import remarkGfm from 'remark-gfm'
 import { StreamableValue, useStreamableValue } from 'ai/rsc'
+import { cn } from '@/lib/utils'
 
 export type SkyfiSectionProps = {
   result?: StreamableValue<string>
@@ -31,6 +32,22 @@ export function SkyfiSection({ result }: SkyfiSectionProps) {
     } catch {
       resultText = data
     }
+  }
+
+  // Handle stream error explicitly
+  if (error) {
+    return (
+      <div>
+        <Section size="sm" className="pt-2 pb-0">
+          <ToolBadge tool="skyfiQueryTool">{`SkyFi MCP Error`}</ToolBadge>
+        </Section>
+        <Section title="Error Details">
+          <div className="text-destructive font-mono text-xs bg-destructive/10 p-3 rounded-lg border border-destructive/20">
+            {(error as any).message || String(error)}
+          </div>
+        </Section>
+      </div>
+    )
   }
 
   return (
@@ -62,9 +79,4 @@ export function SkyfiSection({ result }: SkyfiSectionProps) {
       )}
     </div>
   )
-}
-
-// Inline helper for classnames
-function cn(...classes: string[]) {
-  return classes.filter(Boolean).join(' ')
 }

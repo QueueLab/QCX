@@ -30,8 +30,11 @@ export const getTools = ({ uiStream, fullResponse, mapProvider, selectedModel, d
     documentRetrieve: documentRetrieveTool({
       uiStream,
       fullResponse
-    }),
-    skyfiQueryTool: skyfiTool({
+    })
+  }
+
+  if (selectedModel === 'SkyFi') {
+    tools.skyfiQueryTool = skyfiTool({
       uiStream,
       drawnFeatures
     })

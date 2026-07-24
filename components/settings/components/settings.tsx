@@ -22,7 +22,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/hooks/use-toast"
 import { getSystemPrompt, saveSystemPrompt } from "../../../lib/actions/chat"
-import { getSelectedModel, saveSelectedModel, getSkyfiConfig, saveSkyfiConfig } from "../../../lib/actions/users"
+import { getSelectedModel, saveSelectedModel } from "../../../lib/actions/users"
 import { useCurrentUser } from "@/lib/auth/use-current-user"
 import { SettingsSkeleton } from './settings-skeleton'
 import { useUser } from '@clerk/nextjs'
@@ -40,7 +40,6 @@ const settingsFormSchema = z.object({
   selectedModel: z.string().refine(value => value.trim() !== '', {
     message: "Please select a tool.",
   }),
-  skyfiApiKey: z.string().optional(),
   users: z.array(
     z.object({
       id: z.string(),
@@ -60,7 +59,6 @@ const defaultValues: Partial<SettingsFormValues> = {
   systemPrompt:
     "You are a planetary copilot, an AI assistant designed to help users with information about planets, space exploration, and astronomy. Provide accurate, educational, and engaging responses about our solar system and beyond.",
   selectedModel: "QCX-Terra",
-  skyfiApiKey: "",
   users: [],
   domain: "",
 }
@@ -99,10 +97,9 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
     async function fetchData() {
       if (!userId || authLoading) return;
 
-      const [existingPrompt, selectedModel, skyfiConfig] = await Promise.all([
+      const [existingPrompt, selectedModel] = await Promise.all([
         getSystemPrompt(userId),
         getSelectedModel(),
-        getSkyfiConfig(),
       ]);
 
       if (existingPrompt) {
@@ -110,9 +107,6 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
       }
       if (selectedModel) {
         form.setValue("selectedModel", selectedModel, { shouldValidate: true, shouldDirty: false });
-      }
-      if (skyfiConfig?.apiKey) {
-        form.setValue("skyfiApiKey", skyfiConfig.apiKey, { shouldValidate: true, shouldDirty: false });
       }
     }
     fetchData();
@@ -136,10 +130,9 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
 
     try {
       // Save the system prompt and selected model
-      const [promptSaveResult, modelSaveResult, skyfiSaveResult] = await Promise.all([
+      const [promptSaveResult, modelSaveResult] = await Promise.all([
         saveSystemPrompt(userId, data.systemPrompt),
         saveSelectedModel(data.selectedModel),
-        saveSkyfiConfig({ apiKey: data.skyfiApiKey, initialized: !!data.skyfiApiKey }),
       ]);
 
       if (promptSaveResult?.error) {
@@ -147,9 +140,6 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
       }
       if (modelSaveResult?.error) {
         throw new Error(modelSaveResult.error);
-      }
-      if (skyfiSaveResult?.error) {
-        throw new Error(skyfiSaveResult.error);
       }
 
       console.log("Submitted data:", data)

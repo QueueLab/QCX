@@ -1,7 +1,45 @@
-import { OAuthClientProvider, OAuthClientMetadata, OAuthClientInformationMixed, OAuthTokens } from '@modelcontextprotocol/sdk/dist/esm/client/auth.js';
 import { db } from '@/lib/db';
 import { skyfiOAuthTokens } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { encrypt, decrypt } from '@/lib/utils/encryption';
+
+export interface OAuthClientMetadata {
+  client_name?: string;
+  grant_types?: string[];
+  response_types?: string[];
+  token_endpoint_auth_method?: string;
+  redirect_uris?: string[];
+  [key: string]: any;
+}
+
+export interface OAuthClientInformationMixed {
+  client_id: string;
+  client_secret?: string;
+  registration_client_uri?: string;
+  registration_access_token?: string;
+  [key: string]: any;
+}
+
+export interface OAuthTokens {
+  access_token: string;
+  refresh_token?: string;
+  expires_at?: number;
+  [key: string]: any;
+}
+
+export interface OAuthClientProvider {
+  redirectUrl: string | URL | undefined;
+  clientMetadataUrl?: string;
+  clientMetadata: OAuthClientMetadata;
+  state?(): string | Promise<string>;
+  clientInformation(): OAuthClientInformationMixed | undefined | Promise<OAuthClientInformationMixed | undefined>;
+  saveClientInformation?(clientInformation: OAuthClientInformationMixed): void | Promise<void>;
+  tokens(): OAuthTokens | undefined | Promise<OAuthTokens | undefined>;
+  saveTokens(tokens: OAuthTokens): void | Promise<void>;
+  redirectToAuthorization(authorizationUrl: URL): void | Promise<void>;
+  saveCodeVerifier(codeVerifier: string): void | Promise<void>;
+  codeVerifier(): string | Promise<string>;
+}
 
 export class SkyfiOAuthProvider implements OAuthClientProvider {
   private userId: string;
@@ -35,36 +73,33 @@ export class SkyfiOAuthProvider implements OAuthClientProvider {
     if (row && row.clientId) {
       return {
         client_id: row.clientId,
-        client_secret: row.clientSecret || undefined,
-        registration_client_uri: '',
-        registration_access_token: '',
-      } as any;
+        client_secret: decrypt(row.clientSecret) || undefined,
+        registration_client_uri: row.registrationClientUri || undefined,
+        registration_access_token: decrypt(row.registrationAccessToken) || undefined,
+      };
     }
     return undefined;
   }
 
   async saveClientInformation(clientInformation: OAuthClientInformationMixed): Promise<void> {
-    const [existing] = await db.select({ id: skyfiOAuthTokens.id })
-      .from(skyfiOAuthTokens)
-      .where(eq(skyfiOAuthTokens.userId, this.userId))
-      .limit(1);
-
-    if (existing) {
-      await db.update(skyfiOAuthTokens)
-        .set({
+    await db.insert(skyfiOAuthTokens)
+      .values({
+        userId: this.userId,
+        clientId: clientInformation.client_id,
+        clientSecret: encrypt(clientInformation.client_secret || null),
+        registrationClientUri: clientInformation.registration_client_uri || null,
+        registrationAccessToken: encrypt(clientInformation.registration_access_token || null),
+      })
+      .onConflictDoUpdate({
+        target: skyfiOAuthTokens.userId,
+        set: {
           clientId: clientInformation.client_id,
-          clientSecret: clientInformation.client_secret || null,
+          clientSecret: encrypt(clientInformation.client_secret || null),
+          registrationClientUri: clientInformation.registration_client_uri || null,
+          registrationAccessToken: encrypt(clientInformation.registration_access_token || null),
           updatedAt: new Date(),
-        })
-        .where(eq(skyfiOAuthTokens.id, existing.id));
-    } else {
-      await db.insert(skyfiOAuthTokens)
-        .values({
-          userId: this.userId,
-          clientId: clientInformation.client_id,
-          clientSecret: clientInformation.client_secret || null,
-        });
-    }
+        }
+      });
   }
 
   async tokens(): Promise<OAuthTokens | undefined> {
@@ -77,11 +112,18 @@ export class SkyfiOAuthProvider implements OAuthClientProvider {
       return undefined;
     }
 
+    const decryptedAccessToken = decrypt(row.accessToken);
+    const decryptedRefreshToken = decrypt(row.refreshToken);
+
+    if (!decryptedAccessToken) {
+      return undefined;
+    }
+
     const nowSeconds = Math.floor(Date.now() / 1000);
     const expiresAt = row.tokenExpiry ? Math.floor(row.tokenExpiry.getTime() / 1000) : null;
 
     // Check if token is expired or expiring in less than 60 seconds
-    if (expiresAt && expiresAt < nowSeconds + 60 && row.refreshToken && row.clientId) {
+    if (expiresAt && expiresAt < nowSeconds + 60 && decryptedRefreshToken && row.clientId) {
       console.log('[SkyfiProvider] Token expired or expiring soon. Refreshing token...');
       try {
         const response = await fetch('https://mcp.skyfi.com/oauth/token', {
@@ -92,7 +134,7 @@ export class SkyfiOAuthProvider implements OAuthClientProvider {
           body: new URLSearchParams({
             grant_type: 'refresh_token',
             client_id: row.clientId,
-            refresh_token: row.refreshToken,
+            refresh_token: decryptedRefreshToken,
           }),
         });
 
@@ -101,7 +143,7 @@ export class SkyfiOAuthProvider implements OAuthClientProvider {
           console.log('[SkyfiProvider] Token successfully refreshed.');
           const newTokens: OAuthTokens = {
             access_token: data.access_token,
-            refresh_token: data.refresh_token || row.refreshToken,
+            refresh_token: data.refresh_token || decryptedRefreshToken,
             expires_at: data.expires_in ? Math.floor(Date.now() / 1000) + data.expires_in : undefined,
           };
           await this.saveTokens(newTokens);
@@ -115,60 +157,46 @@ export class SkyfiOAuthProvider implements OAuthClientProvider {
     }
 
     return {
-      access_token: row.accessToken,
-      refresh_token: row.refreshToken || undefined,
+      access_token: decryptedAccessToken,
+      refresh_token: decryptedRefreshToken || undefined,
       expires_at: expiresAt || undefined,
     };
   }
 
   async saveTokens(tokens: OAuthTokens): Promise<void> {
-    const [existing] = await db.select({ id: skyfiOAuthTokens.id })
-      .from(skyfiOAuthTokens)
-      .where(eq(skyfiOAuthTokens.userId, this.userId))
-      .limit(1);
-
     const tokenExpiryDate = tokens.expires_at ? new Date(tokens.expires_at * 1000) : null;
 
-    if (existing) {
-      await db.update(skyfiOAuthTokens)
-        .set({
-          accessToken: tokens.access_token,
-          refreshToken: tokens.refresh_token || null,
+    await db.insert(skyfiOAuthTokens)
+      .values({
+        userId: this.userId,
+        accessToken: encrypt(tokens.access_token),
+        refreshToken: encrypt(tokens.refresh_token || null),
+        tokenExpiry: tokenExpiryDate,
+      })
+      .onConflictDoUpdate({
+        target: skyfiOAuthTokens.userId,
+        set: {
+          accessToken: encrypt(tokens.access_token),
+          refreshToken: encrypt(tokens.refresh_token || null),
           tokenExpiry: tokenExpiryDate,
           updatedAt: new Date(),
-        })
-        .where(eq(skyfiOAuthTokens.id, existing.id));
-    } else {
-      await db.insert(skyfiOAuthTokens)
-        .values({
-          userId: this.userId,
-          accessToken: tokens.access_token,
-          refreshToken: tokens.refresh_token || null,
-          tokenExpiry: tokenExpiryDate,
-        });
-    }
+        }
+      });
   }
 
   async saveCodeVerifier(codeVerifier: string): Promise<void> {
-    const [existing] = await db.select({ id: skyfiOAuthTokens.id })
-      .from(skyfiOAuthTokens)
-      .where(eq(skyfiOAuthTokens.userId, this.userId))
-      .limit(1);
-
-    if (existing) {
-      await db.update(skyfiOAuthTokens)
-        .set({
+    await db.insert(skyfiOAuthTokens)
+      .values({
+        userId: this.userId,
+        codeVerifier,
+      })
+      .onConflictDoUpdate({
+        target: skyfiOAuthTokens.userId,
+        set: {
           codeVerifier,
           updatedAt: new Date(),
-        })
-        .where(eq(skyfiOAuthTokens.id, existing.id));
-    } else {
-      await db.insert(skyfiOAuthTokens)
-        .values({
-          userId: this.userId,
-          codeVerifier,
-        });
-    }
+        }
+      });
   }
 
   async codeVerifier(): Promise<string> {
@@ -181,25 +209,18 @@ export class SkyfiOAuthProvider implements OAuthClientProvider {
   }
 
   async saveState(state: string): Promise<void> {
-    const [existing] = await db.select({ id: skyfiOAuthTokens.id })
-      .from(skyfiOAuthTokens)
-      .where(eq(skyfiOAuthTokens.userId, this.userId))
-      .limit(1);
-
-    if (existing) {
-      await db.update(skyfiOAuthTokens)
-        .set({
+    await db.insert(skyfiOAuthTokens)
+      .values({
+        userId: this.userId,
+        state,
+      })
+      .onConflictDoUpdate({
+        target: skyfiOAuthTokens.userId,
+        set: {
           state,
           updatedAt: new Date(),
-        })
-        .where(eq(skyfiOAuthTokens.id, existing.id));
-    } else {
-      await db.insert(skyfiOAuthTokens)
-        .values({
-          userId: this.userId,
-          state,
-        });
-    }
+        }
+      });
   }
 
   async state(): Promise<string> {
@@ -212,6 +233,6 @@ export class SkyfiOAuthProvider implements OAuthClientProvider {
   }
 
   async redirectToAuthorization(authorizationUrl: URL): Promise<void> {
-    // This is called internally, handled transiently on connection.
+    // Handled transiently
   }
 }

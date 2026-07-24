@@ -8,6 +8,8 @@ CREATE TABLE IF NOT EXISTS "skyfi_oauth_tokens" (
 	"client_secret" text,
 	"code_verifier" text,
 	"state" text,
+	"registration_client_uri" text,
+	"registration_access_token" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "skyfi_oauth_tokens_user_id_unique" UNIQUE("user_id")

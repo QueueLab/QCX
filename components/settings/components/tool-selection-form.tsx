@@ -56,6 +56,7 @@ export function ToolSelectionForm({ form }: ToolSelectionFormProps) {
   const [skyfiBudget, setSkyfiBudget] = useState<string | null>(null);
   const [loadingStatus, setLoadingStatus] = useState(true);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
 
   useEffect(() => {
     async function loadStatus() {
@@ -184,8 +185,9 @@ export function ToolSelectionForm({ form }: ToolSelectionFormProps) {
                         type="button"
                         variant="destructive"
                         size="sm"
+                        disabled={isDisconnecting}
                         onClick={async () => {
-                          setLoadingStatus(true);
+                          setIsDisconnecting(true);
                           try {
                             const res = await disconnectSkyfi();
                             if (res.success) {
@@ -205,11 +207,18 @@ export function ToolSelectionForm({ form }: ToolSelectionFormProps) {
                               variant: "destructive",
                             });
                           } finally {
-                            setLoadingStatus(false);
+                            setIsDisconnecting(false);
                           }
                         }}
                       >
-                        Disconnect
+                        {isDisconnecting ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Disconnecting...
+                          </>
+                        ) : (
+                          "Disconnect"
+                        )}
                       </Button>
                     </div>
                   </div>
