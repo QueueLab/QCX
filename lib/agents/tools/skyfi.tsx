@@ -29,6 +29,14 @@ function geoJsonToWkt(geometry: any): string | null {
   return null;
 }
 
+function deterministicSerialize(val: any): string {
+  if (val === null || val === undefined) return '';
+  if (typeof val !== 'object') return String(val);
+  const keys = Object.keys(val).sort();
+  const parts = keys.map(k => `${k}:${deterministicSerialize(val[k])}`);
+  return `{${parts.join(',')}}`;
+}
+
 /**
  * Establish connection to the SkyFi MCP server with the user's stored OAuth token and support AbortSignal.
  */
@@ -118,8 +126,8 @@ export const skyfiTool = ({
   Always ask the user for permission before placing a billable order! Ensure you call 'validate_order' first to display the cost.`,
   parameters: skyfiQuerySchema,
   execute: async (params: z.infer<typeof skyfiQuerySchema>) => {
-    const { queryType, location, aoi, params: extraParams, maxResults } = params;
-    console.log('[SkyfiTool] Execute called with:', params);
+    const { queryType, location, aoi, orderId, params: extraParams, maxResults } = params;
+    console.log('[SkyfiTool] Execute called for queryType:', queryType, { maxResults, confirm: params.confirm });
 
     const uiFeedbackStream = createStreamableValue<string>();
     uiStream.append(<BotMessage content={uiFeedbackStream.value} />);
@@ -190,6 +198,7 @@ export const skyfiTool = ({
           clearTimeout(timeoutId);
           const invalidAoiMessage = "Your drawn area is not a valid closed Polygon. SkyFi requires a closed Polygon to define your Area of Interest. Please use the map drawing tools to draw a closed Polygon.";
           uiFeedbackStream.update(invalidAoiMessage);
+          await closeClient(mcpClient);
           uiFeedbackStream.done();
           uiStream.update(<BotMessage content={uiFeedbackStream.value} />);
           return { type: 'SKYFI_QUERY', success: false, error: 'Invalid AOI geometry', message: invalidAoiMessage };
@@ -201,8 +210,10 @@ export const skyfiTool = ({
       }
 
       // Stable idempotency key derivation to prevent duplicate order placements
+      const serializedExtraParams = deterministicSerialize(extraParams);
+      const hashInput = `${userId}_${resolvedAoiWkt || ''}_${queryType}_${orderId || ''}_${serializedExtraParams}`;
       stableIdempotencyKey = crypto.createHash('sha256')
-        .update(`${userId}_${resolvedAoiWkt || ''}_${queryType}`)
+        .update(hashInput)
         .digest('hex');
 
       switch (queryType) {
@@ -226,6 +237,7 @@ export const skyfiTool = ({
           mcpToolName = 'skyfi_validate_archive_order';
           mcpArgs = {
             ...extraParams,
+            ...(orderId ? { orderId } : {}),
             aoi: resolvedAoiWkt || extraParams?.aoi
           };
           break;
@@ -238,15 +250,17 @@ export const skyfiTool = ({
             mcpToolName = 'skyfi_place_archive_order';
           }
           mcpArgs = {
-            idempotencyKey: stableIdempotencyKey,
             ...extraParams,
+            ...(orderId ? { orderId } : {}),
+            idempotencyKey: stableIdempotencyKey,
             aoi: resolvedAoiWkt || extraParams?.aoi
           };
           break;
         case 'list_orders':
           mcpToolName = 'skyfi_list_orders';
           mcpArgs = {
-            ...extraParams
+            ...extraParams,
+            ...(orderId ? { orderId } : {})
           };
           break;
         default:
@@ -261,7 +275,7 @@ export const skyfiTool = ({
         const geocodeResult = await mcpClient.callTool({
           name: 'skyfi_geocode_aoi',
           arguments: { place: location }
-        });
+        }, undefined, { signal: controller.signal });
 
         const geocodeText = (geocodeResult as any)?.content?.[0]?.text || '';
         // Extract polygon WKT
@@ -274,9 +288,12 @@ export const skyfiTool = ({
         }
       }
 
-      console.log('[SkyfiTool] Calling tool:', mcpToolName, 'with args:', mcpArgs);
+      console.log('[SkyfiTool] Calling tool:', mcpToolName);
 
-      const mcpResult = await mcpClient.callTool({ name: mcpToolName, arguments: mcpArgs });
+      const mcpResult = await mcpClient.callTool({
+        name: mcpToolName,
+        arguments: mcpArgs
+      }, undefined, { signal: controller.signal });
 
       clearTimeout(timeoutId);
 

@@ -7,6 +7,7 @@ import { eq } from 'drizzle-orm';
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user';
 import { SkyfiOAuthProvider } from '@/lib/skyfi/provider';
 import crypto from 'crypto';
+import { redirect } from 'next/navigation';
 
 export async function getRedirectUri(): Promise<string> {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
@@ -68,12 +69,12 @@ async function ensureClientRegistered(provider: SkyfiOAuthProvider): Promise<str
  * Performs DCR, generates PKCE, and returns the authorization URL.
  */
 export async function startSkyfiConnection(): Promise<{ url?: string; error?: string }> {
-  try {
-    const userId = await getCurrentUserIdOnServer();
-    if (!userId) {
-      return { error: 'Unauthorized: User not authenticated.' };
-    }
+  const userId = await getCurrentUserIdOnServer();
+  if (!userId) {
+    redirect('/sign-in');
+  }
 
+  try {
     const redirectUri = await getRedirectUri();
     const provider = new SkyfiOAuthProvider(userId, redirectUri);
 
