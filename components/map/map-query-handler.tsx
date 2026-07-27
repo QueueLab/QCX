@@ -13,6 +13,7 @@ interface McpResponseData {
     address?: string;
   };
   mapUrl?: string;
+  routeGeoJSON?: any;
 }
 
 interface GeospatialToolOutput {
@@ -42,8 +43,8 @@ export const MapQueryHandler: React.FC<MapQueryHandlerProps> = ({ toolOutput }) 
           // Optionally store more info from mcp_response if needed by MapboxMap component later
           mapFeature: {
             place_name, 
-            // Potentially add mapUrl or other details from toolOutput.mcp_response
-            mapUrl: toolOutput.mcp_response?.mapUrl 
+            mapUrl: toolOutput.mcp_response?.mapUrl,
+            routeGeoJSON: toolOutput.mcp_response?.routeGeoJSON
           } 
         }));
       } else {
