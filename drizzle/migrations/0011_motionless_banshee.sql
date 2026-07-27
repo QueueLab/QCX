@@ -1,0 +1,1 @@
+ALTER TABLE "skyfi_oauth_tokens" ADD COLUMN "redirect_uri" text;

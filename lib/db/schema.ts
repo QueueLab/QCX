@@ -142,6 +142,7 @@ export const skyfiOAuthTokens = pgTable('skyfi_oauth_tokens', {
   state: text('state'),
   registrationClientUri: text('registration_client_uri'),
   registrationAccessToken: text('registration_access_token'),
+  redirectUri: text('redirect_uri'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });

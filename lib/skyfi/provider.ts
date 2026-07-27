@@ -64,7 +64,7 @@ export class SkyfiOAuthProvider implements OAuthClientProvider {
     };
   }
 
-  async clientInformation(): Promise<OAuthClientInformationMixed | undefined> {
+  async clientInformation(): Promise<OAuthClientInformationMixed & { redirect_uri?: string } | undefined> {
     const [row] = await db.select()
       .from(skyfiOAuthTokens)
       .where(eq(skyfiOAuthTokens.userId, this.userId))
@@ -76,12 +76,13 @@ export class SkyfiOAuthProvider implements OAuthClientProvider {
         client_secret: decrypt(row.clientSecret) || undefined,
         registration_client_uri: row.registrationClientUri || undefined,
         registration_access_token: decrypt(row.registrationAccessToken) || undefined,
+        redirect_uri: row.redirectUri || undefined,
       };
     }
     return undefined;
   }
 
-  async saveClientInformation(clientInformation: OAuthClientInformationMixed): Promise<void> {
+  async saveClientInformation(clientInformation: OAuthClientInformationMixed & { redirect_uri?: string }): Promise<void> {
     await db.insert(skyfiOAuthTokens)
       .values({
         userId: this.userId,
@@ -89,6 +90,7 @@ export class SkyfiOAuthProvider implements OAuthClientProvider {
         clientSecret: encrypt(clientInformation.client_secret || null),
         registrationClientUri: clientInformation.registration_client_uri || null,
         registrationAccessToken: encrypt(clientInformation.registration_access_token || null),
+        redirectUri: clientInformation.redirect_uri || null,
       })
       .onConflictDoUpdate({
         target: skyfiOAuthTokens.userId,
@@ -97,6 +99,7 @@ export class SkyfiOAuthProvider implements OAuthClientProvider {
           clientSecret: encrypt(clientInformation.client_secret || null),
           registrationClientUri: clientInformation.registration_client_uri || null,
           registrationAccessToken: encrypt(clientInformation.registration_access_token || null),
+          redirectUri: clientInformation.redirect_uri || null,
           updatedAt: new Date(),
         }
       });
@@ -122,9 +125,11 @@ export class SkyfiOAuthProvider implements OAuthClientProvider {
     const nowSeconds = Math.floor(Date.now() / 1000);
     const expiresAt = row.tokenExpiry ? Math.floor(row.tokenExpiry.getTime() / 1000) : null;
 
-    // Check if token is expired or expiring in less than 60 seconds
-    if (expiresAt && expiresAt < nowSeconds + 60 && decryptedRefreshToken && row.clientId) {
-      console.log('[SkyfiProvider] Token expired or expiring soon. Refreshing token...');
+    // Check if token is expired, expiring in less than 60 seconds, or missing expiry entirely (conservative treatment)
+    const isExpiredOrMissingExpiry = !expiresAt || (expiresAt < nowSeconds + 60);
+
+    if (isExpiredOrMissingExpiry && decryptedRefreshToken && row.clientId) {
+      console.log('[SkyfiProvider] Token expired, expiring soon, or missing expiry. Refreshing token...');
       try {
         const response = await fetch('https://mcp.skyfi.com/oauth/token', {
           method: 'POST',

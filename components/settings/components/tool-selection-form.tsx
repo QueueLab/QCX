@@ -54,6 +54,7 @@ export function ToolSelectionForm({ form }: ToolSelectionFormProps) {
   const { toast } = useToast();
   const [skyfiConnected, setSkyfiConnected] = useState(false);
   const [skyfiBudget, setSkyfiBudget] = useState<string | null>(null);
+  const [skyfiExpired, setSkyfiExpired] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState(true);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
@@ -66,6 +67,7 @@ export function ToolSelectionForm({ form }: ToolSelectionFormProps) {
           const status = await getSkyfiConnectionStatus();
           setSkyfiConnected(status.connected);
           setSkyfiBudget(status.budget || null);
+          setSkyfiExpired(!!status.expired);
         } catch (err) {
           console.error("Failed to load SkyFi connection status:", err);
         } finally {
@@ -167,6 +169,104 @@ export function ToolSelectionForm({ form }: ToolSelectionFormProps) {
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Checking SkyFi connection status...
                   </div>
+                ) : skyfiExpired ? (
+                  <div className="space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 border rounded-xl bg-destructive/10 border-destructive/20 text-destructive-foreground dark:text-red-400">
+                      <Orbit className="h-10 w-10 shrink-0 text-destructive animate-pulse" />
+                      <div className="flex-1 space-y-1">
+                        <p className="font-semibold text-foreground">SkyFi Connection Expired/Unauthorized</p>
+                        <p className="text-xs text-muted-foreground">Your prior SkyFi authentication session is invalid, expired, or was revoked. Please reconnect to restore planetary intelligence access.</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={isConnecting}
+                          onClick={async () => {
+                            setIsConnecting(true);
+                            try {
+                              const res = await startSkyfiConnection();
+                              if (res.authRequired) {
+                                window.location.href = `/sign-in?redirect_url=${encodeURIComponent(window.location.href)}`;
+                                return;
+                              }
+                              if (res.error) {
+                                toast({
+                                  title: "Connection Error",
+                                  description: res.error,
+                                  variant: "destructive",
+                                });
+                                setIsConnecting(false);
+                                return;
+                              }
+                              if (res.url) {
+                                window.location.href = res.url;
+                              } else {
+                                throw new Error("No authorization URL returned from the connection action.");
+                              }
+                            } catch (err: any) {
+                              toast({
+                                title: "Connection Error",
+                                description: err.message || "Failed to initiate SkyFi connection.",
+                                variant: "destructive",
+                              });
+                              setIsConnecting(false);
+                            }
+                          }}
+                        >
+                          {isConnecting ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Connecting...
+                            </>
+                          ) : (
+                            "Reconnect"
+                          )}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          disabled={isDisconnecting}
+                          onClick={async () => {
+                            setIsDisconnecting(true);
+                            try {
+                              const res = await disconnectSkyfi();
+                              if (res.success) {
+                                setSkyfiConnected(false);
+                                setSkyfiBudget(null);
+                                setSkyfiExpired(false);
+                                toast({
+                                  title: "SkyFi Disconnected",
+                                  description: "Your SkyFi account has been disconnected.",
+                                });
+                              } else {
+                                throw new Error(res.error);
+                              }
+                            } catch (err: any) {
+                              toast({
+                                title: "Disconnection Error",
+                                description: err.message || "Failed to disconnect SkyFi.",
+                                variant: "destructive",
+                              });
+                            } finally {
+                              setIsDisconnecting(false);
+                            }
+                          }}
+                        >
+                          {isDisconnecting ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Disconnecting...
+                            </>
+                          ) : (
+                            "Disconnect"
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                 ) : skyfiConnected ? (
                   <div className="space-y-4">
                     <div className="flex items-center gap-4 p-4 border rounded-xl bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400">
@@ -193,6 +293,7 @@ export function ToolSelectionForm({ form }: ToolSelectionFormProps) {
                             if (res.success) {
                               setSkyfiConnected(false);
                               setSkyfiBudget(null);
+                              setSkyfiExpired(false);
                               toast({
                                 title: "SkyFi Disconnected",
                                 description: "Your SkyFi account has been disconnected.",
@@ -240,10 +341,18 @@ export function ToolSelectionForm({ form }: ToolSelectionFormProps) {
                             return;
                           }
                           if (res.error) {
-                            throw new Error(res.error);
+                            toast({
+                              title: "Connection Error",
+                              description: res.error,
+                              variant: "destructive",
+                            });
+                            setIsConnecting(false);
+                            return;
                           }
                           if (res.url) {
                             window.location.href = res.url;
+                          } else {
+                            throw new Error("No authorization URL returned from the connection action.");
                           }
                         } catch (err: any) {
                           toast({
