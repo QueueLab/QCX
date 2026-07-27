@@ -11,9 +11,6 @@
 
 ---
 
-## 📸 Platform Showcase
-
-### Interactive Planetary Copilot User Interface
 <img width="1882" height="850" alt="Screenshot 2026-07-27 101948" src="https://github.com/user-attachments/assets/55a4a45e-41db-4576-95b1-af435dcbb45d" />
 
 
