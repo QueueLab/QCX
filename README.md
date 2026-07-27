@@ -2,7 +2,7 @@
 
 # Quality Computer Experience (QCX)
 
-### The Ultimate Planetary Copilot & Geospatial Intelligence Platform
+### A Gravitational General Intelligence Interface. 
 
 [**Pricing**](https://buy.stripe.com/14A3cv7K72TR3go14Nasg02) &nbsp;|&nbsp; [**Land**](https://wwww.queue.cx) &nbsp;|&nbsp; [**X**](https://x.com/tryqcx)
 
@@ -14,14 +14,8 @@
 ## 📸 Platform Showcase
 
 ### Interactive Planetary Copilot User Interface
-Below is a full screenshot of the QCX Planetary Copilot in action, demonstrating the integrated interactive chat interface, multi-source search agent, calendar mission planner, and the dynamic Mapbox-powered geospatial visualizer:
+<img width="1882" height="850" alt="Screenshot 2026-07-27 101948" src="https://github.com/user-attachments/assets/55a4a45e-41db-4576-95b1-af435dcbb45d" />
 
-![QCX Planetary Copilot Platform](Quality%20Computer%20Experiences%20(6).png)
-
-### OpenGraph Branding & Geospatial Preview
-The application's branding and rich geospatial visualization preview:
-
-![QCX OpenGraph Preview](public/images/opengraph-image.png)
 
 ---
 
