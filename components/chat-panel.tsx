@@ -36,6 +36,7 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
   const [isMobile, setIsMobile] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
+  const [isFocused, setIsFocused] = useState(false)
   const [suggestions, setSuggestionsState] = useState<PartialRelated | null>(null)
   const setSuggestions = useCallback((s: PartialRelated | null) => {
     setSuggestionsState(s)
@@ -271,51 +272,62 @@ export const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(({ messages, i
               <Paperclip size={isMobile ? 18 : 20} />
             </Button>
           )}
-          <Textarea
-            ref={inputRef}
-            name="input"
-            rows={1}
-            maxRows={isMobile ? 3 : 5}
-            tabIndex={0}
-            placeholder={isUploading ? "Uploading document..." : "Explore"}
-            spellCheck={false}
-            value={input}
-            disabled={isUploading}
-            data-testid="chat-input"
-            className={cn(
-              'resize-none w-full min-h-12 rounded-fill border border-input pl-14 pr-12 pt-3 pb-1 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
-              isMobile
-                ? 'mobile-chat-input input bg-background'
-                : 'bg-muted'
-            )}
-            onChange={e => {
-              setInput(e.target.value)
-              debouncedGetSuggestions(e.target.value)
-            }}
-            onKeyDown={e => {
-              if (
-                e.key === 'Enter' &&
-                !e.shiftKey &&
-                !e.nativeEvent.isComposing
-              ) {
-                if (input.trim().length === 0 && !selectedFile) {
+          <div className="relative w-full flex items-center">
+            <Textarea
+              ref={inputRef}
+              name="input"
+              rows={1}
+              maxRows={isMobile ? 3 : 5}
+              tabIndex={0}
+              placeholder={(isFocused || input || selectedFile || isUploading) ? (isUploading ? "Uploading document..." : "Explore") : ""}
+              spellCheck={false}
+              value={input}
+              disabled={isUploading}
+              data-testid="chat-input"
+              className={cn(
+                'resize-none w-full min-h-12 rounded-fill border border-input pl-14 pr-12 pt-3 pb-1 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+                isMobile
+                  ? 'mobile-chat-input input bg-background'
+                  : 'bg-muted'
+              )}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
+              onChange={e => {
+                setInput(e.target.value)
+                debouncedGetSuggestions(e.target.value)
+              }}
+              onKeyDown={e => {
+                if (
+                  e.key === 'Enter' &&
+                  !e.shiftKey &&
+                  !e.nativeEvent.isComposing
+                ) {
+                  if (input.trim().length === 0 && !selectedFile) {
+                    e.preventDefault()
+                    return
+                  }
                   e.preventDefault()
-                  return
+                  formRef.current?.requestSubmit()
                 }
-                e.preventDefault()
-                formRef.current?.requestSubmit()
-              }
-            }}
-            onHeightChange={height => {
-              if (!inputRef.current) return
-              const initialHeight = 70
-              const initialBorder = 32
-              const multiple = (height - initialHeight) / 20
-              const newBorder = initialBorder - 4 * multiple
-              inputRef.current.style.borderRadius =
-                Math.max(8, newBorder) + 'px'
-            }}
-          />
+              }}
+              onHeightChange={height => {
+                if (!inputRef.current) return
+                const initialHeight = 70
+                const initialBorder = 32
+                const multiple = (height - initialHeight) / 20
+                const newBorder = initialBorder - 4 * multiple
+                inputRef.current.style.borderRadius =
+                  Math.max(8, newBorder) + 'px'
+              }}
+            />
+            {!isFocused && !input && !selectedFile && !isUploading && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <span className="text-sm font-medium bg-gradient-to-r from-muted-foreground/50 via-foreground/80 to-muted-foreground/50 bg-[length:200%_auto] bg-clip-text text-transparent animate-shimmer select-none">
+                  explore
+                </span>
+              </div>
+            )}
+          </div>
           <Button
             type="submit"
             size={'icon'}
