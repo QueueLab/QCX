@@ -149,10 +149,10 @@
 
   .mobile-icons-bar-content {
     display: flex;
-    gap: 16px;
-    padding: 0 10px;
-    min-width: max-content;
-    justify-content: flex-start;
+    width: 100%;
+    min-width: 100%;
+    padding: 0 12px;
+    justify-content: space-between;
   }
 
   .mobile-icons-bar-content > * {
