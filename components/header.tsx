@@ -29,7 +29,9 @@ export const Header = () => {
 
   useEffect(() => {
     // Open payment popup as soon as application opens
-    setIsPurchaseOpen(true)
+    if (process.env.NEXT_PUBLIC_PLAYWRIGHT_TEST !== 'true') {
+      setIsPurchaseOpen(true)
+    }
   }, [])
 
   return (
