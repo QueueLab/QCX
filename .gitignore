@@ -62,3 +62,6 @@ edge_function/
 
 # clerk configuration (can include secrets)
 /.clerk/
+
+# foglamp architecture scans (contains secrets like editToken)
+/.foglamp/
