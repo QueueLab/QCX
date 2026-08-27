@@ -406,7 +406,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
           pitch: initialPitch,
           bearing: initialBearing,
           maxZoom: 22,
-          attributionControl: true,
+          attributionControl: false,
           preserveDrawingBuffer: true
         })
 
