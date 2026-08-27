@@ -42,10 +42,12 @@ export const retrieveTool = ({ uiStream, fullResponse }: ToolProps) => ({
       hasError = true
       console.error('Retrieve API error:', error)
 
-      fullResponse += `\n${error} "${url}".`
+      fullResponse += `\nAn error occurred while retrieving content from "${url}".`
 
       uiStream.update(
-        <Card className="p-4 mt-2 text-sm">{`${error} "${url}".`}</Card>
+        <Card className="p-4 mt-2 text-sm">
+          {`An error occurred while retrieving content from "${url}".`}
+        </Card>
       )
       return results
     }

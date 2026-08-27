@@ -63,13 +63,9 @@ export function ChatHistoryClient({}: ChatHistoryClientProps) {
         const data: { chats: DrizzleChat[], nextOffset: number | null } = await response.json();
         setChats(data.chats);
       } catch (err) {
-        if (err instanceof Error) {
-          setError(err.message);
-          toast.error(`Error fetching chats: ${err.message}`);
-        } else {
-          setError('An unknown error occurred.');
-          toast.error('Error fetching chats: An unknown error occurred.');
-        }
+        console.error('Failed to fetch chats:', err);
+        setError('Failed to load chat history.');
+        toast.error('Unable to fetch chat history. Please try again.');
       } finally {
         setIsLoading(false);
       }
@@ -97,11 +93,8 @@ export function ChatHistoryClient({}: ChatHistoryClientProps) {
         setIsAlertDialogOpen(false);
         router.refresh();
       } catch (err) {
-        if (err instanceof Error) {
-          toast.error(err.message);
-        } else {
-          toast.error('An unknown error occurred while clearing history.');
-        }
+        console.error('Failed to clear chat history:', err);
+        toast.error('Unable to clear history. Please try again.');
         setIsAlertDialogOpen(false);
       }
     });

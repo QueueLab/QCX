@@ -278,7 +278,7 @@ async function submit(formData?: FormData, skip?: boolean) {
       };
     } catch (err: any) {
       console.error('Failed to parse files or initialize resolution search:', err);
-      const errorStream = createStreamableValue<string>(`Failed to perform resolution search: ${err?.message || 'Invalid parameters.'}`);
+      const errorStream = createStreamableValue<string>('Failed to perform resolution search. Please try again.');
       errorStream.done();
       isGenerating.done(false);
       uiStream.done();
