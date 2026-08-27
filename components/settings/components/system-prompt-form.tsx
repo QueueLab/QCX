@@ -34,9 +34,10 @@ export function SystemPromptForm({ form }: SystemPromptFormProps) {
     const result = await startSystemPromptGeneration(domain)
 
     if (result.error) {
+      console.error("System prompt generation initiation error:", result.error)
       toast({
         title: "Generation failed",
-        description: result.error,
+        description: "An error occurred starting prompt generation. Please try again.",
         variant: "destructive",
       })
       setIsGenerating(false)
@@ -69,12 +70,13 @@ export function SystemPromptForm({ form }: SystemPromptFormProps) {
         const job = await getSystemPromptGenerationJob(jobId)
 
         if (job.error || job.status === 'error') {
+          console.error("System prompt generation job error:", job.errorMessage || job.error)
           if (interval) clearInterval(interval)
           setJobId(null)
           setIsGenerating(false)
           toast({
             title: "Generation error",
-            description: job.errorMessage || job.error || "An error occurred during generation.",
+            description: "An error occurred during prompt generation. Please try again.",
             variant: "destructive",
           })
         } else if (job.status === 'complete') {

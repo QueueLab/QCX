@@ -150,10 +150,11 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
         description: "Your settings have been saved successfully.",
       })
     } catch (error: any) {
+      console.error("Failed to save settings:", error)
       // Error notification
       toast({
         title: "Something went wrong",
-        description: error.message || "Your settings could not be saved. Please try again.",
+        description: "Your settings could not be saved. Please try again.",
         variant: "destructive",
       })
     } finally {

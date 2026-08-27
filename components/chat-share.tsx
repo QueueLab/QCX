@@ -70,7 +70,8 @@ export function ChatShare({ chatId, className }: ChatShareProps) {
         setEmailInput('')
         fetchParticipants()
       } catch (err: any) {
-        toast.error(err.message || 'Error inviting collaborator')
+        console.error('Failed to add collaborator:', err)
+        toast.error('Unable to invite collaborator. Please check the details and try again.')
       }
     })
   }
@@ -93,7 +94,8 @@ export function ChatShare({ chatId, className }: ChatShareProps) {
       toast.success('Collaborator removed')
       fetchParticipants()
     } catch (err: any) {
-      toast.error(err.message || 'Error removing collaborator')
+      console.error('Failed to remove collaborator:', err)
+      toast.error('Unable to remove collaborator. Please try again.')
     }
   }
 
