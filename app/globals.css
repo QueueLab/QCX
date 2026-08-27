@@ -263,3 +263,12 @@
 .mapboxgl-ctrl-group button {
   pointer-events: auto !important;
 }
+
+/* Hide Mapbox logo, attribution, and bottom controls */
+.mapboxgl-ctrl-bottom-left,
+.mapboxgl-ctrl-bottom-right,
+.mapboxgl-ctrl-logo,
+.mapboxgl-ctrl-attrib,
+.mapboxgl-compact {
+  display: none !important;
+}
