@@ -118,7 +118,7 @@ async function submit(formData?: FormData, skip?: boolean) {
           message.type !== 'resolution_search_result'
       );
 
-      const userInput = 'Analyze this map view.';
+      const userInput = 'Resolution Search';
       const content: CoreMessage['content'] = [
         { type: 'text', text: userInput },
         { type: 'image', image: dataUrl, mimeType: (file as File).type }
@@ -133,7 +133,7 @@ async function submit(formData?: FormData, skip?: boolean) {
       });
       messages.push({ role: 'user', content });
 
-      const summaryStream = createStreamableValue<string>('Analyzing map view...');
+      const summaryStream = createStreamableValue<string>('Performing resolution search...');
       const groupeId = nanoid();
 
       const processResolutionSearch = async () => {
