@@ -72,7 +72,7 @@ export function HeaderSearchButton() {
         ...currentMessages,
         {
           id: nanoid(),
-          component: <UserMessage content={[{ type: 'text', text: 'Analyze this map view.' }]} />
+          component: <UserMessage content={[{ type: 'text', text: 'Resolution Search' }]} />
         }
       ])
 
@@ -172,7 +172,7 @@ export function HeaderSearchButton() {
       size="icon"
       onClick={handleResolutionSearch}
       disabled={isAnalyzing || !map || !actions}
-      title="Analyze current map view"
+      title="Resolution Search"
     >
       {isAnalyzing ? (
         <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-current"></div>
