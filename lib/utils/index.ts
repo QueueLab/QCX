@@ -80,7 +80,18 @@ export async function getModel(requireVision: boolean = false) {
     }
   }
 
-  // Default behavior: Grok -> Gemini -> Bedrock -> OpenAI
+  // Default behavior: OpenAI -> Grok -> Gemini -> Bedrock
+  if (openaiApiKey) {
+    try {
+      const openai = createOpenAI({
+        apiKey: openaiApiKey,
+      });
+      return openai('gpt-5.6-terra');
+    } catch (error) {
+      console.warn('OpenAI API unavailable, falling back to next provider:', error);
+    }
+  }
+
   if (xaiApiKey) {
     const xai = createXai({
       apiKey: xaiApiKey,
@@ -90,7 +101,7 @@ export async function getModel(requireVision: boolean = false) {
       const modelId = requireVision ? 'grok-latest' : 'grok-latest';
       return xai(modelId);
     } catch (error) {
-      console.warn('xAI API unavailable, falling back to next provider:');
+      console.warn('xAI API unavailable, falling back to next provider:', error);
     }
   }
 
