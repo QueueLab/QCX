@@ -1,9 +1,8 @@
 import { z } from 'zod'
 
-// This schema is designed to be compatible with xAI's OpenAI-compatible endpoint.
-// We use a flattened structure and avoid z.literal (which generates JSON Schema 'const')
-// and z.any() to ensure maximum compatibility with xAI's schema validation.
-// This follows the pattern established in lib/schema/geospatial.tsx.
+// OpenAI-compatible structured outputs reject unions of differently nested
+// arrays. Keep coordinates as JSON text at the model boundary and parse plus
+// validate them before they reach GeoJSON consumers.
 
 export const resolutionSearchSchema = z.object({
   summary: z.string().describe('A detailed text summary of the analysis, including land feature classification, points of interest, relevant current news, and temporal context.'),
@@ -14,10 +13,7 @@ export const resolutionSearchSchema = z.object({
     features: z.array(z.object({
       type: z.string().describe("Must be 'Feature'"),
       geometryType: z.string().describe("The type of geometry, e.g., 'Point', 'Polygon'"),
-      coordinates: z.array(z.number())
-        .or(z.array(z.array(z.number())))
-        .or(z.array(z.array(z.array(z.number()))))
-        .describe('Coordinates for the geometry'),
+      coordinates: z.string().describe('Coordinates as a JSON-stringified array, e.g. "[13.4, 52.5]" for Point or "[[[13.4, 52.5], [13.5, 52.5], [13.5, 52.6], [13.4, 52.5]]]" for Polygon.'),
       name: z.string().describe('Name of the feature or point of interest'),
       description: z.string().optional().describe('Description of the feature')
     }))
@@ -38,4 +34,4 @@ export const resolutionSearchSchema = z.object({
   })).optional().describe('List of recent news items relevant to the location.')
 })
 
-export type ResolutionSearch = z.infer<typeof resolutionSearchSchema>;
+export type ResolutionSearch = z.infer<typeof resolutionSearchSchema>

@@ -142,7 +142,7 @@ Use these user-drawn areas/lines as primary areas of interest for your analysis.
 4. **Coordinate Extraction:** If possible, confirm or refine the geocoordinates (latitude/longitude) of the center of the image.
 5. **COG Applicability:** Determine if this location would benefit from Cloud Optimized GeoTIFF (COG) analysis for high-precision temporal or spectral data.
 6. **News Integration:** Reference any recent news or events that may be relevant to the current state of the location.
-7. **Structured Output:** Return your findings in a structured JSON format including summary, geoJson (if any), news context, and any extracted coordinates or COG information. Use the provided schema.
+7. **Structured Output:** Return your findings in a structured JSON format including summary, geoJson (if any), news context, and any extracted coordinates or COG information. Use the provided schema. Encode each feature's coordinates as a valid JSON string: use [longitude, latitude] for Point features and nested arrays for Polygon or LineString features.
 
 Your analysis should be based on the visual information in the image, the temporal context provided, and your general knowledge. Do not attempt to access external websites or perform web searches beyond what has been provided.
 

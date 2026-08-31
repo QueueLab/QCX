@@ -194,10 +194,12 @@ export async function researcher(
 
       case 'error':
         hasError = true
-        fullResponse += `\n\nError: Tool execution failed.`
+        fullResponse += `\n\nError: Model response generation failed.`
         break
     }
   }
+
+  streamText.done(fullResponse)
 
   messages.push({
     role: 'assistant',

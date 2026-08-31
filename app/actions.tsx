@@ -151,22 +151,51 @@ async function submit(formData?: FormData, skip?: boolean) {
           const analysisResult = await streamResult.object;
           summaryStream.done(analysisResult.summary || 'Analysis complete.');
 
-          // Reconstruct standard GeoJSON from flattened schema if present
+          // Reconstruct standard GeoJSON from flattened schema if present.
+          // Structured-output models should return flat Point coordinates, but
+          // validate recursively so malformed or legacy nested data cannot
+          // reach the map layer or persisted assistant state.
+          const isValidCoordinates = (value: unknown): value is number[] | unknown[] => {
+            if (!Array.isArray(value) || value.length === 0) return false
+            return value.every(item =>
+              Array.isArray(item)
+                ? isValidCoordinates(item)
+                : typeof item === 'number' && Number.isFinite(item)
+            )
+          }
+
           let geoJson: FeatureCollection | null = null;
           if (analysisResult.geoJson && analysisResult.geoJson.features) {
             geoJson = {
               type: 'FeatureCollection',
-              features: analysisResult.geoJson.features.map(f => ({
-                type: 'Feature',
-                geometry: {
-                  type: f.geometryType as any,
-                  coordinates: f.coordinates as any
-                },
-                properties: {
-                  name: f.name,
-                  description: f.description
+              features: analysisResult.geoJson.features.flatMap(f => {
+                let parsedCoords: unknown = f.coordinates;
+                if (typeof parsedCoords === 'string') {
+                  try {
+                    parsedCoords = JSON.parse(parsedCoords);
+                  } catch (error) {
+                    console.error('Failed to parse feature coordinates:', error);
+                    return [];
+                  }
                 }
-              }))
+
+                if (!isValidCoordinates(parsedCoords)) {
+                  console.warn('Skipping feature with invalid coordinates:', f.name);
+                  return [];
+                }
+
+                return [{
+                  type: 'Feature',
+                  geometry: {
+                    type: f.geometryType as any,
+                    coordinates: parsedCoords as any
+                  },
+                  properties: {
+                    name: f.name,
+                    description: f.description
+                  }
+                }];
+              })
             };
           }
 
