@@ -151,31 +151,50 @@ async function submit(formData?: FormData, skip?: boolean) {
           const analysisResult = await streamResult.object;
           summaryStream.done(analysisResult.summary || 'Analysis complete.');
 
-          // Reconstruct standard GeoJSON from flattened schema if present
+          // Reconstruct standard GeoJSON from flattened schema if present.
+          // Structured-output models should return flat Point coordinates, but
+          // validate recursively so malformed or legacy nested data cannot
+          // reach the map layer or persisted assistant state.
+          const isValidCoordinates = (value: unknown): value is number[] | unknown[] => {
+            if (!Array.isArray(value) || value.length === 0) return false
+            return value.every(item =>
+              Array.isArray(item)
+                ? isValidCoordinates(item)
+                : typeof item === 'number' && Number.isFinite(item)
+            )
+          }
+
           let geoJson: FeatureCollection | null = null;
           if (analysisResult.geoJson && analysisResult.geoJson.features) {
             geoJson = {
               type: 'FeatureCollection',
-              features: analysisResult.geoJson.features.map(f => {
-                let parsedCoords: any = f.coordinates;
+              features: analysisResult.geoJson.features.flatMap(f => {
+                let parsedCoords: unknown = f.coordinates;
                 if (typeof parsedCoords === 'string') {
                   try {
                     parsedCoords = JSON.parse(parsedCoords);
-                  } catch (e) {
-                    console.error('Failed to parse feature coordinates:', e);
+                  } catch (error) {
+                    console.error('Failed to parse feature coordinates:', error);
+                    return [];
                   }
                 }
-                return {
+
+                if (!isValidCoordinates(parsedCoords)) {
+                  console.warn('Skipping feature with invalid coordinates:', f.name);
+                  return [];
+                }
+
+                return [{
                   type: 'Feature',
                   geometry: {
                     type: f.geometryType as any,
-                    coordinates: parsedCoords
+                    coordinates: parsedCoords as any
                   },
                   properties: {
                     name: f.name,
                     description: f.description
                   }
-                };
+                }];
               })
             };
           }

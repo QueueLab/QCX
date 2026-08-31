@@ -1,9 +1,8 @@
 import { z } from 'zod'
 
-// This schema is designed to be compatible with xAI's OpenAI-compatible endpoint.
-// We use a flattened structure and avoid z.literal (which generates JSON Schema 'const')
-// and z.any() to ensure maximum compatibility with xAI's schema validation.
-// This follows the pattern established in lib/schema/geospatial.tsx.
+// OpenAI Structured Outputs does not reliably support unions of differently
+// nested arrays. Keep the model-facing contract flat and validate coordinates
+// before they reach GeoJSON consumers.
 
 export const resolutionSearchSchema = z.object({
   summary: z.string().describe('A detailed text summary of the analysis, including land feature classification, points of interest, relevant current news, and temporal context.'),
@@ -13,12 +12,12 @@ export const resolutionSearchSchema = z.object({
     type: z.string().describe("Must be 'FeatureCollection'"),
     features: z.array(z.object({
       type: z.string().describe("Must be 'Feature'"),
-      geometryType: z.string().describe("The type of geometry, e.g., 'Point', 'Polygon'"),
-      coordinates: z.array(z.number()).describe('Longitude and latitude numbers, e.g. [13.4, 52.5]'),
+      geometryType: z.string().describe("Use 'Point' for structured-output compatibility."),
+      coordinates: z.array(z.number()).describe('A longitude/latitude pair for a Point feature, e.g. [13.4, 52.5]. Do not nest this array.'),
       name: z.string().describe('Name of the feature or point of interest'),
       description: z.string().optional().describe('Description of the feature')
     }))
-  }).optional().describe('A collection of points of interest and classified land features to be overlaid on the map.'),
+  }).optional().describe('A collection of point features to overlay on the map. Describe polygonal or line features in the summary instead.'),
 
   // Flattened top-level fields for better xAI compatibility
   extractedLatitude: z.number().optional().describe('The extracted latitude of the center of the image.'),
@@ -35,4 +34,4 @@ export const resolutionSearchSchema = z.object({
   })).optional().describe('List of recent news items relevant to the location.')
 })
 
-export type ResolutionSearch = z.infer<typeof resolutionSearchSchema>;
+export type ResolutionSearch = z.infer<typeof resolutionSearchSchema>
