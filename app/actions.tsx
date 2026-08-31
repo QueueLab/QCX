@@ -157,11 +157,13 @@ async function submit(formData?: FormData, skip?: boolean) {
             geoJson = {
               type: 'FeatureCollection',
               features: analysisResult.geoJson.features.map(f => {
-                let parsedCoords: any = [];
-                try {
-                  parsedCoords = typeof f.coordinates === 'string' ? JSON.parse(f.coordinates) : f.coordinates;
-                } catch (e) {
-                  console.error('Failed to parse feature coordinates:', e);
+                let parsedCoords: any = f.coordinates;
+                if (typeof parsedCoords === 'string') {
+                  try {
+                    parsedCoords = JSON.parse(parsedCoords);
+                  } catch (e) {
+                    console.error('Failed to parse feature coordinates:', e);
+                  }
                 }
                 return {
                   type: 'Feature',

@@ -14,7 +14,7 @@ export const resolutionSearchSchema = z.object({
     features: z.array(z.object({
       type: z.string().describe("Must be 'Feature'"),
       geometryType: z.string().describe("The type of geometry, e.g., 'Point', 'Polygon'"),
-      coordinates: z.string().describe('Coordinates for the geometry as a JSON stringified array, e.g., "[13.4, 52.5]" for Point or "[[[13.4, 52.5], [13.5, 52.5], [13.5, 52.6], [13.4, 52.5]]]" for Polygon'),
+      coordinates: z.array(z.number()).describe('Longitude and latitude numbers, e.g. [13.4, 52.5]'),
       name: z.string().describe('Name of the feature or point of interest'),
       description: z.string().optional().describe('Description of the feature')
     }))
