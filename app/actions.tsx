@@ -156,17 +156,25 @@ async function submit(formData?: FormData, skip?: boolean) {
           if (analysisResult.geoJson && analysisResult.geoJson.features) {
             geoJson = {
               type: 'FeatureCollection',
-              features: analysisResult.geoJson.features.map(f => ({
-                type: 'Feature',
-                geometry: {
-                  type: f.geometryType as any,
-                  coordinates: f.coordinates as any
-                },
-                properties: {
-                  name: f.name,
-                  description: f.description
+              features: analysisResult.geoJson.features.map(f => {
+                let parsedCoords: any = [];
+                try {
+                  parsedCoords = typeof f.coordinates === 'string' ? JSON.parse(f.coordinates) : f.coordinates;
+                } catch (e) {
+                  console.error('Failed to parse feature coordinates:', e);
                 }
-              }))
+                return {
+                  type: 'Feature',
+                  geometry: {
+                    type: f.geometryType as any,
+                    coordinates: parsedCoords
+                  },
+                  properties: {
+                    name: f.name,
+                    description: f.description
+                  }
+                };
+              })
             };
           }
 

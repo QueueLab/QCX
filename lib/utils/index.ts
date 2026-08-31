@@ -86,7 +86,7 @@ export async function getModel(requireVision: boolean = false) {
       const openai = createOpenAI({
         apiKey: openaiApiKey,
       });
-      return openai('gpt-5.6-terra');
+      return openai('gpt-4o');
     } catch (error) {
       console.warn('OpenAI API unavailable, falling back to next provider:', error);
     }
