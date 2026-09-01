@@ -149,7 +149,6 @@ export async function getSkyfiConnectionStatus(): Promise<{ connected: boolean; 
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${tokens.access_token}`,
-          'X-Skyfi-Api-Key': tokens.access_token,
         },
         body: JSON.stringify({
           jsonrpc: '2.0',

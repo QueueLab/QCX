@@ -48,7 +48,6 @@ async function getConnectedSkyfiMcpClient(accessToken: string, signal?: AbortSig
       requestInit: {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
-          'X-Skyfi-Api-Key': accessToken,
         },
         signal,
       }
