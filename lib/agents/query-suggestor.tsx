@@ -4,6 +4,7 @@ import { PartialRelated, relatedSchema } from '@/lib/schema/related'
 import { Section } from '@/components/section'
 import SearchRelated from '@/components/search-related'
 import { getModel } from '../utils'
+import { FOLLOWUP_TIMEOUT_MS, createDeadlineSignal, withTimeout } from '@/lib/utils/with-timeout'
 
 interface CacheEntry {
   data: PartialRelated;
@@ -54,36 +55,55 @@ export async function querySuggestor(
 
   let finalRelatedQueries: PartialRelated = {}
   
-  // OPTIMIZATION: Use a more concise system prompt to reduce token usage
-  const result = await streamObject({
-    model: (await getModel()) as LanguageModel,
-    system: `Generate 3 follow-up queries that explore the subject matter deeper. Format as JSON with an "items" array containing objects with "query" fields. Keep queries concise and relevant.`,
-    messages,
-    schema: relatedSchema,
-    temperature: 0.7, // Lower temperature for more consistent results
-  })
+  let result: any
+  try {
+    result = await withTimeout(Promise.resolve(streamObject({
+      model: (await getModel()) as LanguageModel,
+      system: `Generate exactly 3 concise follow-up queries that deepen the user's subject. Return only an object with an "items" array of objects containing non-empty "query" strings. Do not invent facts not present in the conversation.`,
+      messages,
+      schema: relatedSchema,
+      temperature: 0,
+      maxTokens: 300,
+      abortSignal: createDeadlineSignal(FOLLOWUP_TIMEOUT_MS),
+    })), FOLLOWUP_TIMEOUT_MS, 'Follow-up generation')
+  } catch (error) {
+    console.error('Follow-up generation unavailable:', error)
+    const fallback: PartialRelated = { items: [] }
+    objectStream.done(fallback)
+    queryCache.set(cacheKey, { data: fallback, timestamp: Date.now() })
+    return fallback
+  }
 
   // OPTIMIZATION: Stream updates but batch them to reduce re-render frequency
   let lastUpdateTime = Date.now();
   const UPDATE_THROTTLE = 200; // ms
 
-  for await (const obj of result.partialObjectStream) {
-    if (obj && typeof obj === 'object' && 'items' in obj) {
-      const now = Date.now();
-      // Only update UI if enough time has passed since last update
-      if (now - lastUpdateTime > UPDATE_THROTTLE) {
-        objectStream.update(obj as PartialRelated)
-        lastUpdateTime = now;
+  try {
+    for await (const obj of result.partialObjectStream) {
+      if (obj && typeof obj === 'object' && 'items' in obj) {
+        const now = Date.now();
+        // Only update UI if enough time has passed since last update
+        if (now - lastUpdateTime > UPDATE_THROTTLE) {
+          objectStream.update(obj as PartialRelated)
+          lastUpdateTime = now;
+        }
+        finalRelatedQueries = obj as PartialRelated
       }
-      finalRelatedQueries = obj as PartialRelated
     }
+  } catch (error) {
+    console.error('Follow-up stream interrupted:', error)
   }
 
-  objectStream.done()
+  const safeResult: PartialRelated = {
+    items: (finalRelatedQueries.items || [])
+      .filter((item): item is { query: string } => typeof item?.query === 'string' && item.query.trim().length > 0)
+      .slice(0, 3)
+      .map(item => ({ query: item.query.trim() }))
+  }
   
   // OPTIMIZATION: Cache the result
   queryCache.set(cacheKey, {
-    data: finalRelatedQueries,
+    data: safeResult,
     timestamp: Date.now()
   });
   
@@ -95,5 +115,6 @@ export async function querySuggestor(
     }
   }
 
-  return finalRelatedQueries
+  objectStream.done(safeResult)
+  return safeResult
 }

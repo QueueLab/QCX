@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card'
 import { SearchSkeleton } from '@/components/search-skeleton'
 import { SearchResults as SearchResultsType } from '@/lib/types'
 import RetrieveSection from '@/components/retrieve-section'
+import { createDeadlineSignal } from '@/lib/utils/with-timeout'
 
 export const retrieveTool = ({ uiStream, fullResponse }: ToolProps) => ({
   description: 'Retrieve content from the web',
@@ -17,6 +18,7 @@ export const retrieveTool = ({ uiStream, fullResponse }: ToolProps) => ({
     try {
       const response = await fetch(`https://r.jina.ai/${url}`, {
         method: 'GET',
+        signal: createDeadlineSignal(10_000),
         headers: {
           Accept: 'application/json',
           'X-With-Generated-Alt': 'true'

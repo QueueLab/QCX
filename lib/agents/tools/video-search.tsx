@@ -3,6 +3,7 @@ import { searchSchema } from '@/lib/schema/search'
 import { Card } from '@/components/ui/card'
 import { ToolProps } from '.'
 import { VideoSearchSection } from '@/components/video-search-section'
+import { createDeadlineSignal } from '@/lib/utils/with-timeout'
 
 // Start Generation Here
 export const videoSearchTool = ({ uiStream, fullResponse }: ToolProps) => ({
@@ -18,6 +19,7 @@ export const videoSearchTool = ({ uiStream, fullResponse }: ToolProps) => ({
     try {
       const response = await fetch('https://google.serper.dev/videos', {
         method: 'POST',
+        signal: createDeadlineSignal(10_000),
         headers: {
           'X-API-KEY': process.env.SERPER_API_KEY || '',
           'Content-Type': 'application/json'

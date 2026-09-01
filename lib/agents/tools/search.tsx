@@ -4,6 +4,7 @@ import { searchSchema } from '@/lib/schema/search'
 import { Card } from '@/components/ui/card'
 import { SearchSection } from '@/components/search-section'
 import { ToolProps } from '.'
+import { withTimeout } from '@/lib/utils/with-timeout'
 
 export const searchTool = ({ uiStream, fullResponse }: ToolProps) => ({
   description: 'Search the web for information',
@@ -39,16 +40,20 @@ export const searchTool = ({ uiStream, fullResponse }: ToolProps) => ({
       query.length < 5 ? query + ' '.repeat(5 - query.length) : query
     let searchResult
     try {
-      searchResult = await tavilySearch(
-        filledQuery,
-        max_results,
-        search_depth,
-        include_answer,
-        topic,
-        time_range,
-        include_images,
-        include_image_descriptions,
-        include_raw_content
+      searchResult = await withTimeout(
+        tavilySearch(
+          filledQuery,
+          max_results,
+          search_depth,
+          include_answer,
+          topic,
+          time_range,
+          include_images,
+          include_image_descriptions,
+          include_raw_content
+        ),
+        12_000,
+        'Web search'
       )
     } catch (error) {
       console.error('Search API error:', error)

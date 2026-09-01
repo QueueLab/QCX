@@ -2,6 +2,7 @@ import { CoreMessage, streamObject } from 'ai'
 import { getModel } from '@/lib/utils'
 import { tavily } from '@tavily/core'
 import { resolutionSearchSchema } from '@/lib/schema/resolution-search'
+import { AI_REQUEST_TIMEOUT_MS, ENRICHMENT_TIMEOUT_MS, createDeadlineSignal, withTimeout } from '@/lib/utils/with-timeout'
 
 // This agent is now a pure data-processing module, with no UI dependencies.
 
@@ -10,6 +11,20 @@ export interface DrawnFeature {
   type: 'Polygon' | 'LineString';
   measurement: string;
   geometry: any;
+}
+
+function formatDrawingContext(features: DrawnFeature[] = []): string {
+  const validFeatures = (Array.isArray(features) ? features : []).filter(feature =>
+    feature &&
+    (feature.type === 'Polygon' || feature.type === 'LineString') &&
+    typeof feature.measurement === 'string' &&
+    feature.geometry &&
+    Array.isArray(feature.geometry.coordinates)
+  )
+  return validFeatures.slice(0, 20).map((feature, index) =>
+    `Drawing ${index + 1}: ${feature.type}; measured ${feature.measurement}; ` +
+    `GeoJSON geometry: ${JSON.stringify(feature.geometry)}`
+  ).join('\n')
 }
 
 /**
@@ -52,7 +67,10 @@ async function getReverseGeocode(lat: number, lng: number): Promise<string> {
   try {
     const response = await fetch(
       `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`,
-      { headers: { 'User-Agent': 'QCX-ResolutionSearch' } }
+      {
+        headers: { 'User-Agent': 'QCX-ResolutionSearch' },
+        signal: createDeadlineSignal(ENRICHMENT_TIMEOUT_MS)
+      }
     )
     const data = await response.json()
     return data.address?.city || data.address?.county || data.address?.country || 'Unknown Location'
@@ -96,12 +114,18 @@ export async function resolutionSearch(messages: CoreMessage[], timezone: string
   let locationName = 'this location';
   let newsContext = '';
   
-  if (location?.lat && location?.lng) {
+  if (location && Number.isFinite(location.lat) && Number.isFinite(location.lng)) {
     try {
-      locationName = await getReverseGeocode(location.lat, location.lng);
-      
-      // OPTIMIZATION: Fetch news in parallel with AI analysis
-      const newsData = await fetchLocationNews(locationName, timezone);
+      locationName = await withTimeout(
+        getReverseGeocode(location.lat, location.lng),
+        ENRICHMENT_TIMEOUT_MS,
+        'Reverse geocoding'
+      );
+      const newsData = await withTimeout(
+        fetchLocationNews(locationName, timezone),
+        ENRICHMENT_TIMEOUT_MS,
+        'Location news'
+      );
       
       if (newsData.hasRecentNews && newsData.newsItems.length > 0) {
         newsContext = `\n\nRecent News for ${locationName}:\n${newsData.newsItems
@@ -113,6 +137,7 @@ export async function resolutionSearch(messages: CoreMessage[], timezone: string
     }
   }
 
+  const drawingContext = formatDrawingContext(drawnFeatures)
   const systemPrompt = `
 As a geospatial analyst, your task is to analyze the provided satellite image of a geographic location.
 
@@ -129,9 +154,8 @@ ${newsContext}
 
 Please incorporate this recent news context into your analysis where relevant.` : ''}
 
-${drawnFeatures && drawnFeatures.length > 0 ? `**User-Drawn Features:**
-The user has drawn the following features on the map for your reference:
-${drawnFeatures.map(f => `- ${f.type} (${f.measurement}): ${JSON.stringify(f.geometry)}`).join('\n')}
+${drawingContext ? `**User-Drawn Features (authoritative context):**
+${drawingContext}
 Use these user-drawn areas/lines as primary areas of interest for your analysis.` : ''}
 
 **Analysis Requirements:**
@@ -150,6 +174,12 @@ Analyze the user's prompt and the image to provide a holistic understanding of t
 `;
 
   const filteredMessages = messages.filter(msg => msg.role !== 'system');
+  if (drawingContext) {
+    filteredMessages.push({
+      role: 'user',
+      content: `Use these measured map drawings as authoritative analysis constraints. Refer to their exact type, measurement, and coordinates in your answer:\n${drawingContext}`
+    })
+  }
 
   // Check if any message contains an image (resolution search is specifically for image analysis)
   const hasImage = messages.some((message: any) =>
@@ -158,10 +188,13 @@ Analyze the user's prompt and the image to provide a holistic understanding of t
   )
 
   // Use streamObject to get partial results.
-  return streamObject({
+  return withTimeout(Promise.resolve(streamObject({
     model: await getModel(hasImage),
     system: systemPrompt,
     messages: filteredMessages,
     schema: resolutionSearchSchema,
-  })
+    temperature: 0,
+    maxTokens: 1800,
+    abortSignal: createDeadlineSignal(AI_REQUEST_TIMEOUT_MS),
+  })), AI_REQUEST_TIMEOUT_MS, 'Resolution analysis')
 }

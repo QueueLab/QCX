@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useMemo } from 'react'
+import React, { useCallback, useMemo, useState } from 'react'
 import { Button } from './ui/button'
 import { ArrowRight } from 'lucide-react'
 import {
@@ -13,6 +13,7 @@ import { AI } from '@/app/actions'
 import { UserMessage } from './user-message'
 import { PartialRelated } from '@/lib/schema/related'
 import { nanoid } from '@/lib/utils'
+import { useMapData } from './map/map-data-context'
 
 export interface SearchRelatedProps {
   relatedQueries: StreamableValue<PartialRelated, any>
@@ -28,24 +29,38 @@ export const SearchRelated: React.FC<SearchRelatedProps> = React.memo(({
   const { submit } = useActions()
   const [, setMessages] = useUIState<typeof AI>()
   const [data] = useStreamableValue<PartialRelated>(relatedQueries)
+  const { mapData } = useMapData()
+  const [pendingQuery, setPendingQuery] = useState<string | null>(null)
 
   // OPTIMIZATION: Memoize click handler with useCallback
   const handleRelatedClick = useCallback(async (query: string) => {
+    if (!query.trim()) return
+    const normalizedQuery = query.trim()
+    if (pendingQuery) return
+    setPendingQuery(normalizedQuery)
     const formData = new FormData()
-    formData.append('related_query', query)
+    formData.append('related_query', normalizedQuery)
+    formData.append('drawnFeatures', JSON.stringify(mapData.drawnFeatures || []))
 
     const userMessage = {
       id: nanoid(),
       component: <UserMessage content={query} />
     }
 
-    const responseMessage = await submit(formData)
-    setMessages(currentMessages => [
-      ...currentMessages,
-      userMessage,
-      responseMessage
-    ])
-  }, [submit, setMessages])
+    try {
+      const responseMessage = await submit(formData)
+      setMessages(currentMessages => [...currentMessages, userMessage, responseMessage])
+    } catch (error) {
+      console.error('Failed to submit related query:', error)
+      setMessages(currentMessages => [
+        ...currentMessages,
+        userMessage,
+        { id: nanoid(), component: <div className="text-sm text-destructive">Unable to complete this follow-up. Please try again.</div> }
+      ])
+    } finally {
+      setPendingQuery(null)
+    }
+  }, [submit, setMessages, mapData.drawnFeatures, pendingQuery])
 
   // OPTIMIZATION: Memoize filtered and mapped items
   const relatedItems = useMemo(() => {
@@ -60,6 +75,7 @@ export const SearchRelated: React.FC<SearchRelatedProps> = React.memo(({
           <Button
             variant="link"
             className="flex-1 justify-start px-0 py-1 h-fit font-semibold text-accent-foreground/50 whitespace-normal text-left"
+            disabled={pendingQuery !== null}
             onClick={() => handleRelatedClick(item?.query || '')}
           >
             {item?.query}

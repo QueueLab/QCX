@@ -14,6 +14,7 @@ import { getModel } from '../utils'
 import { MapProvider } from '@/lib/store/settings'
 import { DrawnFeature } from './resolution-search'
 import { getSelectedModel } from '@/lib/actions/users'
+import { AI_REQUEST_TIMEOUT_MS, createDeadlineSignal } from '@/lib/utils/with-timeout'
 
 // This magic tag lets us write raw multi-line strings with backticks, arrows, etc.
 const raw = String.raw
@@ -157,7 +158,9 @@ export async function researcher(
 
   const result = await nonexperimental_streamText({
     model: (await getModel(hasImage)) as LanguageModel,
-    maxTokens: 4096,
+    maxTokens: 2500,
+    temperature: 0,
+    abortSignal: createDeadlineSignal(AI_REQUEST_TIMEOUT_MS),
     system: systemPromptToUse,
     messages,
     tools: getTools({ uiStream, fullResponse, mapProvider, selectedModel, drawnFeatures }),
