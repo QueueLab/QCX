@@ -18,13 +18,13 @@ const { getRedirectUri } = await import('../lib/actions/skyfi');
 
 console.log('Starting SkyFi plugin unit tests...');
 
-// 1. Test getRedirectUri with NEXT_PUBLIC_APP_URL set
+// 1. The public request host must win even when NEXT_PUBLIC_APP_URL is stale.
 process.env.NEXT_PUBLIC_APP_URL = 'https://custom-domain.com';
 const redirectUriEnv = await getRedirectUri();
-if (redirectUriEnv !== 'https://custom-domain.com/api/skyfi/callback') {
-  throw new Error(`getRedirectUri failed with ENV. Expected 'https://custom-domain.com/api/skyfi/callback', got '${redirectUriEnv}'`);
+if (redirectUriEnv !== 'https://proxy-host.com/api/skyfi/callback') {
+  throw new Error(`getRedirectUri request-host precedence failed. Expected 'https://proxy-host.com/api/skyfi/callback', got '${redirectUriEnv}'`);
 }
-console.log('✓ getRedirectUri prioritizing NEXT_PUBLIC_APP_URL verified');
+console.log('✓ getRedirectUri prioritizing the public request host verified');
 
 // 2. Test getRedirectUri fallback with proxy headers without NEXT_PUBLIC_APP_URL
 delete process.env.NEXT_PUBLIC_APP_URL;

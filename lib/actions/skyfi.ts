@@ -11,10 +11,6 @@ import crypto from 'crypto';
 import { headers } from 'next/headers';
 
 export async function getRedirectUri(): Promise<string> {
-  if (process.env.NEXT_PUBLIC_APP_URL) {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '');
-    return `${baseUrl}/api/skyfi/callback`;
-  }
   try {
     const headersList = await headers();
     const host = headersList.get('x-forwarded-host') || headersList.get('host');
@@ -23,7 +19,11 @@ export async function getRedirectUri(): Promise<string> {
       return `${proto}://${host}/api/skyfi/callback`;
     }
   } catch (e) {
-    console.warn('[Skyfi] Failed to get host from headers, falling back to ENV:', e);
+    console.warn('[Skyfi] Failed to get host from headers, falling back to NEXT_PUBLIC_APP_URL:', e);
+  }
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '');
+    return `${baseUrl}/api/skyfi/callback`;
   }
   return 'http://localhost:3000/api/skyfi/callback';
 }
