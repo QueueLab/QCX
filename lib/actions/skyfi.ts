@@ -10,19 +10,31 @@ import crypto from 'crypto';
 
 import { headers } from 'next/headers';
 
+import { getClerkUserIdOnServer, resolveClerkUserToDbUser } from '@/lib/auth/get-current-user';
+
 export async function getRedirectUri(): Promise<string> {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (baseUrl) {
+    return `${baseUrl}/api/skyfi/callback`;
+  }
   try {
     const headersList = await headers();
+    const forwardedProto = headersList.get('x-forwarded-proto');
+    const forwardedHost = headersList.get('x-forwarded-host');
     const host = headersList.get('host');
-    if (host) {
-      const protocol = host.startsWith('localhost') || host.startsWith('127.0.0.1') ? 'http' : 'https';
-      return `${protocol}://${host}/api/skyfi/callback`;
+
+    const finalHost = forwardedHost || host;
+    if (finalHost) {
+      let finalProto = forwardedProto;
+      if (!finalProto) {
+        finalProto = finalHost.startsWith('localhost') || finalHost.startsWith('127.0.0.1') || finalHost.startsWith('3000') || finalHost.startsWith('3001') ? 'http' : 'https';
+      }
+      return `${finalProto}://${finalHost}/api/skyfi/callback`;
     }
   } catch (e) {
-    console.warn('[Skyfi] Failed to get host from headers, falling back to ENV:', e);
+    console.warn('[Skyfi] Failed to get host from headers:', e);
   }
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-  return `${baseUrl}/api/skyfi/callback`;
+  return 'http://localhost:3000/api/skyfi/callback';
 }
 
 /**
@@ -30,11 +42,11 @@ export async function getRedirectUri(): Promise<string> {
  * Uses an AbortController with a 10s timeout to prevent hanging.
  */
 async function ensureClientRegistered(provider: SkyfiOAuthProvider, forceRegister: boolean = false): Promise<string> {
-  if (!forceRegister) {
-    const currentInfo = await provider.clientInformation();
-    if (currentInfo?.client_id) {
-      return currentInfo.client_id;
-    }
+  const currentInfo = await provider.clientInformation();
+  const currentRedirectUri = provider.redirectUrl?.toString();
+
+  if (!forceRegister && currentInfo?.client_id && currentInfo?.redirect_uri === currentRedirectUri) {
+    return currentInfo.client_id;
   }
 
   console.log('[SkyFiAction] Client not registered or force-register active. Registering dynamically...');
@@ -48,7 +60,7 @@ async function ensureClientRegistered(provider: SkyfiOAuthProvider, forceRegiste
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         client_name: 'QCX Planetary Copilot',
-        redirect_uris: [provider.redirectUrl?.toString()],
+        redirect_uris: [currentRedirectUri],
         token_endpoint_auth_method: 'none',
         grant_types: ['authorization_code', 'refresh_token'],
         response_types: ['code'],
@@ -63,11 +75,16 @@ async function ensureClientRegistered(provider: SkyfiOAuthProvider, forceRegiste
     }
 
     const data = await res.json();
+    if (!data || !data.client_id) {
+      throw new Error('Dynamic Client Registration response did not contain a valid client_id.');
+    }
+
     await provider.saveClientInformation({
       client_id: data.client_id,
       client_secret: data.client_secret || null,
       registration_client_uri: data.registration_client_uri || null,
       registration_access_token: data.registration_access_token || null,
+      redirect_uri: currentRedirectUri,
     } as any);
 
     return data.client_id;
@@ -82,16 +99,26 @@ async function ensureClientRegistered(provider: SkyfiOAuthProvider, forceRegiste
  * Performs DCR, generates PKCE, and returns the authorization URL.
  */
 export async function startSkyfiConnection(): Promise<{ url?: string; error?: string; authRequired?: boolean }> {
-  const userId = await getCurrentUserIdOnServer();
-  if (!userId) {
-    return { authRequired: true, error: 'Please sign in to connect your SkyFi account.' };
+  let userId: string | null = null;
+  try {
+    const clerkUserId = await getClerkUserIdOnServer();
+    if (!clerkUserId) {
+      return { authRequired: true, error: 'Please sign in to connect your SkyFi account.' };
+    }
+    userId = await resolveClerkUserToDbUser(clerkUserId);
+    if (!userId) {
+      return { error: 'Authentication service error: Database resolution failed to return a valid user ID.' };
+    }
+  } catch (authError: any) {
+    console.error('[SkyFiAction: startSkyfiConnection] Auth error:', authError);
+    return { error: `Authentication service error: ${authError.message}` };
   }
 
   try {
     const redirectUri = await getRedirectUri();
     const provider = new SkyfiOAuthProvider(userId, redirectUri);
 
-    const clientId = await ensureClientRegistered(provider, true);
+    const clientId = await ensureClientRegistered(provider, false);
 
     const verifier = generateCodeVerifier();
     const challenge = generateCodeChallenge(verifier);
@@ -112,7 +139,15 @@ export async function startSkyfiConnection(): Promise<{ url?: string; error?: st
     return { url: authorizeUrl.toString() };
   } catch (error: any) {
     console.error('[SkyFiAction: startSkyfiConnection] Error:', error.message);
-    return { error: error.message || 'Failed to start SkyFi connection.' };
+    const isTimeout = error.name === 'AbortError' || error.message?.toLowerCase().includes('timeout') || error.message?.toLowerCase().includes('aborted');
+    const isNetwork = error.message?.toLowerCase().includes('fetch') || error.message?.toLowerCase().includes('network') || error.message?.toLowerCase().includes('failed to fetch');
+
+    if (isTimeout) {
+      return { error: 'SkyFi Connection Error: Dynamic client registration request timed out.' };
+    } else if (isNetwork) {
+      return { error: 'SkyFi Connection Error: Network failure. Please check your connection to SkyFi services.' };
+    }
+    return { error: `SkyFi Registration/Connection failed: ${error.message}` };
   }
 }
 
@@ -120,19 +155,34 @@ export async function startSkyfiConnection(): Promise<{ url?: string; error?: st
  * Returns whether a valid SkyFi connection exists for the current user.
  * Uses an AbortController with a 10s timeout to prevent hanging.
  */
-export async function getSkyfiConnectionStatus(): Promise<{ connected: boolean; email?: string; budget?: string }> {
+export async function getSkyfiConnectionStatus(): Promise<{ connected: boolean; email?: string; budget?: string; expired?: boolean; missing?: boolean; error?: string }> {
   try {
     const userId = await getCurrentUserIdOnServer();
     if (!userId) {
-      return { connected: false };
+      return { connected: false, missing: true };
+    }
+
+    const [row] = await db.select()
+      .from(skyfiOAuthTokens)
+      .where(eq(skyfiOAuthTokens.userId, userId))
+      .limit(1);
+
+    if (!row || !row.clientId) {
+      return { connected: false, missing: true };
     }
 
     const redirectUri = await getRedirectUri();
     const provider = new SkyfiOAuthProvider(userId, redirectUri);
-    const tokens = await provider.tokens();
+    let tokens;
+    try {
+      tokens = await provider.tokens();
+    } catch (tokenErr: any) {
+      console.warn('[SkyFiAction: getSkyfiConnectionStatus] Failed to retrieve tokens:', tokenErr);
+      return { connected: false, expired: true, error: tokenErr.message };
+    }
 
     if (!tokens || !tokens.access_token) {
-      return { connected: false };
+      return { connected: false, expired: true };
     }
 
     const controller = new AbortController();
@@ -144,7 +194,7 @@ export async function getSkyfiConnectionStatus(): Promise<{ connected: boolean; 
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Skyfi-Api-Key': tokens.access_token,
+          'Authorization': `Bearer ${tokens.access_token}`,
         },
         body: JSON.stringify({
           jsonrpc: '2.0',
@@ -160,6 +210,10 @@ export async function getSkyfiConnectionStatus(): Promise<{ connected: boolean; 
 
       clearTimeout(timeoutId);
 
+      if (res.status === 401) {
+        return { connected: false, expired: true };
+      }
+
       if (res.ok) {
         const data = await res.json();
         const content = data?.result?.content?.[0]?.text || '';
@@ -173,7 +227,7 @@ export async function getSkyfiConnectionStatus(): Promise<{ connected: boolean; 
     return { connected: true };
   } catch (error: any) {
     console.error('[SkyFiAction: getSkyfiConnectionStatus] Error:', error.message);
-    return { connected: false };
+    return { connected: false, error: error.message };
   }
 }
 

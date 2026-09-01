@@ -63,7 +63,6 @@ async function getConnectedSkyfiMcpClient(accessToken: string, signal?: AbortSig
       requestInit: {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
-          'X-Skyfi-Api-Key': accessToken,
         },
         signal,
       }
@@ -179,11 +178,11 @@ export const skyfiTool = ({
     const mcpClient = await getConnectedSkyfiMcpClient(tokens.access_token, controller.signal);
     if (!mcpClient) {
       clearTimeout(timeoutId);
-      feedbackMessage = 'Failed to connect to the SkyFi MCP server. Your login may have expired, please try reconnecting in Settings.';
+      feedbackMessage = 'Failed to connect to the SkyFi MCP server. Your SkyFi connection may have expired or is unauthorized. Please reconnect your SkyFi account in Settings.';
       uiFeedbackStream.update(feedbackMessage);
       uiFeedbackStream.done();
       uiStream.update(<BotMessage content={uiFeedbackStream.value} />);
-      return { type: 'SKYFI_QUERY', success: false, error: 'Connection failed' };
+      return { type: 'SKYFI_QUERY', success: false, error: 'Unauthenticated', message: feedbackMessage };
     }
 
     let dryRunValidateOnly = false;
@@ -337,9 +336,13 @@ export const skyfiTool = ({
       clearTimeout(timeoutId);
 
       const isAbortError = error.name === 'AbortError' || error.message?.includes('aborted') || error.message?.includes('timeout');
+      const isUnauthorized = error.message?.includes('401') || error.message?.toLowerCase().includes('unauthorized') || error.message?.toLowerCase().includes('expired') || error.message?.toLowerCase().includes('token');
+
       let toolError = `SkyFi execution failed: ${error.message}`;
 
-      if (isAbortError) {
+      if (isUnauthorized) {
+        toolError = `SkyFi execution failed: Your SkyFi connection is unauthorized or expired. Please reconnect your SkyFi account in Settings.`;
+      } else if (isAbortError) {
         toolError = `SkyFi execution failed: Request timed out after 30 seconds.`;
         if (queryType === 'place_order' && !dryRunValidateOnly) {
           toolError += ` The order request was aborted to prevent duplicate placements. Use the idempotency key: ${stableIdempotencyKey} if you attempt to retry.`;
