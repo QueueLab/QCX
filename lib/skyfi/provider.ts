@@ -76,6 +76,7 @@ export class SkyfiOAuthProvider implements OAuthClientProvider {
         client_secret: decrypt(row.clientSecret) || undefined,
         registration_client_uri: row.registrationClientUri || undefined,
         registration_access_token: decrypt(row.registrationAccessToken) || undefined,
+        redirect_uri: row.redirectUri || undefined,
       };
     }
     return undefined;
@@ -87,6 +88,7 @@ export class SkyfiOAuthProvider implements OAuthClientProvider {
         userId: this.userId,
         clientId: clientInformation.client_id,
         clientSecret: encrypt(clientInformation.client_secret || null),
+        redirectUri: this.redirectUrlStr,
         registrationClientUri: clientInformation.registration_client_uri || null,
         registrationAccessToken: encrypt(clientInformation.registration_access_token || null),
       })
@@ -95,6 +97,7 @@ export class SkyfiOAuthProvider implements OAuthClientProvider {
         set: {
           clientId: clientInformation.client_id,
           clientSecret: encrypt(clientInformation.client_secret || null),
+          redirectUri: this.redirectUrlStr,
           registrationClientUri: clientInformation.registration_client_uri || null,
           registrationAccessToken: encrypt(clientInformation.registration_access_token || null),
           updatedAt: new Date(),
@@ -122,9 +125,10 @@ export class SkyfiOAuthProvider implements OAuthClientProvider {
     const nowSeconds = Math.floor(Date.now() / 1000);
     const expiresAt = row.tokenExpiry ? Math.floor(row.tokenExpiry.getTime() / 1000) : null;
 
-    // Check if token is expired or expiring in less than 60 seconds
-    if (expiresAt && expiresAt < nowSeconds + 60 && decryptedRefreshToken && row.clientId) {
-      console.log('[SkyfiProvider] Token expired or expiring soon. Refreshing token...');
+    // Check if token is expired, expiring in less than 60 seconds, or expiry details are missing (conservative treatment)
+    const isExpiredOrMissing = !expiresAt || expiresAt < nowSeconds + 60;
+    if (isExpiredOrMissing && decryptedRefreshToken && row.clientId) {
+      console.log('[SkyfiProvider] Token expired, expiring soon, or missing expiry details. Refreshing token...');
       try {
         const response = await fetch('https://mcp.skyfi.com/oauth/token', {
           method: 'POST',
@@ -150,9 +154,15 @@ export class SkyfiOAuthProvider implements OAuthClientProvider {
           return newTokens;
         } else {
           console.error('[SkyfiProvider] Failed to refresh token:', await response.text());
+          if (expiresAt && expiresAt < nowSeconds) {
+            return undefined;
+          }
         }
       } catch (err: any) {
         console.error('[SkyfiProvider] Error refreshing token:', err.message);
+        if (expiresAt && expiresAt < nowSeconds) {
+          return undefined;
+        }
       }
     }
 

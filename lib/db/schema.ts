@@ -138,6 +138,7 @@ export const skyfiOAuthTokens = pgTable('skyfi_oauth_tokens', {
   tokenExpiry: timestamp('token_expiry', { withTimezone: true }),
   clientId: text('client_id'),
   clientSecret: text('client_secret'),
+  redirectUri: text('redirect_uri'),
   codeVerifier: text('code_verifier'),
   state: text('state'),
   registrationClientUri: text('registration_client_uri'),
