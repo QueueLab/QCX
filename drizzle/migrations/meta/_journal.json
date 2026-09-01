@@ -71,6 +71,13 @@
       "when": 1784838292039,
       "tag": "0009_add_skyfi_oauth_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1785549039000,
+      "tag": "0010_add_skyfi_redirect_uri",
+      "breakpoints": true
     }
   ]
 }

@@ -7,6 +7,7 @@ import { skyfiOAuthTokens } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {
+  const fallbackSettingsUrl = new URL('/settings', request.url).toString();
   try {
     const userId = await getCurrentUserIdOnServer();
     if (!userId) {
@@ -16,6 +17,12 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const code = searchParams.get('code');
     const state = searchParams.get('state');
+    const oauthError = searchParams.get('error');
+
+    if (oauthError) {
+      const description = searchParams.get('error_description') || oauthError;
+      return NextResponse.redirect(`${fallbackSettingsUrl}?error=${encodeURIComponent(`skyfi_${description}`)}`);
+    }
 
     if (!code || !state) {
       return NextResponse.json({ error: 'Missing code or state parameters.' }, { status: 400 });
@@ -90,12 +97,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: `Token exchange failed or timed out: ${fetchError.message}` }, { status: 500 });
     }
 
-    // Redirect user back to the settings page
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    return NextResponse.redirect(`${baseUrl}/settings`);
+    // Preserve the same public origin used for the OAuth redirect. This works
+    // with NEXT_PUBLIC_APP_URL as well as reverse proxies using forwarded hosts.
+    return NextResponse.redirect(new URL('/settings', redirectUri).toString());
   } catch (error: any) {
     console.error('[SkyFiCallback] Unexpected error:', error.message);
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    return NextResponse.redirect(`${baseUrl}/settings?error=skyfi_callback_failed`);
+    return NextResponse.redirect(`${fallbackSettingsUrl}?error=skyfi_callback_failed`);
   }
 }

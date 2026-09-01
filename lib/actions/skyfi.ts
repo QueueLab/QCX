@@ -13,16 +13,19 @@ import { headers } from 'next/headers';
 export async function getRedirectUri(): Promise<string> {
   try {
     const headersList = await headers();
-    const host = headersList.get('host');
+    const host = headersList.get('x-forwarded-host') || headersList.get('host');
     if (host) {
-      const protocol = host.startsWith('localhost') || host.startsWith('127.0.0.1') ? 'http' : 'https';
-      return `${protocol}://${host}/api/skyfi/callback`;
+      const proto = headersList.get('x-forwarded-proto') || (host.startsWith('localhost') || host.startsWith('127.0.0.1') ? 'http' : 'https');
+      return `${proto}://${host}/api/skyfi/callback`;
     }
   } catch (e) {
-    console.warn('[Skyfi] Failed to get host from headers, falling back to ENV:', e);
+    console.warn('[Skyfi] Failed to get host from headers, falling back to NEXT_PUBLIC_APP_URL:', e);
   }
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-  return `${baseUrl}/api/skyfi/callback`;
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '');
+    return `${baseUrl}/api/skyfi/callback`;
+  }
+  return 'http://localhost:3000/api/skyfi/callback';
 }
 
 /**
@@ -30,14 +33,15 @@ export async function getRedirectUri(): Promise<string> {
  * Uses an AbortController with a 10s timeout to prevent hanging.
  */
 async function ensureClientRegistered(provider: SkyfiOAuthProvider, forceRegister: boolean = false): Promise<string> {
+  const currentUri = provider.redirectUrl?.toString();
   if (!forceRegister) {
     const currentInfo = await provider.clientInformation();
-    if (currentInfo?.client_id) {
+    if (currentInfo?.client_id && currentInfo?.redirect_uri === currentUri) {
       return currentInfo.client_id;
     }
   }
 
-  console.log('[SkyFiAction] Client not registered or force-register active. Registering dynamically...');
+  console.log('[SkyFiAction] Client not registered or redirect URI changed. Registering dynamically...');
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -91,7 +95,7 @@ export async function startSkyfiConnection(): Promise<{ url?: string; error?: st
     const redirectUri = await getRedirectUri();
     const provider = new SkyfiOAuthProvider(userId, redirectUri);
 
-    const clientId = await ensureClientRegistered(provider, true);
+    const clientId = await ensureClientRegistered(provider, false);
 
     const verifier = generateCodeVerifier();
     const challenge = generateCodeChallenge(verifier);
@@ -144,7 +148,7 @@ export async function getSkyfiConnectionStatus(): Promise<{ connected: boolean; 
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Skyfi-Api-Key': tokens.access_token,
+          'Authorization': `Bearer ${tokens.access_token}`,
         },
         body: JSON.stringify({
           jsonrpc: '2.0',
