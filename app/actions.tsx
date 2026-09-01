@@ -262,6 +262,7 @@ async function submit(formData?: FormData, skip?: boolean) {
                 content: JSON.stringify({
                   ...analysisResult,
                   geoJson: geoJson, // Use reconstructed GeoJSON for storage/UI
+                  drawnFeatures,
                   image: dataUrl,
                   mapboxImage: mapboxDataUrl,
                   googleImage: googleDataUrl

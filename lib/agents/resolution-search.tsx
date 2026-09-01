@@ -13,6 +13,20 @@ export interface DrawnFeature {
   geometry: any;
 }
 
+function formatDrawingContext(features: DrawnFeature[] = []): string {
+  const validFeatures = (Array.isArray(features) ? features : []).filter(feature =>
+    feature &&
+    (feature.type === 'Polygon' || feature.type === 'LineString') &&
+    typeof feature.measurement === 'string' &&
+    feature.geometry &&
+    Array.isArray(feature.geometry.coordinates)
+  )
+  return validFeatures.slice(0, 20).map((feature, index) =>
+    `Drawing ${index + 1}: ${feature.type}; measured ${feature.measurement}; ` +
+    `GeoJSON geometry: ${JSON.stringify(feature.geometry)}`
+  ).join('\n')
+}
+
 /**
  * Fetch recent news for a location using Tavily API
  */
@@ -123,6 +137,7 @@ export async function resolutionSearch(messages: CoreMessage[], timezone: string
     }
   }
 
+  const drawingContext = formatDrawingContext(drawnFeatures)
   const systemPrompt = `
 As a geospatial analyst, your task is to analyze the provided satellite image of a geographic location.
 
@@ -139,9 +154,8 @@ ${newsContext}
 
 Please incorporate this recent news context into your analysis where relevant.` : ''}
 
-${drawnFeatures && drawnFeatures.length > 0 ? `**User-Drawn Features:**
-The user has drawn the following features on the map for your reference:
-${drawnFeatures.map(f => `- ${f.type} (${f.measurement}): ${JSON.stringify(f.geometry)}`).join('\n')}
+${drawingContext ? `**User-Drawn Features (authoritative context):**
+${drawingContext}
 Use these user-drawn areas/lines as primary areas of interest for your analysis.` : ''}
 
 **Analysis Requirements:**
@@ -160,6 +174,12 @@ Analyze the user's prompt and the image to provide a holistic understanding of t
 `;
 
   const filteredMessages = messages.filter(msg => msg.role !== 'system');
+  if (drawingContext) {
+    filteredMessages.push({
+      role: 'user',
+      content: `Use these measured map drawings as authoritative analysis constraints. Refer to their exact type, measurement, and coordinates in your answer:\n${drawingContext}`
+    })
+  }
 
   // Check if any message contains an image (resolution search is specifically for image analysis)
   const hasImage = messages.some((message: any) =>
