@@ -492,11 +492,20 @@ async function submit(formData?: FormData, skip?: boolean) {
 
   const currentSystemPrompt = userId ? await getSystemPrompt(userId) : null
   const maxMessages = 10
-  const messages = aiState.get().messages.map(message => ({
-    role: message.role,
-    content: message.content,
-    name: message.name
-  })) as CoreMessage[]
+  // Only send conversational content to the researcher. Resolution result
+  // blobs, related-query payloads, and UI markers are presentation state, not
+  // model messages; including them makes OpenAI follow-ups intermittently
+  // fail or exceed the context budget.
+  const messages = aiState.get().messages
+    .filter(message => !['related', 'followup', 'end', 'resolution_search_result'].includes(message.type || ''))
+    .map(message => ({
+      role: message.role,
+      content: Array.isArray(message.content)
+        ? message.content.filter((part: any) => part?.type !== 'image')
+        : message.content,
+      name: message.name
+    }))
+    .filter(message => typeof message.content === 'string' ? message.content.trim().length > 0 : true) as CoreMessage[]
 
   if (file) {
     const buffer = await file.arrayBuffer()
