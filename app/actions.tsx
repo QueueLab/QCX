@@ -168,7 +168,12 @@ async function submit(formData?: FormData, skip?: boolean) {
           if (analysisResult.geoJson && analysisResult.geoJson.features) {
             geoJson = {
               type: 'FeatureCollection',
-              features: analysisResult.geoJson.features.flatMap(f => {
+              features: analysisResult.geoJson.features.flatMap((f: {
+                coordinates: unknown
+                geometryType: string
+                name: string
+                description?: string
+              }) => {
                 let parsedCoords: unknown = f.coordinates;
                 if (typeof parsedCoords === 'string') {
                   try {
@@ -279,7 +284,7 @@ async function submit(formData?: FormData, skip?: boolean) {
           });
         } catch (error) {
           console.error('Error in resolution search:', error);
-          summaryStream.error(error);
+          summaryStream.done('Resolution analysis is temporarily unavailable. Please try again.');
         } finally {
           isGenerating.done(false);
           uiStream.done();
@@ -594,7 +599,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     } catch (error) {
       console.error('Error in researcher:', error)
       errorOccurred = true
-      streamText.error(error)
+      streamText.done('The answer could not be completed before the service deadline. Please try again.')
     } finally {
       isGenerating.done(false)
       uiStream.done()
@@ -794,7 +799,15 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                 const relatedQueries = createStreamableValue<RelatedQueries>({
                   items: []
                 })
-                relatedQueries.done(JSON.parse(content as string))
+                const parsed = JSON.parse(content as string)
+                relatedQueries.done({
+                  items: Array.isArray(parsed?.items)
+                    ? parsed.items
+                        .filter((item: any) => typeof item?.query === 'string' && item.query.trim())
+                        .slice(0, 3)
+                        .map((item: any) => ({ query: item.query.trim() }))
+                    : []
+                })
                 return {
                   id,
                   component: (
@@ -820,7 +833,11 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
             case 'resolution_search_result': {
               try {
                 const analysisResult = JSON.parse(content as string);
-                const geoJson = analysisResult.geoJson as FeatureCollection;
+                const geoJson = analysisResult.geoJson &&
+                  analysisResult.geoJson.type === 'FeatureCollection' &&
+                  Array.isArray(analysisResult.geoJson.features)
+                  ? analysisResult.geoJson as FeatureCollection
+                  : null;
                 const image = analysisResult.image as string;
                 const mapboxImage = analysisResult.mapboxImage as string;
                 const googleImage = analysisResult.googleImage as string;
