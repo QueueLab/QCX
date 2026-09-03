@@ -1,0 +1,74 @@
+name: Scheduled Vercel Redeployment and Warm-up
+
+on:
+  schedule:
+    # GitHub Actions schedules use UTC. Run daily at 04:17 UTC.
+    - cron: '17 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: scheduled-production-redeploy
+  cancel-in-progress: false
+
+env:
+  QCX_URL: https://www.queue.cx
+
+jobs:
+  redeploy-and-warm:
+    name: Redeploy production and warm multimodal runtimes
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out the production branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Trigger a fresh Vercel production deployment
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit --allow-empty -m 'chore: scheduled production redeployment'
+          git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:main
+
+      - name: Wait for the new deployment to serve health checks
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 20); do
+            if curl --fail-with-body --silent --show-error --max-time 20 "${QCX_URL}/api/health"; then
+              printf '\nProduction health check passed on attempt %s.\n' "${attempt}"
+              exit 0
+            fi
+            printf 'Deployment is not ready yet; retrying in 15 seconds (attempt %s/20).\n' "${attempt}"
+            sleep 15
+          done
+          echo 'Production health check did not become ready within five minutes.' >&2
+          exit 1
+
+      - name: Warm multimodal feature runtimes
+        env:
+          QCX_WARMUP_TOKEN: ${{ secrets.QCX_WARMUP_TOKEN }}
+        run: |
+          set -euo pipefail
+          auth_args=()
+          if [ -n "${QCX_WARMUP_TOKEN}" ]; then
+            auth_args=(-H "Authorization: Bearer ${QCX_WARMUP_TOKEN}")
+          fi
+
+          for feature in image vision document video; do
+            echo "Warming ${feature} runtime..."
+            curl --fail-with-body --silent --show-error \
+              --retry 4 --retry-all-errors --retry-delay 10 --max-time 30 \
+              "${auth_args[@]}" \
+              "${QCX_URL}/api/warmup?feature=${feature}"
+            printf '\n'
+          done
