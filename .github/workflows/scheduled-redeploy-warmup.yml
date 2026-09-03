@@ -13,9 +13,6 @@ concurrency:
   group: scheduled-production-redeploy
   cancel-in-progress: false
 
-env:
-  QCX_URL: https://www.queue.cx
-
 jobs:
   redeploy-and-warm:
     name: Redeploy production and warm multimodal runtimes
@@ -31,6 +28,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Trigger a fresh Vercel production deployment
+        id: redeploy
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -38,17 +36,60 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git commit --allow-empty -m 'chore: scheduled production redeployment'
+          deployment_sha="$(git rev-parse HEAD)"
+          echo "deployment_sha=${deployment_sha}" >> "${GITHUB_OUTPUT}"
           git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:main
 
-      - name: Wait for the new deployment to serve health checks
+      - name: Resolve the exact Vercel production deployment URL
+        id: deployment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
+          deployment_url=''
+          for attempt in $(seq 1 30); do
+            deployment_id="$(gh api \
+              "repos/${GITHUB_REPOSITORY}/deployments?sha=${{ steps.redeploy.outputs.deployment_sha }}&per_page=20" \
+              --jq '[.[] | select(.environment | startswith("Production")) | .id] | first // empty')"
+
+            if [ -n "${deployment_id}" ]; then
+              deployment_url="$(gh api \
+                "repos/${GITHUB_REPOSITORY}/deployments/${deployment_id}/statuses?per_page=20" \
+                --jq '[.[] | select(.state == "success")][0].target_url // empty')"
+            fi
+
+            if [ -n "${deployment_url}" ]; then
+              echo "Vercel production deployment is ready at ${deployment_url}"
+              echo "url=${deployment_url}" >> "${GITHUB_OUTPUT}"
+              exit 0
+            fi
+
+            printf 'Waiting for the Vercel production deployment (attempt %s/30).\n' "${attempt}"
+            sleep 10
+          done
+
+          echo 'Vercel did not report a successful production deployment within five minutes.' >&2
+          exit 1
+
+      - name: Wait for the new deployment to serve health checks
+        env:
+          QCX_URL: ${{ steps.deployment.outputs.url }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${VERCEL_AUTOMATION_BYPASS_SECRET}" ]; then
+            echo 'VERCEL_AUTOMATION_BYPASS_SECRET is required because qcx deployments use Vercel Deployment Protection.' >&2
+            exit 1
+          fi
+
+          bypass_args=(-H "x-vercel-protection-bypass: ${VERCEL_AUTOMATION_BYPASS_SECRET}")
           for attempt in $(seq 1 20); do
-            if curl --fail-with-body --silent --show-error --max-time 20 "${QCX_URL}/api/health"; then
+            if curl --fail-with-body --silent --show-error --max-time 20 \
+              "${bypass_args[@]}" "${QCX_URL}/api/health"; then
               printf '\nProduction health check passed on attempt %s.\n' "${attempt}"
               exit 0
             fi
-            printf 'Deployment is not ready yet; retrying in 15 seconds (attempt %s/20).\n' "${attempt}"
+            printf 'Health endpoint is not ready yet; retrying in 15 seconds (attempt %s/20).\n' "${attempt}"
             sleep 15
           done
           echo 'Production health check did not become ready within five minutes.' >&2
@@ -56,9 +97,12 @@ jobs:
 
       - name: Warm multimodal feature runtimes
         env:
+          QCX_URL: ${{ steps.deployment.outputs.url }}
           QCX_WARMUP_TOKEN: ${{ secrets.QCX_WARMUP_TOKEN }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: |
           set -euo pipefail
+          bypass_args=(-H "x-vercel-protection-bypass: ${VERCEL_AUTOMATION_BYPASS_SECRET}")
           auth_args=()
           if [ -n "${QCX_WARMUP_TOKEN}" ]; then
             auth_args=(-H "Authorization: Bearer ${QCX_WARMUP_TOKEN}")
@@ -68,7 +112,7 @@ jobs:
             echo "Warming ${feature} runtime..."
             curl --fail-with-body --silent --show-error \
               --retry 4 --retry-all-errors --retry-delay 10 --max-time 30 \
-              "${auth_args[@]}" \
+              "${bypass_args[@]}" "${auth_args[@]}" \
               "${QCX_URL}/api/warmup?feature=${feature}"
             printf '\n'
           done
