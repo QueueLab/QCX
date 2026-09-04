@@ -1,7 +1,7 @@
 import { ClerkProvider } from "@clerk/nextjs"
 import { UserSync } from "@/components/user-sync"
 import type { Metadata, Viewport } from 'next'
-import { Inter as FontSans, Poppins } from 'next/font/google'
+import { Plus_Jakarta_Sans as FontSans, Poppins } from 'next/font/google'
 import './globals.css'
 import 'katex/dist/katex.min.css';
 import { cn } from '@/lib/utils'
