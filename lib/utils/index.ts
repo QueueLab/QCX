@@ -75,7 +75,7 @@ export async function getModel(requireVision: boolean = false) {
           const openai = createOpenAI({
             apiKey: openaiApiKey,
           });
-          return openai('gpt-6-astra');
+          return openai('gpt-6');
         } else {
             console.error('User selected OpenAI model but OPENAI_API_KEY is not set.');
             throw new Error('Selected model is not configured.');
@@ -138,7 +138,7 @@ export async function getModel(requireVision: boolean = false) {
   const openai = createOpenAI({
     apiKey: openaiApiKey,
   });
-  return openai('gpt-6-astra');
+  return openai('gpt-6');
 }
 
 /**
