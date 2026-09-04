@@ -14,26 +14,49 @@ export type SearchSectionProps = {
 
 export function SearchSection({ result }: SearchSectionProps) {
   const [data, error, pending] = useStreamableValue(result)
-  const searchResults: TypeSearchResults = data ? JSON.parse(data) : undefined
+
+  let searchResults: TypeSearchResults | undefined = undefined
+  let parseFailed = false
+
+  if (data) {
+    try {
+      searchResults = JSON.parse(data)
+      if (!searchResults || typeof searchResults !== 'object' || !Array.isArray(searchResults.results)) {
+        parseFailed = true
+      }
+    } catch (e) {
+      console.error('Failed to parse search results JSON:', e)
+      parseFailed = true
+    }
+  }
+
   return (
     <div>
       {!pending && data ? (
-        <>
+        parseFailed || !searchResults ? (
           <Section size="sm" className="pt-2 pb-0">
-            <ToolBadge tool="search">{`${searchResults.query}`}</ToolBadge>
+            <div className="rounded-md border p-3 text-xs text-muted-foreground bg-muted/40">
+              Unable to display search results.
+            </div>
           </Section>
-          {searchResults.images && searchResults.images.length > 0 && (
-            <Section title="Images">
-              <SearchResultsImageSection
-                images={searchResults.images}
-                query={searchResults.query}
-              />
+        ) : (
+          <>
+            <Section size="sm" className="pt-2 pb-0">
+              <ToolBadge tool="search">{`${searchResults.query ?? ''}`}</ToolBadge>
             </Section>
-          )}
-          <Section title="Sources">
-            <SearchResults results={searchResults.results} />
-          </Section>
-        </>
+            {searchResults.images && searchResults.images.length > 0 && (
+              <Section title="Images">
+                <SearchResultsImageSection
+                  images={searchResults.images}
+                  query={searchResults.query ?? ''}
+                />
+              </Section>
+            )}
+            <Section title="Sources">
+              <SearchResults results={searchResults.results ?? []} />
+            </Section>
+          </>
+        )
       ) : (
         <Section className="pt-2 pb-0">
           <SearchSkeleton />
