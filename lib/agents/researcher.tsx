@@ -36,7 +36,7 @@ Use these user-drawn areas/lines as primary areas of interest for your analysis 
 1. **Tool First:** Always check if a tool can directly or partially answer the user's query. Use the most specific tool available.
 2. **Geospatial Priority:** For any query involving locations, places, addresses, geographical features, finding businesses, distances, or directions → you **MUST** use the 'geospatialQueryTool'.
 ${selectedModel === 'SkyFi' ? `3. **SkyFi Priority:** The user has selected **SkyFi** as their active planetary tool. For any query asking to query latest images, search past captures, check their SkyFi account or budget, or select Areas of Interest (AOIs) for SkyFi, you **MUST** use the 'skyfiQueryTool' instead of or in addition to general searches.` : `3. **Search Specificity:** When using the 'search' tool, formulate queries that are as specific as possible.`}
-4. **Concise Response:** When tools are not needed, provide direct, helpful answers based on your knowledge. Match the user's language.
+4. **Concise Response & Synthesis:** After using tools (such as \`search\` or \`retrieve\`), you **MUST** always produce a concise final text answer synthesizing the retrieved details, and cite source URLs. When tools are not needed, provide direct, helpful answers based on your knowledge. Match the user's language.
 5. **Citations:** Always cite source URLs when using information from tools.
 
 ### **Tool Usage Guidelines (Mandatory)**
@@ -46,6 +46,7 @@ ${selectedModel === 'SkyFi' ? `3. **SkyFi Priority:** The user has selected **Sk
 - **When to use**:  
   Any query requiring up-to-date factual information, current events, statistics, product details, news, or general knowledge.
 - **Do NOT use** \`retrieve\` for URLs discovered via search results.
+- **Behavior after search**: Always follow up tool results with a concise final text synthesis answering the user's query directly and citing source URLs.
 
 #### **2. Fetching Specific Web Pages**
 - **Tool**: \`retrieve\`
@@ -160,6 +161,8 @@ export async function researcher(
     model: (await getModel(hasImage)) as LanguageModel,
     maxTokens: 2500,
     temperature: 0,
+    // Allow multi-step tool calling (tool round + synthesis step with headroom for chained tool calls)
+    maxSteps: 5,
     abortSignal: createDeadlineSignal(AI_REQUEST_TIMEOUT_MS),
     system: systemPromptToUse,
     messages,
@@ -170,13 +173,15 @@ export async function researcher(
 
   const toolCalls: ToolCallPart[] = []
   const toolResponses: ToolResultPart[] = []
+  let hasAppendedAnswerSection = false
 
   for await (const delta of result.fullStream) {
     switch (delta.type) {
       case 'text-delta':
         if (delta.textDelta) {
-          if (fullResponse.length === 0 && delta.textDelta.length > 0) {
-            uiStream.update(answerSection)
+          if (!hasAppendedAnswerSection) {
+            uiStream.append(answerSection)
+            hasAppendedAnswerSection = true
           }
           fullResponse += delta.textDelta
           streamText.update(fullResponse)
@@ -188,9 +193,6 @@ export async function researcher(
         break
 
       case 'tool-result':
-        if (!useSpecificModel && toolResponses.length === 0 && delta.result) {
-          uiStream.append(answerSection)
-        }
         if (!delta.result) hasError = true
         toolResponses.push(delta)
         break
@@ -200,6 +202,15 @@ export async function researcher(
         fullResponse += `\n\nError: Model response generation failed.`
         break
     }
+  }
+
+  if (toolResponses.length > 0 && !hasError && fullResponse.trim().length === 0) {
+    fullResponse = 'Information gathered from search results.'
+    if (!hasAppendedAnswerSection) {
+      uiStream.append(answerSection)
+      hasAppendedAnswerSection = true
+    }
+    streamText.update(fullResponse)
   }
 
   streamText.done(fullResponse)
