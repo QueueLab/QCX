@@ -32,7 +32,7 @@ export const UserMessage: React.FC<UserMessageProps> = ({
   )?.image
 
   return (
-    <div className="flex items-start w-full space-x-3 mt-2">
+    <div className="flex items-start w-full space-x-3 mt-2" data-testid="user-message">
       <div className="flex-1 space-y-2">
         {imagePart && (
           <div className="p-2 border rounded-lg bg-muted w-fit">

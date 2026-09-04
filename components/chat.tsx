@@ -201,7 +201,7 @@ export function Chat({ id }: ChatProps) {
             onSuggestionsChange={setSuggestions}
           />
         </div>
-        <div className="mobile-chat-messages-area relative">
+        <div className="mobile-chat-messages-area relative" data-testid="chat-container">
           {isCalendarOpen ? (
             <CalendarNotepad chatId={id} />
           ) : (
@@ -231,9 +231,9 @@ export function Chat({ id }: ChatProps) {
   return (
     <MapDataProvider> {/* Add Provider */}
       <HeaderSearchButton />
-      <div className="flex justify-start items-start">
+      <div className="flex justify-start items-start min-w-0">
         {/* This is the new div for scrolling */}
-        <div className="w-1/2 flex flex-col space-y-3 md:space-y-4 px-8 sm:px-12 pt-16 md:pt-20 pb-4 h-[calc(100vh-0.5in)] overflow-y-auto">
+        <div className="w-1/2 flex flex-col space-y-3 md:space-y-4 px-8 sm:px-12 pt-16 md:pt-20 pb-4 h-[calc(100vh-0.5in)] overflow-y-auto min-w-0" data-testid="chat-container">
         {isCalendarOpen ? (
           <CalendarNotepad chatId={id} />
         ) : (
@@ -244,8 +244,8 @@ export function Chat({ id }: ChatProps) {
               setInput={setInput} 
               onSuggestionsChange={setSuggestions}
             />
-            <div className="relative min-h-[100px]">
-              <div className={cn("transition-all duration-300", suggestions ? "blur-md pointer-events-none" : "")}>
+            <div className="relative min-h-[100px] min-w-0">
+              <div className={cn("transition-all duration-300 min-w-0", suggestions ? "blur-md pointer-events-none" : "")}>
                 {showEmptyScreen ? (
                   <EmptyScreen
                     submitMessage={message => {

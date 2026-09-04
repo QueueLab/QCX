@@ -40,6 +40,31 @@ test.describe('Responsive design - Desktop', () => {
     expect(chatBox).toBeTruthy();
     expect(mapBox).toBeTruthy();
   });
+
+  test('should prevent math content horizontal page overflow on desktop', async ({ page }) => {
+    const chatInput = page.locator('[data-testid="chat-input"]');
+    await expect(chatInput).toBeVisible();
+
+    const mathMessage = 'Inline equation: $f(x) = \\sum_{i=1}^{100} \\frac{x_i^2 + y_i^2 + z_i^2 + w_i^2}{\\sqrt{\\alpha_i + \\beta_i + \\gamma_i + \\delta_i}}$ and display equation: $$\\int_{-\\infty}^{\\infty} e^{-x^2} dx = \\sqrt{\\pi} \\cdot \\frac{\\sum_{n=1}^{50} (n^2 + 2n + 1)}{\\prod_{k=1}^{20} (k + \\frac{1}{k})} \\cdot \\text{Super Long Math Line That Extends Significantly Beyond Standard Container Width}$$';
+
+    await chatInput.fill(mathMessage);
+    await page.click('[data-testid="chat-submit"]');
+
+    const userMessage = page.locator('[data-testid="user-message"]').last();
+    await expect(userMessage).toBeVisible();
+
+    const chatContainer = page.locator('[data-testid="chat-container"]');
+    if (await chatContainer.isVisible()) {
+      const chatBox = await chatContainer.boundingBox();
+      expect(chatBox).toBeTruthy();
+      if (chatBox) {
+        expect(chatBox.width).toBeLessThanOrEqual(1920);
+      }
+    }
+
+    const bodyWidth = await page.evaluate(() => document.body.scrollWidth);
+    expect(bodyWidth).toBeLessThanOrEqual(1920 + 1);
+  });
 });
 
 test.describe('Responsive design - Tablet', () => {
@@ -181,6 +206,37 @@ test.describe('Responsive design - Mobile', () => {
     const viewportWidth = 375;
     
     expect(bodyWidth).toBeLessThanOrEqual(viewportWidth + 1); // +1 for rounding
+  });
+
+  test('should prevent math content horizontal page overflow on mobile', async ({ page }) => {
+    const chatInput = page.locator('[data-testid="chat-input"]');
+    await expect(chatInput).toBeVisible();
+
+    const mathMessage = 'Inline equation: $f(x) = \\sum_{i=1}^{100} \\frac{x_i^2 + y_i^2 + z_i^2 + w_i^2}{\\sqrt{\\alpha_i + \\beta_i + \\gamma_i + \\delta_i}}$ and display equation: $$\\int_{-\\infty}^{\\infty} e^{-x^2} dx = \\sqrt{\\pi} \\cdot \\frac{\\sum_{n=1}^{50} (n^2 + 2n + 1)}{\\prod_{k=1}^{20} (k + \\frac{1}{k})} \\cdot \\text{Super Long Math Line That Extends Significantly Beyond Standard Container Width}$$';
+
+    await chatInput.fill(mathMessage);
+
+    const submitButton = page.locator('[data-testid="mobile-submit-button"]');
+    if (await submitButton.isVisible()) {
+      await submitButton.click();
+    } else {
+      await page.click('[data-testid="chat-submit"]');
+    }
+
+    const userMessage = page.locator('[data-testid="user-message"]').last();
+    await expect(userMessage).toBeVisible();
+
+    const chatContainer = page.locator('[data-testid="chat-container"]');
+    if (await chatContainer.isVisible()) {
+      const chatBox = await chatContainer.boundingBox();
+      expect(chatBox).toBeTruthy();
+      if (chatBox) {
+        expect(chatBox.width).toBeLessThanOrEqual(375);
+      }
+    }
+
+    const bodyWidth = await page.evaluate(() => document.body.scrollWidth);
+    expect(bodyWidth).toBeLessThanOrEqual(375 + 1);
   });
 
   test('should stack elements vertically', async ({ page }) => {
