@@ -95,10 +95,10 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
 
   useEffect(() => {
     async function fetchData() {
-      if (!userId || authLoading) return;
+      if (authLoading || !user) return;
 
       const [existingPrompt, selectedModel] = await Promise.all([
-        getSystemPrompt(userId),
+        getSystemPrompt(),
         getSelectedModel(),
       ]);
 
@@ -110,7 +110,7 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
       }
     }
     fetchData();
-  }, [form, userId, authLoading]);
+  }, [form, user, authLoading]);
 
   if (authLoading) {
     return <SettingsSkeleton />;
@@ -131,7 +131,7 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
     try {
       // Save the system prompt and selected model
       const [promptSaveResult, modelSaveResult] = await Promise.all([
-        saveSystemPrompt(userId, data.systemPrompt),
+        saveSystemPrompt(data.systemPrompt),
         saveSelectedModel(data.selectedModel),
       ]);
 

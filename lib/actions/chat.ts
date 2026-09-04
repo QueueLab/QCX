@@ -287,9 +287,9 @@ export async function updateDrawingContext(chatId: string, contextData: { drawnF
 }
 
 export async function saveSystemPrompt(
-  userId: string,
   prompt: string
 ): Promise<{ success?: boolean; error?: string }> {
+  const userId = await getCurrentUserIdOnServer()
   if (!userId) return { error: 'User ID is required' }
   if (!prompt) return { error: 'Prompt is required' }
 
@@ -298,6 +298,7 @@ export async function saveSystemPrompt(
       .set({ systemPrompt: prompt })
       .where(eq(users.id, userId));
 
+    revalidatePath('/settings');
     return { success: true }
   } catch (error) {
     console.error('saveSystemPrompt: Error:', error)
@@ -305,9 +306,8 @@ export async function saveSystemPrompt(
   }
 }
 
-export async function getSystemPrompt(
-  userId: string
-): Promise<string | null> {
+export async function getSystemPrompt(): Promise<string | null> {
+  const userId = await getCurrentUserIdOnServer()
   if (!userId) return null
 
   try {

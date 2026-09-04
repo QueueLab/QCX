@@ -490,7 +490,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     }
   }
 
-  const currentSystemPrompt = userId ? await getSystemPrompt(userId) : null
+  const currentSystemPrompt = await getSystemPrompt()
   const maxMessages = 10
   // Only send conversational content to the researcher. Resolution result
   // blobs, related-query payloads, and UI markers are presentation state, not
