@@ -2,6 +2,7 @@ import { CoreMessage, streamObject } from 'ai'
 import { getModel } from '@/lib/utils'
 import { tavily } from '@tavily/core'
 import { resolutionSearchSchema } from '@/lib/schema/resolution-search'
+import { GUIDING_PRINCIPLES } from './planetary-prompts'
 import { AI_REQUEST_TIMEOUT_MS, ENRICHMENT_TIMEOUT_MS, createDeadlineSignal, withTimeout } from '@/lib/utils/with-timeout'
 
 // This agent is now a pure data-processing module, with no UI dependencies.
@@ -139,7 +140,10 @@ export async function resolutionSearch(messages: CoreMessage[], timezone: string
 
   const drawingContext = formatDrawingContext(drawnFeatures)
   const systemPrompt = `
-As a geospatial analyst, your task is to analyze the provided satellite image of a geographic location.
+As a geospatial analyst operating under GUIDING_PRINCIPLES, your task is to analyze the provided satellite image of a geographic location.
+
+**Guiding Principles:**
+${Object.entries(GUIDING_PRINCIPLES).map(([key, val]) => `- **${key}**: ${val}`).join('\n')}
 
 **Temporal Context:**
 The current local time at this location is ${localTime} (timezone: ${timezone}).
