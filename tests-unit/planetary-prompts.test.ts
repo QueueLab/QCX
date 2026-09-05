@@ -56,14 +56,31 @@ describe('Planetary Prompts & Agent System', () => {
     expect(ENVIRONMENTAL_ADAPTATIONS.weather_response.severe_weather_imminent_or_occurring).toContain('Response:');
   });
 
-  test('interpolateVariables correctly replaces placeholders', () => {
-    const template = 'Location: {GPS_COORDINATES_Verified}, Time: {TIMESTAMP_UTC_Synchronized}';
+  test('interpolateVariables correctly replaces placeholders and handles literal replacement tokens', () => {
+    const template = 'Location: {GPS_COORDINATES_Verified}, Code: {TOKEN}';
     const variables = {
       GPS_COORDINATES_Verified: '37.7749, -122.4194',
-      TIMESTAMP_UTC_Synchronized: '2026-09-05T12:00:00Z'
+      TOKEN: 'Cost: $& and $1'
     };
     const result = interpolateVariables(template, variables);
-    expect(result).toBe('Location: 37.7749, -122.4194, Time: 2026-09-05T12:00:00Z');
+    expect(result).toBe('Location: 37.7749, -122.4194, Code: Cost: $& and $1');
+  });
+
+  test('assembleAgentPrompt handles special characters like quotes safely in JSON context', () => {
+    const prompt = assembleAgentPrompt({
+      agentType: 'environmental_intelligence',
+      dynamicContext: {
+        GPS_COORDINATES_Verified: '12" N, 77" E'
+      }
+    });
+
+    // Extract DYNAMIC CONTEXT block and verify it parses as valid JSON
+    const jsonMatch = prompt.match(/DYNAMIC CONTEXT:\n(\{[\s\S]*?\})\n\nPARAMETERS:/);
+    expect(jsonMatch).not.toBeNull();
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[1]);
+      expect(parsed.current_location).toBe('12" N, 77" E');
+    }
   });
 
   test('assembleAgentPrompt generates valid operational prompt for Environmental Intelligence Agent', () => {

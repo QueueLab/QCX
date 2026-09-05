@@ -299,9 +299,30 @@ export function interpolateVariables(template: string, variables?: Record<string
   let result = template;
   for (const [key, value] of Object.entries(variables)) {
     const placeholder = `{${key}}`;
-    result = result.replaceAll(placeholder, value);
+    result = result.replaceAll(placeholder, () => value);
   }
   return result;
+}
+
+/**
+ * Recursively interpolates variables into an object before JSON serialization
+ */
+export function interpolateObject(obj: any, variables?: Record<string, string>): any {
+  if (!variables) return obj;
+  if (typeof obj === 'string') {
+    return interpolateVariables(obj, variables);
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(item => interpolateObject(item, variables));
+  }
+  if (obj && typeof obj === 'object') {
+    const result: Record<string, any> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      result[key] = interpolateObject(value, variables);
+    }
+    return result;
+  }
+  return obj;
 }
 
 /**
@@ -342,8 +363,10 @@ export function assembleAgentPrompt(options: AssembleAgentPromptOptions): string
   parts.push(staticPrompt);
 
   // Step 2: Inject relevant, validated dynamic context variables
-  const populatedContext = interpolateVariables(JSON.stringify(contextObj, null, 2), options.dynamicContext);
-  const populatedParams = interpolateVariables(JSON.stringify(paramsObj, null, 2), options.dynamicContext);
+  const populatedContextObj = interpolateObject(contextObj, options.dynamicContext);
+  const populatedParamsObj = interpolateObject(paramsObj, options.dynamicContext);
+  const populatedContext = JSON.stringify(populatedContextObj, null, 2);
+  const populatedParams = JSON.stringify(populatedParamsObj, null, 2);
   parts.push(`DYNAMIC CONTEXT:\n${populatedContext}\n\nPARAMETERS:\n${populatedParams}`);
 
   // Step 3: Apply environmental adaptations if provided
