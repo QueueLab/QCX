@@ -53,8 +53,7 @@ export type SettingsFormValues = z.infer<typeof settingsFormSchema>
 
 // Default values
 const defaultValues: Partial<SettingsFormValues> = {
-  systemPrompt:
-    "You are a planetary copilot, an AI assistant designed to help users with information about planets, space exploration, and astronomy. Provide accurate, educational, and engaging responses about our solar system and beyond.",
+  systemPrompt: "",
   selectedModel: "QCX-Terra",
   users: [],
   domain: "",
@@ -99,7 +98,12 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
         getSelectedModel(),
       ]);
 
-      form.setValue("systemPrompt", existingPrompt ?? "", { shouldValidate: true, shouldDirty: false });
+      // Do not overwrite text that was entered while the initial request was in flight.
+      // This previously made a newly typed prompt appear to auto-delete when the request
+      // resolved with a null or stale value.
+      if (!form.getFieldState("systemPrompt").isDirty) {
+        form.setValue("systemPrompt", existingPrompt ?? "", { shouldValidate: true, shouldDirty: false });
+      }
 
       if (selectedModel) {
         form.setValue("selectedModel", selectedModel, { shouldValidate: true, shouldDirty: false });

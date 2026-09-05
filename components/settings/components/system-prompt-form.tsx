@@ -20,6 +20,7 @@ export function SystemPromptForm({ form }: SystemPromptFormProps) {
   const characterCount = systemPrompt?.length || 0
   const [jobId, setJobId] = useState<string | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const handleGenerate = async () => {
     if (!domain) {
@@ -153,21 +154,28 @@ export function SystemPromptForm({ form }: SystemPromptFormProps) {
                   type="button"
                   variant="ghost"
                   size="sm"
+                  disabled={isDeleting}
                   className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
                   onClick={async () => {
-                    form.setValue("systemPrompt", "", { shouldValidate: true, shouldDirty: true })
-                    const res = await deleteSystemPrompt()
-                    if (res?.error) {
-                      toast({
-                        title: "Error deleting system prompt",
-                        description: res.error,
-                        variant: "destructive",
-                      })
-                    } else {
+                    setIsDeleting(true)
+                    try {
+                      const res = await deleteSystemPrompt()
+                      if (res?.error) {
+                        toast({
+                          title: "Error deleting system prompt",
+                          description: res.error,
+                          variant: "destructive",
+                        })
+                        return
+                      }
+
+                      form.setValue("systemPrompt", "", { shouldValidate: true, shouldDirty: true })
                       toast({
                         title: "System prompt cleared",
                         description: "Your system prompt has been cleared and reset.",
                       })
+                    } finally {
+                      setIsDeleting(false)
                     }
                   }}
                 >
