@@ -175,11 +175,13 @@
   .mobile-chat-messages-area {
     flex: 1; /* Changed from height: 40vh to take available space */
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 12px;
     background-color: hsl(var(--card));
     color: hsl(var(--card-foreground));
     box-sizing: border-box;
     min-height: 0;
+    min-width: 0;
     border-radius: 16px;
     border: 1px solid hsl(var(--border));
     margin: 4px 8px 8px 8px;
@@ -271,4 +273,19 @@
 .mapboxgl-ctrl-attrib,
 .mapboxgl-compact {
   display: none !important;
+}
+
+/* KaTeX display math overflow containment */
+.prose .katex-display,
+.prose-sm .katex-display,
+.katex-display {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.prose .katex-display > .katex,
+.prose-sm .katex-display > .katex,
+.katex-display > .katex {
+  max-width: 100%;
 }
