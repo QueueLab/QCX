@@ -23,6 +23,8 @@ import dynamic from 'next/dynamic'
 import { HeaderSearchButton } from './header-search-button'
 import { useIsStandalone } from '@/lib/hooks/use-is-standalone'
 import { getSupabaseBrowserClient } from '@/lib/supabase/browser-client'
+import { ChatShare } from './chat-share'
+import { createPortal } from 'react-dom'
 
 type ChatProps = {
   id?: string // This is the chatId
@@ -180,11 +182,41 @@ export function Chat({ id }: ChatProps) {
     );
   };
 
+  const enableShare = process.env.ENABLE_SHARE !== 'false'
+  const [headerSharePortalTarget, setHeaderSharePortalTarget] = useState<HTMLElement | null>(null)
+  const [isAuthorizedToShare, setIsAuthorizedToShare] = useState(false)
+
+  useEffect(() => {
+    setHeaderSharePortalTarget(document.getElementById('header-share-portal'))
+  }, [])
+
+  useEffect(() => {
+    if (!id) {
+      setIsAuthorizedToShare(false)
+      return
+    }
+
+    // Verify user access to chat before showing collaboration control
+    fetch(`/api/chats/${id}/participants`)
+      .then(res => {
+        setIsAuthorizedToShare(res.ok)
+      })
+      .catch(() => {
+        setIsAuthorizedToShare(false)
+      })
+  }, [id])
+
+  const renderHeaderShare = () => {
+    if (!enableShare || !id || !isAuthorizedToShare || !headerSharePortalTarget) return null
+    return createPortal(<ChatShare chatId={id} />, headerSharePortalTarget)
+  }
+
   // Mobile layout
   if (isMobile) {
     return (
       <MapDataProvider> {/* Add Provider */}
         <HeaderSearchButton />
+        {renderHeaderShare()}
         <div className="mobile-layout-container">
           <div className="mobile-map-section">
           {activeView ? <SettingsView /> : isUsageOpen ? <UsageView /> : <MapProvider />}
@@ -231,6 +263,7 @@ export function Chat({ id }: ChatProps) {
   return (
     <MapDataProvider> {/* Add Provider */}
       <HeaderSearchButton />
+      {renderHeaderShare()}
       <div className="flex justify-start items-start">
         {/* This is the new div for scrolling */}
         <div className="w-1/2 flex flex-col space-y-3 md:space-y-4 px-8 sm:px-12 pt-16 md:pt-20 pb-4 h-[calc(100vh-0.5in)] overflow-y-auto">

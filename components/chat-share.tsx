@@ -13,6 +13,7 @@ import {
 } from './ui/dialog'
 import { toast } from 'sonner'
 import { Spinner } from './ui/spinner'
+import type { Participant } from '@/lib/types'
 
 interface ChatShareProps {
   chatId: string
@@ -23,7 +24,7 @@ export function ChatShare({ chatId, className }: ChatShareProps) {
   const [open, setOpen] = useState(false)
   const [emailInput, setEmailInput] = useState('')
   const [isPending, startTransition] = useTransition()
-  const [participants, setParticipants] = useState<any[]>([])
+  const [participants, setParticipants] = useState<Participant[]>([])
   const [isLoadingParticipants, setIsLoadingParticipants] = useState(false)
 
   const fetchParticipants = async () => {
@@ -153,9 +154,14 @@ export function ChatShare({ chatId, className }: ChatShareProps) {
                 {participants.map(p => (
                   <div key={p.userId} className="flex items-center justify-between p-2 bg-muted/50 border border-border/40 rounded-lg">
                     <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {p.firstName || p.lastName ? `${p.firstName || ''} ${p.lastName || ''}`.trim() : 'Anonymous'}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium truncate">
+                          {p.firstName || p.lastName ? `${p.firstName || ''} ${p.lastName || ''}`.trim() : 'Anonymous'}
+                        </p>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-accent text-accent-foreground font-semibold capitalize">
+                          {p.role || 'collaborator'}
+                        </span>
+                      </div>
                       <p className="text-xs text-muted-foreground truncate">{p.email}</p>
                     </div>
                     <button
