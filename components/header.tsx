@@ -80,6 +80,8 @@ export const Header = () => {
         <History location="header" />
 
         <HistoryContainer location="header" />
+
+        <div id="header-share-portal" className="contents" />
       </div>
     </header>
     </>

@@ -17,7 +17,7 @@ export const UserMessage: React.FC<UserMessageProps> = ({
   chatId,
   showShare = false
 }) => {
-  const enableShare = process.env.ENABLE_SHARE === 'true'
+  const enableShare = process.env.ENABLE_SHARE !== 'false'
 
   // Normalize content to an array
   const contentArray =

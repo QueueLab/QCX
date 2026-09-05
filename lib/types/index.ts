@@ -46,6 +46,16 @@ export type SerperSearchResultItem = {
   position: number
 }
 
+export interface Participant {
+  id: string
+  role: string
+  userId: string
+  email: string | null
+  firstName: string | null
+  lastName: string | null
+  avatarUrl: string | null
+}
+
 export interface Chat extends Record<string, any> {
   id: string
   title: string
@@ -54,6 +64,7 @@ export interface Chat extends Record<string, any> {
   path: string
   messages: AIMessage[]
   sharePath?: string
+  participants?: Participant[]
 }
 
 export type AIMessage = {

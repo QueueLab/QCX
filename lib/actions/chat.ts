@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { type Chat as OldChatType, type AIMessage } from '@/lib/types'
+import { type Chat as OldChatType, type AIMessage, type Participant } from '@/lib/types'
 import {
   getChatsPage as dbGetChatsPage,
   getChat as dbGetChat,
@@ -201,9 +201,18 @@ export async function saveChat(chat: OldChatType, userId: string): Promise<strin
   }
   const effectiveUserId = userId || chat.userId;
 
+  // Check if chat already exists to avoid overwriting chats.userId for an existing chat
+  let existingOwnerId: string | undefined = undefined
+  if (chat.id) {
+    const [existingChat] = await db.select({ userId: chats.userId }).from(chats).where(eq(chats.id, chat.id)).limit(1)
+    if (existingChat) {
+      existingOwnerId = existingChat.userId
+    }
+  }
+
   const newChatData: DbNewChat = {
     id: chat.id,
-    userId: effectiveUserId,
+    userId: existingOwnerId || effectiveUserId,
     title: chat.title || 'Untitled Chat',
     createdAt: chat.createdAt ? new Date(chat.createdAt) : new Date(),
     visibility: 'private',
@@ -398,7 +407,7 @@ export async function removeParticipant(chatId: string, targetUserId: string): P
   return true
 }
 
-export async function listParticipants(chatId: string): Promise<any[] | null> {
+export async function listParticipants(chatId: string): Promise<Participant[] | null> {
   const currentUserId = await getCurrentUserIdOnServer()
   if (!currentUserId) return null
 
@@ -430,5 +439,5 @@ export async function listParticipants(chatId: string): Promise<any[] | null> {
   .innerJoin(users, eq(chatParticipants.userId, users.id))
   .where(eq(chatParticipants.chatId, chatId))
 
-  return result
+  return result as Participant[]
 }

@@ -98,13 +98,33 @@ export async function saveChat(chatData: NewChat, messagesData: Omit<NewMessage,
   return db.transaction(async (tx: typeof db) => {
     let chatId = chatData.id;
 
-    if (chatId) { // If chat ID is provided, assume update or append messages
+    if (chatId) { // If chat ID is provided, check if it already exists in DB
       const existingChat = await tx.select({ id: chats.id }).from(chats).where(eq(chats.id, chatId)).limit(1);
       if (!existingChat.length) {
-        // Chat doesn't exist, so create it
+        // Chat doesn't exist in DB yet, so create it for the creating user
         const newChatResult = await tx.insert(chats).values(chatData).returning({ id: chats.id });
         chatId = newChatResult[0].id;
       } else {
+        // Chat exists: verify caller is owner or participant
+        const accessibleChat = await tx
+          .select({ id: chats.id })
+          .from(chats)
+          .where(
+            and(
+              eq(chats.id, chatId),
+              sql`${chats.userId} = ${chatData.userId} OR EXISTS (
+                SELECT 1 FROM ${chatParticipants}
+                WHERE ${chatParticipants.chatId} = ${chats.id} AND ${chatParticipants.userId} = ${chatData.userId}
+              )`
+            )
+          )
+          .limit(1);
+
+        if (!accessibleChat.length) {
+          console.error(`User ${chatData.userId} is not authorized to write to chat ${chatId}`);
+          return null;
+        }
+
         // Optionally update chat metadata here if needed, e.g., title
         if (chatData.title) {
           await tx.update(chats).set({ title: chatData.title, visibility: chatData.visibility, updatedAt: chatData.updatedAt }).where(eq(chats.id, chatId));
@@ -164,6 +184,25 @@ export async function createMessage(messageData: NewMessage): Promise<Message | 
     return null;
   }
   try {
+    const accessibleChat = await db
+      .select({ id: chats.id })
+      .from(chats)
+      .where(
+        and(
+          eq(chats.id, messageData.chatId),
+          sql`${chats.userId} = ${messageData.userId} OR EXISTS (
+            SELECT 1 FROM ${chatParticipants}
+            WHERE ${chatParticipants.chatId} = ${chats.id} AND ${chatParticipants.userId} = ${messageData.userId}
+          )`
+        )
+      )
+      .limit(1);
+
+    if (!accessibleChat.length) {
+      console.error(`User ${messageData.userId} is not authorized to create a message in chat ${messageData.chatId}`);
+      return null;
+    }
+
     const result = await db.insert(messages).values(messageData).returning();
     return result[0] || null;
   } catch (error) {
