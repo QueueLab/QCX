@@ -10,7 +10,7 @@ import { generateText } from 'ai';
 const domainSchema = z.string().min(1).refine((val) => {
   try {
     // Basic validation to check if it's a valid URL or domain
-    const url = val.startsWith('http') ? val : `https://${val}`;
+    const url = /^https?:\/\//i.test(val) ? val : `https://${val}`;
     new URL(url);
     return true;
   } catch (e) {
@@ -32,7 +32,7 @@ export async function startSystemPromptGeneration(domain: string) {
     return { error: validation.error.errors[0].message };
   }
 
-  const normalizedDomain = domain.startsWith('http') ? domain : `https://${domain}`;
+  const normalizedDomain = /^https?:\/\//i.test(domain) ? domain : `https://${domain}`;
 
   try {
     const job = await createJob({

@@ -80,17 +80,42 @@ export async function resolveClerkUserToDbUser(clerkUserId: string): Promise<str
       }
     }
 
-    // 2.2 Create new user if no match found
-    const [newUser] = await db.insert(users).values({
-      clerkUserId,
-      email,
-      role: 'viewer',
-      firstName,
-      lastName,
-      avatarUrl,
-    }).returning({ id: users.id });
+    // 2.2 Create new user with conflict handling (idempotent upsert/insert)
+    try {
+      const [newUser] = await db.insert(users).values({
+        clerkUserId,
+        email,
+        role: 'viewer',
+        firstName,
+        lastName,
+        avatarUrl,
+      })
+      .onConflictDoNothing({ target: users.clerkUserId })
+      .returning({ id: users.id });
 
-    return newUser.id;
+      if (newUser?.id) {
+        return newUser.id;
+      }
+    } catch (insertError: any) {
+      // Treat unique-constraint race conditions as recoverable cases
+      console.warn('[Auth] Concurrent insert conflict encountered, recovering:', insertError?.message || insertError);
+    }
+
+    // Re-run SELECT by clerk_user_id (or email) after a conflict
+    const [recoveredUser] = await db.select({ id: users.id })
+      .from(users)
+      .where(
+        email
+          ? or(eq(users.clerkUserId, clerkUserId), eq(users.email, email))
+          : eq(users.clerkUserId, clerkUserId)
+      )
+      .limit(1);
+
+    if (recoveredUser) {
+      return recoveredUser.id;
+    }
+
+    return null;
   } catch (error) {
     console.error('[Auth] Error resolving Clerk user to DB user:', error);
     return null;

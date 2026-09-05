@@ -299,7 +299,8 @@ export async function saveSystemPrompt(
       .set({ systemPrompt: trimmedPrompt })
       .where(eq(users.id, userId));
 
-    revalidatePath('/settings');
+    revalidatePath('/');
+    revalidatePath('/search/[id]', 'page');
     return { success: true }
   } catch (error) {
     console.error('saveSystemPrompt: Error:', error)

@@ -28,6 +28,13 @@ import { SettingsSkeleton } from './settings-skeleton'
 import { useUser } from '@clerk/nextjs'
 
 // Define the form schema with enum validation for roles
+const roleSchema = z.preprocess((val) => {
+  if (val === "admin" || val === "editor" || val === "viewer") {
+    return val
+  }
+  return "viewer"
+}, z.enum(["admin", "editor", "viewer"]))
+
 const settingsFormSchema = z.object({
   systemPrompt: z
     .string()
@@ -41,12 +48,12 @@ const settingsFormSchema = z.object({
     z.object({
       id: z.string(),
       email: z.string().email(),
-      role: z.enum(["admin", "editor", "viewer"]),
+      role: roleSchema,
     }),
   ),
   newUserEmail: z.string().email().optional().or(z.literal('')),
-  newUserRole: z.enum(["admin", "editor", "viewer"]).optional(),
-  domain: z.string().url().optional().or(z.literal('')),
+  newUserRole: roleSchema.optional(),
+  domain: z.string().optional(),
 })
 
 export type SettingsFormValues = z.infer<typeof settingsFormSchema>
@@ -161,6 +168,31 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
     }
   }
 
+  function onInvalid(errors: any) {
+    const fieldMeta: Record<string, { label: string; tab: string }> = {
+      domain: { label: "Business Domain", tab: "System tab" },
+      systemPrompt: { label: "System Prompt", tab: "System tab" },
+      selectedModel: { label: "Plugin", tab: "Plugins tab" },
+      newUserEmail: { label: "New User Email", tab: "Users tab" },
+      newUserRole: { label: "New User Role", tab: "Users tab" },
+      users: { label: "Users", tab: "Users tab" },
+    }
+
+    const messages = Object.keys(errors).map((fieldKey) => {
+      const meta = fieldMeta[fieldKey]
+      if (meta) {
+        return `${meta.label} on ${meta.tab} is invalid`
+      }
+      return `${fieldKey} is invalid`
+    })
+
+    toast({
+      title: "Validation Error",
+      description: messages.join("\n"),
+      variant: "destructive",
+    })
+  }
+
   function onReset() {
     form.reset(defaultValues)
     setTheme('earth')
@@ -172,7 +204,7 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)}>
+      <form onSubmit={form.handleSubmit(onSubmit, onInvalid)}>
         <div className="space-y-6">
           {/* Theme selector placed above the tabs */}
           <Card className="mb-6">
