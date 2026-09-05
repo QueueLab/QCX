@@ -23,7 +23,10 @@ export function SystemPromptForm({ form }: SystemPromptFormProps) {
   const [isDeleting, setIsDeleting] = useState(false)
 
   const handleGenerate = async () => {
-    if (!domain) {
+    const rawDomain = form.getValues("domain") || domain
+    const trimmedDomain = rawDomain ? rawDomain.trim() : ""
+
+    if (!trimmedDomain) {
       toast({
         title: "Domain required",
         description: "Please enter a domain to generate a system prompt.",
@@ -32,8 +35,12 @@ export function SystemPromptForm({ form }: SystemPromptFormProps) {
       return
     }
 
+    const normalizedDomain = /^https?:\/\//i.test(trimmedDomain)
+      ? trimmedDomain
+      : `https://${trimmedDomain}`
+
     setIsGenerating(true)
-    const result = await startSystemPromptGeneration(domain)
+    const result = await startSystemPromptGeneration(normalizedDomain)
 
     if (result.error) {
       toast({
