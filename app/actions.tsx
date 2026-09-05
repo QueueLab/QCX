@@ -244,8 +244,6 @@ async function submit(formData?: FormData, skip?: boolean) {
             </Section>
           );
 
-          await new Promise(resolve => setTimeout(resolve, 500));
-
           aiState.done({
             ...aiState.get(),
             messages: [
@@ -578,8 +576,6 @@ async function submit(formData?: FormData, skip?: boolean) {
             <FollowupPanel />
           </Section>
         )
-
-        await new Promise(resolve => setTimeout(resolve, 500))
 
         aiState.done({
           ...aiState.get(),
