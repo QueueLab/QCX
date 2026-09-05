@@ -68,13 +68,16 @@ export async function getModel(requireVision: boolean = false) {
             throw new Error('Selected model is not configured.');
         }
       case 'GPT-5.1':
+      case 'gpt-6-astra':
+      case 'GPT-6 Astra':
+      case 'GPT-6':
         if (openaiApiKey) {
           const openai = createOpenAI({
             apiKey: openaiApiKey,
           });
-          return openai('gpt-4o');
+          return openai('gpt-6');
         } else {
-            console.error('User selected "GPT-5.1" but OPENAI_API_KEY is not set.');
+            console.error('User selected OpenAI model but OPENAI_API_KEY is not set.');
             throw new Error('Selected model is not configured.');
         }
     }
@@ -86,7 +89,7 @@ export async function getModel(requireVision: boolean = false) {
       const openai = createOpenAI({
         apiKey: openaiApiKey,
       });
-      return openai('gpt-4o');
+      return openai('gpt-6-astra');
     } catch (error) {
       console.warn('OpenAI API unavailable, falling back to next provider:', error);
     }
@@ -135,7 +138,7 @@ export async function getModel(requireVision: boolean = false) {
   const openai = createOpenAI({
     apiKey: openaiApiKey,
   });
-  return openai('gpt-4o');
+  return openai('gpt-6');
 }
 
 /**
