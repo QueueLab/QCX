@@ -162,7 +162,7 @@ export function SystemPromptForm({ form }: SystemPromptFormProps) {
                   variant="ghost"
                   size="sm"
                   disabled={isDeleting}
-                  className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                  className="h-8 text-xs text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
                   onClick={async () => {
                     setIsDeleting(true)
                     try {
