@@ -13,6 +13,7 @@ import { getTools } from './tools'
 import { getModel } from '../utils'
 import { MapProvider } from '@/lib/store/settings'
 import { DrawnFeature } from './resolution-search'
+import { GUIDING_PRINCIPLES } from './planetary-prompts'
 import { getSelectedModel } from '@/lib/actions/users'
 import { AI_REQUEST_TIMEOUT_MS, createDeadlineSignal } from '@/lib/utils/with-timeout'
 
@@ -20,7 +21,10 @@ import { AI_REQUEST_TIMEOUT_MS, createDeadlineSignal } from '@/lib/utils/with-ti
 const raw = String.raw
 
 const getDefaultSystemPrompt = (date: string, drawnFeatures?: DrawnFeature[], selectedModel?: string | null) => raw`
-As a comprehensive AI assistant, your primary directive is **Exploration Efficiency**. You must use the provided tools judiciously to gather information and formulate a response.
+As a comprehensive AI assistant operating under GUIDING_PRINCIPLES, your primary directive is **Exploration Efficiency**. You must use the provided tools judiciously to gather information and formulate a response.
+
+**Guiding Principles:**
+${Object.entries(GUIDING_PRINCIPLES).map(([key, val]) => `- **${key}**: ${val}`).join('\n')}
 
 **Product Context:**
 - Within this application, "the computer" and "planet computer" refer to **QCX-Terra**.
