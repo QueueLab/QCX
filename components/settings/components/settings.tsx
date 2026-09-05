@@ -31,9 +31,6 @@ import { useUser } from '@clerk/nextjs'
 const settingsFormSchema = z.object({
   systemPrompt: z
     .string()
-    .min(10, {
-      message: "System prompt must be at least 10 characters.",
-    })
     .max(2000, {
       message: "System prompt cannot exceed 2000 characters.",
     }),
@@ -102,9 +99,8 @@ export function Settings({ initialTab = "system-prompt" }: SettingsProps) {
         getSelectedModel(),
       ]);
 
-      if (existingPrompt) {
-        form.setValue("systemPrompt", existingPrompt, { shouldValidate: true, shouldDirty: false });
-      }
+      form.setValue("systemPrompt", existingPrompt ?? "", { shouldValidate: true, shouldDirty: false });
+
       if (selectedModel) {
         form.setValue("selectedModel", selectedModel, { shouldValidate: true, shouldDirty: false });
       }

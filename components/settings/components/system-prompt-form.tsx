@@ -4,9 +4,10 @@ import { FormField, FormItem, FormLabel, FormControl, FormDescription, FormMessa
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Loader2, Sparkles } from "lucide-react"
+import { Loader2, Sparkles, Trash2 } from "lucide-react"
 import { useToast } from "@/components/ui/hooks/use-toast"
 import { startSystemPromptGeneration, getSystemPromptGenerationJob } from "@/lib/actions/system-prompt"
+import { deleteSystemPrompt } from "@/lib/actions/chat"
 
 interface SystemPromptFormProps {
   form: UseFormReturn<any>
@@ -145,7 +146,36 @@ export function SystemPromptForm({ form }: SystemPromptFormProps) {
         name="systemPrompt"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>System</FormLabel>
+            <div className="flex items-center justify-between">
+              <FormLabel>System</FormLabel>
+              {systemPrompt?.trim() && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={async () => {
+                    form.setValue("systemPrompt", "", { shouldValidate: true, shouldDirty: true })
+                    const res = await deleteSystemPrompt()
+                    if (res?.error) {
+                      toast({
+                        title: "Error deleting system prompt",
+                        description: res.error,
+                        variant: "destructive",
+                      })
+                    } else {
+                      toast({
+                        title: "System prompt cleared",
+                        description: "Your system prompt has been cleared and reset.",
+                      })
+                    }
+                  }}
+                >
+                  <Trash2 className="mr-1 h-3.5 w-3.5" />
+                  Delete Prompt
+                </Button>
+              )}
+            </div>
             <FormControl>
               <Textarea
                 placeholder="Enter the system prompt for your planetary copilot..."
