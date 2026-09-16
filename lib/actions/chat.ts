@@ -201,18 +201,9 @@ export async function saveChat(chat: OldChatType, userId: string): Promise<strin
   }
   const effectiveUserId = userId || chat.userId;
 
-  // Check if chat already exists to avoid overwriting chats.userId for an existing chat
-  let existingOwnerId: string | undefined = undefined
-  if (chat.id) {
-    const [existingChat] = await db.select({ userId: chats.userId }).from(chats).where(eq(chats.id, chat.id)).limit(1)
-    if (existingChat) {
-      existingOwnerId = existingChat.userId
-    }
-  }
-
   const newChatData: DbNewChat = {
     id: chat.id,
-    userId: existingOwnerId || effectiveUserId,
+    userId: effectiveUserId,
     title: chat.title || 'Untitled Chat',
     createdAt: chat.createdAt ? new Date(chat.createdAt) : new Date(),
     visibility: 'private',
