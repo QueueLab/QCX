@@ -73,7 +73,7 @@ export function ProfileToggle() {
           </DropdownMenuItem>
         )}
         {isLoaded && !isSignedIn && (
-          <DropdownMenuItem onClick={() => openSignIn({ mode: 'modal' })}>
+          <DropdownMenuItem onClick={() => openSignIn()}>
             <LogIn className="mr-2 h-4 w-4" />
             <span>Sign in</span>
           </DropdownMenuItem>

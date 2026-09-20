@@ -115,7 +115,7 @@ export function ChatHistoryClient({}: ChatHistoryClientProps) {
         <p className="text-sm text-muted-foreground text-center">
           Sign in to view your message history
         </p>
-        <Button variant="outline" size="sm" onClick={() => openSignIn({ mode: 'modal' })}>
+        <Button variant="outline" size="sm" onClick={() => openSignIn()}>
           Sign in
         </Button>
       </div>
