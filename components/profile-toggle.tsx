@@ -1,10 +1,10 @@
 'use client'
-import { Settings, Shield, CircleUserRound, LogOut } from "lucide-react"
+import { Settings, Shield, CircleUserRound, LogOut, LogIn } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { ProfileToggleEnum, useProfileToggle } from "./profile-toggle-context"
 import { useUsageToggle } from "./usage-toggle-context"
-import { useClerk, useUser, SignInButton } from "@clerk/nextjs"
+import { useClerk, useUser } from "@clerk/nextjs"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { useMediaQuery } from "@/hooks/use-media-query"
 
@@ -15,7 +15,7 @@ export function ProfileToggle() {
 
   // Call hooks unconditionally
   const { isLoaded, isSignedIn, user } = useUser()
-  const { signOut } = useClerk()
+  const { signOut, openSignIn } = useClerk()
 
   const handleSectionToggle = (section: ProfileToggleEnum) => {
     if (activeView !== section && isUsageOpen) {
@@ -73,12 +73,10 @@ export function ProfileToggle() {
           </DropdownMenuItem>
         )}
         {isLoaded && !isSignedIn && (
-          <SignInButton mode="modal">
-            <DropdownMenuItem>
-              <LogOut className="mr-2 h-4 w-4" />
-              <span>Sign in</span>
-            </DropdownMenuItem>
-          </SignInButton>
+          <DropdownMenuItem onClick={() => openSignIn()}>
+            <LogIn className="mr-2 h-4 w-4" />
+            <span>Sign in</span>
+          </DropdownMenuItem>
         )}
       </DropdownMenuContent>
     </DropdownMenu>
