@@ -19,7 +19,7 @@ import {
 import { toast } from 'sonner';
 import { Spinner } from '@/components/ui/spinner';
 import { Zap, ChevronDown, ChevronUp } from 'lucide-react';
-import { useUser } from '@clerk/nextjs';
+import { useUser, useClerk } from '@clerk/nextjs';
 import { useHistoryToggle } from '../history-toggle-context';
 import HistoryItem from '@/components/history-item';
 import type { Chat as DrizzleChat } from '@/lib/actions/chat-db';
@@ -28,6 +28,7 @@ interface ChatHistoryClientProps {}
 
 export function ChatHistoryClient({}: ChatHistoryClientProps) {
   const { isLoaded, isSignedIn } = useUser();
+  const { openSignIn } = useClerk();
   const [chats, setChats] = useState<DrizzleChat[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -114,7 +115,7 @@ export function ChatHistoryClient({}: ChatHistoryClientProps) {
         <p className="text-sm text-muted-foreground text-center">
           Sign in to view your message history
         </p>
-        <Button variant="outline" size="sm" onClick={() => window.location.href = "/sign-in"}>
+        <Button variant="outline" size="sm" onClick={() => openSignIn({ mode: 'modal' })}>
           Sign in
         </Button>
       </div>
