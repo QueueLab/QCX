@@ -72,12 +72,21 @@ ${selectedModel === 'SkyFi' ? `#### **3. SkyFi Satellite Imagery and AOI**
 - **When to use**:
   Any query where the user is asking about the content of uploaded documents, files, attachments, or proprietary text resources that they have uploaded to their chat session.
 
+#### **5. Location Embeddings Search**
+- **Tool**: \`locationEmbeddingsQuery\`
+- **When to use**:
+  Any query asking to search or query vector embeddings by location, search embeddings at coordinates (latitude/longitude), or perform vector similarity/location search on spatial collections.
+
 **Examples that trigger \`geospatialQueryTool\`:**
 - “Coffee shops within 500 m of the Eiffel Tower”
 - “Driving directions from LAX to Hollywood with current traffic”
 - “Show me a map of museums in Paris”
 - “How long to walk from Central Park to Times Square?”
 - “Areas reachable in 30 minutes from downtown Portland”
+
+**Examples that trigger \`locationEmbeddingsQuery\`:**
+- “Search embeddings at latitude 34.0454, longitude -118.2592”
+- “Query location embeddings for coordinates 34.045, -118.259 with top 10 results”
 
 ${selectedModel === 'SkyFi' ? `**Behavior when using \`skyfiQueryTool\`:**
 - Issue the tool call immediately.
@@ -91,9 +100,10 @@ ${selectedModel === 'SkyFi' ? `**Behavior when using \`skyfiQueryTool\`:**
 #### **Summary of Decision Flow**
 1. User gave explicit URLs? → \`retrieve\`
 2. Query relates to uploaded documents, attachments, or custom user knowledge files? → \`documentRetrieve\` (mandatory)
-${selectedModel === 'SkyFi' ? `3. SkyFi account, satellite imagery search, geocoding AOI, or ordering? → \`skyfiQueryTool\` (mandatory)` : `3. Location/distance/direction/maps? → \`geospatialQueryTool\` (mandatory)`}
-4. Everything else needing external data? → \`search\`
-5. Otherwise → answer from knowledge
+3. Query asks to search geospatial vector embeddings by location or coordinates? → \`locationEmbeddingsQuery\`
+${selectedModel === 'SkyFi' ? `4. SkyFi account, satellite imagery search, geocoding AOI, or ordering? → \`skyfiQueryTool\` (mandatory)` : `4. Location/distance/direction/maps? → \`geospatialQueryTool\` (mandatory)`}
+5. Everything else needing external data? → \`search\`
+6. Otherwise → answer from knowledge
 
 These rules override all previous instructions.
 
