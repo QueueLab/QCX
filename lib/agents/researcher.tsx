@@ -65,7 +65,8 @@ ${selectedModel === 'SkyFi' ? `#### **3. SkyFi Satellite Imagery and AOI**
 - **Tool**: \`geospatialQueryTool\` → **MUST be used (no exceptions)** for:
   • Finding places, businesses, "near me", distances, directions
   • Travel times, routes, traffic, map generation
-  • Isochrones, travel-time matrices, multi-stop optimization`}
+  • Isochrones, travel-time matrices, multi-stop optimization
+- Do not use this tool for satellite-image similarity or embeddings searches; use \`locationEmbeddingsQuery\` for those instead.`}
 
 #### **4. Searching Uploaded Documents and Attachments**
 - **Tool**: \`documentRetrieve\`
@@ -75,7 +76,9 @@ ${selectedModel === 'SkyFi' ? `#### **3. SkyFi Satellite Imagery and AOI**
 #### **5. Location Embeddings Search**
 - **Tool**: \`locationEmbeddingsQuery\`
 - **When to use**:
-  Any query asking to search or query vector embeddings by location, search embeddings at coordinates (latitude/longitude), or perform vector similarity/location search on spatial collections.
+  Any query asking to search satellite or aerial imagery embeddings by location, search embeddings at coordinates (latitude/longitude), or perform vector similarity/location search on spatial collections.
+- Pass coordinates as structured \`latitude\` and \`longitude\` arguments. Do not put them only in a free-form query.
+- If the user gives only a place name, use an available geocoder first or ask for coordinates; never invent coordinates.
 
 **Examples that trigger \`geospatialQueryTool\`:**
 - “Coffee shops within 500 m of the Eiffel Tower”
@@ -87,6 +90,8 @@ ${selectedModel === 'SkyFi' ? `#### **3. SkyFi Satellite Imagery and AOI**
 **Examples that trigger \`locationEmbeddingsQuery\`:**
 - “Search embeddings at latitude 34.0454, longitude -118.2592”
 - “Query location embeddings for coordinates 34.045, -118.259 with top 10 results”
+- “Find satellite imagery similar to the area at 34.045, -118.259”
+- “Search for construction-site imagery near latitude 30.25, longitude -97.65”
 
 ${selectedModel === 'SkyFi' ? `**Behavior when using \`skyfiQueryTool\`:**
 - Issue the tool call immediately.
@@ -100,7 +105,7 @@ ${selectedModel === 'SkyFi' ? `**Behavior when using \`skyfiQueryTool\`:**
 #### **Summary of Decision Flow**
 1. User gave explicit URLs? → \`retrieve\`
 2. Query relates to uploaded documents, attachments, or custom user knowledge files? → \`documentRetrieve\` (mandatory)
-3. Query asks to search geospatial vector embeddings by location or coordinates? → \`locationEmbeddingsQuery\`
+3. Query asks to search satellite/aerial vector embeddings by location, coordinates, or imagery semantics? → \`locationEmbeddingsQuery\`
 ${selectedModel === 'SkyFi' ? `4. SkyFi account, satellite imagery search, geocoding AOI, or ordering? → \`skyfiQueryTool\` (mandatory)` : `4. Location/distance/direction/maps? → \`geospatialQueryTool\` (mandatory)`}
 5. Everything else needing external data? → \`search\`
 6. Otherwise → answer from knowledge

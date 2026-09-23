@@ -21,10 +21,12 @@ const { locationEmbeddingsTool } = await import(
 )
 
 describe('Location Embeddings Tool', () => {
-  it('validates schema inputs correctly', () => {
+  it('validates documented inputs and defaults', () => {
     const validParams = locationEmbeddingsQuerySchema.parse({
       latitude: 34.0454501975,
       longitude: -118.259248828,
+      start_date: '2024-01-01',
+      end_date: '2024-12-31',
       top_k: 10
     })
 
@@ -41,27 +43,44 @@ describe('Location Embeddings Tool', () => {
     expect(() =>
       locationEmbeddingsQuerySchema.parse({ latitude: 100, longitude: 0 })
     ).toThrow()
+    expect(() =>
+      locationEmbeddingsQuerySchema.parse({ latitude: 0, longitude: 0, top_k: 5001 })
+    ).toThrow()
   })
 
-  it('executes tool call and formats fetch request properly', async () => {
-    const mockUiStream = {
-      append: () => {},
-      update: () => {}
-    }
-
+  it('searches by location and resolves chip thumbnail URLs', async () => {
+    const mockUiStream = { append: () => {}, update: () => {} }
     const originalFetch = globalThis.fetch
-    let lastFetchUrl = ''
-    let lastFetchOptions: any = null
+    const originalApiKey = process.env.LGND_EMBEDDINGS_API_KEY
+    process.env.LGND_EMBEDDINGS_API_KEY = 'sk_test_api_key'
+    const requests: Array<{ url: string; options?: RequestInit }> = []
 
     globalThis.fetch = (async (url: string | URL | Request, options?: RequestInit) => {
-      lastFetchUrl = url.toString()
-      lastFetchOptions = options
+      requests.push({ url: url.toString(), options })
+      if (requests.length === 1) {
+        return new Response(
+          JSON.stringify({
+            data: [
+              {
+                chip_id: 'chip_1',
+                score: 0.95,
+                distance: 0.05,
+                geometry: { type: 'Point', coordinates: [-118.259, 34.045] },
+                datetime: '2024-06-15T10:30:00Z',
+                collection: 'naip',
+                centroid: { type: 'Point', coordinates: [-118.259, 34.045] }
+              }
+            ],
+            _meta: { top_k: 10 }
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      }
       return new Response(
         JSON.stringify({
-          results: [
-            { id: 'emb_1', score: 0.95 },
-            { id: 'emb_2', score: 0.88 }
-          ]
+          object: 'thumbnail_url',
+          url: 'https://cdn.example.test/chip_1.jpg?signature=temporary',
+          expires_at: '2026-09-23T14:00:00Z'
         }),
         { status: 200, headers: { 'Content-Type': 'application/json' } }
       )
@@ -76,53 +95,64 @@ describe('Location Embeddings Tool', () => {
       const result = await tool.execute({
         latitude: 34.0454501975,
         longitude: -118.259248828,
-        top_k: 10,
-        apiKey: 'sk_test_api_key'
+        start_date: '2024-01-01',
+        end_date: '2024-12-31',
+        top_k: 10
       })
 
-      const expectedUrl =
-        'https://embeddings.api.lgnd.ai/v1/tenants/ten_01a0cd9a20c671b59c2cf55ee847bc66/collections/col_01a0cd9a20e170daac4573a3f7200000/search-by-location'
-
-      expect(lastFetchUrl).toBe(expectedUrl)
-      expect(lastFetchOptions?.headers?.Authorization).toBe('Bearer sk_test_api_key')
-
-      const sentBody = JSON.parse(lastFetchOptions.body)
-      expect(sentBody.latitude).toBe(34.0454501975)
-      expect(sentBody.longitude).toBe(-118.259248828)
-      expect(sentBody.top_k).toBe(10)
-
-      expect(result.results.results.length).toBe(2)
+      expect(requests).toHaveLength(2)
+      expect(requests[0].url).toContain('/search-by-location')
+      expect(requests[1].url).toContain('/chips/chip_1/thumbnail/url')
+      expect(requests[0].options?.headers).toMatchObject({
+        Authorization: 'Bearer sk_test_api_key'
+      })
+      expect(JSON.parse(requests[0].options?.body as string)).toMatchObject({
+        latitude: 34.0454501975,
+        longitude: -118.259248828,
+        start_date: '2024-01-01',
+        end_date: '2024-12-31',
+        top_k: 10
+      })
+      if (!('results' in result)) throw new Error('Expected a successful result')
+      expect(result.results.data).toHaveLength(1)
+      expect(result.images).toEqual([
+          {
+            chip_id: 'chip_1',
+            url: 'https://cdn.example.test/chip_1.jpg?signature=temporary',
+            expires_at: '2026-09-23T14:00:00Z'
+          }
+        ])
     } finally {
       globalThis.fetch = originalFetch
+      if (originalApiKey === undefined) delete process.env.LGND_EMBEDDINGS_API_KEY
+      else process.env.LGND_EMBEDDINGS_API_KEY = originalApiKey
     }
   })
 
-  it('handles API HTTP errors gracefully', async () => {
-    const mockUiStream = {
-      append: () => {},
-      update: () => {}
-    }
-
+  it('returns a useful error when the API rejects the request', async () => {
+    const mockUiStream = { append: () => {}, update: () => {} }
     const originalFetch = globalThis.fetch
-    globalThis.fetch = (async () => {
-      return new Response('Unauthorized key', { status: 401 })
-    }) as typeof fetch
+    const originalApiKey = process.env.LGND_EMBEDDINGS_API_KEY
+    process.env.LGND_EMBEDDINGS_API_KEY = 'sk_test_api_key'
+    globalThis.fetch = (async () =>
+      new Response('Unauthorized key', { status: 401 })) as typeof fetch
 
     try {
       const tool = locationEmbeddingsTool({
         uiStream: mockUiStream as any,
         fullResponse: ''
       })
-
       const result = await tool.execute({
         latitude: 34.045,
         longitude: -118.259,
         top_k: 5
       })
-
+      if (!('error' in result)) throw new Error('Expected an error result')
       expect(result.error).toContain('HTTP 401')
     } finally {
       globalThis.fetch = originalFetch
+      if (originalApiKey === undefined) delete process.env.LGND_EMBEDDINGS_API_KEY
+      else process.env.LGND_EMBEDDINGS_API_KEY = originalApiKey
     }
   })
 })
