@@ -11,31 +11,25 @@ export const locationEmbeddingsQuerySchema = z.object({
     .min(-180)
     .max(180)
     .describe('Longitude coordinate (-180 to 180)'),
-  start_date: z
-    .string()
-    .date()
-    .optional()
-    .describe('Optional imagery start date in YYYY-MM-DD format'),
-  end_date: z
-    .string()
-    .date()
-    .optional()
-    .describe('Optional imagery end date in YYYY-MM-DD format'),
   top_k: z
     .number()
     .int()
-    .min(1)
-    .max(5000)
+    .positive()
     .optional()
     .default(10)
-    .describe('Number of top embedding search results to return (1-5000)'),
-  geometry: z
-    .object({
-      type: z.enum(['Point', 'MultiPoint', 'Polygon', 'MultiPolygon']),
-      coordinates: z.unknown()
-    })
+    .describe('Number of top embedding search results to return (default: 10)'),
+  tenantId: z
+    .string()
     .optional()
-    .describe('Optional GeoJSON geometry used to filter results spatially')
+    .describe('Optional tenant ID for the embeddings API (defaults to configured tenant ID)'),
+  collectionId: z
+    .string()
+    .optional()
+    .describe('Optional collection ID for the embeddings API (defaults to configured collection ID)'),
+  apiKey: z
+    .string()
+    .optional()
+    .describe('Optional API key override for the embeddings API')
 })
 
 export type LocationEmbeddingsQuery = z.infer<typeof locationEmbeddingsQuerySchema>
