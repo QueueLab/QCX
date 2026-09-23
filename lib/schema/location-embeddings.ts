@@ -1,35 +1,47 @@
 import { z } from 'zod'
 
 export const locationEmbeddingsQuerySchema = z.object({
+  query: z
+    .string()
+    .min(1)
+    .max(10_000)
+    .describe('Natural-language description of the satellite or aerial imagery to find'),
+  location: z
+    .string()
+    .min(1)
+    .max(500)
+    .optional()
+    .describe('Optional place name or address to geocode and use as a search region'),
   latitude: z
     .number()
     .min(-90)
     .max(90)
-    .describe('Latitude coordinate (-90 to 90)'),
+    .optional()
+    .describe('Optional latitude when coordinates are already known'),
   longitude: z
     .number()
     .min(-180)
     .max(180)
-    .describe('Longitude coordinate (-180 to 180)'),
+    .optional()
+    .describe('Optional longitude when coordinates are already known'),
+  start_date: z
+    .string()
+    .date()
+    .optional()
+    .describe('Optional imagery start date in YYYY-MM-DD format'),
+  end_date: z
+    .string()
+    .date()
+    .optional()
+    .describe('Optional imagery end date in YYYY-MM-DD format'),
   top_k: z
     .number()
     .int()
-    .positive()
+    .min(1)
+    .max(5000)
     .optional()
     .default(10)
-    .describe('Number of top embedding search results to return (default: 10)'),
-  tenantId: z
-    .string()
-    .optional()
-    .describe('Optional tenant ID for the embeddings API (defaults to configured tenant ID)'),
-  collectionId: z
-    .string()
-    .optional()
-    .describe('Optional collection ID for the embeddings API (defaults to configured collection ID)'),
-  apiKey: z
-    .string()
-    .optional()
-    .describe('Optional API key override for the embeddings API')
+    .describe('Number of top embedding search results to return (1-5000)')
 })
 
 export type LocationEmbeddingsQuery = z.infer<typeof locationEmbeddingsQuerySchema>

@@ -7,145 +7,162 @@ mock.module('ai/rsc', () => ({
     done: () => {}
   }),
   useStreamableValue: (val: any) => [val, null, false],
-  createStreamableUI: () => ({
-    append: () => {},
-    update: () => {}
-  })
+  createStreamableUI: () => ({ append: () => {}, update: () => {} })
 }))
 
-const { locationEmbeddingsQuerySchema } = await import(
-  '../lib/schema/location-embeddings'
-)
-const { locationEmbeddingsTool } = await import(
-  '../lib/agents/tools/location-embeddings'
-)
+const { locationEmbeddingsQuerySchema } = await import('../lib/schema/location-embeddings')
+const { locationEmbeddingsTool } = await import('../lib/agents/tools/location-embeddings')
 
-describe('Location Embeddings Tool', () => {
-  it('validates schema inputs correctly', () => {
+describe('Natural-language location embeddings tool', () => {
+  it('validates natural-language queries and optional place names', () => {
     const validParams = locationEmbeddingsQuerySchema.parse({
-      latitude: 34.0454501975,
-      longitude: -118.259248828,
+      query: 'heavy machinery used to fell timber near forests',
+      location: 'Oregon',
       top_k: 10
     })
 
-    expect(validParams.latitude).toBe(34.0454501975)
-    expect(validParams.longitude).toBe(-118.259248828)
+    expect(validParams.query).toContain('heavy machinery')
+    expect(validParams.location).toBe('Oregon')
     expect(validParams.top_k).toBe(10)
 
-    const defaultParams = locationEmbeddingsQuerySchema.parse({
-      latitude: 0,
-      longitude: 0
-    })
-    expect(defaultParams.top_k).toBe(10)
-
+    expect(() => locationEmbeddingsQuerySchema.parse({ query: '' })).toThrow()
     expect(() =>
-      locationEmbeddingsQuerySchema.parse({ latitude: 100, longitude: 0 })
+      locationEmbeddingsQuerySchema.parse({ query: 'forests', top_k: 5001 })
     ).toThrow()
   })
 
-  it('executes tool call, queries thumbnails for chips, and formats fetch request properly', async () => {
-    const mockUiStream = {
-      append: () => {},
-      update: () => {}
-    }
-
+  it('geocodes a place, searches LGND by text within its region, and resolves thumbnails', async () => {
     const originalFetch = globalThis.fetch
-    const fetchCalls: Array<{ url: string; options: any }> = []
+    const originalApiKey = process.env.LGND_EMBEDDINGS_API_KEY
+    const originalMapboxToken = process.env.MAPBOX_ACCESS_TOKEN
+    process.env.LGND_EMBEDDINGS_API_KEY = 'sk_test_api_key'
+    process.env.MAPBOX_ACCESS_TOKEN = 'pk_test_mapbox_token'
+    const requests: Array<{ url: string; options?: RequestInit }> = []
 
     globalThis.fetch = (async (url: string | URL | Request, options?: RequestInit) => {
-      const urlStr = url.toString()
-      fetchCalls.push({ url: urlStr, options })
-
-      if (urlStr.includes('/search-by-location')) {
+      requests.push({ url: url.toString(), options })
+      if (requests.length === 1) {
         return new Response(
           JSON.stringify({
-            results: [
-              { chip_id: 'chip_123', score: 0.95 },
-              { chip_id: 'chip_456', score: 0.88 }
+            features: [
+              {
+                place_name: 'Oregon, United States',
+                center: [-120.5542, 43.8041],
+                bbox: [-124.7035, 41.9918, -116.4635, 46.292]
+              }
             ]
           }),
           { status: 200, headers: { 'Content-Type': 'application/json' } }
         )
-      } else if (urlStr.includes('/chips/chip_123/thumbnail/url')) {
+      }
+      if (requests.length === 2) {
         return new Response(
-          JSON.stringify({ url: 'https://cdn.embeddings.api.lgnd.ai/thumb1.png' }),
-          { status: 200, headers: { 'Content-Type': 'application/json' } }
-        )
-      } else if (urlStr.includes('/chips/chip_456/thumbnail/url')) {
-        return new Response(
-          JSON.stringify({ url: 'https://cdn.embeddings.api.lgnd.ai/thumb2.png' }),
+          JSON.stringify({
+            data: [
+              {
+                chip_id: 'chip_1',
+                score: 0.95,
+                distance: 0.05,
+                geometry: { type: 'Polygon', coordinates: [] },
+                datetime: '2024-06-15T10:30:00Z',
+                collection: 'naip',
+                centroid: { type: 'Point', coordinates: [-120.55, 43.8] }
+              }
+            ],
+            _meta: { top_k: 10 }
+          }),
           { status: 200, headers: { 'Content-Type': 'application/json' } }
         )
       }
-
-      return new Response('Not found', { status: 404 })
+      return new Response(
+        JSON.stringify({
+          object: 'thumbnail_url',
+          url: 'https://cdn.example.test/chip_1.jpg?signature=temporary',
+          expires_at: '2026-09-23T14:00:00Z'
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      )
     }) as typeof fetch
 
     try {
       const tool = locationEmbeddingsTool({
-        uiStream: mockUiStream as any,
+        uiStream: { append: () => {}, update: () => {} } as any,
         fullResponse: ''
       })
-
       const result = await tool.execute({
-        latitude: 34.0454501975,
-        longitude: -118.259248828,
-        top_k: 10,
-        apiKey: 'sk_test_api_key'
+        query: 'heavy machinery used to fell timber near forests',
+        location: 'Oregon',
+        top_k: 10
       })
 
-      const expectedSearchUrl =
-        'https://embeddings.api.lgnd.ai/v1/tenants/ten_01a0cd9a20c671b59c2cf55ee847bc66/collections/col_01a0cd9a20e170daac4573a3f7200000/search-by-location'
-
-      expect(fetchCalls[0].url).toBe(expectedSearchUrl)
-      expect(fetchCalls[0].options?.headers?.Authorization).toBe('Bearer sk_test_api_key')
-
-      const sentBody = JSON.parse(fetchCalls[0].options.body)
-      expect(sentBody.latitude).toBe(34.0454501975)
-      expect(sentBody.longitude).toBe(-118.259248828)
-      expect(sentBody.top_k).toBe(10)
-
-      // Verify chip thumbnail URLs were requested
-      const thumbUrls = fetchCalls.slice(1).map(c => c.url)
-      expect(thumbUrls).toContain('https://embeddings.api.lgnd.ai/v1/chips/chip_123/thumbnail/url')
-      expect(thumbUrls).toContain('https://embeddings.api.lgnd.ai/v1/chips/chip_456/thumbnail/url')
-
-      // Verify collected images in output payload
-      expect(result.images).toEqual([
-        'https://cdn.embeddings.api.lgnd.ai/thumb1.png',
-        'https://cdn.embeddings.api.lgnd.ai/thumb2.png'
-      ])
+      expect(requests).toHaveLength(3)
+      expect(requests[0].url).toContain('api.mapbox.com/geocoding')
+      expect(requests[1].url).toContain('/search-by-text')
+      expect(requests[2].url).toContain('/chips/chip_1/thumbnail/url')
+      expect(JSON.parse(requests[1].options?.body as string)).toMatchObject({
+        query: 'heavy machinery used to fell timber near forests',
+        top_k: 10,
+        geometry: {
+          type: 'Polygon',
+          coordinates: [[
+            [-124.7035, 41.9918],
+            [-116.4635, 41.9918],
+            [-116.4635, 46.292],
+            [-124.7035, 46.292],
+            [-124.7035, 41.9918]
+          ]]
+        }
+      })
+      expect(requests[1].options?.headers).toMatchObject({
+        Authorization: 'Bearer sk_test_api_key'
+      })
+      if (!('results' in result)) throw new Error('Expected a successful result')
+      expect(result.location).toBe('Oregon, United States')
+      expect(result.results.data).toHaveLength(1)
+      expect(result.images[0].url).toContain('chip_1.jpg')
     } finally {
       globalThis.fetch = originalFetch
+      if (originalApiKey === undefined) delete process.env.LGND_EMBEDDINGS_API_KEY
+      else process.env.LGND_EMBEDDINGS_API_KEY = originalApiKey
+      if (originalMapboxToken === undefined) delete process.env.MAPBOX_ACCESS_TOKEN
+      else process.env.MAPBOX_ACCESS_TOKEN = originalMapboxToken
     }
   })
 
-  it('handles API HTTP errors gracefully', async () => {
-    const mockUiStream = {
-      append: () => {},
-      update: () => {}
-    }
-
+  it('supports explicit coordinates without calling Mapbox', async () => {
     const originalFetch = globalThis.fetch
-    globalThis.fetch = (async () => {
-      return new Response('Unauthorized key', { status: 401 })
+    const originalApiKey = process.env.LGND_EMBEDDINGS_API_KEY
+    process.env.LGND_EMBEDDINGS_API_KEY = 'sk_test_api_key'
+    let requestCount = 0
+    globalThis.fetch = (async (url: string | URL | Request, options?: RequestInit) => {
+      requestCount += 1
+      expect(url.toString()).toContain('/search-by-text')
+      expect(JSON.parse(options?.body as string)).toMatchObject({
+        query: 'clear-cut forest',
+        top_k: 5
+      })
+      return new Response(JSON.stringify({ data: [] }), { status: 200 })
     }) as typeof fetch
 
     try {
       const tool = locationEmbeddingsTool({
-        uiStream: mockUiStream as any,
+        uiStream: { append: () => {}, update: () => {} } as any,
         fullResponse: ''
       })
-
       const result = await tool.execute({
-        latitude: 34.045,
-        longitude: -118.259,
+        query: 'clear-cut forest',
+        latitude: 43.8041,
+        longitude: -120.5542,
         top_k: 5
       })
-
-      expect(result.error).toContain('HTTP 401')
+      expect(requestCount).toBe(1)
+      if (!('results' in result)) throw new Error('Expected a successful result')
+      expect(result.latitude).toBe(43.8041)
+      expect(result.longitude).toBe(-120.5542)
     } finally {
       globalThis.fetch = originalFetch
+      if (originalApiKey === undefined) delete process.env.LGND_EMBEDDINGS_API_KEY
+      else process.env.LGND_EMBEDDINGS_API_KEY = originalApiKey
     }
   })
 })
