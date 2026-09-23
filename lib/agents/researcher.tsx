@@ -65,36 +65,33 @@ ${selectedModel === 'SkyFi' ? `#### **3. SkyFi Satellite Imagery and AOI**
 - **Tool**: \`geospatialQueryTool\` → **MUST be used (no exceptions)** for:
   • Finding places, businesses, "near me", distances, directions
   • Travel times, routes, traffic, map generation
-  • Isochrones, travel-time matrices, multi-stop optimization
-- Do not use this tool for satellite-image similarity or embeddings searches; use \`locationEmbeddingsQuery\` for those instead.`}
+  • Isochrones, travel-time matrices, multi-stop optimization`}
 
 #### **4. Searching Uploaded Documents and Attachments**
 - **Tool**: \`documentRetrieve\`
 - **When to use**:
   Any query where the user is asking about the content of uploaded documents, files, attachments, or proprietary text resources that they have uploaded to their chat session.
 
-#### **5. Location Embeddings Search**
+#### **5. Location Embeddings & Satellite Similarity Search**
 - **Tool**: \`locationEmbeddingsQuery\`
 - **When to use**:
-  Any query asking to search satellite or aerial imagery embeddings by natural-language description, place name, coordinates, or perform vector similarity/location search on spatial collections.
-- Pass coordinates as structured \`latitude\` and \`longitude\` arguments. Do not put them only in a free-form query.
-- Pass the imagery description in \`query\` and a named place in \`location\` when coordinates are not provided. The tool geocodes the place server-side and uses LGND \`search-by-text\` with the resulting region.
-- If the user gives only a place name, do not ask for latitude and longitude unless Mapbox geocoding fails.
-
-**Examples that trigger \`geospatialQueryTool\`:**
-- “Coffee shops within 500 m of the Eiffel Tower”
-- “Driving directions from LAX to Hollywood with current traffic”
-- “Show me a map of museums in Paris”
-- “How long to walk from Central Park to Times Square?”
-- “Areas reachable in 30 minutes from downtown Portland”
+  Use for natural-language satellite/aerial imagery description search (e.g. searching for heavy machinery, timber/forest clearance, construction sites, agricultural irrigation patterns, or land-use embeddings) or spatial vector search near coordinates or place regions.
+- **Rules**:
+  • Pass \`query\` (imagery description string) and optional \`location\` (place name string, e.g. "Oregon", "Phoenix, Arizona") OR explicit \`latitude\` and \`longitude\` arguments.
+  • If the user provides a place name without coordinates, pass \`location\` to \`locationEmbeddingsQuery\` so it can geocode the area boundary via Mapbox.
+  • Do NOT use for ordinary place search, business lookup, POIs, directions, coffee shops, or routing (those MUST use \`geospatialQueryTool\`).
 
 **Examples that trigger \`locationEmbeddingsQuery\`:**
-- “Search embeddings at latitude 34.0454, longitude -118.2592”
-- “Query location embeddings for coordinates 34.045, -118.259 with top 10 results”
-- “Find satellite imagery similar to the area at 34.045, -118.259”
-- “Search for construction-site imagery near latitude 30.25, longitude -97.65”
-- “Find heavy machinery used to fell timber near forests in Oregon”
+- “Find heavy machinery used to fell timber near forests that have not previously been cleared in Oregon”
 - “Find satellite imagery showing construction sites around Phoenix, Arizona”
+- “Search for recently cleared forest areas in Oregon from 2024-01-01 through 2024-12-31”
+- “Find imagery of agricultural fields with visible irrigation patterns near Sacramento, California, and return top 20 matches”
+- “Find clear-cut forest imagery near 43.8041, -120.5542”
+
+**Examples that MUST NOT use \`locationEmbeddingsQuery\` (use \`geospatialQueryTool\` instead):**
+- “Find coffee shops within 500 meters of the Eiffel Tower”
+- “Give me driving directions from LAX to Hollywood”
+- “What is the nearest museum to Central Park?”
 
 ${selectedModel === 'SkyFi' ? `**Behavior when using \`skyfiQueryTool\`:**
 - Issue the tool call immediately.
@@ -108,8 +105,8 @@ ${selectedModel === 'SkyFi' ? `**Behavior when using \`skyfiQueryTool\`:**
 #### **Summary of Decision Flow**
 1. User gave explicit URLs? → \`retrieve\`
 2. Query relates to uploaded documents, attachments, or custom user knowledge files? → \`documentRetrieve\` (mandatory)
-3. Query asks to search satellite/aerial vector embeddings by natural-language description, place name, or coordinates? → \`locationEmbeddingsQuery\`
-${selectedModel === 'SkyFi' ? `4. SkyFi account, satellite imagery search, geocoding AOI, or ordering? → \`skyfiQueryTool\` (mandatory)` : `4. Location/distance/direction/maps? → \`geospatialQueryTool\` (mandatory)`}
+3. Satellite/aerial imagery similarity, land-use embeddings, or natural-language spatial vector search? → \`locationEmbeddingsQuery\`
+${selectedModel === 'SkyFi' ? `4. SkyFi account, satellite imagery search, geocoding AOI, or ordering? → \`skyfiQueryTool\` (mandatory)` : `4. Location/distance/direction/maps/POIs? → \`geospatialQueryTool\` (mandatory)`}
 5. Everything else needing external data? → \`search\`
 6. Otherwise → answer from knowledge
 
