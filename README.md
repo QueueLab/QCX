@@ -2,7 +2,7 @@
 
 # Quality Computer Experience (QCX)
 
-### A Gravitational General Intelligence Interface. 
+### 这是一个引力通用智能接口. 
 
 [**Pricing**](https://buy.stripe.com/14A3cv7K72TR3go14Nasg02) &nbsp;|&nbsp; [**Land**](https://wwww.queue.cx) &nbsp;|&nbsp; [**X**](https://x.com/tryqcx)
 
