@@ -48,7 +48,8 @@ export function ClearHistory({ empty }: ClearHistoryProps) {
               startTransition(async () => {
                 const result = await clearChats()
                 if (result?.error) {
-                  toast.error(result.error)
+                  console.error('Clear history error:', result.error)
+                  toast.error('Unable to clear history. Please try again.')
                 } else {
                   toast.success('History cleared')
                 }

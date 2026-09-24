@@ -96,15 +96,21 @@ export const Copilot: React.FC<CopilotProps> = React.memo(({ inquiry }: CopilotP
     onFormSubmit(e as unknown as React.FormEvent<HTMLFormElement>, true)
   }, [onFormSubmit])
 
+  useEffect(() => {
+    if (error) {
+      console.error('Copilot inquiry error:', error)
+    }
+  }, [error])
+
   // OPTIMIZATION: Memoize error card
   const errorCard = useMemo(() => {
     if (!error) return null;
     return (
-      <Card className="p-4 w-full flex justify-between items-center">
+      <Card className="p-4 w-full flex justify-between items-center border-destructive/20 bg-destructive/10">
         <div className="flex items-center space-x-2">
-          <Sparkles className="w-4 h-4" />
-          <h5 className="text-muted-foreground text-xs truncate">
-            {`error: ${error}`}
+          <Sparkles className="w-4 h-4 text-destructive" />
+          <h5 className="text-destructive text-xs truncate font-mono">
+            An error occurred during inquiry generation. Please try again.
           </h5>
         </div>
       </Card>

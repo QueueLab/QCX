@@ -80,7 +80,7 @@ export const DownloadReportButton = () => {
       toast.success('Report generated successfully', { id: toastId })
     } catch (error) {
       console.error('Failed to generate report:', error)
-      toast.error(`Report generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`, { id: toastId })
+      toast.error('Report generation failed. Please try again.', { id: toastId })
     } finally {
       setIsGenerating(false)
       setShowTemplate(false)
