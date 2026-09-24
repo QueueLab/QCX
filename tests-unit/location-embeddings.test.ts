@@ -296,4 +296,58 @@ describe('Location Embeddings Tool', () => {
       globalThis.fetch = originalFetch
     }
   })
+
+  it('returns explicit error when search-by-location is called without valid coordinates', async () => {
+    const mockUiStream = {
+      append: () => {},
+      update: () => {}
+    }
+
+    const tool = locationEmbeddingsTool({
+      uiStream: mockUiStream as any,
+      fullResponse: ''
+    })
+
+    const result = await tool.execute({
+      top_k: 5
+    })
+
+    expect(result.error).toBe('Location search requires valid latitude and longitude coordinates.')
+  })
+
+  it('returns human-friendly error message when search-by-location returns 422 bounds error', async () => {
+    const mockUiStream = {
+      append: () => {},
+      update: () => {}
+    }
+
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = (async () => {
+      return new Response(
+        JSON.stringify({
+          error: {
+            message: 'Search geometry does not intersect collection bounds.'
+          }
+        }),
+        { status: 422, headers: { 'Content-Type': 'application/json' } }
+      )
+    }) as typeof fetch
+
+    try {
+      const tool = locationEmbeddingsTool({
+        uiStream: mockUiStream as any,
+        fullResponse: ''
+      })
+
+      const result = await tool.execute({
+        latitude: 45.5152,
+        longitude: -122.6784,
+        top_k: 5
+      })
+
+      expect(result.error).toContain('outside the selected LGND collection bounds')
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
 })
