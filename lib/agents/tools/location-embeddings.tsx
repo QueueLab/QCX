@@ -151,7 +151,39 @@ export const locationEmbeddingsTool = ({ uiStream, fullResponse }: ToolProps) =>
 
       if (!res.ok) {
         const errorText = await res.text().catch(() => '')
-        errorMsg = `Embeddings API returned HTTP ${res.status}: ${errorText || res.statusText}`
+
+        // If HTTP 422 or validation error occurs on a text search query due to geometry/location bounds,
+        // retry the query without spatial/geometry constraints so semantic search still succeeds.
+        const isGeometryBoundsError =
+          res.status === 422 ||
+          errorText.includes('intersect collection bounds') ||
+          errorText.includes('VALIDATION_ERROR')
+
+        if (
+          isTextSearch &&
+          isGeometryBoundsError &&
+          (requestBody.geometry || requestBody.latitude !== undefined || requestBody.longitude !== undefined)
+        ) {
+          console.warn(
+            'Embeddings API geometry bounds error. Retrying search-by-text without spatial/geometry constraints.'
+          )
+          const fallbackBody: Record<string, any> = { query, top_k }
+          const fallbackRes = await fetch(searchEndpoint, {
+            method: 'POST',
+            headers,
+            signal: createDeadlineSignal(15_000),
+            body: JSON.stringify(fallbackBody)
+          })
+
+          if (fallbackRes.ok) {
+            apiResponse = await fallbackRes.json()
+          } else {
+            const fallbackErrText = await fallbackRes.text().catch(() => '')
+            errorMsg = `Embeddings API returned HTTP ${fallbackRes.status}: ${fallbackErrText || fallbackRes.statusText}`
+          }
+        } else {
+          errorMsg = `Embeddings API returned HTTP ${res.status}: ${errorText || res.statusText}`
+        }
       } else {
         apiResponse = await res.json()
       }

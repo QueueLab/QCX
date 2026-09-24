@@ -206,4 +206,94 @@ describe('Location Embeddings Tool', () => {
       globalThis.fetch = originalFetch
     }
   })
+
+  it('retries search-by-text without geometry when Embeddings API returns 422 geometry bounds error', async () => {
+    const mockUiStream = {
+      append: () => {},
+      update: () => {}
+    }
+
+    const originalFetch = globalThis.fetch
+    const fetchCalls: Array<{ url: string; options: any }> = []
+
+    process.env.MAPBOX_ACCESS_TOKEN = 'pk.test_mapbox_token'
+
+    globalThis.fetch = (async (url: string | URL | Request, options?: RequestInit) => {
+      const urlStr = url.toString()
+      fetchCalls.push({ url: urlStr, options })
+
+      if (urlStr.includes('api.mapbox.com/geocoding')) {
+        return new Response(
+          JSON.stringify({
+            features: [
+              {
+                center: [-120.5542, 43.8041],
+                bbox: [-124.5662, 41.9918, -116.4635, 46.292]
+              }
+            ]
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      } else if (urlStr.includes('/search-by-text')) {
+        const body = JSON.parse(options?.body as string)
+        if (body.geometry) {
+          return new Response(
+            JSON.stringify({
+              error: {
+                type: 'invalid_request_error',
+                code: 'VALIDATION_ERROR',
+                message: 'Search geometry does not intersect collection bounds.',
+                param: 'geometry'
+              }
+            }),
+            { status: 422, headers: { 'Content-Type': 'application/json' } }
+          )
+        }
+        return new Response(
+          JSON.stringify({
+            results: [{ chip_id: 'chip_fallback_1', score: 0.88 }]
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      } else if (urlStr.includes('/chips/chip_fallback_1/thumbnail/url')) {
+        return new Response(
+          JSON.stringify({ url: 'https://cdn.embeddings.api.lgnd.ai/fallback_thumb.png' }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      }
+
+      return new Response('Not found', { status: 404 })
+    }) as typeof fetch
+
+    try {
+      const tool = locationEmbeddingsTool({
+        uiStream: mockUiStream as any,
+        fullResponse: ''
+      })
+
+      const result = await tool.execute({
+        query: 'heavy machinery used to fell timber',
+        location: 'Oregon',
+        top_k: 10
+      })
+
+      const textSearchCalls = fetchCalls.filter(c => c.url.includes('/search-by-text'))
+      expect(textSearchCalls.length).toBe(2)
+
+      // First request had geometry
+      const firstBody = JSON.parse(textSearchCalls[0].options.body)
+      expect(firstBody.geometry).toBeDefined()
+
+      // Fallback request did NOT have geometry
+      const fallbackBody = JSON.parse(textSearchCalls[1].options.body)
+      expect(fallbackBody.geometry).toBeUndefined()
+      expect(fallbackBody.query).toBe('heavy machinery used to fell timber')
+
+      // Result succeeded with images from fallback
+      expect(result.error).toBeUndefined()
+      expect(result.images).toEqual(['https://cdn.embeddings.api.lgnd.ai/fallback_thumb.png'])
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
 })
