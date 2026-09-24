@@ -106,6 +106,18 @@ export const locationEmbeddingsTool = ({ uiStream, fullResponse }: ToolProps) =>
 
     // Determine endpoint: use search-by-text if natural language query is provided, else search-by-location
     const isTextSearch = Boolean(query && query.trim().length > 0)
+
+    if (
+      !isTextSearch &&
+      (resolvedLatitude === undefined || resolvedLongitude === undefined)
+    ) {
+      const errorPayload = {
+        error: 'Location search requires valid latitude and longitude coordinates.'
+      }
+      streamResults.done(JSON.stringify(errorPayload))
+      return errorPayload
+    }
+
     const searchEndpoint = isTextSearch
       ? `https://embeddings.api.lgnd.ai/v1/tenants/${effectiveTenantId}/collections/${effectiveCollectionId}/search-by-text`
       : `https://embeddings.api.lgnd.ai/v1/tenants/${effectiveTenantId}/collections/${effectiveCollectionId}/search-by-location`
@@ -127,15 +139,9 @@ export const locationEmbeddingsTool = ({ uiStream, fullResponse }: ToolProps) =>
       if (resolvedGeometry) {
         requestBody.geometry = resolvedGeometry
       }
-      if (resolvedLatitude !== undefined) {
-        requestBody.latitude = resolvedLatitude
-      }
-      if (resolvedLongitude !== undefined) {
-        requestBody.longitude = resolvedLongitude
-      }
     } else {
-      requestBody.latitude = resolvedLatitude ?? 0
-      requestBody.longitude = resolvedLongitude ?? 0
+      requestBody.latitude = resolvedLatitude
+      requestBody.longitude = resolvedLongitude
     }
 
     let apiResponse: any = null
@@ -151,7 +157,37 @@ export const locationEmbeddingsTool = ({ uiStream, fullResponse }: ToolProps) =>
 
       if (!res.ok) {
         const errorText = await res.text().catch(() => '')
-        errorMsg = `Embeddings API returned HTTP ${res.status}: ${errorText || res.statusText}`
+
+        // If HTTP 422 or validation error occurs on a text search query due to geometry/location bounds,
+        // retry the query without spatial/geometry constraints so semantic search still succeeds.
+        const isGeometryBoundsError =
+          res.status === 422 ||
+          errorText.includes('intersect collection bounds') ||
+          errorText.includes('VALIDATION_ERROR')
+
+        if (isTextSearch && isGeometryBoundsError && requestBody.geometry) {
+          console.warn(
+            'Embeddings API geometry bounds error. Retrying search-by-text without spatial geometry constraint.'
+          )
+          const fallbackBody: Record<string, any> = { query, top_k }
+          const fallbackRes = await fetch(searchEndpoint, {
+            method: 'POST',
+            headers,
+            signal: createDeadlineSignal(15_000),
+            body: JSON.stringify(fallbackBody)
+          })
+
+          if (fallbackRes.ok) {
+            apiResponse = await fallbackRes.json()
+          } else {
+            const fallbackErrText = await fallbackRes.text().catch(() => '')
+            errorMsg = `The requested location is outside the selected LGND collection bounds (${effectiveCollectionId}). Retry returned HTTP ${fallbackRes.status}: ${fallbackErrText || fallbackRes.statusText}`
+          }
+        } else if (isGeometryBoundsError) {
+          errorMsg = `The requested location is outside the selected LGND collection bounds (${effectiveCollectionId}). Choose a collection covering this area or update LGND_COLLECTION_ID.`
+        } else {
+          errorMsg = `Embeddings API returned HTTP ${res.status}: ${errorText || res.statusText}`
+        }
       } else {
         apiResponse = await res.json()
       }
