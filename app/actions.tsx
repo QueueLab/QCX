@@ -22,6 +22,7 @@ import { UserMessage } from '@/components/user-message'
 import { BotMessage } from '@/components/message'
 import { SearchSection } from '@/components/search-section'
 import { SkyfiSection } from '@/components/skyfi-section'
+import { LocationEmbeddingsSection } from '@/components/location-embeddings-section'
 import SearchRelated from '@/components/search-related'
 import { GeoJsonLayer } from '@/components/map/geojson-layer'
 import { ResolutionCarousel } from '@/components/resolution-carousel'
@@ -561,7 +562,7 @@ async function submit(formData?: FormData, skip?: boolean) {
           : msg
       ) as CoreMessage[]
       const latestMessages = modifiedMessages.slice(maxMessages * -1)
-      const { fullResponse } = await researcher(
+      const { fullResponse, toolResponses } = await researcher(
         currentSystemPrompt || '',
         uiStream,
         streamText,
@@ -572,6 +573,14 @@ async function submit(formData?: FormData, skip?: boolean) {
       )
 
       if (!errorOccurred) {
+        const toolAiMessages: AIMessage[] = (toolResponses || []).map((tr: any) => ({
+          id: nanoid(),
+          role: 'tool',
+          name: tr.toolName,
+          content: typeof tr.result === 'string' ? tr.result : JSON.stringify(tr.result),
+          type: 'tool'
+        }))
+
         const relatedQueries = await querySuggestor(uiStream, messages)
         uiStream.append(
           <Section title="Follow-up">
@@ -585,6 +594,7 @@ async function submit(formData?: FormData, skip?: boolean) {
           ...aiState.get(),
           messages: [
             ...aiState.get().messages,
+            ...toolAiMessages,
             {
               id: groupeId,
               role: 'assistant',
@@ -914,6 +924,12 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                 return {
                   id,
                   component: <SkyfiSection result={searchResults.value} />,
+                  isCollapsed: isCollapsed.value
+                }
+              case 'locationEmbeddingsQuery':
+                return {
+                  id,
+                  component: <LocationEmbeddingsSection result={searchResults.value} />,
                   isCollapsed: isCollapsed.value
                 }
               case 'search':

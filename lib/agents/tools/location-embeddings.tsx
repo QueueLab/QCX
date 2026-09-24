@@ -7,6 +7,46 @@ import { createDeadlineSignal } from '@/lib/utils/with-timeout'
 const DEFAULT_TENANT_ID = 'ten_01a0cd9a20c671b59c2cf55ee847bc66'
 const DEFAULT_COLLECTION_ID = 'col_01a0cd9a20e170daac4573a3f7200000'
 
+export interface IndexedChip {
+  chip_id: string
+  collection: string
+  datetime: string
+  score: string | number
+  centroid: any
+  thumbnail_url: string
+}
+
+export interface LocationEmbeddingsSuccessPayload {
+  query?: string
+  location?: string
+  latitude?: number
+  longitude?: number
+  top_k: number
+  tenantId: string
+  collectionId: string
+  results: any
+  images: string[]
+  indexedChips: IndexedChip[]
+  formattedResult: string
+  error?: undefined
+}
+
+export interface LocationEmbeddingsErrorPayload {
+  query?: string
+  location?: string
+  latitude?: number
+  longitude?: number
+  top_k?: number
+  error: string
+  images?: undefined
+  indexedChips?: undefined
+  formattedResult?: undefined
+}
+
+export type LocationEmbeddingsResult =
+  | LocationEmbeddingsSuccessPayload
+  | LocationEmbeddingsErrorPayload
+
 export const locationEmbeddingsTool = ({ uiStream, fullResponse }: ToolProps) => ({
   description:
     'Search geospatial satellite/aerial vector embeddings using natural language text queries or coordinates, geocodes place names via Mapbox, and retrieves satellite thumbnail preview URLs',
@@ -16,7 +56,7 @@ export const locationEmbeddingsTool = ({ uiStream, fullResponse }: ToolProps) =>
     location,
     latitude,
     longitude,
-    top_k = 10,
+    top_k = 3,
     tenantId,
     collectionId,
     apiKey
@@ -225,58 +265,93 @@ export const locationEmbeddingsTool = ({ uiStream, fullResponse }: ToolProps) =>
       }
     }
 
-    // Fetch thumbnail URLs for each returned chip_id
+    // Limit processing list to top 3
+    const topItemsList = itemsList.slice(0, 3)
+
+    // Fetch thumbnail URLs and build indexed metadata for each chip
     const thumbnailImages: string[] = []
-    if (itemsList.length > 0) {
-      const thumbnailPromises = itemsList.map(async item => {
+    const indexedChips: Array<{
+      chip_id: string
+      collection: string
+      datetime: string
+      score: string | number
+      centroid: any
+      thumbnail_url: string
+    }> = []
+
+    if (topItemsList.length > 0) {
+      const thumbnailPromises = topItemsList.map(async item => {
         const chipId = item.chip_id || item.chipId || item.id
         if (!chipId) return null
 
-        try {
-          const thumbUrl = `https://embeddings.api.lgnd.ai/v1/chips/${chipId}/thumbnail/url`
-          const thumbHeaders: Record<string, string> = {}
-          if (effectiveApiKey) {
-            thumbHeaders['Authorization'] = effectiveApiKey.startsWith('Bearer ')
-              ? effectiveApiKey
-              : `Bearer ${effectiveApiKey}`
-          }
-
-          const thumbRes = await fetch(thumbUrl, {
-            method: 'GET',
-            headers: thumbHeaders,
-            signal: createDeadlineSignal(10_000)
-          })
-
-          if (thumbRes.ok) {
-            const thumbData = await thumbRes.json()
-            const imgUrl =
-              thumbData.url ||
-              thumbData.thumbnailUrl ||
-              thumbData.thumbnail_url ||
-              thumbData.signed_url
-            if (imgUrl) {
-              item.thumbnail_url = imgUrl
-              return imgUrl
+        let imgUrl = item.thumbnail_url
+        if (!imgUrl) {
+          try {
+            const thumbUrl = `https://embeddings.api.lgnd.ai/v1/chips/${chipId}/thumbnail/url`
+            const thumbHeaders: Record<string, string> = {}
+            if (effectiveApiKey) {
+              thumbHeaders['Authorization'] = effectiveApiKey.startsWith('Bearer ')
+                ? effectiveApiKey
+                : `Bearer ${effectiveApiKey}`
             }
+
+            const thumbRes = await fetch(thumbUrl, {
+              method: 'GET',
+              headers: thumbHeaders,
+              signal: createDeadlineSignal(10_000)
+            })
+
+            if (thumbRes.ok) {
+              const thumbData = await thumbRes.json()
+              imgUrl =
+                thumbData.url ||
+                thumbData.thumbnailUrl ||
+                thumbData.thumbnail_url ||
+                thumbData.signed_url
+            }
+          } catch (thumbErr) {
+            console.error(`Failed to fetch thumbnail URL for chip_id ${chipId}:`, thumbErr)
           }
-        } catch (thumbErr) {
-          console.error(`Failed to fetch thumbnail URL for chip_id ${chipId}:`, thumbErr)
+        }
+
+        if (imgUrl) {
+          item.thumbnail_url = imgUrl
+          const dt = typeof item.datetime === 'string' ? item.datetime.split('T')[0] : 'N/A'
+          const score = typeof item.score === 'number' ? item.score.toFixed(4) : item.score || 'N/A'
+          return {
+            chip_id: String(chipId),
+            collection: item.collection ? String(item.collection) : 'N/A',
+            datetime: dt,
+            score,
+            centroid: item.centroid || null,
+            thumbnail_url: imgUrl
+          }
         }
         return null
       })
 
-      const fetchedThumbs = await Promise.allSettled(thumbnailPromises)
-      fetchedThumbs.forEach(res => {
+      const fetchedResults = await Promise.allSettled(thumbnailPromises)
+      fetchedResults.forEach(res => {
         if (res.status === 'fulfilled' && res.value) {
-          thumbnailImages.push(res.value)
+          thumbnailImages.push(res.value.thumbnail_url)
+          indexedChips.push(res.value)
         }
       })
     }
 
-    const formattedResult =
-      apiResponse && typeof apiResponse === 'object'
-        ? JSON.stringify(apiResponse, null, 2)
-        : String(apiResponse)
+    const formattedSummary = topItemsList.length > 0
+      ? topItemsList.map((item, idx) => {
+          const chipId = item.chip_id || item.chipId || item.id || `Chip #${idx + 1}`
+          const collection = item.collection || 'N/A'
+          const dt = item.datetime ? item.datetime.split('T')[0] : 'N/A'
+          const score = typeof item.score === 'number' ? item.score.toFixed(4) : item.score || 'N/A'
+          const coords = item.centroid?.coordinates
+            ? `[${item.centroid.coordinates[1]}, ${item.centroid.coordinates[0]}]`
+            : 'N/A'
+          const thumb = item.thumbnail_url ? ` | Image: ${item.thumbnail_url}` : ''
+          return `${idx + 1}. Chip ID: ${chipId} | Collection: ${collection} | Date: ${dt} | Score: ${score} | Centroid: ${coords}${thumb}`
+        }).join('\n')
+      : 'No matches found.'
 
     const payload = {
       query,
@@ -288,7 +363,8 @@ export const locationEmbeddingsTool = ({ uiStream, fullResponse }: ToolProps) =>
       collectionId: effectiveCollectionId,
       results: apiResponse,
       images: thumbnailImages,
-      formattedResult: `\`\`\`json\n${formattedResult}\n\`\`\``
+      indexedChips,
+      formattedResult: formattedSummary
     }
 
     streamResults.done(JSON.stringify(payload))

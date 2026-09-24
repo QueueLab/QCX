@@ -30,8 +30,8 @@ export const locationEmbeddingsQuerySchema = z.object({
     .int()
     .positive()
     .optional()
-    .default(10)
-    .describe('Number of top embedding search results to return (default: 10)'),
+    .default(3)
+    .describe('Number of top embedding search results to return (default: 3)'),
   tenantId: z
     .string()
     .optional()

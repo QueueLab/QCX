@@ -119,6 +119,9 @@ describe('Location Embeddings Tool', () => {
       expect(sentBody.geometry.type).toBe('Polygon')
 
       // Check thumbnail url fetch and images result
+      if ('error' in result) {
+        throw new Error(`Unexpected tool error: ${result.error}`)
+      }
       expect(result.images).toEqual(['https://cdn.embeddings.api.lgnd.ai/oregon_thumb.png'])
     } finally {
       globalThis.fetch = originalFetch
@@ -172,6 +175,9 @@ describe('Location Embeddings Tool', () => {
       const sentBody = JSON.parse(fetchCalls[0].options.body)
       expect(sentBody.latitude).toBe(34.0454501975)
       expect(sentBody.longitude).toBe(-118.259248828)
+      if ('error' in result) {
+        throw new Error(`Unexpected tool error: ${result.error}`)
+      }
       expect(result.images).toEqual(['https://cdn.embeddings.api.lgnd.ai/thumb1.png'])
     } finally {
       globalThis.fetch = originalFetch
@@ -201,6 +207,9 @@ describe('Location Embeddings Tool', () => {
         top_k: 5
       })
 
+      if (!('error' in result)) {
+        throw new Error('Expected tool error payload')
+      }
       expect(result.error).toContain('HTTP 401')
     } finally {
       globalThis.fetch = originalFetch
@@ -290,7 +299,9 @@ describe('Location Embeddings Tool', () => {
       expect(fallbackBody.query).toBe('heavy machinery used to fell timber')
 
       // Result succeeded with images from fallback
-      expect(result.error).toBeUndefined()
+      if ('error' in result) {
+        throw new Error(`Unexpected tool error: ${result.error}`)
+      }
       expect(result.images).toEqual(['https://cdn.embeddings.api.lgnd.ai/fallback_thumb.png'])
     } finally {
       globalThis.fetch = originalFetch
@@ -312,6 +323,9 @@ describe('Location Embeddings Tool', () => {
       top_k: 5
     })
 
+    if (!('error' in result)) {
+      throw new Error('Expected tool error payload')
+    }
     expect(result.error).toBe('Location search requires valid latitude and longitude coordinates.')
   })
 
@@ -345,7 +359,69 @@ describe('Location Embeddings Tool', () => {
         top_k: 5
       })
 
+      if (!('error' in result)) {
+        throw new Error('Expected tool error payload')
+      }
       expect(result.error).toContain('outside the selected LGND collection bounds')
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
+
+  it('formats formattedResult as structured text summary rather than raw json code block', async () => {
+    const mockUiStream = {
+      append: () => {},
+      update: () => {}
+    }
+
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = (async (url: string | URL | Request) => {
+      const urlStr = url.toString()
+      if (urlStr.includes('/search-by-location')) {
+        return new Response(
+          JSON.stringify({
+            data: [
+              {
+                object: 'search_result',
+                chip_id: 'chip_0d932d7b43bf2e35c3c8646f0a3ead6a',
+                score: 0.43325,
+                datetime: '2020-07-14T00:00:00Z',
+                collection: 'naip',
+                centroid: { type: 'Point', coordinates: [-124.0172, 40.8893] }
+              }
+            ]
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      } else if (urlStr.includes('/chips/')) {
+        return new Response(
+          JSON.stringify({ url: 'https://api-cdn.lgnd.ai/thumbnails/chips/1.jpg' }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      }
+      return new Response('Not found', { status: 404 })
+    }) as typeof fetch
+
+    try {
+      const tool = locationEmbeddingsTool({
+        uiStream: mockUiStream as any,
+        fullResponse: ''
+      })
+
+      const result = await tool.execute({
+        latitude: 40.8893,
+        longitude: -124.0172,
+        top_k: 1
+      })
+
+      if ('error' in result) {
+        throw new Error(`Unexpected tool error: ${result.error}`)
+      }
+      expect(result.formattedResult).not.toContain('```json')
+      expect(result.formattedResult).toContain('Chip ID: chip_0d932d7b43bf2e35c3c8646f0a3ead6a')
+      expect(result.formattedResult).toContain('Collection: naip')
+      expect(result.indexedChips.length).toBe(1)
+      expect(result.indexedChips[0].chip_id).toBe('chip_0d932d7b43bf2e35c3c8646f0a3ead6a')
     } finally {
       globalThis.fetch = originalFetch
     }

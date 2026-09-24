@@ -22,6 +22,7 @@ export function LocationEmbeddingsSection({ result }: LocationEmbeddingsSectionP
   let images: string[] = []
   let rawResultText = ''
   let hasError = false
+  let parsedResultsList: any[] = []
 
   if (data) {
     try {
@@ -35,10 +36,43 @@ export function LocationEmbeddingsSection({ result }: LocationEmbeddingsSectionP
       if (parsedJson.error) {
         hasError = true
         rawResultText = parsedJson.error
-      } else if (parsedJson.formattedResult) {
-        rawResultText = parsedJson.formattedResult
       } else {
-        rawResultText = JSON.stringify(parsedJson, null, 2)
+        const rawRes = parsedJson.results
+        if (Array.isArray(rawRes)) {
+          parsedResultsList = rawRes
+        } else if (rawRes && typeof rawRes === 'object') {
+          if (Array.isArray(rawRes.data)) parsedResultsList = rawRes.data
+          else if (Array.isArray(rawRes.results)) parsedResultsList = rawRes.results
+          else if (Array.isArray(rawRes.items)) parsedResultsList = rawRes.items
+          else if (Array.isArray(rawRes.chips)) parsedResultsList = rawRes.chips
+        }
+
+        if (parsedResultsList.length > 0) {
+          rawResultText = parsedResultsList
+            .slice(0, 3)
+            .map((item: any, idx: number) => {
+              const chipId = item.chip_id || item.chipId || item.id || `Chip #${idx + 1}`
+              const collection = item.collection ? String(item.collection) : 'N/A'
+              const dt = typeof item.datetime === 'string' ? item.datetime.split('T')[0] : 'N/A'
+              const score =
+                typeof item.score === 'number' && Number.isFinite(item.score)
+                  ? item.score.toFixed(4)
+                  : item.score ? String(item.score) : 'N/A'
+
+              const c0 = item.centroid?.coordinates?.[0]
+              const c1 = item.centroid?.coordinates?.[1]
+              const latStr = typeof c1 === 'number' && Number.isFinite(c1) ? c1.toFixed(4) : c1
+              const lngStr = typeof c0 === 'number' && Number.isFinite(c0) ? c0.toFixed(4) : c0
+              const coords = c0 !== undefined && c1 !== undefined ? `[${latStr}, ${lngStr}]` : 'N/A'
+
+              return `**${idx + 1}. ${chipId}**  \n• **Collection**: ${collection} | **Date**: ${dt} | **Score**: ${score} | **Centroid**: ${coords}`
+            })
+            .join('\n\n')
+        } else if (parsedJson.formattedResult) {
+          rawResultText = parsedJson.formattedResult
+        } else {
+          rawResultText = 'No location embedding matches found.'
+        }
       }
     } catch {
       rawResultText = data

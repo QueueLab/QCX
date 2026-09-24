@@ -173,7 +173,7 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({
               )
             })}
 
-            {/* 2. Sensor Fusion (Always before Strategic Output) */}
+            {/* 2. Sensor Fusion & Location Embeddings Satellite Thumbnails */}
             {sensorFusionResults.map((message, index) => {
               const contentString = renderMessageContent(message.content)
               try {
@@ -214,6 +214,44 @@ export const ReportTemplate: React.FC<ReportTemplateProps> = ({
                   </div>
                 )
               } catch (e) {
+                return null
+              }
+            })}
+
+            {/* Embedded Satellite Imagery Thumbnails in Report */}
+            {messages.filter(m => m.role === 'tool' && m.name === 'locationEmbeddingsQuery').map((toolMsg, idx) => {
+              const contentString = renderMessageContent(toolMsg.content)
+              try {
+                const parsedPayload = JSON.parse(contentString)
+                const images: string[] = parsedPayload.images || []
+                const chips: any[] = parsedPayload.indexedChips || []
+                if (!images || images.length === 0) return null
+
+                return (
+                  <div key={`embedding-report-${idx}`} className="space-y-6 bg-slate-50 p-10 rounded-3xl border border-slate-200 break-inside-avoid">
+                    <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                      <p className="text-xs font-black text-[#003366] uppercase tracking-[0.2em]">Indexed Satellite Vector Embeddings</p>
+                      <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[9px] font-bold rounded">TOP 3 MATCHES</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                      {images.slice(0, 3).map((imgUrl, i) => {
+                        const chip = chips[i] || {}
+                        return (
+                          <div key={i} data-pdf-nosplit className="bg-white p-3 rounded-2xl border border-slate-200 shadow-md flex flex-col space-y-2">
+                            <img src={imgUrl} alt={`Chip Preview ${i + 1}`} className="rounded-xl w-full h-32 object-cover block" crossOrigin="anonymous" />
+                            <div className="text-[9px] font-bold text-slate-700 space-y-1">
+                              <p className="truncate text-[#003366] font-black">#{i + 1} {chip.chip_id || 'Chip'}</p>
+                              <p className="text-slate-500">Collection: {chip.collection || 'N/A'}</p>
+                              <p className="text-slate-500">Date: {chip.datetime || 'N/A'}</p>
+                              <p className="text-emerald-600 font-black">Score: {chip.score || 'N/A'}</p>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              } catch {
                 return null
               }
             })}

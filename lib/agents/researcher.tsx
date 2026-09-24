@@ -80,12 +80,14 @@ ${selectedModel === 'SkyFi' ? `#### **3. SkyFi Satellite Imagery and AOI**
   • Pass \`query\` (imagery description string) and optional \`location\` (place name string, e.g. "Oregon", "Phoenix, Arizona") OR explicit \`latitude\` and \`longitude\` arguments.
   • If the user provides a place name without coordinates, pass \`location\` to \`locationEmbeddingsQuery\` so it can geocode the area boundary via Mapbox.
   • Do NOT use for ordinary place search, business lookup, POIs, directions, coffee shops, or routing (those MUST use \`geospatialQueryTool\`).
+  • **Output Formatting Rule**: NEVER return raw LGND API JSON payloads directly in your chat response text. Always parse and present the search results as structured human-readable text (summarizing up to 3 Chip IDs, collection name, datetime, centroid coordinates, match scores, and thumbnail URLs).
+  • **Image Context Indexing & Semantic Follow-up**: All satellite thumbnails returned by \`locationEmbeddingsQuery\` are indexed in chat context. When answering follow-up questions (such as "from these images what is the estimated output for timber?"), reference the specific indexed Chip IDs (e.g., chip_0d932d7b43bf2e35c3c8646f0a3ead6a) and their metadata (collection, acquisition date, centroid coordinates). Explain the precise analytical methodology (forest density, canopy coverage, growth rates, and required remote sensing software/expertise) while pointing out that thumbnail previews provide context but require full high-resolution raster/spectral data for direct volumetric quantification.
 
 **Examples that trigger \`locationEmbeddingsQuery\`:**
 - “Find heavy machinery used to fell timber near forests that have not previously been cleared in Oregon”
 - “Find satellite imagery showing construction sites around Phoenix, Arizona”
 - “Search for recently cleared forest areas in Oregon from 2024-01-01 through 2024-12-31”
-- “Find imagery of agricultural fields with visible irrigation patterns near Sacramento, California, and return top 20 matches”
+- “Find imagery of agricultural fields with visible irrigation patterns near Sacramento, California, and return top 3 matches”
 - “Find clear-cut forest imagery near 43.8041, -120.5542”
 
 **Examples that MUST NOT use \`locationEmbeddingsQuery\` (use \`geospatialQueryTool\` instead):**
