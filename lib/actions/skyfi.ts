@@ -9,6 +9,8 @@ import { SkyfiOAuthProvider } from '@/lib/skyfi/provider';
 import crypto from 'crypto';
 
 import { headers } from 'next/headers';
+import { Client as MCPClient } from '@modelcontextprotocol/sdk/client/index.js';
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 
 export async function getRedirectUri(): Promise<string> {
   try {
@@ -143,38 +145,39 @@ export async function getSkyfiConnectionStatus(): Promise<{ connected: boolean; 
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     try {
-      // Try a simple whoami call to verify token validity and get email/budget
-      const res = await fetch('https://mcp.skyfi.com/mcp', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${tokens.access_token}`,
-        },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: 1,
-          method: 'tools/call',
-          params: {
-            name: 'skyfi_whoami',
-            arguments: {},
+      // Use the MCP SDK rather than calling tools/call directly. Streamable HTTP
+      // servers require an initialize handshake (and may issue a session ID)
+      // before tool calls are accepted.
+      const transport = new StreamableHTTPClientTransport(
+        new URL('https://mcp.skyfi.com/mcp'),
+        {
+          requestInit: {
+            headers: { Authorization: `Bearer ${tokens.access_token}` },
+            signal: controller.signal,
           },
-        }),
-        signal: controller.signal,
-      });
+        },
+      );
+      const client = new MCPClient({ name: 'QCXSkyFiStatus', version: '1.0.0' });
 
-      clearTimeout(timeoutId);
-
-      if (res.ok) {
-        const data = await res.json();
-        const content = data?.result?.content?.[0]?.text || '';
+      try {
+        await client.connect(transport);
+        const result = await client.callTool(
+          { name: 'skyfi_whoami', arguments: {} },
+          undefined,
+          { signal: controller.signal },
+        );
+        const content = (result as any)?.content?.[0]?.text || '';
+        clearTimeout(timeoutId);
         return { connected: true, budget: content };
+      } finally {
+        await client.close().catch(() => undefined);
       }
     } catch (fetchError) {
       clearTimeout(timeoutId);
-      console.warn('[SkyFiAction: getSkyfiConnectionStatus] Failed to query whoami:', fetchError);
+      console.warn('[SkyfiAction: getSkyfiConnectionStatus] Failed to query whoami:', fetchError);
     }
 
-    return { connected: true };
+    return { connected: false };
   } catch (error: any) {
     console.error('[SkyFiAction: getSkyfiConnectionStatus] Error:', error.message);
     return { connected: false };
