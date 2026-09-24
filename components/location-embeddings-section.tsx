@@ -49,7 +49,7 @@ export function LocationEmbeddingsSection({ result }: LocationEmbeddingsSectionP
 
         if (parsedResultsList.length > 0) {
           rawResultText = parsedResultsList
-            .slice(0, 10)
+            .slice(0, 3)
             .map((item: any, idx: number) => {
               const chipId = item.chip_id || item.chipId || item.id || `Chip #${idx + 1}`
               const collection = item.collection || 'N/A'

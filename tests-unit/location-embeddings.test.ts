@@ -400,6 +400,8 @@ describe('Location Embeddings Tool', () => {
       expect(result.formattedResult).not.toContain('```json')
       expect(result.formattedResult).toContain('Chip ID: chip_0d932d7b43bf2e35c3c8646f0a3ead6a')
       expect(result.formattedResult).toContain('Collection: naip')
+      expect(result.indexedChips.length).toBe(1)
+      expect(result.indexedChips[0].chip_id).toBe('chip_0d932d7b43bf2e35c3c8646f0a3ead6a')
     } finally {
       globalThis.fetch = originalFetch
     }
