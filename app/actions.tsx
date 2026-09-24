@@ -22,6 +22,7 @@ import { UserMessage } from '@/components/user-message'
 import { BotMessage } from '@/components/message'
 import { SearchSection } from '@/components/search-section'
 import { SkyfiSection } from '@/components/skyfi-section'
+import { LocationEmbeddingsSection } from '@/components/location-embeddings-section'
 import SearchRelated from '@/components/search-related'
 import { GeoJsonLayer } from '@/components/map/geojson-layer'
 import { ResolutionCarousel } from '@/components/resolution-carousel'
@@ -914,6 +915,12 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
                 return {
                   id,
                   component: <SkyfiSection result={searchResults.value} />,
+                  isCollapsed: isCollapsed.value
+                }
+              case 'locationEmbeddingsQuery':
+                return {
+                  id,
+                  component: <LocationEmbeddingsSection result={searchResults.value} />,
                   isCollapsed: isCollapsed.value
                 }
               case 'search':

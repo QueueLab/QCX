@@ -350,4 +350,58 @@ describe('Location Embeddings Tool', () => {
       globalThis.fetch = originalFetch
     }
   })
+
+  it('formats formattedResult as structured text summary rather than raw json code block', async () => {
+    const mockUiStream = {
+      append: () => {},
+      update: () => {}
+    }
+
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = (async (url: string | URL | Request) => {
+      const urlStr = url.toString()
+      if (urlStr.includes('/search-by-location')) {
+        return new Response(
+          JSON.stringify({
+            data: [
+              {
+                object: 'search_result',
+                chip_id: 'chip_0d932d7b43bf2e35c3c8646f0a3ead6a',
+                score: 0.43325,
+                datetime: '2020-07-14T00:00:00Z',
+                collection: 'naip',
+                centroid: { type: 'Point', coordinates: [-124.0172, 40.8893] }
+              }
+            ]
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      } else if (urlStr.includes('/chips/')) {
+        return new Response(
+          JSON.stringify({ url: 'https://api-cdn.lgnd.ai/thumbnails/chips/1.jpg' }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      }
+      return new Response('Not found', { status: 404 })
+    }) as typeof fetch
+
+    try {
+      const tool = locationEmbeddingsTool({
+        uiStream: mockUiStream as any,
+        fullResponse: ''
+      })
+
+      const result = await tool.execute({
+        latitude: 40.8893,
+        longitude: -124.0172,
+        top_k: 1
+      })
+
+      expect(result.formattedResult).not.toContain('```json')
+      expect(result.formattedResult).toContain('Chip ID: chip_0d932d7b43bf2e35c3c8646f0a3ead6a')
+      expect(result.formattedResult).toContain('Collection: naip')
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
 })

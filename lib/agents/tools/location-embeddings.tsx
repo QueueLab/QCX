@@ -273,10 +273,18 @@ export const locationEmbeddingsTool = ({ uiStream, fullResponse }: ToolProps) =>
       })
     }
 
-    const formattedResult =
-      apiResponse && typeof apiResponse === 'object'
-        ? JSON.stringify(apiResponse, null, 2)
-        : String(apiResponse)
+    const formattedSummary = itemsList.length > 0
+      ? itemsList.map((item, idx) => {
+          const chipId = item.chip_id || item.chipId || item.id || `Chip #${idx + 1}`
+          const collection = item.collection || 'N/A'
+          const dt = item.datetime ? item.datetime.split('T')[0] : 'N/A'
+          const score = typeof item.score === 'number' ? item.score.toFixed(4) : item.score || 'N/A'
+          const coords = item.centroid?.coordinates
+            ? `[${item.centroid.coordinates[1]}, ${item.centroid.coordinates[0]}]`
+            : 'N/A'
+          return `${idx + 1}. Chip ID: ${chipId} | Collection: ${collection} | Date: ${dt} | Score: ${score} | Centroid: ${coords}`
+        }).join('\n')
+      : 'No matches found.'
 
     const payload = {
       query,
@@ -288,7 +296,7 @@ export const locationEmbeddingsTool = ({ uiStream, fullResponse }: ToolProps) =>
       collectionId: effectiveCollectionId,
       results: apiResponse,
       images: thumbnailImages,
-      formattedResult: `\`\`\`json\n${formattedResult}\n\`\`\``
+      formattedResult: formattedSummary
     }
 
     streamResults.done(JSON.stringify(payload))
