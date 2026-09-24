@@ -52,15 +52,18 @@ export function LocationEmbeddingsSection({ result }: LocationEmbeddingsSectionP
             .slice(0, 3)
             .map((item: any, idx: number) => {
               const chipId = item.chip_id || item.chipId || item.id || `Chip #${idx + 1}`
-              const collection = item.collection || 'N/A'
-              const dt = item.datetime ? item.datetime.split('T')[0] : 'N/A'
+              const collection = item.collection ? String(item.collection) : 'N/A'
+              const dt = typeof item.datetime === 'string' ? item.datetime.split('T')[0] : 'N/A'
               const score =
-                typeof item.score === 'number'
+                typeof item.score === 'number' && Number.isFinite(item.score)
                   ? item.score.toFixed(4)
-                  : item.score || 'N/A'
-              const coords = item.centroid?.coordinates
-                ? `[${item.centroid.coordinates[1]?.toFixed(4)}, ${item.centroid.coordinates[0]?.toFixed(4)}]`
-                : 'N/A'
+                  : item.score ? String(item.score) : 'N/A'
+
+              const c0 = item.centroid?.coordinates?.[0]
+              const c1 = item.centroid?.coordinates?.[1]
+              const latStr = typeof c1 === 'number' && Number.isFinite(c1) ? c1.toFixed(4) : c1
+              const lngStr = typeof c0 === 'number' && Number.isFinite(c0) ? c0.toFixed(4) : c0
+              const coords = c0 !== undefined && c1 !== undefined ? `[${latStr}, ${lngStr}]` : 'N/A'
 
               return `**${idx + 1}. ${chipId}**  \n• **Collection**: ${collection} | **Date**: ${dt} | **Score**: ${score} | **Centroid**: ${coords}`
             })

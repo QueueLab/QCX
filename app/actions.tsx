@@ -562,7 +562,7 @@ async function submit(formData?: FormData, skip?: boolean) {
           : msg
       ) as CoreMessage[]
       const latestMessages = modifiedMessages.slice(maxMessages * -1)
-      const { fullResponse } = await researcher(
+      const { fullResponse, toolResponses } = await researcher(
         currentSystemPrompt || '',
         uiStream,
         streamText,
@@ -573,6 +573,14 @@ async function submit(formData?: FormData, skip?: boolean) {
       )
 
       if (!errorOccurred) {
+        const toolAiMessages: AIMessage[] = (toolResponses || []).map((tr: any) => ({
+          id: nanoid(),
+          role: 'tool',
+          name: tr.toolName,
+          content: typeof tr.result === 'string' ? tr.result : JSON.stringify(tr.result),
+          type: 'tool'
+        }))
+
         const relatedQueries = await querySuggestor(uiStream, messages)
         uiStream.append(
           <Section title="Follow-up">
@@ -586,6 +594,7 @@ async function submit(formData?: FormData, skip?: boolean) {
           ...aiState.get(),
           messages: [
             ...aiState.get().messages,
+            ...toolAiMessages,
             {
               id: groupeId,
               role: 'assistant',

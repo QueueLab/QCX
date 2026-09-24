@@ -119,6 +119,9 @@ describe('Location Embeddings Tool', () => {
       expect(sentBody.geometry.type).toBe('Polygon')
 
       // Check thumbnail url fetch and images result
+      if ('error' in result) {
+        throw new Error(`Unexpected tool error: ${result.error}`)
+      }
       expect(result.images).toEqual(['https://cdn.embeddings.api.lgnd.ai/oregon_thumb.png'])
     } finally {
       globalThis.fetch = originalFetch
@@ -172,6 +175,9 @@ describe('Location Embeddings Tool', () => {
       const sentBody = JSON.parse(fetchCalls[0].options.body)
       expect(sentBody.latitude).toBe(34.0454501975)
       expect(sentBody.longitude).toBe(-118.259248828)
+      if ('error' in result) {
+        throw new Error(`Unexpected tool error: ${result.error}`)
+      }
       expect(result.images).toEqual(['https://cdn.embeddings.api.lgnd.ai/thumb1.png'])
     } finally {
       globalThis.fetch = originalFetch
@@ -201,6 +207,9 @@ describe('Location Embeddings Tool', () => {
         top_k: 5
       })
 
+      if (!('error' in result)) {
+        throw new Error('Expected tool error payload')
+      }
       expect(result.error).toContain('HTTP 401')
     } finally {
       globalThis.fetch = originalFetch
@@ -290,7 +299,9 @@ describe('Location Embeddings Tool', () => {
       expect(fallbackBody.query).toBe('heavy machinery used to fell timber')
 
       // Result succeeded with images from fallback
-      expect(result.error).toBeUndefined()
+      if ('error' in result) {
+        throw new Error(`Unexpected tool error: ${result.error}`)
+      }
       expect(result.images).toEqual(['https://cdn.embeddings.api.lgnd.ai/fallback_thumb.png'])
     } finally {
       globalThis.fetch = originalFetch
@@ -312,6 +323,9 @@ describe('Location Embeddings Tool', () => {
       top_k: 5
     })
 
+    if (!('error' in result)) {
+      throw new Error('Expected tool error payload')
+    }
     expect(result.error).toBe('Location search requires valid latitude and longitude coordinates.')
   })
 
@@ -345,6 +359,9 @@ describe('Location Embeddings Tool', () => {
         top_k: 5
       })
 
+      if (!('error' in result)) {
+        throw new Error('Expected tool error payload')
+      }
       expect(result.error).toContain('outside the selected LGND collection bounds')
     } finally {
       globalThis.fetch = originalFetch
@@ -397,6 +414,9 @@ describe('Location Embeddings Tool', () => {
         top_k: 1
       })
 
+      if ('error' in result) {
+        throw new Error(`Unexpected tool error: ${result.error}`)
+      }
       expect(result.formattedResult).not.toContain('```json')
       expect(result.formattedResult).toContain('Chip ID: chip_0d932d7b43bf2e35c3c8646f0a3ead6a')
       expect(result.formattedResult).toContain('Collection: naip')

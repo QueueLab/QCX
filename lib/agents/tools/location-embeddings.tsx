@@ -7,6 +7,46 @@ import { createDeadlineSignal } from '@/lib/utils/with-timeout'
 const DEFAULT_TENANT_ID = 'ten_01a0cd9a20c671b59c2cf55ee847bc66'
 const DEFAULT_COLLECTION_ID = 'col_01a0cd9a20e170daac4573a3f7200000'
 
+export interface IndexedChip {
+  chip_id: string
+  collection: string
+  datetime: string
+  score: string | number
+  centroid: any
+  thumbnail_url: string
+}
+
+export interface LocationEmbeddingsSuccessPayload {
+  query?: string
+  location?: string
+  latitude?: number
+  longitude?: number
+  top_k: number
+  tenantId: string
+  collectionId: string
+  results: any
+  images: string[]
+  indexedChips: IndexedChip[]
+  formattedResult: string
+  error?: undefined
+}
+
+export interface LocationEmbeddingsErrorPayload {
+  query?: string
+  location?: string
+  latitude?: number
+  longitude?: number
+  top_k?: number
+  error: string
+  images?: undefined
+  indexedChips?: undefined
+  formattedResult?: undefined
+}
+
+export type LocationEmbeddingsResult =
+  | LocationEmbeddingsSuccessPayload
+  | LocationEmbeddingsErrorPayload
+
 export const locationEmbeddingsTool = ({ uiStream, fullResponse }: ToolProps) => ({
   description:
     'Search geospatial satellite/aerial vector embeddings using natural language text queries or coordinates, geocodes place names via Mapbox, and retrieves satellite thumbnail preview URLs',
@@ -276,23 +316,25 @@ export const locationEmbeddingsTool = ({ uiStream, fullResponse }: ToolProps) =>
 
         if (imgUrl) {
           item.thumbnail_url = imgUrl
-          indexedChips.push({
-            chip_id: chipId,
-            collection: item.collection || 'N/A',
-            datetime: item.datetime ? item.datetime.split('T')[0] : 'N/A',
-            score: typeof item.score === 'number' ? item.score.toFixed(4) : item.score || 'N/A',
+          const dt = typeof item.datetime === 'string' ? item.datetime.split('T')[0] : 'N/A'
+          const score = typeof item.score === 'number' ? item.score.toFixed(4) : item.score || 'N/A'
+          return {
+            chip_id: String(chipId),
+            collection: item.collection ? String(item.collection) : 'N/A',
+            datetime: dt,
+            score,
             centroid: item.centroid || null,
             thumbnail_url: imgUrl
-          })
-          return imgUrl
+          }
         }
         return null
       })
 
-      const fetchedThumbs = await Promise.allSettled(thumbnailPromises)
-      fetchedThumbs.forEach(res => {
+      const fetchedResults = await Promise.allSettled(thumbnailPromises)
+      fetchedResults.forEach(res => {
         if (res.status === 'fulfilled' && res.value) {
-          thumbnailImages.push(res.value)
+          thumbnailImages.push(res.value.thumbnail_url)
+          indexedChips.push(res.value)
         }
       })
     }

@@ -87,7 +87,7 @@ ${selectedModel === 'SkyFi' ? `#### **3. SkyFi Satellite Imagery and AOI**
 - “Find heavy machinery used to fell timber near forests that have not previously been cleared in Oregon”
 - “Find satellite imagery showing construction sites around Phoenix, Arizona”
 - “Search for recently cleared forest areas in Oregon from 2024-01-01 through 2024-12-31”
-- “Find imagery of agricultural fields with visible irrigation patterns near Sacramento, California, and return top 20 matches”
+- “Find imagery of agricultural fields with visible irrigation patterns near Sacramento, California, and return top 3 matches”
 - “Find clear-cut forest imagery near 43.8041, -120.5542”
 
 **Examples that MUST NOT use \`locationEmbeddingsQuery\` (use \`geospatialQueryTool\` instead):**
