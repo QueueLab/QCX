@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+export const MAX_LGND_RESULTS = 3
+
 export const locationEmbeddingsQuerySchema = z.object({
   query: z
     .string()
@@ -28,10 +30,11 @@ export const locationEmbeddingsQuerySchema = z.object({
   top_k: z
     .number()
     .int()
-    .positive()
+    .min(MAX_LGND_RESULTS)
+    .max(MAX_LGND_RESULTS)
     .optional()
-    .default(3)
-    .describe('Number of top embedding search results to return (default: 3)'),
+    .default(MAX_LGND_RESULTS)
+    .describe('Always return the top three embedding search results; top_k must be 3.'),
   tenantId: z
     .string()
     .optional()

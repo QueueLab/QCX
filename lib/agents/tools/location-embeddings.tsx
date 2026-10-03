@@ -1,5 +1,5 @@
 import { createStreamableValue } from 'ai/rsc'
-import { locationEmbeddingsQuerySchema } from '@/lib/schema/location-embeddings'
+import { MAX_LGND_RESULTS, locationEmbeddingsQuerySchema } from '@/lib/schema/location-embeddings'
 import { ToolProps } from '.'
 import { LocationEmbeddingsSection } from '@/components/location-embeddings-section'
 import { createDeadlineSignal } from '@/lib/utils/with-timeout'
@@ -25,6 +25,8 @@ export interface LocationEmbeddingsSuccessPayload {
   tenantId: string
   collectionId: string
   results: any
+  areaOfInterest?: any
+  searchGeometry?: any
   images: string[]
   indexedChips: IndexedChip[]
   formattedResult: string
@@ -49,7 +51,7 @@ export type LocationEmbeddingsResult =
 
 export const locationEmbeddingsTool = ({ uiStream, fullResponse }: ToolProps) => ({
   description:
-    'Search geospatial satellite/aerial vector embeddings using natural language text queries or coordinates, geocodes place names via Mapbox, and retrieves satellite thumbnail preview URLs',
+    'Search geospatial satellite/aerial vector embeddings using natural language text queries or coordinates, geocodes place names via Mapbox, retrieves up to the three best matches and their thumbnail preview URLs; always use top_k=3',
   parameters: locationEmbeddingsQuerySchema,
   execute: async ({
     query,
@@ -70,6 +72,7 @@ export const locationEmbeddingsTool = ({ uiStream, fullResponse }: ToolProps) =>
     collectionId?: string
     apiKey?: string
   }) => {
+    const resultLimit = MAX_LGND_RESULTS
     const streamResults = createStreamableValue<string>()
     uiStream.append(<LocationEmbeddingsSection result={streamResults.value} />)
 
@@ -172,7 +175,7 @@ export const locationEmbeddingsTool = ({ uiStream, fullResponse }: ToolProps) =>
         : `Bearer ${effectiveApiKey}`
     }
 
-    const requestBody: Record<string, any> = { top_k }
+    const requestBody: Record<string, any> = { top_k: resultLimit }
 
     if (isTextSearch) {
       requestBody.query = query
@@ -182,6 +185,9 @@ export const locationEmbeddingsTool = ({ uiStream, fullResponse }: ToolProps) =>
     } else {
       requestBody.latitude = resolvedLatitude
       requestBody.longitude = resolvedLongitude
+      if (resolvedGeometry) {
+        requestBody.geometry = resolvedGeometry
+      }
     }
 
     let apiResponse: any = null
@@ -205,11 +211,13 @@ export const locationEmbeddingsTool = ({ uiStream, fullResponse }: ToolProps) =>
           errorText.includes('intersect collection bounds') ||
           errorText.includes('VALIDATION_ERROR')
 
-        if (isTextSearch && isGeometryBoundsError && requestBody.geometry) {
+        if (isGeometryBoundsError && requestBody.geometry) {
           console.warn(
-            'Embeddings API geometry bounds error. Retrying search-by-text without spatial geometry constraint.'
+            'Embeddings API geometry bounds error. Retrying without the spatial geometry constraint.'
           )
-          const fallbackBody: Record<string, any> = { query, top_k }
+          const fallbackBody: Record<string, any> = isTextSearch
+            ? { query, top_k: resultLimit }
+            : { latitude: resolvedLatitude, longitude: resolvedLongitude, top_k: resultLimit }
           const fallbackRes = await fetch(searchEndpoint, {
             method: 'POST',
             headers,
@@ -242,7 +250,7 @@ export const locationEmbeddingsTool = ({ uiStream, fullResponse }: ToolProps) =>
         location,
         latitude: resolvedLatitude,
         longitude: resolvedLongitude,
-        top_k,
+        top_k: resultLimit,
         error: errorMsg
       }
       streamResults.done(JSON.stringify(errorPayload))
@@ -266,7 +274,16 @@ export const locationEmbeddingsTool = ({ uiStream, fullResponse }: ToolProps) =>
     }
 
     // Limit processing list to top 3
-    const topItemsList = itemsList.slice(0, 3)
+    const topItemsList = itemsList.slice(0, resultLimit)
+    const boundedApiResponse = Array.isArray(apiResponse)
+      ? topItemsList
+      : apiResponse && typeof apiResponse === 'object'
+        ? Object.fromEntries(Object.entries(apiResponse).map(([key, value]) =>
+            ['results', 'items', 'data', 'chips'].includes(key) && Array.isArray(value)
+              ? [key, value.slice(0, resultLimit)]
+              : [key, value]
+          ))
+        : apiResponse
 
     // Fetch thumbnail URLs and build indexed metadata for each chip
     const thumbnailImages: string[] = []
@@ -358,10 +375,18 @@ export const locationEmbeddingsTool = ({ uiStream, fullResponse }: ToolProps) =>
       location,
       latitude: resolvedLatitude,
       longitude: resolvedLongitude,
-      top_k,
+      top_k: resultLimit,
       tenantId: effectiveTenantId,
       collectionId: effectiveCollectionId,
-      results: apiResponse,
+      results: boundedApiResponse,
+      areaOfInterest:
+        apiResponse?.areaOfInterest ||
+        apiResponse?.area_of_interest ||
+        apiResponse?.aoi ||
+        apiResponse?.geometry ||
+        resolvedGeometry ||
+        null,
+      searchGeometry: resolvedGeometry || undefined,
       images: thumbnailImages,
       indexedChips,
       formattedResult: formattedSummary

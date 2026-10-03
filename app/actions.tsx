@@ -32,6 +32,7 @@ import RetrieveSection from '@/components/retrieve-section'
 import { VideoSearchSection } from '@/components/video-search-section'
 import { MapQueryHandler } from '@/components/map/map-query-handler'
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
+import { buildPersistedAnalysisContext } from '@/lib/utils/persisted-analysis-context'
 import { createClient } from '@/lib/supabase/client'
 import { db } from '@/lib/db'
 import { documents, documentChunks } from '@/lib/db/schema'
@@ -104,6 +105,8 @@ async function submit(formData?: FormData, skip?: boolean) {
       const mapboxBuffer = isFile(file_mapbox) ? await file_mapbox.arrayBuffer() : null;
       const mapboxDataUrl = mapboxBuffer ? `data:${(file_mapbox as File).type};base64,${Buffer.from(mapboxBuffer).toString('base64')}` : null;
 
+      const persistedSearchContext = buildPersistedAnalysisContext(aiState.get().messages)
+
       const googleBuffer = isFile(file_google) ? await file_google.arrayBuffer() : null;
       const googleDataUrl = googleBuffer ? `data:${(file_google as File).type};base64,${Buffer.from(googleBuffer).toString('base64')}` : null;
 
@@ -139,7 +142,13 @@ async function submit(formData?: FormData, skip?: boolean) {
 
       const processResolutionSearch = async () => {
         try {
-          const streamResult = await resolutionSearch(messages, timezone, drawnFeatures, location);
+          const streamResult = await resolutionSearch(
+            messages,
+            timezone,
+            drawnFeatures,
+            location,
+            persistedSearchContext
+          );
 
           let fullSummary = '';
           for await (const partialObject of streamResult.partialObjectStream) {
@@ -493,10 +502,9 @@ async function submit(formData?: FormData, skip?: boolean) {
 
   const currentSystemPrompt = await getSystemPrompt()
   const maxMessages = 10
-  // Only send conversational content to the researcher. Resolution result
-  // blobs, related-query payloads, and UI markers are presentation state, not
-  // model messages; including them makes OpenAI follow-ups intermittently
-  // fail or exceed the context budget.
+  const persistedSearchContext = buildPersistedAnalysisContext(aiState.get().messages)
+  // Keep bulky structured result blobs out of the conversational window; a
+  // compact cross-turn summary is supplied separately to the researcher.
   const messages = aiState.get().messages
     .filter(message => !['related', 'followup', 'end', 'resolution_search_result'].includes(message.type || ''))
     .map(message => ({
@@ -569,7 +577,8 @@ async function submit(formData?: FormData, skip?: boolean) {
         latestMessages,
         'mapbox', // default provider
         false,
-        drawnFeatures
+        drawnFeatures,
+        persistedSearchContext
       )
 
       if (!errorOccurred) {

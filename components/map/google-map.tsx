@@ -52,6 +52,9 @@ export function GoogleMapComponent() {
   }, [mapData.drawnFeatures]);
 
   const cameraOptions = useMemo(() => {
+    if (mapData.targetPosition) {
+      return { center: mapData.targetPosition, range: 1000, tilt: 60, heading: 0 };
+    }
     if (mapData.cameraState) {
       const { center, zoom, pitch, bearing } = mapData.cameraState;
       // Convert Mapbox zoom to Google Maps range (approximate)
@@ -62,9 +65,6 @@ export function GoogleMapComponent() {
         tilt: pitch || 0,
         heading: bearing || 0,
       };
-    }
-    if (mapData.targetPosition) {
-      return { center: mapData.targetPosition, range: 1000, tilt: 60, heading: 0 };
     }
     return { center: { lat: 37.7749, lng: -122.4194 }, range: 1000, tilt: 60, heading: 0 };
   }, [mapData.cameraState, mapData.targetPosition]);
