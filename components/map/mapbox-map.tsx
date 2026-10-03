@@ -25,6 +25,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   const rotationFrameRef = useRef<number | null>(null)
   const polygonLabelsRef = useRef<{ [id: string]: mapboxgl.Marker }>({})
   const lineLabelsRef = useRef<{ [id: string]: mapboxgl.Marker }>({})
+  const locationMarkersRef = useRef<Map<string, mapboxgl.Marker>>(new Map())
   const lastInteractionRef = useRef<number>(Date.now())
   const isRotatingRef = useRef<boolean>(false)
   const isUpdatingPositionRef = useRef<boolean>(false)
@@ -553,20 +554,127 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
     }
   }, [position, updateMapPosition, mapType])
 
-  // Effect to handle map updates from MapDataContext
+  // Fly to an LGND AOI when available; otherwise use the exact requested location.
   useEffect(() => {
-    if (mapData.targetPosition && map.current) {
-      const { lat, lng } = mapData.targetPosition;
-      if (typeof lat === 'number' && typeof lng === 'number') {
-        updateMapPosition(lat, lng);
+    if (!map.current || !isMapReady) return
+    if (mapData.targetGeometry) {
+      try {
+        const bounds = turf.bbox({
+          type: 'Feature',
+          properties: {},
+          geometry: mapData.targetGeometry
+        })
+        const [[minLng, minLat], [maxLng, maxLat]] = [
+          [bounds[0], bounds[1]],
+          [bounds[2], bounds[3]]
+        ]
+        if ([minLng, minLat, maxLng, maxLat].every(Number.isFinite) &&
+            (minLng !== maxLng || minLat !== maxLat)) {
+          isUpdatingPositionRef.current = true
+          stopRotation()
+          map.current.fitBounds([[minLng, minLat], [maxLng, maxLat]], {
+            padding: 56,
+            maxZoom: 14,
+            duration: 1200
+          })
+          map.current.once('moveend', () => {
+            currentMapCenterRef.current.center = map.current ? [map.current.getCenter().lng, map.current.getCenter().lat] : [minLng, minLat]
+            isUpdatingPositionRef.current = false
+          })
+          return
+        }
+      } catch (error) {
+        console.warn('Could not fit map to LGND geometry:', error)
       }
     }
-    // TODO: Handle mapData.mapFeature for drawing routes, polygons, etc. in a future step.
-    // For example:
-    // if (mapData.mapFeature && mapData.mapFeature.route_geometry && typeof drawRoute === 'function') {
-    //   drawRoute(mapData.mapFeature.route_geometry); // Implement drawRoute function if needed
-    // }
-  }, [mapData.targetPosition, mapData.mapFeature, updateMapPosition]);
+    if (mapData.targetPosition) {
+      const { lat, lng } = mapData.targetPosition
+      if (Number.isFinite(lat) && Number.isFinite(lng)) updateMapPosition(lat, lng)
+    }
+  }, [mapData.targetPosition, mapData.targetGeometry, mapData.mapFeature, isMapReady, updateMapPosition, stopRotation])
+
+  // Keep all persisted LGND AOI and chip footprints visible as a GeoJSON overlay.
+  useEffect(() => {
+    if (!map.current || !isMapReady) return
+    const features = (mapData.geoJsonFeatures || []).map(feature => ({
+      type: 'Feature' as const,
+      id: feature.id,
+      geometry: feature.geometry,
+      properties: { title: feature.title || '', source: feature.source || 'lgnd' }
+    }))
+    const featureCollection: GeoJSON.FeatureCollection = {
+      type: 'FeatureCollection',
+      features: features as GeoJSON.Feature[]
+    }
+    const sourceId = 'lgnd-area-features'
+    const source = map.current.getSource(sourceId) as mapboxgl.GeoJSONSource | undefined
+    if (source) {
+      source.setData(featureCollection)
+      return
+    }
+
+    map.current.addSource(sourceId, { type: 'geojson', data: featureCollection })
+    map.current.addLayer({
+      id: 'lgnd-area-fill',
+      type: 'fill',
+      source: sourceId,
+      paint: {
+        'fill-color': ['match', ['get', 'source'], 'lgnd-aoi', '#a855f7', '#38bdf8'],
+        'fill-opacity': ['match', ['get', 'source'], 'lgnd-aoi', 0.20, 0.12]
+      }
+    })
+    map.current.addLayer({
+      id: 'lgnd-area-outline',
+      type: 'line',
+      source: sourceId,
+      paint: {
+        'line-color': ['match', ['get', 'source'], 'lgnd-aoi', '#c084fc', '#38bdf8'],
+        'line-width': ['match', ['get', 'source'], 'lgnd-aoi', 3, 2]
+      }
+    })
+  }, [mapData.geoJsonFeatures, isMapReady])
+
+  // Pins are derived from the persisted LGND message and are recreated on chat replay.
+  useEffect(() => {
+    if (!map.current || !isMapReady) return
+    locationMarkersRef.current.forEach(marker => marker.remove())
+    locationMarkersRef.current.clear()
+    for (const markerData of mapData.markers || []) {
+      if (!Number.isFinite(markerData.latitude) || !Number.isFinite(markerData.longitude)) continue
+      const element = document.createElement('button')
+      element.type = 'button'
+      element.setAttribute('aria-label', markerData.title || 'LGND map location')
+      element.title = markerData.title || 'LGND map location'
+      element.style.width = '18px'
+      element.style.height = '18px'
+      element.style.borderRadius = '50%'
+      element.style.border = '2px solid white'
+      element.style.backgroundColor = markerData.source === 'lgnd-search' ? '#a855f7' : '#0284c7'
+      element.style.boxShadow = '0 1px 6px rgba(0,0,0,.55)'
+      const popupText = [markerData.title, markerData.details].filter(Boolean).join('\n')
+      const mapMarker = new mapboxgl.Marker({ element, anchor: 'center' })
+        .setLngLat([markerData.longitude, markerData.latitude])
+        .setPopup(new mapboxgl.Popup({ offset: 12 }).setText(popupText))
+        .addTo(map.current)
+      element.addEventListener('click', () => {
+        if (markerData.geometry) {
+          setMapData(previous => ({
+            ...previous,
+            targetPosition: { lat: markerData.latitude, lng: markerData.longitude },
+            targetGeometry: markerData.geometry || null
+          }))
+        } else {
+          updateMapPosition(markerData.latitude, markerData.longitude)
+        }
+      })
+      locationMarkersRef.current.set(markerData.id, mapMarker)
+    }
+  }, [mapData.markers, isMapReady, setMapData, updateMapPosition])
+
+  useEffect(() => () => {
+    locationMarkersRef.current.forEach(marker => marker.remove())
+    locationMarkersRef.current.clear()
+  }, [])
 
   // Long-press handlers
   const handleMouseDown = useCallback(() => {

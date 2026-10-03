@@ -214,7 +214,7 @@ export function Chat({ id }: ChatProps) {
   // Mobile layout
   if (isMobile) {
     return (
-      <MapDataProvider> {/* Add Provider */}
+      <MapDataProvider key={id}> {/* Add Provider */}
         <HeaderSearchButton />
         {renderHeaderShare()}
         <div className="mobile-layout-container">
@@ -261,7 +261,7 @@ export function Chat({ id }: ChatProps) {
 
   // Desktop layout
   return (
-    <MapDataProvider> {/* Add Provider */}
+    <MapDataProvider key={id}> {/* Add Provider */}
       <HeaderSearchButton />
       {renderHeaderShare()}
       <div className="flex justify-start items-start">

@@ -184,6 +184,102 @@ describe('Location Embeddings Tool', () => {
     }
   })
 
+  it('sends the geocoded AOI to location search and returns it for map restoration', async () => {
+    const mockUiStream = { append: () => {}, update: () => {} }
+    const originalFetch = globalThis.fetch
+    const areaOfInterest = {
+      type: 'Polygon',
+      coordinates: [[[-123, 37], [-122, 37], [-122, 38], [-123, 38], [-123, 37]]]
+    }
+    const fetchCalls: Array<{ url: string; options?: RequestInit }> = []
+    process.env.MAPBOX_ACCESS_TOKEN = 'pk.test_mapbox_token'
+
+    globalThis.fetch = (async (url: string | URL | Request, options?: RequestInit) => {
+      const urlStr = url.toString()
+      fetchCalls.push({ url: urlStr, options })
+      if (urlStr.includes('api.mapbox.com/geocoding')) {
+        return new Response(JSON.stringify({
+          features: [{ center: [-122.5, 37.5], geometry: areaOfInterest }]
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      }
+      if (urlStr.includes('/search-by-location')) {
+        return new Response(JSON.stringify({ data: [{ chip_id: 'aoi-chip', centroid: { coordinates: [-122.5, 37.5] } }] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        })
+      }
+      if (urlStr.includes('/chips/aoi-chip/thumbnail/url')) {
+        return new Response(JSON.stringify({ url: 'https://cdn.example/aoi-chip.png' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        })
+      }
+      return new Response('Not found', { status: 404 })
+    }) as typeof fetch
+
+    try {
+      const tool = locationEmbeddingsTool({ uiStream: mockUiStream as any, fullResponse: '' })
+      const result = await tool.execute({ location: 'San Francisco Bay', top_k: 1 })
+      const locationCall = fetchCalls.find(call => call.url.includes('/search-by-location'))
+      const requestBody = JSON.parse(locationCall?.options?.body as string)
+
+      expect(requestBody.latitude).toBe(37.5)
+      expect(requestBody.longitude).toBe(-122.5)
+      expect(requestBody.geometry).toEqual(areaOfInterest)
+      if ('error' in result) throw new Error(`Unexpected tool error: ${result.error}`)
+      expect(result.areaOfInterest).toEqual(areaOfInterest)
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
+
+  it('retries location search without AOI geometry when LGND rejects the bounds constraint', async () => {
+    const mockUiStream = { append: () => {}, update: () => {} }
+    const originalFetch = globalThis.fetch
+    const geometry = {
+      type: 'Polygon',
+      coordinates: [[[-124, 41], [-116, 41], [-116, 46], [-124, 46], [-124, 41]]]
+    }
+    const requestBodies: any[] = []
+    process.env.MAPBOX_ACCESS_TOKEN = 'pk.test_mapbox_token'
+    globalThis.fetch = (async (url: string | URL | Request, options?: RequestInit) => {
+      const urlStr = url.toString()
+      if (urlStr.includes('api.mapbox.com/geocoding')) {
+        return new Response(JSON.stringify({ features: [{ center: [-120, 43], geometry }] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        })
+      }
+      if (urlStr.includes('/search-by-location')) {
+        const body = JSON.parse(options?.body as string)
+        requestBodies.push(body)
+        if (body.geometry) {
+          return new Response(JSON.stringify({ error: { message: 'geometry does not intersect collection bounds' } }), {
+            status: 422,
+            headers: { 'Content-Type': 'application/json' }
+          })
+        }
+        return new Response(JSON.stringify({ results: [] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        })
+      }
+      return new Response('Not found', { status: 404 })
+    }) as typeof fetch
+
+    try {
+      const tool = locationEmbeddingsTool({ uiStream: mockUiStream as any, fullResponse: '' })
+      const result = await tool.execute({ location: 'Oregon', top_k: 1 })
+      expect(requestBodies).toHaveLength(2)
+      expect(requestBodies[0].geometry).toEqual(geometry)
+      expect(requestBodies[1]).toEqual({ latitude: 43, longitude: -120, top_k: 1 })
+      if ('error' in result) throw new Error(`Unexpected tool error: ${result.error}`)
+      expect(result.areaOfInterest).toEqual(geometry)
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
+
   it('handles API HTTP errors gracefully', async () => {
     const mockUiStream = {
       append: () => {},

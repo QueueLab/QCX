@@ -25,6 +25,8 @@ export interface LocationEmbeddingsSuccessPayload {
   tenantId: string
   collectionId: string
   results: any
+  areaOfInterest?: any
+  searchGeometry?: any
   images: string[]
   indexedChips: IndexedChip[]
   formattedResult: string
@@ -182,6 +184,9 @@ export const locationEmbeddingsTool = ({ uiStream, fullResponse }: ToolProps) =>
     } else {
       requestBody.latitude = resolvedLatitude
       requestBody.longitude = resolvedLongitude
+      if (resolvedGeometry) {
+        requestBody.geometry = resolvedGeometry
+      }
     }
 
     let apiResponse: any = null
@@ -205,11 +210,13 @@ export const locationEmbeddingsTool = ({ uiStream, fullResponse }: ToolProps) =>
           errorText.includes('intersect collection bounds') ||
           errorText.includes('VALIDATION_ERROR')
 
-        if (isTextSearch && isGeometryBoundsError && requestBody.geometry) {
+        if (isGeometryBoundsError && requestBody.geometry) {
           console.warn(
-            'Embeddings API geometry bounds error. Retrying search-by-text without spatial geometry constraint.'
+            'Embeddings API geometry bounds error. Retrying without the spatial geometry constraint.'
           )
-          const fallbackBody: Record<string, any> = { query, top_k }
+          const fallbackBody: Record<string, any> = isTextSearch
+            ? { query, top_k }
+            : { latitude: resolvedLatitude, longitude: resolvedLongitude, top_k }
           const fallbackRes = await fetch(searchEndpoint, {
             method: 'POST',
             headers,
@@ -362,6 +369,14 @@ export const locationEmbeddingsTool = ({ uiStream, fullResponse }: ToolProps) =>
       tenantId: effectiveTenantId,
       collectionId: effectiveCollectionId,
       results: apiResponse,
+      areaOfInterest:
+        apiResponse?.areaOfInterest ||
+        apiResponse?.area_of_interest ||
+        apiResponse?.aoi ||
+        apiResponse?.geometry ||
+        resolvedGeometry ||
+        null,
+      searchGeometry: resolvedGeometry || undefined,
       images: thumbnailImages,
       indexedChips,
       formattedResult: formattedSummary
