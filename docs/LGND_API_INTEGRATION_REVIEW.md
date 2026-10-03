@@ -41,4 +41,10 @@ The request contract was checked against the [LGND Embeddings API getting-starte
 
 ## Verification
 
-Unit coverage exercises valid search points, GeoJSON coordinate order, invalid coordinates, result-only fly-to fallback, and error-payload handling. Existing LGND request tests continue to verify the API endpoint selection, geocoding, thumbnail enrichment, bounds fallback, and human-readable response payload. Type checking and unit tests should run in CI with repository dependencies installed; a live LGND request is not required to test map restoration and is not issued by this review.
+Validation completed:
+
+- `ENCRYPTION_KEY=qcx-unit-test-only-key npx --yes bun@1.3.5 test tests-unit`: 24 passed, 0 failed.
+- Focused `tsc --noEmit` for the changed LGND/Mapbox production paths: passed.
+- ESLint on changed production files: 0 errors; two warnings remain in existing effects (`components/chat.tsx:94` and `components/map/mapbox-map.tsx:482`).
+- The full-project `tsc --noEmit` currently reports existing Google Maps typing gaps (`google.maps.Data` and the `gmp-map-3d` JSX element), as well as the project's Bun-only test imports; these are outside the focused LGND/Mapbox check.
+- No live LGND request or real API credential was used; request and map-restoration behavior is covered with mocks.
