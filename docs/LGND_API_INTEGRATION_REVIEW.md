@@ -1,10 +1,12 @@
-# LGND API integration: technical review and map persistence
+# LGND API integration: map persistence and multi-turn context
 
 ## Scope and conclusion
 
-This review follows a location-embedding search from the `locationEmbeddingsQuery` tool through the LGND Embeddings API, serialized chat state, persisted messages, result rendering, and map navigation. The API request path and basic result formatting already existed. The important gap was the boundary between a successful LGND tool result and the map: unlike the geospatial tool, the LGND result component did not publish its location/centroid coordinates to map state, and the Mapbox map did not render the existing `MapData.markers` field.
+This review follows a location-embedding search from the `locationEmbeddingsQuery` tool through the LGND Embeddings API, serialized chat state, persisted messages, result rendering, map navigation, and consecutive follow-up model turns. The API request path and basic result formatting already existed. The gaps were (1) LGND output was not projected onto Mapbox, and (2) follow-up preparation deliberately omitted bulky `resolution_search_result` payloads and sent only the latest ten conversational messages. This meant chip IDs/metadata or earlier resolution findings could disappear from model context even though they remained saved in the backend.
 
 The implementation keeps chat messages as the durable source of truth rather than duplicating LGND payloads in a new table. It derives marker state from the saved tool message when a current or historical chat renders. This means a result remains retrievable with its chat, and its map annotations can be reconstructed on reload without a separate synchronization job or schema migration.
+
+For generation, the AI SDK already supplies a successful tool's structured return value to the next step of the same `streamText` run. This change preserves that path, caps the actual result JSON at three chips, and also reconstructs a small metadata-only context from persisted messages for later turns. Thus follow-ups work both immediately after an LGND tool call and after resolution-search analysis, message-window truncation, or reopening the chat.
 
 The request contract was checked against the [LGND Embeddings API getting-started documentation](https://lgnd.ai/lgnd-docs): location search takes latitude/longitude and accepts optional GeoJSON `geometry`; search responses expose result data. Google's companion map path follows the [Maps 3D marker API](https://developers.google.com/maps/documentation/javascript/3d/marker-add). AOI and chip polygon rendering/fit-to-bounds behavior is implemented specifically for Mapbox, as requested.
 
@@ -19,6 +21,7 @@ The request contract was checked against the [LGND Embeddings API getting-starte
 ## Changes
 
 - Add a pure payload-to-map adapter that validates latitude/longitude ranges, interprets GeoJSON centroid order as `[longitude, latitude]`, and emits stable IDs for the search-location marker and up to three chip-result markers.
+- Enforce exactly `top_k: 3` at the schema/tool boundary and in geometry-retry requests. Bound result arrays in the returned LGND JSON to the first three actual API matches, and retain all available matches (the API may return fewer when the collection has fewer hits) for the model's next generation step.
 - On initial and replayed result rendering, merge these markers into the map context and set the map target to the exact search coordinate. If no search coordinate is present, use the first valid result centroid as the fly-to target.
 - Send the geocoded AOI polygon as an optional LGND `geometry` constraint for location searches too, preserve both the submitted search geometry and any distinct AOI geometry returned by LGND in the serialized tool result, and fall back to the unbounded point/text request if LGND rejects only that geometry constraint.
 - Render and clean up the AOI and chip footprints on Mapbox, fitting the camera to the AOI by default. The search coordinate remains marked; selecting a chip's “Fly to image” action (or its map pin) fits that chip footprint or flies to its centroid. Pin popups include relevant collection/date/score/coordinate metadata.
@@ -32,6 +35,7 @@ The request contract was checked against the [LGND Embeddings API getting-starte
 - Result markers are limited to the top three, matching the current UI/tool summary contract, and are not dependent on thumbnail URL success.
 - Selecting a result is an explicit user action that changes the target from the overall AOI to that chip's polygon footprint, or to its centroid where no footprint is returned.
 - Stable marker IDs deduplicate a chip returned by multiple historical results while preserving separate search-point pins by coordinate.
+- Rebuild a bounded compact context from the full persisted message history on each ordinary follow-up and resolution-image analysis. It retains up to eight recent LGND/resolution result summaries outside the ten-message prompt window, while omitting image bytes, signed thumbnail URLs, raw API payloads, and full GeoJSON coordinate arrays.
 
 ## Persistence and access considerations
 
@@ -39,12 +43,20 @@ The request contract was checked against the [LGND Embeddings API getting-starte
 - No standalone user-global LGND catalogue is introduced. Retrieval remains scoped to chats accessible under the existing chat authorization rules (owner, participant, or public visibility). Sharing a chat retains the existing chat visibility/access semantics.
 - Marker state in React context is a render cache, not the durable record. It is intentionally repopulated from persisted messages on mount/replay rather than separately synchronized to the backend.
 
+## Follow-up context and model handoff
+
+- The standard follow-up path keeps the existing ten-message conversational window and continues to exclude large result blobs from ordinary chat messages. Separately, `buildPersistedAnalysisContext` scans the full AI state (including metadata restored by `/search/[id]`) on every turn.
+- The extractor emits at most eight recent LGND/resolution records in a 9,000-character budget. LGND records include the query/location, collection, search coordinates, and up to three chip IDs, dates, scores, and validated centroid coordinates; resolution records include the analysis summary, extracted coordinates, COG notes, and named map features.
+- It deliberately omits base64 map captures, signed thumbnail URLs, complete raw API responses, and polygon coordinate arrays. Text is bounded and JSON-escaped before it is embedded in model instructions as untrusted reference data.
+- Both `researcher` follow-ups and fresh `resolutionSearch` analyses receive this context. The structured tool result remains available inside the AI SDK multi-step tool loop as well, so the next generation after an API call sees the actual returned three-result JSON, not only a future-turn summary.
+
 ## Verification
 
 Validation completed:
 
-- `ENCRYPTION_KEY=qcx-unit-test-only-key npx --yes bun@1.3.5 test tests-unit`: 24 passed, 0 failed.
-- Focused `tsc --noEmit` for the changed LGND/Mapbox production paths: passed.
-- ESLint on changed production files: 0 errors; two warnings remain in existing effects (`components/chat.tsx:94` and `components/map/mapbox-map.tsx:482`).
-- The full-project `tsc --noEmit` currently reports existing Google Maps typing gaps (`google.maps.Data` and the `gmp-map-3d` JSX element), as well as the project's Bun-only test imports; these are outside the focused LGND/Mapbox check.
+- `ENCRYPTION_KEY=qcx-unit-test-only-key npx --yes bun@1.3.5 test tests-unit`: 30 passed, 0 failed, including exact top-k, three-chip context, historical-window, and resolution-search retention cases.
+- Focused TypeScript checking for the changed server action, agents, tool/schema, and context utilities: passed.
+- Targeted ESLint on the follow-up/context files: 0 errors. The broader production-file lint/build reports existing hook/image warnings, including in `components/chat.tsx` and the map camera effect.
+- `ENCRYPTION_KEY=qcx-build-only-test-key npx next build`: passed (optimized compile, Next lint/type validation, page-data collection, and all 19 static pages). The temporary key only bypassed the repository's import-time encryption-key guard during this local build.
+- No live LGND request or real API credential was used; API/result behavior is covered with mocked responses.
 - No live LGND request or real API credential was used; request and map-restoration behavior is covered with mocks.

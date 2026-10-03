@@ -1,4 +1,5 @@
 import type { MapMarker } from '@/components/map/map-data-context'
+import { MAX_LGND_RESULTS } from '@/lib/schema/location-embeddings'
 
 export interface LocationEmbeddingsMapUpdate {
   targetPosition?: { lat: number; lng: number }
@@ -93,7 +94,7 @@ export function buildLocationEmbeddingsMapUpdate(
   const markers: MapMarker[] = []
   const features: LocationEmbeddingsMapUpdate['features'] = []
   const hasSearchCoordinate = isValidLatitudeLongitude(payload.latitude, payload.longitude)
-  const items = resultItems(payload).slice(0, 3)
+  const items = resultItems(payload).slice(0, MAX_LGND_RESULTS)
 
   const apiArea = payload.results && typeof payload.results === 'object'
     ? payload.results.areaOfInterest || payload.results.area_of_interest || payload.results.aoi || payload.results.geometry
