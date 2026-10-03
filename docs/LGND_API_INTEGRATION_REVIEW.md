@@ -59,4 +59,3 @@ Validation completed:
 - Targeted ESLint on the follow-up/context files: 0 errors. The broader production-file lint/build reports existing hook/image warnings, including in `components/chat.tsx` and the map camera effect.
 - `ENCRYPTION_KEY=qcx-build-only-test-key npx next build`: passed (optimized compile, Next lint/type validation, page-data collection, and all 19 static pages). The temporary key only bypassed the repository's import-time encryption-key guard during this local build.
 - No live LGND request or real API credential was used; API/result behavior is covered with mocked responses.
-- No live LGND request or real API credential was used; request and map-restoration behavior is covered with mocks.
