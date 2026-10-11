@@ -7,8 +7,8 @@ import RetrieveSection from '@/components/retrieve-section'
 import { db } from '@/lib/db'
 import { sql } from 'drizzle-orm'
 import { embed } from 'ai'
-import { openai } from '@ai-sdk/openai'
 import { getCurrentUserIdOnServer } from '@/lib/auth/get-current-user'
+import { getEmbeddingModel } from '@/lib/utils'
 
 interface DocumentChunkResult {
   id: string
@@ -36,7 +36,7 @@ export const documentRetrieveTool = ({ uiStream, fullResponse }: ToolProps) => (
 
       // 2. Embed query
       const { embedding } = await embed({
-        model: openai.embedding('text-embedding-ada-002'),
+        model: getEmbeddingModel(),
         value: query,
       })
 
