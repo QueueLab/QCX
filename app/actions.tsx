@@ -7,8 +7,7 @@ import {
   getMutableAIState
 } from 'ai/rsc'
 import { CoreMessage, ToolResultPart, TextPart, ImagePart, embedMany } from 'ai'
-import { openai } from '@ai-sdk/openai'
-import { nanoid } from '@/lib/utils'
+import { getEmbeddingModel, nanoid } from '@/lib/utils'
 import type { FeatureCollection } from 'geojson'
 import { Spinner } from '@/components/ui/spinner'
 import { Section } from '@/components/section'
@@ -459,7 +458,7 @@ async function submit(formData?: FormData, skip?: boolean) {
 
       if (cappedChunks.length > 0) {
         const { embeddings } = await embedMany({
-          model: openai.embedding('text-embedding-ada-002'),
+          model: getEmbeddingModel(),
           values: cappedChunks,
         })
 
