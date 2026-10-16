@@ -370,6 +370,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   }, [startRotation])
 
   // Initialize map (only once)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (mapContainer.current && !map.current) {
       try {
@@ -478,7 +479,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
         geolocationWatchIdRef.current = null
       }
     }
-  }, [setMap, setIsMapLoaded, captureMapCenter, handleUserInteraction, stopRotation])
+  }, [setMap, setIsMapLoaded, captureMapCenter, handleUserInteraction, stopRotation, mapData.cameraState, position?.latitude, position?.longitude])
 
   // Handle map mode changes
   useEffect(() => {
@@ -547,6 +548,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   }, [mapType, isMapReady, updateMeasurementLabels, setupGeolocationWatcher, captureMapCenter, setupDrawingTools, startRotation, stopRotation])
 
   // Handle position updates from props
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (map.current && position?.latitude && position?.longitude && mapType === MapToggleEnum.RealTimeMode) {
       updateMapPosition(position.latitude, position.longitude)
@@ -554,6 +556,7 @@ export const Mapbox: React.FC<{ position?: { latitude: number; longitude: number
   }, [position, updateMapPosition, mapType])
 
   // Effect to handle map updates from MapDataContext
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (mapData.targetPosition && map.current) {
       const { lat, lng } = mapData.targetPosition;

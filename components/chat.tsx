@@ -91,7 +91,7 @@ export function Chat({ id }: ChatProps) {
       }, 300);
       return () => clearTimeout(timer);
     }
-  }, [aiState.messages.length, router, isStandalone, lastMessage?.type])
+  }, [aiState.messages.length, router, isStandalone, lastMessage?.type, lastMessage?.id])
 
   // Subscribe to real-time database changes for messages and collaborators
   useEffect(() => {

@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import React from 'react'
 import { AIMessage } from '@/lib/types'
 import ReactMarkdown from 'react-markdown'

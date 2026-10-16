@@ -82,7 +82,7 @@ export const SearchRelated: React.FC<SearchRelatedProps> = React.memo(({
           </Button>
         </div>
       )) || []
-  }, [data?.items, handleRelatedClick])
+  }, [data?.items, handleRelatedClick, pendingQuery])
 
   return (
     <div className="flex flex-wrap">

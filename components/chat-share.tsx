@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useEffect } from 'react'
+import { useState, useTransition, useEffect, useCallback } from 'react'
 import { Button } from './ui/button'
 import { Share, UserPlus, Trash2 } from 'lucide-react'
 import {
@@ -27,7 +27,7 @@ export function ChatShare({ chatId, className }: ChatShareProps) {
   const [participants, setParticipants] = useState<Participant[]>([])
   const [isLoadingParticipants, setIsLoadingParticipants] = useState(false)
 
-  const fetchParticipants = async () => {
+  const fetchParticipants = useCallback(async () => {
     setIsLoadingParticipants(true)
     try {
       const res = await fetch(`/api/chats/${chatId}/participants`)
@@ -40,13 +40,13 @@ export function ChatShare({ chatId, className }: ChatShareProps) {
     } finally {
       setIsLoadingParticipants(false)
     }
-  }
+  }, [chatId])
 
   useEffect(() => {
     if (open) {
       fetchParticipants()
     }
-  }, [open, chatId])
+  }, [open, fetchParticipants])
 
   const handleAddCollaborator = async (e: React.FormEvent) => {
     e.preventDefault()
