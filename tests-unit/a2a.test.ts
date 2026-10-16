@@ -29,6 +29,8 @@ test('Agent Card discovery endpoint (.well-known/agent-card.json)', async () => 
   expect(cardData.name).toBe('QCX-Terra Agent')
   expect(Array.isArray(cardData.supportedInterfaces)).toBe(true)
   expect(cardData.supportedInterfaces.length).toBeGreaterThan(0)
+  expect(cardData.supportedInterfaces.map((item: any) => item.protocolBinding)).toEqual(['JSONRPC'])
+  expect(cardData.skills.length).toBeGreaterThan(0)
 })
 
 test('A2A Server POST route SendMessage handling', async () => {
@@ -78,6 +80,29 @@ test('A2A Server invalid method error handling', async () => {
 
   expect(invalidData.error).toBeDefined()
   expect(invalidData.error.code).toBeDefined()
+})
+
+test('A2A endpoint requires the configured bearer token', async () => {
+  const previousToken = process.env.A2A_SERVER_API_KEY
+  process.env.A2A_SERVER_API_KEY = 'test-secret'
+  try {
+    const response = await handleA2aPost(new Request('http://localhost:3000/api/a2a', {
+      method: 'POST',
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'SendMessage', params: {} })
+    }))
+    expect(response.status).toBe(401)
+  } finally {
+    if (previousToken === undefined) delete process.env.A2A_SERVER_API_KEY
+    else process.env.A2A_SERVER_API_KEY = previousToken
+  }
+})
+
+test('A2A endpoint rejects request bodies larger than 1 MiB', async () => {
+  const response = await handleA2aPost(new Request('http://localhost:3000/api/a2a', {
+    method: 'POST',
+    body: 'x'.repeat(1024 * 1024 + 1)
+  }))
+  expect(response.status).toBe(413)
 })
 
 test('A2A Client tool unconfigured target fallback', async () => {
