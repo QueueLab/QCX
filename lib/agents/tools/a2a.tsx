@@ -3,7 +3,10 @@ import { a2aSchema } from '@/lib/schema/a2a'
 import { Card } from '@/components/ui/card'
 import { ToolProps } from '.'
 import { ClientFactory } from '@a2a-js/sdk/client'
-import { Role } from '@a2a-js/sdk'
+import { Role, type Part } from '@a2a-js/sdk'
+
+const getPartText = (part: Part) =>
+  part.content?.$case === 'text' ? part.content.value : ''
 
 export interface RemoteAgentConfig {
   name: string
@@ -96,27 +99,48 @@ export const a2aTool = ({ uiStream, fullResponse }: ToolProps) => ({
           {
             message: {
               role: Role.ROLE_USER,
-              parts: [{ text: payloadMessage }]
-            }
+              parts: [
+                {
+                  content: { $case: 'text', value: payloadMessage },
+                  metadata: undefined,
+                  filename: '',
+                  mediaType: 'text/plain'
+                }
+              ],
+              messageId: `msg-${Date.now()}`,
+              contextId: '',
+              taskId: '',
+              metadata: undefined,
+              extensions: [],
+              referenceTaskIds: []
+            },
+            tenant: '',
+            configuration: undefined,
+            metadata: undefined
           },
           requestOptions
         )
 
         for await (const chunk of stream) {
           let hasNewText = false
-          if (chunk.message?.parts) {
-            for (const part of chunk.message.parts) {
-              if (part.text) {
-                accumulatedResponse += part.text
+          if (chunk.payload?.$case === 'message') {
+            for (const part of chunk.payload.value.parts) {
+              const partText = getPartText(part)
+              if (partText) {
+                accumulatedResponse += partText
                 hasNewText = true
               }
             }
-          } else if (chunk.statusUpdate?.status) {
-            taskState = String(chunk.statusUpdate.status)
-          } else if (chunk.artifactUpdate?.artifact?.parts) {
-            for (const part of chunk.artifactUpdate.artifact.parts) {
-              if (part.text) {
-                accumulatedResponse += part.text
+          } else if (chunk.payload?.$case === 'statusUpdate') {
+            taskState = String(chunk.payload.value.status?.state)
+          } else if (
+            chunk.payload?.$case === 'artifactUpdate' &&
+            chunk.payload.value.artifact?.parts
+          ) {
+            for (const part of chunk.payload.value.artifact.parts) {
+              const partText = getPartText(part)
+              if (partText) {
+                accumulatedResponse += partText
                 hasNewText = true
               }
             }
@@ -139,18 +163,34 @@ export const a2aTool = ({ uiStream, fullResponse }: ToolProps) => ({
           {
             message: {
               role: Role.ROLE_USER,
-              parts: [{ text: payloadMessage }]
-            }
+              parts: [
+                {
+                  content: { $case: 'text', value: payloadMessage },
+                  metadata: undefined,
+                  filename: '',
+                  mediaType: 'text/plain'
+                }
+              ],
+              messageId: `msg-${Date.now()}`,
+              contextId: '',
+              taskId: '',
+              metadata: undefined,
+              extensions: [],
+              referenceTaskIds: []
+            },
+            tenant: '',
+            configuration: undefined,
+            metadata: undefined
           },
           requestOptions
         )
 
-        if (sendResult.message?.parts) {
-          accumulatedResponse = sendResult.message.parts
-            .map(p => p.text || '')
+        if ('parts' in sendResult) {
+          accumulatedResponse = sendResult.parts
+            .map(getPartText)
             .join('')
-        } else if (sendResult.task) {
-          accumulatedResponse = JSON.stringify(sendResult.task)
+        } else {
+          accumulatedResponse = JSON.stringify(sendResult)
         }
       }
 

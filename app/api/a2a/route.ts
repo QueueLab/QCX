@@ -5,7 +5,8 @@ import {
   InMemoryTaskStore,
   AgentEvent,
   RequestContext,
-  ExecutionEventBus
+  ExecutionEventBus,
+  ServerCallContext
 } from '@a2a-js/sdk/server'
 import { Role, TaskState } from '@a2a-js/sdk'
 
@@ -17,13 +18,23 @@ const agentCard = {
     {
       protocolBinding: 'JSON-RPC',
       protocolVersion: '1.0',
-      url: '/api/a2a'
+      url: '/api/a2a',
+      tenant: ''
     }
   ],
+  provider: undefined,
+  version: '1.0.0',
   capabilities: {
     streaming: true,
-    pushNotifications: false
-  }
+    pushNotifications: false,
+    extensions: []
+  },
+  securitySchemes: {},
+  securityRequirements: [],
+  defaultInputModes: ['text/plain'],
+  defaultOutputModes: ['text/plain'],
+  skills: [],
+  signatures: []
 }
 
 const taskStore = new InMemoryTaskStore()
@@ -34,10 +45,8 @@ const agentExecutor = {
     let textPart = ''
     if (userMessage.parts) {
       for (const p of userMessage.parts) {
-        if (p.content && typeof p.content === 'object' && 'value' in p.content) {
+        if (p.content?.$case === 'text') {
           textPart += p.content.value
-        } else if (p.text) {
-          textPart += p.text
         }
       }
     }
@@ -47,9 +56,13 @@ const agentExecutor = {
         id: requestContext.taskId,
         contextId: requestContext.contextId,
         status: {
-          state: TaskState.TASK_STATE_WORKING
+          state: TaskState.TASK_STATE_WORKING,
+          message: undefined,
+          timestamp: undefined
         },
-        history: [userMessage]
+        artifacts: [],
+        history: [userMessage],
+        metadata: undefined
       })
     )
 
@@ -66,9 +79,15 @@ const agentExecutor = {
             content: {
               $case: 'text',
               value: responseText
-            }
+            },
+            metadata: undefined,
+            filename: '',
+            mediaType: 'text/plain'
           }
-        ]
+        ],
+        metadata: undefined,
+        extensions: [],
+        referenceTaskIds: []
       })
     )
 
@@ -77,11 +96,15 @@ const agentExecutor = {
         taskId: requestContext.taskId,
         contextId: requestContext.contextId,
         status: {
-          state: TaskState.TASK_STATE_COMPLETED
-        }
+          state: TaskState.TASK_STATE_COMPLETED,
+          message: undefined,
+          timestamp: undefined
+        },
+        metadata: undefined
       })
     )
-  }
+  },
+  async cancelTask(_taskId: string, _eventBus: ExecutionEventBus) {}
 }
 
 const handler = new DefaultRequestHandler(agentCard, taskStore, agentExecutor)
@@ -95,7 +118,10 @@ export async function POST(request: Request) {
       headers[key] = value
     })
 
-    const rpcResult = await jsonRpcHandler.handle(body, { headers })
+    const rpcResult = await jsonRpcHandler.handle(
+      body,
+      new ServerCallContext({ state: new Map([['headers', headers]]) })
+    )
 
     if (rpcResult && typeof (rpcResult as any)[Symbol.asyncIterator] === 'function') {
       const encoder = new TextEncoder()
