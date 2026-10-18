@@ -1,3 +1,4 @@
+import { createStreamableValue } from 'ai/rsc'
 import { a2aSchema } from '@/lib/schema/a2a'
 import { Card } from '@/components/ui/card'
 import { ToolProps } from '.'
@@ -10,57 +11,10 @@ export interface RemoteAgentConfig {
   apiKey?: string
 }
 
-/** Parse and validate configured remote agents, ignoring malformed entries. */
-function readConfiguredAgents(): RemoteAgentConfig[] {
-  if (!process.env.A2A_REMOTE_AGENTS) return []
-
-  try {
-    const parsed: unknown = JSON.parse(process.env.A2A_REMOTE_AGENTS)
-    if (!Array.isArray(parsed)) return []
-    return parsed.filter(
-      (agent): agent is RemoteAgentConfig =>
-        Boolean(agent) &&
-        typeof agent.name === 'string' &&
-        typeof agent.url === 'string' &&
-        (agent.apiKey === undefined || typeof agent.apiKey === 'string')
-    )
-  } catch (error) {
-    console.error('Failed to parse A2A_REMOTE_AGENTS env var:', error)
-    return []
-  }
-}
-
-/** Resolve a requested agent without allowing unconfigured outbound origins. */
-function resolveAgent(targetAgent: string | undefined, configuredAgents: RemoteAgentConfig[]) {
-  if (!targetAgent) return configuredAgents[0]
-
-  const namedAgent = configuredAgents.find(
-    agent => agent.name.toLowerCase() === targetAgent.toLowerCase()
-  )
-  if (namedAgent) return namedAgent
-  if (!/^https?:\/\//i.test(targetAgent)) return undefined
-
-  try {
-    const requestedUrl = new URL(targetAgent)
-    if (requestedUrl.username || requestedUrl.password) return undefined
-    const matchingAgent = configuredAgents.find(agent => {
-      try {
-        return new URL(agent.url).origin === requestedUrl.origin
-      } catch {
-        return false
-      }
-    })
-    return matchingAgent ? { ...matchingAgent, url: requestedUrl.toString() } : undefined
-  } catch {
-    return undefined
-  }
-}
-
-export const a2aTool = ({ uiStream }: ToolProps) => ({
+export const a2aTool = ({ uiStream, fullResponse }: ToolProps) => ({
   description:
-    'Call a configured remote A2A (Agent-to-Agent) protocol agent to delegate tasks or query specialized agents.',
+    'Call an external or remote A2A (Agent-to-Agent) protocol agent on another system to delegate tasks, ask domain questions, or query specialized remote agents.',
   parameters: a2aSchema,
-  /** Invoke one explicitly selected, configured agent and return its response. */
   execute: async ({
     message,
     targetAgent,
@@ -79,84 +33,155 @@ export const a2aTool = ({ uiStream }: ToolProps) => ({
       </Card>
     )
 
-    const selectedAgent = resolveAgent(targetAgent, readConfiguredAgents())
-    if (!selectedAgent) {
-      const errorMsg = 'No matching remote A2A agent is configured.'
-      uiStream.update(<Card className="p-4 mt-2 text-sm text-destructive">{errorMsg}</Card>)
+    // Parse configured agents from environment variable
+    let configuredAgents: RemoteAgentConfig[] = []
+    if (process.env.A2A_REMOTE_AGENTS) {
+      try {
+        configuredAgents = JSON.parse(process.env.A2A_REMOTE_AGENTS)
+      } catch (e) {
+        console.error('Failed to parse A2A_REMOTE_AGENTS env var:', e)
+      }
+    }
+
+    let agentUrl = ''
+    let apiKey: string | undefined
+
+    if (targetAgent && /^https?:\/\//i.test(targetAgent)) {
+      agentUrl = targetAgent
+    } else if (targetAgent) {
+      const found = configuredAgents.find(
+        a => a.name.toLowerCase() === targetAgent.toLowerCase()
+      )
+      if (found) {
+        agentUrl = found.url
+        apiKey = found.apiKey
+      }
+    }
+
+    if (!agentUrl && configuredAgents.length > 0) {
+      agentUrl = configuredAgents[0].url
+      apiKey = configuredAgents[0].apiKey
+    }
+
+    if (!agentUrl) {
+      const errorMsg =
+        'No valid remote A2A agent target found. Specify a direct agent URL or configure A2A_REMOTE_AGENTS in environment.'
+      uiStream.update(
+        <Card className="p-4 mt-2 text-sm text-destructive">{errorMsg}</Card>
+      )
       return { error: errorMsg }
     }
 
     try {
       const factory = new ClientFactory()
-      const client = await factory.createFromUrl(selectedAgent.url)
-      const requestOptions: any = selectedAgent.apiKey
-        ? { serviceParameters: { authorization: `Bearer ${selectedAgent.apiKey}` } }
-        : {}
-      const payloadMessage = parameters ? `${message}\n\nParameters: ${parameters}` : message
-      const request = {
-        tenant: '',
-        message: {
-          messageId: crypto.randomUUID(),
-          contextId: '',
-          taskId: '',
-          role: Role.ROLE_USER,
-          parts: [{ content: { $case: 'text' as const, value: payloadMessage }, metadata: undefined, filename: '', mediaType: 'text/plain' }],
-          metadata: undefined,
-          extensions: [],
-          referenceTaskIds: []
-        },
-        configuration: undefined,
-        metadata: undefined
+      const client = await factory.createFromUrl(agentUrl)
+
+      const requestOptions: any = {}
+      if (apiKey) {
+        requestOptions.serviceParameters = {
+          authorization: `Bearer ${apiKey}`
+        }
+      }
+
+      let payloadMessage = message
+      if (parameters) {
+        payloadMessage += `\n\nParameters: ${parameters}`
       }
 
       let accumulatedResponse = ''
       let taskState = 'completed'
-      const agentCard = await client.getAgentCard()
 
-      if (agentCard.capabilities?.streaming) {
-        const stream = client.sendMessageStream(request, requestOptions)
+      try {
+        const stream = client.sendMessageStream(
+          {
+            message: {
+              role: Role.ROLE_USER,
+              parts: [{ text: payloadMessage }]
+            }
+          },
+          requestOptions
+        )
+
         for await (const chunk of stream) {
-          const payload = chunk.payload
-          if (payload?.$case === 'message' && payload.value.parts) {
-            for (const part of payload.value.parts) {
-              if (part.content?.$case === 'text') accumulatedResponse += part.content.value
+          let hasNewText = false
+          if (chunk.message?.parts) {
+            for (const part of chunk.message.parts) {
+              if (part.text) {
+                accumulatedResponse += part.text
+                hasNewText = true
+              }
+            }
+          } else if (chunk.statusUpdate?.status) {
+            taskState = String(chunk.statusUpdate.status)
+          } else if (chunk.artifactUpdate?.artifact?.parts) {
+            for (const part of chunk.artifactUpdate.artifact.parts) {
+              if (part.text) {
+                accumulatedResponse += part.text
+                hasNewText = true
+              }
             }
           }
-          if (payload?.$case === 'statusUpdate' && payload.value.status?.state) {
-            taskState = String(payload.value.status.state)
-          }
-          if (payload?.$case === 'artifactUpdate' && payload.value.artifact?.parts) {
-            for (const part of payload.value.artifact.parts) {
-              if (part.content?.$case === 'text') accumulatedResponse += part.content.value
-            }
+
+          if (hasNewText) {
+            uiStream.update(
+              <Card className="p-4 mt-2 text-sm border-primary/20 bg-accent/10">
+                <div className="font-semibold text-xs text-muted-foreground mb-1 uppercase tracking-wider">
+                  A2A Remote Agent ({agentUrl})
+                </div>
+                <div className="whitespace-pre-wrap">{accumulatedResponse}</div>
+              </Card>
+            )
           }
         }
-      } else {
-        const result: any = await client.sendMessage(request, requestOptions)
-        if (Array.isArray(result.parts)) {
-          accumulatedResponse = result.parts
-            .map((part: any) => part.content?.$case === 'text' ? part.content.value : '')
+      } catch (streamError) {
+        // Fallback to single sendMessage if stream unsupported
+        const sendResult = await client.sendMessage(
+          {
+            message: {
+              role: Role.ROLE_USER,
+              parts: [{ text: payloadMessage }]
+            }
+          },
+          requestOptions
+        )
+
+        if (sendResult.message?.parts) {
+          accumulatedResponse = sendResult.message.parts
+            .map(p => p.text || '')
             .join('')
-        } else {
-          accumulatedResponse = JSON.stringify(result)
+        } else if (sendResult.task) {
+          accumulatedResponse = JSON.stringify(sendResult.task)
         }
       }
 
-      if (!accumulatedResponse) accumulatedResponse = 'Remote A2A agent task completed successfully.'
+      if (!accumulatedResponse) {
+        accumulatedResponse = 'Remote A2A agent task completed successfully.'
+      }
+
       uiStream.update(
         <Card className="p-4 mt-2 text-sm border-primary/20 bg-accent/10">
           <div className="font-semibold text-xs text-muted-foreground mb-1 uppercase tracking-wider">
-            A2A Remote Agent ({selectedAgent.name})
+            A2A Remote Agent ({agentUrl})
           </div>
           <div className="whitespace-pre-wrap">{accumulatedResponse}</div>
         </Card>
       )
-      return { response: accumulatedResponse, status: taskState }
-    } catch (error) {
-      console.error('A2A Client Tool Execution Error:', { agentUrl: selectedAgent.url, error })
-      const errorText = 'Failed to invoke the configured remote A2A agent.'
-      uiStream.update(<Card className="p-4 mt-2 text-sm text-destructive">{errorText}</Card>)
-      return { error: errorText }
+
+      return {
+        agentUrl,
+        response: accumulatedResponse,
+        status: taskState
+      }
+    } catch (error: any) {
+      console.error('A2A Client Tool Execution Error:', error)
+      const errorText = `Failed to invoke remote A2A agent at ${agentUrl}: ${error?.message || error}`
+      uiStream.update(
+        <Card className="p-4 mt-2 text-sm text-destructive">{errorText}</Card>
+      )
+      return {
+        agentUrl,
+        error: errorText
+      }
     }
   }
 })

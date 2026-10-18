@@ -1,41 +1,65 @@
-import { buildAgentCard } from '@/lib/a2a/agent-card'
+import { NextResponse } from 'next/server'
 
-function getBaseUrl(request: Request) {
-  const configuredUrl = process.env.NEXT_PUBLIC_APP_URL
-  if (configuredUrl) {
-    try {
-      return new URL(configuredUrl).origin
-    } catch {
-      console.error('NEXT_PUBLIC_APP_URL must be a valid absolute URL')
-    }
-  }
-
-  if (process.env.NODE_ENV !== 'production') {
-    const host = request.headers.get('host') || 'localhost:3000'
-    const protocol = request.headers.get('x-forwarded-proto') || 'http'
-    return `${protocol}://${host}`
-  }
-
-  throw new Error('NEXT_PUBLIC_APP_URL must be configured in production')
-}
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, A2A-Version'
-}
-
-/** Return the canonical A2A agent card using the configured public origin. */
 export async function GET(request: Request) {
-  try {
-    return Response.json(buildAgentCard(getBaseUrl(request)), { headers: corsHeaders })
-  } catch (error) {
-    console.error('A2A Agent Card configuration error:', error)
-    return Response.json({ error: 'Agent card is not configured' }, { status: 500, headers: corsHeaders })
+  const host = request.headers.get('host') || 'localhost:3000'
+  const protocol = request.headers.get('x-forwarded-proto') || 'http'
+  const baseUrl = `${protocol}://${host}`
+
+  const agentCard = {
+    name: 'QCX-Terra Agent',
+    description:
+      'Environment-aware planetary computer platform offering geospatial analysis, remote sensing satellite imagery processing, and multi-agent exploration.',
+    supportedInterfaces: [
+      {
+        protocolBinding: 'JSON-RPC',
+        protocolVersion: '1.0',
+        url: `${baseUrl}/api/a2a`
+      },
+      {
+        protocolBinding: 'HTTP+JSON/REST',
+        protocolVersion: '1.0',
+        url: `${baseUrl}/api/a2a`
+      }
+    ],
+    capabilities: {
+      streaming: true,
+      pushNotifications: false
+    },
+    skills: [
+      {
+        id: 'geospatial-analysis',
+        name: 'Geospatial Analysis & Mapping',
+        description: 'Perform spatial queries, location search, routing, and map feature analysis.'
+      },
+      {
+        id: 'satellite-embeddings',
+        name: 'Satellite Image Vector Search',
+        description: 'Natural language and vector similarity search over satellite and aerial imagery.'
+      },
+      {
+        id: 'planet-computer',
+        name: 'Planetary Computing & Forecasting',
+        description: 'Provide climate forecasting, planetary model exploration, and environmental insights.'
+      }
+    ]
   }
+
+  return NextResponse.json(agentCard, {
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, A2A-Version'
+    }
+  })
 }
 
-/** Answer cross-origin agent-card preflight requests. */
 export async function OPTIONS() {
-  return new Response(null, { status: 204, headers: corsHeaders })
+  return new Response(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, A2A-Version'
+    }
+  })
 }

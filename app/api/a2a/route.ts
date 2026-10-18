@@ -1,20 +1,31 @@
-import { buildAgentCard } from '@/lib/a2a/agent-card'
+import { NextResponse } from 'next/server'
 import {
   DefaultRequestHandler,
   JsonRpcTransportHandler,
   InMemoryTaskStore,
   AgentEvent,
   RequestContext,
-  ExecutionEventBus,
-  ServerCallContext
+  ExecutionEventBus
 } from '@a2a-js/sdk/server'
 import { Role, TaskState } from '@a2a-js/sdk'
 
-const MAX_REQUEST_BYTES = 1024 * 1024
-const cardBaseUrl = process.env.NEXT_PUBLIC_APP_URL
-  ? new URL(process.env.NEXT_PUBLIC_APP_URL).origin
-  : 'http://localhost:3000'
-const agentCard = buildAgentCard(cardBaseUrl)
+const agentCard = {
+  name: 'QCX-Terra Agent',
+  description:
+    'Environment-aware planetary computer platform offering geospatial analysis, remote sensing satellite imagery processing, and multi-agent exploration.',
+  supportedInterfaces: [
+    {
+      protocolBinding: 'JSON-RPC',
+      protocolVersion: '1.0',
+      url: '/api/a2a'
+    }
+  ],
+  capabilities: {
+    streaming: true,
+    pushNotifications: false
+  }
+}
+
 const taskStore = new InMemoryTaskStore()
 
 const agentExecutor = {
@@ -22,147 +33,119 @@ const agentExecutor = {
     const userMessage = requestContext.userMessage
     let textPart = ''
     if (userMessage.parts) {
-      for (const part of userMessage.parts) {
-        if (part.content?.$case === 'text') textPart += part.content.value
+      for (const p of userMessage.parts) {
+        if (p.content && typeof p.content === 'object' && 'value' in p.content) {
+          textPart += p.content.value
+        } else if (p.text) {
+          textPart += p.text
+        }
       }
     }
 
-    eventBus.publish(AgentEvent.task({
-      id: requestContext.taskId,
-      contextId: requestContext.contextId,
-      status: { state: TaskState.TASK_STATE_WORKING, message: undefined, timestamp: new Date().toISOString() },
-      history: [userMessage],
-      artifacts: [],
-      metadata: undefined
-    }))
+    eventBus.publish(
+      AgentEvent.task({
+        id: requestContext.taskId,
+        contextId: requestContext.contextId,
+        status: {
+          state: TaskState.TASK_STATE_WORKING
+        },
+        history: [userMessage]
+      })
+    )
+
     const responseText = `QCX-Terra Agent received your request: "${textPart}". Processed via A2A Protocol.`
-    eventBus.publish(AgentEvent.message({
-      messageId: `msg-${Date.now()}`,
-      taskId: requestContext.taskId,
-      contextId: requestContext.contextId,
-      role: Role.ROLE_AGENT,
-      parts: [{ content: { $case: 'text', value: responseText }, metadata: undefined, filename: '', mediaType: 'text/plain' }],
-      metadata: undefined,
-      extensions: [],
-      referenceTaskIds: []
-    }))
-    eventBus.publish(AgentEvent.statusUpdate({
-      taskId: requestContext.taskId,
-      contextId: requestContext.contextId,
-      status: { state: TaskState.TASK_STATE_COMPLETED, message: undefined, timestamp: new Date().toISOString() },
-      metadata: undefined
-    }))
-  },
-  async cancelTask() {}
+
+    eventBus.publish(
+      AgentEvent.message({
+        messageId: `msg-${Date.now()}`,
+        taskId: requestContext.taskId,
+        contextId: requestContext.contextId,
+        role: Role.ROLE_AGENT,
+        parts: [
+          {
+            content: {
+              $case: 'text',
+              value: responseText
+            }
+          }
+        ]
+      })
+    )
+
+    eventBus.publish(
+      AgentEvent.statusUpdate({
+        taskId: requestContext.taskId,
+        contextId: requestContext.contextId,
+        status: {
+          state: TaskState.TASK_STATE_COMPLETED
+        }
+      })
+    )
+  }
 }
 
 const handler = new DefaultRequestHandler(agentCard, taskStore, agentExecutor)
 const jsonRpcHandler = new JsonRpcTransportHandler(handler)
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, A2A-Version'
-}
 
-/** Read and parse a JSON request while enforcing the maximum body size. */
-async function readBoundedJson(request: Request) {
-  const declaredLength = Number(request.headers.get('content-length'))
-  if (Number.isFinite(declaredLength) && declaredLength > MAX_REQUEST_BYTES) {
-    throw new RangeError('Request body too large')
-  }
-  if (!request.body) throw new SyntaxError('Request body is required')
-
-  const reader = request.body.getReader()
-  const chunks: Uint8Array[] = []
-  let totalBytes = 0
-  try {
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      totalBytes += value.byteLength
-      if (totalBytes > MAX_REQUEST_BYTES) {
-        await reader.cancel()
-        throw new RangeError('Request body too large')
-      }
-      chunks.push(value)
-    }
-  } finally {
-    reader.releaseLock()
-  }
-
-  const body = new Uint8Array(totalBytes)
-  let offset = 0
-  for (const chunk of chunks) {
-    body.set(chunk, offset)
-    offset += chunk.byteLength
-  }
-  return JSON.parse(new TextDecoder().decode(body))
-}
-
-/** Enforce bearer authentication when a server token is configured. */
-function isAuthorized(request: Request) {
-  const expectedToken = process.env.A2A_SERVER_API_KEY
-  if (!expectedToken) return true // Public by default; set A2A_SERVER_API_KEY to require bearer auth.
-  return request.headers.get('authorization') === `Bearer ${expectedToken}`
-}
-
-/** Process one bounded, optionally authenticated A2A JSON-RPC request. */
 export async function POST(request: Request) {
-  if (!isAuthorized(request)) {
-    return Response.json(
-      { jsonrpc: '2.0', id: null, error: { code: -32001, message: 'Unauthorized' } },
-      { status: 401, headers: corsHeaders }
-    )
-  }
-
   try {
-    const body = await readBoundedJson(request)
+    const body = await request.json()
     const headers: Record<string, string> = {}
-    request.headers.forEach((value, key) => { headers[key] = value })
-    const context = new ServerCallContext({ state: new Map([['headers', headers]]) })
-    const rpcResult = await jsonRpcHandler.handle(body, context)
+    request.headers.forEach((value, key) => {
+      headers[key] = value
+    })
+
+    const rpcResult = await jsonRpcHandler.handle(body, { headers })
 
     if (rpcResult && typeof (rpcResult as any)[Symbol.asyncIterator] === 'function') {
-      const generator = rpcResult as AsyncGenerator<any>
       const encoder = new TextEncoder()
       const stream = new ReadableStream({
         async start(controller) {
-          try {
-            for await (const chunk of generator) {
-              controller.enqueue(encoder.encode(`${JSON.stringify(chunk)}\n`))
-            }
-            controller.close()
-          } catch (error) {
-            console.error('A2A response stream failed:', error)
-            controller.error(error)
+          for await (const chunk of rpcResult as AsyncGenerator<any>) {
+            controller.enqueue(encoder.encode(JSON.stringify(chunk) + '\n'))
           }
-        },
-        async cancel() {
-          await generator.return?.(undefined)
+          controller.close()
         }
       })
+
       return new Response(stream, {
-        headers: { ...corsHeaders, 'Content-Type': 'application/x-ndjson' }
+        headers: {
+          'Content-Type': 'application/x-ndjson',
+          'Access-Control-Allow-Origin': '*'
+        }
       })
     }
 
-    return Response.json(rpcResult, { headers: corsHeaders })
-  } catch (error) {
-    if (error instanceof RangeError) {
-      return Response.json(
-        { jsonrpc: '2.0', id: null, error: { code: -32600, message: 'Request body exceeds the 1 MiB limit' } },
-        { status: 413, headers: corsHeaders }
-      )
-    }
+    return NextResponse.json(rpcResult, {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, A2A-Version'
+      }
+    })
+  } catch (error: any) {
     console.error('A2A Server POST Handler error:', error)
-    return Response.json(
-      { jsonrpc: '2.0', id: null, error: { code: -32603, message: 'Internal error' } },
-      { status: 500, headers: corsHeaders }
+    return NextResponse.json(
+      {
+        jsonrpc: '2.0',
+        id: null,
+        error: {
+          code: -32603,
+          message: error?.message || 'Internal error'
+        }
+      },
+      { status: 500 }
     )
   }
 }
 
-/** Answer preflight requests for the public A2A JSON-RPC endpoint. */
 export async function OPTIONS() {
-  return new Response(null, { status: 204, headers: corsHeaders })
+  return new Response(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, A2A-Version'
+    }
+  })
 }
