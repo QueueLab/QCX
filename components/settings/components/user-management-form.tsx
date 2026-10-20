@@ -49,8 +49,9 @@ export function UserManagementForm({ form }: UserManagementFormProps) {
       const result = await addUser({ email: newUserEmail, role: newUserRole as UserRole });
 
       if (result.error) {
-        toast({ title: 'Error adding user', description: result.error, variant: 'destructive' });
-        form.setError("newUserEmail", { type: "manual", message: result.error });
+        console.error("Add user server error:", result.error);
+        toast({ title: 'Error adding user', description: 'Failed to add user. Please check the details and try again.', variant: 'destructive' });
+        form.setError("newUserEmail", { type: "manual", message: "Failed to add user." });
       } else if (result.user) {
         toast({ title: 'User Added', description: `${result.user.email} was successfully added.` });
         append({
