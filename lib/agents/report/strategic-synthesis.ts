@@ -1,6 +1,13 @@
 import { generateText } from 'ai'
 import { getModel } from '@/lib/utils'
 
+function stripJsonFences(text: string): string {
+  // Models sometimes wrap JSON in ```json ... ``` even when told not to
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/)
+  if (fenced) return fenced[1].trim()
+  return text.trim()
+}
+
 export async function strategicSynthesisAgent(sensorFusionFindings: any[], strategicContent: any[]) {
   try {
     const model = await getModel()
@@ -10,6 +17,7 @@ export async function strategicSynthesisAgent(sensorFusionFindings: any[], strat
 
     const { text } = await generateText({
       model,
+      maxTokens: 512,
       system: `You are a strategic intelligence officer. Your task is to synthesize "new knowledge" narrative derived from exploration.
       Focus on insights, implications, and decisions.
       DO NOT restate sensor-fusion observations or raw data.
@@ -26,7 +34,7 @@ export async function strategicSynthesisAgent(sensorFusionFindings: any[], strat
     })
 
     try {
-      return JSON.parse(text) as { strategicOutput: string }
+      return JSON.parse(stripJsonFences(text)) as { strategicOutput: string }
     } catch (e) {
       console.error('Failed to parse AI response for strategic synthesis', {
         error: e instanceof Error ? e.message : String(e),
