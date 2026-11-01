@@ -187,14 +187,43 @@ Analyze the user's prompt and the image to provide a holistic understanding of t
     message.content.some((part: any) => part.type === 'image')
   )
 
-  // Use streamObject to get partial results.
-  return withTimeout(Promise.resolve(streamObject({
-    model: await getModel(hasImage),
-    system: systemPrompt,
-    messages: filteredMessages,
-    schema: resolutionSearchSchema,
-    temperature: 0,
-    maxTokens: 1800,
-    abortSignal: createDeadlineSignal(AI_REQUEST_TIMEOUT_MS),
-  })), AI_REQUEST_TIMEOUT_MS, 'Resolution analysis')
+    const primaryModel = await getModel(hasImage)
+
+  // Fix #767: explicit mode + xAI fallback for OpenAI structured output failures
+  try {
+    return await withTimeout(
+      Promise.resolve(streamObject({
+        model: primaryModel,
+        mode: 'json',
+        system: systemPrompt,
+        messages: filteredMessages,
+        schema: resolutionSearchSchema,
+        temperature: 0,
+        maxTokens: 1800,
+        abortSignal: createDeadlineSignal(AI_REQUEST_TIMEOUT_MS),
+      })),
+      AI_REQUEST_TIMEOUT_MS,
+      'Resolution analysis'
+    )
+  } catch (primaryError) {
+    console.error('[ResolutionSearch] Primary model failed, falling back to xAI:', primaryError)
+    const xaiKey = process.env.XAI_API_KEY
+    if (!xaiKey) throw primaryError
+    const { createXai } = await import('@ai-sdk/xai')
+    const xai = createXai({ apiKey: xaiKey, baseURL: 'https://api.x.ai/v1' })
+    return await withTimeout(
+      Promise.resolve(streamObject({
+        model: xai('grok-latest'),
+        mode: 'json',
+        system: systemPrompt,
+        messages: filteredMessages,
+        schema: resolutionSearchSchema,
+        temperature: 0,
+        maxTokens: 1800,
+        abortSignal: createDeadlineSignal(AI_REQUEST_TIMEOUT_MS),
+      })),
+      AI_REQUEST_TIMEOUT_MS,
+      'Resolution analysis (xAI fallback)'
+    )
+  }
 }
