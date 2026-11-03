@@ -1,12 +1,20 @@
 import { generateText } from 'ai'
 import { getModel } from '@/lib/utils'
 
+function stripJsonFences(text: string): string {
+  // Models sometimes wrap JSON in ```json ... ``` even when told not to
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/)
+  if (fenced) return fenced[1].trim()
+  return text.trim()
+}
+
 export async function executiveSummaryAgent(crossSessionContext: string, activeMessages: any[]) {
   try {
     const model = await getModel()
 
     const { text } = await generateText({
       model,
+      maxTokens: 512,
       system: `You are a high-level geospatial intelligence analyst. Based on the provided user history and current conversation, generate:
       1. A professional, concise report title (max 60 characters).
       2. A 150-200 word executive summary that synthesizes the intelligence findings, observations, and spatial analysis discussed, taking into account broader system-wide context from previous sessions.
@@ -24,7 +32,7 @@ export async function executiveSummaryAgent(crossSessionContext: string, activeM
     })
 
     try {
-      return JSON.parse(text) as { title: string; summary: string }
+      return JSON.parse(stripJsonFences(text)) as { title: string; summary: string }
     } catch (e) {
       console.error('Failed to parse AI response for executive summary', {
         error: e instanceof Error ? e.message : String(e),
