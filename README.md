@@ -29,7 +29,7 @@
 
 ### 1. Planetary Copilot (Generative AI/UI)
 - **Vercel AI SDK Core**: Stream-updates multi-turn conversational agents that yield complex Generative UI elements directly in the chat panel.
-- **Unified Provider Routing**: Seamlessly shifts requests between xAI (Grok-3-mini, Grok-2-vision), Google Gemini (Gemini 3.1 Pro), AWS Bedrock, and OpenAI, depending on key configuration and task requirements.
+- **Unified Provider Routing**: Routes AI requests through xAI, Google Gemini, AWS Bedrock, OpenAI, or OpenRouter. OpenRouter can be selected as a unified OpenAI-compatible inference provider while preserving streaming, tool calling, structured outputs, image inputs, and document embeddings when the configured models support them.
 - **Vision-Enabled Tasks**: When handling image or visual payloads, QCX automatically routes tasks to vision-enabled models (such as `grok-vision-beta` or `grok-2-vision-1212`) as standard text-only model names do not support visual inputs.
 - **Interactive Geospatial Tools**: Integrates specialized GIS tools directly into the conversational interface, allowing the agent to pan the map, query coordinates, and inspect locations dynamically.
 
@@ -171,6 +171,19 @@ NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN="pk.your_mapbox_token_here"
 # ==========================================
 # 6. GENERATIVE AI PROVIDERS (Model Keys)
 # ==========================================
+# OpenRouter (select as the inference provider)
+INFERENCE_PROVIDER="openrouter"
+OPENROUTER_API_KEY="sk-or-v1-your-openrouter-key"
+# OpenRouter model slugs. Defaults to openai/gpt-4o when unset.
+OPENROUTER_MODEL="openai/gpt-4o"
+# Optional image-input model; defaults to OPENROUTER_MODEL.
+OPENROUTER_VISION_MODEL="openai/gpt-4o"
+# Keep this at ada-002 for existing document vectors; changing models requires re-embedding stored chunks.
+OPENROUTER_EMBEDDING_MODEL="openai/text-embedding-ada-002"
+# Optional OpenRouter attribution headers; site URL falls back to NEXT_PUBLIC_APP_URL.
+OPENROUTER_SITE_URL="https://your-qcx-site.example"
+OPENROUTER_APP_NAME="QCX"
+
 # xAI API Key (Grok models) - PLATFORM PRIMARY CHOICE
 XAI_API_KEY="xai-your-api-key"
 

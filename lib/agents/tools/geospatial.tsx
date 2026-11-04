@@ -249,7 +249,11 @@ Uses the Mapbox Search Box Text Search API endpoint to power searching for and g
 
     const selectedModel = await getSelectedModel();
 
-    if (selectedModel?.toLowerCase().includes('gemini') && mapProvider === 'google') {
+    if (
+      process.env.INFERENCE_PROVIDER?.trim().toLowerCase() !== 'openrouter' &&
+      selectedModel?.toLowerCase().includes('gemini') &&
+      mapProvider === 'google'
+    ) {
       let feedbackMessage = `Processing geospatial query with Gemini 3.1 Pro...`;
       uiFeedbackStream.update(feedbackMessage);
 

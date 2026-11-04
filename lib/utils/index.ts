@@ -6,6 +6,7 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock'
 import { createXai } from '@ai-sdk/xai';
 import { v4 as uuidv4 } from 'uuid';
+import { createOpenRouterEmbeddingModel, createOpenRouterModel } from './openrouter';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -23,6 +24,15 @@ export { generateUUID as nanoid };
 
 export async function getModel(requireVision: boolean = false) {
   const selectedModel = await getSelectedModel();
+  const inferenceProvider = process.env.INFERENCE_PROVIDER?.trim().toLowerCase() || 'auto';
+
+  if (inferenceProvider === 'openrouter') {
+    return createOpenRouterModel(requireVision);
+  }
+
+  if (inferenceProvider !== 'auto') {
+    throw new Error(`Unsupported INFERENCE_PROVIDER "${inferenceProvider}". Supported values: auto, openrouter.`);
+  }
 
   const xaiApiKey = process.env.XAI_API_KEY;
   const gemini3ProApiKey = process.env.GEMINI_3_PRO_API_KEY;
@@ -136,6 +146,19 @@ export async function getModel(requireVision: boolean = false) {
     apiKey: openaiApiKey,
   });
   return openai('gpt-4o');
+}
+
+export function getEmbeddingModel() {
+  const inferenceProvider = process.env.INFERENCE_PROVIDER?.trim().toLowerCase() || 'auto';
+  if (inferenceProvider === 'openrouter') {
+    return createOpenRouterEmbeddingModel();
+  }
+  if (inferenceProvider !== 'auto') {
+    throw new Error(`Unsupported INFERENCE_PROVIDER "${inferenceProvider}". Supported values: auto, openrouter.`);
+  }
+
+  const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  return openai.embedding('text-embedding-ada-002');
 }
 
 /**
