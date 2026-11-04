@@ -36,6 +36,7 @@ export function SkyfiSection({ result }: SkyfiSectionProps) {
 
   // Handle stream error explicitly
   if (error) {
+    console.error('SkyFi tool execution error:', error)
     return (
       <div>
         <Section size="sm" className="pt-2 pb-0">
@@ -43,7 +44,7 @@ export function SkyfiSection({ result }: SkyfiSectionProps) {
         </Section>
         <Section title="Error Details">
           <div className="text-destructive font-mono text-xs bg-destructive/10 p-3 rounded-lg border border-destructive/20">
-            {(error as any).message || String(error)}
+            An error occurred while communicating with SkyFi. Please try again later.
           </div>
         </Section>
       </div>
