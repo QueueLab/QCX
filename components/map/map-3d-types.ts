@@ -8,6 +8,7 @@ declare global {
     // so we define it here.
     export interface Maps3DLibrary {
       Map3DElement: typeof Map3DElement;
+      Marker3DElement: typeof Marker3DElement;
     }
 
     export namespace maps3d {
@@ -27,6 +28,17 @@ declare global {
         range: number;
         roll: number;
         tilt: number;
+      }
+
+      export class Marker3DElement extends HTMLElement {
+        constructor(options: {
+          position: { lat: number; lng: number; altitude?: number };
+          altitudeMode?: 'CLAMP_TO_GROUND' | 'RELATIVE_TO_GROUND' | 'ABSOLUTE';
+          label?: string;
+          extruded?: boolean;
+        });
+        position: { lat: number; lng: number; altitude?: number };
+        label: string;
       }
     }
   }

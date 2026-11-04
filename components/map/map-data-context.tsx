@@ -12,8 +12,19 @@ export interface CameraState {
   heading?: number;
 }
 
+export interface MapMarker {
+  id: string;
+  latitude: number;
+  longitude: number;
+  title?: string;
+  details?: string;
+  source?: string;
+  geometry?: GeoJSON.Geometry;
+}
+
 export interface MapData {
   targetPosition?: { lat: number; lng: number } | null; // For flying to a location
+  targetGeometry?: GeoJSON.Geometry | null; // Area to fit and visualize on the map
   cameraState?: CameraState; // For saving camera state
   currentTimezone?: string; // Current timezone identifier
   // TODO: Add other relevant map data types later (e.g., routeGeoJSON, poiList)
@@ -24,10 +35,12 @@ export interface MapData {
     measurement: string;
     geometry: any;
   }>;
-  markers?: Array<{
-    latitude: number;
-    longitude: number;
+  markers?: MapMarker[];
+  geoJsonFeatures?: Array<{
+    id: string;
+    geometry: GeoJSON.Geometry;
     title?: string;
+    source?: string;
   }>;
 }
 
@@ -39,7 +52,7 @@ interface MapDataContextType {
 const MapDataContext = createContext<MapDataContextType | undefined>(undefined);
 
 export const MapDataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [mapData, setMapData] = useState<MapData>({ drawnFeatures: [], markers: [] });
+  const [mapData, setMapData] = useState<MapData>({ drawnFeatures: [], markers: [], geoJsonFeatures: [] });
 
   return (
     <MapDataContext.Provider value={{ mapData, setMapData }}>

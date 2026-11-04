@@ -9,6 +9,9 @@ import rehypeExternalLinks from 'rehype-external-links'
 import remarkGfm from 'remark-gfm'
 import { StreamableValue, useStreamableValue } from 'ai/rsc'
 import { cn } from '@/lib/utils'
+import { useEffect } from 'react'
+import { useMapData } from '@/components/map/map-data-context'
+import { buildLocationEmbeddingsMapUpdate } from '@/lib/utils/location-embeddings-map'
 
 export type LocationEmbeddingsSectionProps = {
   result?: StreamableValue<string>
@@ -16,6 +19,7 @@ export type LocationEmbeddingsSectionProps = {
 
 export function LocationEmbeddingsSection({ result }: LocationEmbeddingsSectionProps) {
   const [data, error, pending] = useStreamableValue(result)
+  const { setMapData } = useMapData()
 
   let latitude: number | undefined
   let longitude: number | undefined
@@ -23,10 +27,12 @@ export function LocationEmbeddingsSection({ result }: LocationEmbeddingsSectionP
   let rawResultText = ''
   let hasError = false
   let parsedResultsList: any[] = []
+  let parsedPayload: any
 
   if (data) {
     try {
       const parsedJson = JSON.parse(data)
+      parsedPayload = parsedJson
       latitude = parsedJson.latitude
       longitude = parsedJson.longitude
       if (Array.isArray(parsedJson.images)) {
@@ -79,6 +85,41 @@ export function LocationEmbeddingsSection({ result }: LocationEmbeddingsSectionP
     }
   }
 
+  useEffect(() => {
+    if (!data) return
+    try {
+      const update = buildLocationEmbeddingsMapUpdate(JSON.parse(data))
+      if (!update) return
+      setMapData(previous => {
+        const mergedMarkers = new Map((previous.markers || []).map(marker => [marker.id, marker]))
+        update.markers.forEach(marker => mergedMarkers.set(marker.id, marker))
+        const mergedFeatures = new Map((previous.geoJsonFeatures || []).map(feature => [feature.id, feature]))
+        update.features.forEach(feature => mergedFeatures.set(feature.id, feature))
+        return {
+          ...previous,
+          ...(update.targetPosition ? { targetPosition: update.targetPosition } : {}),
+          targetGeometry: update.targetGeometry || null,
+          markers: Array.from(mergedMarkers.values()),
+          geoJsonFeatures: Array.from(mergedFeatures.values())
+        }
+      })
+    } catch {
+      // Non-JSON stream updates are rendered as text but do not drive map state.
+    }
+  }, [data, setMapData])
+
+  const flyToResult = (chipId: string) => {
+    const update = buildLocationEmbeddingsMapUpdate(parsedPayload)
+    const marker = update?.markers.find(item => item.id === `lgnd:chip:${chipId}`)
+    if (!marker) return
+    const feature = update?.features.find(item => item.id === marker.id)
+    setMapData(previous => ({
+      ...previous,
+      targetPosition: { lat: marker.latitude, lng: marker.longitude },
+      targetGeometry: feature?.geometry || null
+    }))
+  }
+
   if (error) {
     return (
       <div>
@@ -117,6 +158,26 @@ export function LocationEmbeddingsSection({ result }: LocationEmbeddingsSectionP
           )}
 
           <Section title="Embeddings Results">
+            {parsedResultsList.length > 0 && (
+              <div className="mb-3 flex flex-wrap gap-2">
+                {parsedResultsList.slice(0, 3).map((item: any, idx: number) => {
+                  const chipId = String(item.chip_id || item.chipId || item.id || `result-${idx + 1}`)
+                  const hasLocation = buildLocationEmbeddingsMapUpdate(parsedPayload)?.markers.some(marker => marker.id === `lgnd:chip:${chipId}`)
+                  if (!hasLocation) return null
+                  return (
+                    <button
+                      key={chipId}
+                      type="button"
+                      onClick={() => flyToResult(chipId)}
+                      className="rounded-md border px-2 py-1 text-xs font-medium hover:bg-muted"
+                      aria-label={`Fly to LGND image ${chipId} on map`}
+                    >
+                      Fly to image {idx + 1}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
             <div
               className={cn(
                 'overflow-x-auto',

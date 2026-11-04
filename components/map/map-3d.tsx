@@ -4,6 +4,7 @@ import React, {
   forwardRef,
   useEffect,
   useImperativeHandle,
+  useRef,
   useState,
   type ForwardedRef
 } from 'react';
@@ -20,11 +21,38 @@ export const Map3D = forwardRef(
     props: Map3DProps,
     forwardedRef: ForwardedRef<google.maps.maps3d.Map3DElement | null>
   ) => {
-    useMapsLibrary('maps3d');
-    const { setMapData } = useMapData();
+    const maps3d = useMapsLibrary('maps3d');
+    const { mapData, setMapData } = useMapData();
 
     const [map3DElement, map3dRef] =
       useCallbackRef<google.maps.maps3d.Map3DElement>();
+    const markersRef = useRef<google.maps.maps3d.Marker3DElement[]>([]);
+
+    useEffect(() => {
+      if (!map3DElement || !maps3d) return;
+      markersRef.current.forEach(marker => marker.remove());
+      markersRef.current = [];
+      for (const markerData of mapData.markers || []) {
+        if (!Number.isFinite(markerData.latitude) || !Number.isFinite(markerData.longitude)) continue;
+        const marker = new maps3d.Marker3DElement({
+          position: { lat: markerData.latitude, lng: markerData.longitude, altitude: 0 },
+          altitudeMode: 'CLAMP_TO_GROUND',
+          label: markerData.title || 'LGND location'
+        });
+        marker.setAttribute('title', [markerData.title, markerData.details].filter(Boolean).join(' · '));
+        marker.addEventListener('gmp-click', () => setMapData(previous => ({
+          ...previous,
+          targetPosition: { lat: markerData.latitude, lng: markerData.longitude },
+          targetGeometry: markerData.geometry || null
+        })));
+        map3DElement.append(marker);
+        markersRef.current.push(marker);
+      }
+      return () => {
+        markersRef.current.forEach(marker => marker.remove());
+        markersRef.current = [];
+      };
+    }, [map3DElement, maps3d, mapData.markers, setMapData]);
 
     useMap3DCameraEvents(map3DElement, p => {
       const { center, range, heading, tilt } = p.detail;

@@ -19,6 +19,9 @@ const { locationEmbeddingsQuerySchema } = await import(
 const { locationEmbeddingsTool } = await import(
   '../lib/agents/tools/location-embeddings'
 )
+const { buildPersistedAnalysisContext } = await import(
+  '../lib/utils/persisted-analysis-context'
+)
 
 describe('Location Embeddings Tool', () => {
   it('validates schema inputs correctly with natural language queries', () => {
@@ -26,25 +29,31 @@ describe('Location Embeddings Tool', () => {
       query:
         'heavy machinery used to fell timber near forests that have not previously been cleared',
       location: 'Oregon',
-      top_k: 10
+      top_k: 3
     })
 
     expect(validTextParams.query).toContain('heavy machinery')
     expect(validTextParams.location).toBe('Oregon')
-    expect(validTextParams.top_k).toBe(10)
+    expect(validTextParams.top_k).toBe(3)
 
     const validCoordParams = locationEmbeddingsQuerySchema.parse({
       latitude: 34.0454501975,
       longitude: -118.259248828,
-      top_k: 5
+      top_k: 3
     })
 
     expect(validCoordParams.latitude).toBe(34.0454501975)
     expect(validCoordParams.longitude).toBe(-118.259248828)
-    expect(validCoordParams.top_k).toBe(5)
+    expect(validCoordParams.top_k).toBe(3)
 
     expect(() =>
       locationEmbeddingsQuerySchema.parse({ latitude: 100, longitude: 0 })
+    ).toThrow()
+    expect(() =>
+      locationEmbeddingsQuerySchema.parse({ query: 'imagery', top_k: 4 })
+    ).toThrow()
+    expect(() =>
+      locationEmbeddingsQuerySchema.parse({ query: 'imagery', top_k: 1 })
     ).toThrow()
   })
 
@@ -116,6 +125,7 @@ describe('Location Embeddings Tool', () => {
 
       const sentBody = JSON.parse(searchCall?.options.body)
       expect(sentBody.query).toContain('heavy machinery')
+      expect(sentBody.top_k).toBe(3)
       expect(sentBody.geometry.type).toBe('Polygon')
 
       // Check thumbnail url fetch and images result
@@ -123,6 +133,7 @@ describe('Location Embeddings Tool', () => {
         throw new Error(`Unexpected tool error: ${result.error}`)
       }
       expect(result.images).toEqual(['https://cdn.embeddings.api.lgnd.ai/oregon_thumb.png'])
+      expect(result.top_k).toBe(3)
     } finally {
       globalThis.fetch = originalFetch
     }
@@ -175,10 +186,157 @@ describe('Location Embeddings Tool', () => {
       const sentBody = JSON.parse(fetchCalls[0].options.body)
       expect(sentBody.latitude).toBe(34.0454501975)
       expect(sentBody.longitude).toBe(-118.259248828)
+      expect(sentBody.top_k).toBe(3)
       if ('error' in result) {
         throw new Error(`Unexpected tool error: ${result.error}`)
       }
       expect(result.images).toEqual(['https://cdn.embeddings.api.lgnd.ai/thumb1.png'])
+      expect(result.top_k).toBe(3)
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
+
+  it('requests and retains exactly three LGND chips in persisted next-turn context', async () => {
+    const mockUiStream = { append: () => {}, update: () => {} }
+    const originalFetch = globalThis.fetch
+    let requestBody: any
+    const apiResults = Array.from({ length: 5 }, (_, index) => ({
+      chip_id: `chip-three-${index + 1}`,
+      collection: 'Sentinel-2',
+      datetime: `2025-01-0${index + 1}T00:00:00Z`,
+      score: 0.95 - index * 0.01,
+      centroid: { type: 'Point', coordinates: [-120 - index * 0.1, 43 + index * 0.1] }
+    }))
+    globalThis.fetch = (async (url: string | URL | Request, options?: RequestInit) => {
+      if (url.toString().includes('/search-by-text')) {
+        requestBody = JSON.parse(options?.body as string)
+        return new Response(JSON.stringify({ results: apiResults }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        })
+      }
+      return new Response('No thumbnail available', { status: 404 })
+    }) as typeof fetch
+
+    try {
+      const tool = locationEmbeddingsTool({ uiStream: mockUiStream as any, fullResponse: '' })
+      const result = await tool.execute({ query: 'recent construction', top_k: 10 })
+      if ('error' in result) throw new Error(`Unexpected tool error: ${result.error}`)
+
+      expect(requestBody.top_k).toBe(3)
+      expect(result.top_k).toBe(3)
+      expect(result.results.results).toHaveLength(3)
+      expect(result.results.results.map((item: any) => item.chip_id)).toEqual([
+        'chip-three-1', 'chip-three-2', 'chip-three-3'
+      ])
+      const context = buildPersistedAnalysisContext([{
+        role: 'tool',
+        type: 'tool',
+        name: 'locationEmbeddingsQuery',
+        content: JSON.stringify(result)
+      }])
+      expect(context).toContain('chip-three-1')
+      expect(context).toContain('chip-three-2')
+      expect(context).toContain('chip-three-3')
+      expect(context).not.toContain('chip-three-4')
+      expect(context).not.toContain('chip-three-5')
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
+
+  it('sends the geocoded AOI to location search and returns it for map restoration', async () => {
+    const mockUiStream = { append: () => {}, update: () => {} }
+    const originalFetch = globalThis.fetch
+    const areaOfInterest = {
+      type: 'Polygon',
+      coordinates: [[[-123, 37], [-122, 37], [-122, 38], [-123, 38], [-123, 37]]]
+    }
+    const fetchCalls: Array<{ url: string; options?: RequestInit }> = []
+    process.env.MAPBOX_ACCESS_TOKEN = 'pk.test_mapbox_token'
+
+    globalThis.fetch = (async (url: string | URL | Request, options?: RequestInit) => {
+      const urlStr = url.toString()
+      fetchCalls.push({ url: urlStr, options })
+      if (urlStr.includes('api.mapbox.com/geocoding')) {
+        return new Response(JSON.stringify({
+          features: [{ center: [-122.5, 37.5], geometry: areaOfInterest }]
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      }
+      if (urlStr.includes('/search-by-location')) {
+        return new Response(JSON.stringify({ data: [{ chip_id: 'aoi-chip', centroid: { coordinates: [-122.5, 37.5] } }] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        })
+      }
+      if (urlStr.includes('/chips/aoi-chip/thumbnail/url')) {
+        return new Response(JSON.stringify({ url: 'https://cdn.example/aoi-chip.png' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        })
+      }
+      return new Response('Not found', { status: 404 })
+    }) as typeof fetch
+
+    try {
+      const tool = locationEmbeddingsTool({ uiStream: mockUiStream as any, fullResponse: '' })
+      const result = await tool.execute({ location: 'San Francisco Bay', top_k: 1 })
+      const locationCall = fetchCalls.find(call => call.url.includes('/search-by-location'))
+      const requestBody = JSON.parse(locationCall?.options?.body as string)
+
+      expect(requestBody.latitude).toBe(37.5)
+      expect(requestBody.longitude).toBe(-122.5)
+      expect(requestBody.geometry).toEqual(areaOfInterest)
+      if ('error' in result) throw new Error(`Unexpected tool error: ${result.error}`)
+      expect(result.areaOfInterest).toEqual(areaOfInterest)
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
+
+  it('retries location search without AOI geometry when LGND rejects the bounds constraint', async () => {
+    const mockUiStream = { append: () => {}, update: () => {} }
+    const originalFetch = globalThis.fetch
+    const geometry = {
+      type: 'Polygon',
+      coordinates: [[[-124, 41], [-116, 41], [-116, 46], [-124, 46], [-124, 41]]]
+    }
+    const requestBodies: any[] = []
+    process.env.MAPBOX_ACCESS_TOKEN = 'pk.test_mapbox_token'
+    globalThis.fetch = (async (url: string | URL | Request, options?: RequestInit) => {
+      const urlStr = url.toString()
+      if (urlStr.includes('api.mapbox.com/geocoding')) {
+        return new Response(JSON.stringify({ features: [{ center: [-120, 43], geometry }] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        })
+      }
+      if (urlStr.includes('/search-by-location')) {
+        const body = JSON.parse(options?.body as string)
+        requestBodies.push(body)
+        if (body.geometry) {
+          return new Response(JSON.stringify({ error: { message: 'geometry does not intersect collection bounds' } }), {
+            status: 422,
+            headers: { 'Content-Type': 'application/json' }
+          })
+        }
+        return new Response(JSON.stringify({ results: [] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        })
+      }
+      return new Response('Not found', { status: 404 })
+    }) as typeof fetch
+
+    try {
+      const tool = locationEmbeddingsTool({ uiStream: mockUiStream as any, fullResponse: '' })
+      const result = await tool.execute({ location: 'Oregon', top_k: 1 })
+      expect(requestBodies).toHaveLength(2)
+      expect(requestBodies[0].geometry).toEqual(geometry)
+      expect(requestBodies[1]).toEqual({ latitude: 43, longitude: -120, top_k: 3 })
+      if ('error' in result) throw new Error(`Unexpected tool error: ${result.error}`)
+      expect(result.areaOfInterest).toEqual(geometry)
     } finally {
       globalThis.fetch = originalFetch
     }
