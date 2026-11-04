@@ -6,6 +6,7 @@ import { geospatialTool } from './geospatial'
 import { documentRetrieveTool } from './document-retrieve'
 import { skyfiTool } from './skyfi'
 import { locationEmbeddingsTool } from './location-embeddings'
+import { a2aTool } from './a2a'
 import { DrawnFeature } from '@/lib/agents/resolution-search'
 
 import { MapProvider } from '@/lib/store/settings'
@@ -33,6 +34,10 @@ export const getTools = ({ uiStream, fullResponse, mapProvider, selectedModel, d
       fullResponse
     }),
     locationEmbeddingsQuery: locationEmbeddingsTool({
+      uiStream,
+      fullResponse
+    }),
+    a2aQueryTool: a2aTool({
       uiStream,
       fullResponse
     })

@@ -46,6 +46,7 @@ export function CompareSlider({ leftImage, rightImage, className }: CompareSlide
       onTouchMove={handleMove}
     >
       {/* Right Image (Google Satellite) */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={rightImage}
         alt="Google Satellite"
@@ -58,6 +59,7 @@ export function CompareSlider({ leftImage, rightImage, className }: CompareSlide
         style={{ width: `${sliderPosition}%` }}
       >
         <div style={{ width: containerWidth }} className="h-full relative">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={leftImage}
             alt="Mapbox"

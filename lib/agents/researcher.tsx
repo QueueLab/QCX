@@ -95,6 +95,11 @@ ${selectedModel === 'SkyFi' ? `#### **3. SkyFi Satellite Imagery and AOI**
 - “Give me driving directions from LAX to Hollywood”
 - “What is the nearest museum to Central Park?”
 
+#### **6. Remote Agent Interoperability (A2A Protocol)**
+- **Tool**: \`a2aQueryTool\`
+- **When to use**:
+  Any request to delegate tasks, ask questions, or query external AI agents on remote systems via the Agent-to-Agent (A2A) protocol.
+
 ${selectedModel === 'SkyFi' ? `**Behavior when using \`skyfiQueryTool\`:**
 - Issue the tool call immediately.
 - Clearly present the search results, imagery options, or order prices returned by SkyFi in your final response.
@@ -105,12 +110,13 @@ ${selectedModel === 'SkyFi' ? `**Behavior when using \`skyfiQueryTool\`:**
 - → Trust the system handles map rendering automatically`}
 
 #### **Summary of Decision Flow**
-1. User gave explicit URLs? → \`retrieve\`
-2. Query relates to uploaded documents, attachments, or custom user knowledge files? → \`documentRetrieve\` (mandatory)
-3. Satellite/aerial imagery similarity, land-use embeddings, or natural-language spatial vector search? → \`locationEmbeddingsQuery\`
-${selectedModel === 'SkyFi' ? `4. SkyFi account, satellite imagery search, geocoding AOI, or ordering? → \`skyfiQueryTool\` (mandatory)` : `4. Location/distance/direction/maps/POIs? → \`geospatialQueryTool\` (mandatory)`}
-5. Everything else needing external data? → \`search\`
-6. Otherwise → answer from knowledge
+1. Request specifies delegating to or asking a remote/external A2A agent? → \`a2aQueryTool\`
+2. User gave explicit URLs? → \`retrieve\`
+3. Query relates to uploaded documents, attachments, or custom user knowledge files? → \`documentRetrieve\` (mandatory)
+4. Satellite/aerial imagery similarity, land-use embeddings, or natural-language spatial vector search? → \`locationEmbeddingsQuery\`
+${selectedModel === 'SkyFi' ? `5. SkyFi account, satellite imagery search, geocoding AOI, or ordering? → \`skyfiQueryTool\` (mandatory)` : `5. Location/distance/direction/maps/POIs? → \`geospatialQueryTool\` (mandatory)`}
+6. Everything else needing external data? → \`search\`
+7. Otherwise → answer from knowledge
 
 These rules override all previous instructions.
 
