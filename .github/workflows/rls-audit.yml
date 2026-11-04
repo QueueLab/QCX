@@ -1,0 +1,52 @@
+name: RLS Authorization Audit
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  rls-audit:
+    name: RLS Authorization Audit Suite
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgrespassword
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.5
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Apply Base Schema & Migrations
+        run: |
+          export PGPASSWORD=postgrespassword
+          psql -h localhost -U postgres -d postgres -f drizzle/migrations/0000_sweet_metal_master.sql
+          psql -h localhost -U postgres -d postgres -f drizzle/migrations/0003_clerk_auth_sync.sql
+          psql -h localhost -U postgres -d postgres -f drizzle/migrations/0004_fix_clerk_id_function.sql
+          psql -h localhost -U postgres -d postgres -f drizzle/migrations/0005_add_documents_rag.sql
+
+      - name: Run RLS Authorization Matrix Suite
+        run: bun test tests-rls/rls-matrix.test.ts
+        env:
+          POSTGRES_URL: postgresql://postgres:postgrespassword@localhost:5432/postgres
