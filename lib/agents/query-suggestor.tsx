@@ -20,7 +20,11 @@ function getCacheKey(messages: CoreMessage[]): string {
   const recentMessages = messages.slice(-3);
   return JSON.stringify(recentMessages.map(m => ({
     role: m.role,
-    content: typeof m.content === 'string' ? m.content : '[complex content]'
+    content: typeof m.content === 'string'
+      ? m.content.slice(-500)
+      : Array.isArray(m.content)
+        ? m.content.map((p: any) => p?.text || '').join(' ').slice(-500)
+        : '[complex content]'
   })));
 }
 
@@ -74,20 +78,20 @@ export async function querySuggestor(
     return fallback
   }
 
-  // OPTIMIZATION: Stream updates but batch them to reduce re-render frequency
-  let lastUpdateTime = Date.now();
-  const UPDATE_THROTTLE = 200; // ms
+  // OPTIMIZATION: Stream updates efficiently - update immediately on first item, then throttle
+  let lastUpdateTime = 0;
+  const UPDATE_THROTTLE = 100; // ms
 
   try {
     for await (const obj of result.partialObjectStream) {
       if (obj && typeof obj === 'object' && 'items' in obj) {
+        finalRelatedQueries = obj as PartialRelated
         const now = Date.now();
-        // Only update UI if enough time has passed since last update
-        if (now - lastUpdateTime > UPDATE_THROTTLE) {
+        // Update UI immediately on first yield or after throttle interval
+        if (lastUpdateTime === 0 || now - lastUpdateTime > UPDATE_THROTTLE) {
           objectStream.update(obj as PartialRelated)
           lastUpdateTime = now;
         }
-        finalRelatedQueries = obj as PartialRelated
       }
     }
   } catch (error) {
