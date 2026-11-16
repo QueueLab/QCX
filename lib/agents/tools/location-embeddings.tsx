@@ -13,7 +13,7 @@ export interface IndexedChip {
   datetime: string
   score: string | number
   centroid: any
-  thumbnail_url: string
+  thumbnail_url: string | null
 }
 
 export interface LocationEmbeddingsSuccessPayload {
@@ -270,14 +270,7 @@ export const locationEmbeddingsTool = ({ uiStream, fullResponse }: ToolProps) =>
 
     // Fetch thumbnail URLs and build indexed metadata for each chip
     const thumbnailImages: string[] = []
-    const indexedChips: Array<{
-      chip_id: string
-      collection: string
-      datetime: string
-      score: string | number
-      centroid: any
-      thumbnail_url: string
-    }> = []
+    const indexedChips: IndexedChip[] = []
 
     if (topItemsList.length > 0) {
       const thumbnailPromises = topItemsList.map(async item => {
@@ -314,27 +307,25 @@ export const locationEmbeddingsTool = ({ uiStream, fullResponse }: ToolProps) =>
           }
         }
 
-        if (imgUrl) {
-          item.thumbnail_url = imgUrl
-          const dt = typeof item.datetime === 'string' ? item.datetime.split('T')[0] : 'N/A'
-          const score = typeof item.score === 'number' ? item.score.toFixed(4) : item.score || 'N/A'
-          return {
-            chip_id: String(chipId),
-            collection: item.collection ? String(item.collection) : 'N/A',
-            datetime: dt,
-            score,
-            centroid: item.centroid || null,
-            thumbnail_url: imgUrl
-          }
+        const dt = typeof item.datetime === 'string' ? item.datetime.split('T')[0] : 'N/A'
+        const score = typeof item.score === 'number' ? item.score.toFixed(4) : item.score || 'N/A'
+        return {
+          chip_id: String(chipId),
+          collection: item.collection ? String(item.collection) : 'N/A',
+          datetime: dt,
+          score,
+          centroid: item.centroid || null,
+          thumbnail_url: imgUrl || null
         }
-        return null
       })
 
       const fetchedResults = await Promise.allSettled(thumbnailPromises)
       fetchedResults.forEach(res => {
         if (res.status === 'fulfilled' && res.value) {
-          thumbnailImages.push(res.value.thumbnail_url)
           indexedChips.push(res.value)
+          if (res.value.thumbnail_url) {
+            thumbnailImages.push(res.value.thumbnail_url)
+          }
         }
       })
     }

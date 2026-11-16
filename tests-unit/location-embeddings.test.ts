@@ -426,4 +426,57 @@ describe('Location Embeddings Tool', () => {
       globalThis.fetch = originalFetch
     }
   })
+
+  it('keeps valid chip metadata when thumbnail retrieval fails', async () => {
+    const mockUiStream = {
+      append: () => {},
+      update: () => {}
+    }
+
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = (async (url: string | URL | Request) => {
+      const urlStr = url.toString()
+      if (urlStr.includes('/search-by-location')) {
+        return new Response(
+          JSON.stringify({
+            results: [
+              {
+                chip_id: 'chip_without_thumbnail',
+                score: 0.71,
+                datetime: '2024-02-03T00:00:00Z',
+                collection: 'sentinel-2',
+                centroid: { type: 'Point', coordinates: [40.1, -10.2] }
+              }
+            ]
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      }
+      return new Response('Thumbnail unavailable', { status: 404 })
+    }) as typeof fetch
+
+    try {
+      const tool = locationEmbeddingsTool({
+        uiStream: mockUiStream as any,
+        fullResponse: ''
+      })
+
+      const result = await tool.execute({
+        latitude: -10.2,
+        longitude: 40.1,
+        top_k: 1
+      })
+
+      if ('error' in result) {
+        throw new Error(`Unexpected tool error: ${result.error}`)
+      }
+      expect(result.indexedChips).toHaveLength(1)
+      expect(result.indexedChips[0].chip_id).toBe('chip_without_thumbnail')
+      expect(result.indexedChips[0].thumbnail_url).toBeNull()
+      expect(result.images).toEqual([])
+      expect(result.formattedResult).toContain('chip_without_thumbnail')
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
 })

@@ -37,7 +37,7 @@ export function LocationEmbeddingsSection({ result }: LocationEmbeddingsSectionP
         hasError = true
         rawResultText = parsedJson.error
       } else {
-        const rawRes = parsedJson.results
+        const rawRes = parsedJson.indexedChips || parsedJson.results
         if (Array.isArray(rawRes)) {
           parsedResultsList = rawRes
         } else if (rawRes && typeof rawRes === 'object') {

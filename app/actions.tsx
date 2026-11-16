@@ -547,8 +547,6 @@ async function submit(formData?: FormData, skip?: boolean) {
   const groupeId = nanoid()
 
   const streamText = createStreamableValue<string>('')
-  let errorOccurred = false
-
   async function processEvents() {
     try {
       const modifiedMessages = messages.map(msg =>
@@ -562,26 +560,66 @@ async function submit(formData?: FormData, skip?: boolean) {
           : msg
       ) as CoreMessage[]
       const latestMessages = modifiedMessages.slice(maxMessages * -1)
-      const { fullResponse, toolResponses } = await researcher(
-        currentSystemPrompt || '',
-        uiStream,
-        streamText,
-        latestMessages,
-        'mapbox', // default provider
-        false,
-        drawnFeatures
-      )
+      let fullResponse = ''
+      let toolResponses: any[] = []
+      let researcherSucceeded = false
 
-      if (!errorOccurred) {
-        const toolAiMessages: AIMessage[] = (toolResponses || []).map((tr: any) => ({
-          id: nanoid(),
-          role: 'tool',
-          name: tr.toolName,
-          content: typeof tr.result === 'string' ? tr.result : JSON.stringify(tr.result),
-          type: 'tool'
-        }))
+      try {
+        const researcherResult = await researcher(
+          currentSystemPrompt || '',
+          uiStream,
+          streamText,
+          latestMessages,
+          'mapbox', // default provider
+          false,
+          drawnFeatures
+        )
+        fullResponse = researcherResult.fullResponse || ''
+        toolResponses = researcherResult.toolResponses || []
+        researcherSucceeded = !researcherResult.hasError
+      } catch (error) {
+        console.error('Chat response generation failed:', error)
+        fullResponse = 'I could not generate a response right now. Please try again.'
+        streamText.done(fullResponse)
+        uiStream.append(
+          <Section title="response">
+            <BotMessage content={streamText.value} />
+          </Section>
+        )
+      }
 
-        const relatedQueries = await querySuggestor(uiStream, messages)
+      const toolAiMessages: AIMessage[] = toolResponses.map((tr: any) => ({
+        id: nanoid(),
+        role: 'tool',
+        name: tr.toolName,
+        content: typeof tr.result === 'string' ? tr.result : JSON.stringify(tr.result),
+        type: 'tool'
+      }))
+      const persistedMessages: AIMessage[] = [
+        ...toolAiMessages,
+        {
+          id: groupeId,
+          role: 'assistant',
+          content: fullResponse,
+          type: 'response'
+        }
+      ]
+
+      if (researcherSucceeded) {
+        let relatedQueries: RelatedQueries = { items: [] }
+        try {
+          const generatedQueries = await querySuggestor(uiStream, messages)
+          relatedQueries = {
+            items: (generatedQueries.items || [])
+              .filter(
+                (item): item is { query: string } =>
+                  typeof item?.query === 'string' && item.query.trim().length > 0
+              )
+              .map(item => ({ query: item.query.trim() }))
+          }
+        } catch (error) {
+          console.error('Follow-up generation failed:', error)
+        }
         uiStream.append(
           <Section title="Follow-up">
             <FollowupPanel />
@@ -590,36 +628,37 @@ async function submit(formData?: FormData, skip?: boolean) {
 
         await new Promise(resolve => setTimeout(resolve, 500))
 
-        aiState.done({
-          ...aiState.get(),
-          messages: [
-            ...aiState.get().messages,
-            ...toolAiMessages,
-            {
-              id: groupeId,
-              role: 'assistant',
-              content: fullResponse,
-              type: 'response'
-            },
-            {
-              id: groupeId,
-              role: 'assistant',
-              content: JSON.stringify(relatedQueries),
-              type: 'related'
-            },
-            {
-              id: groupeId,
-              role: 'assistant',
-              content: 'followup',
-              type: 'followup'
-            }
-          ]
-        })
+        persistedMessages.push(
+          {
+            id: groupeId,
+            role: 'assistant',
+            content: JSON.stringify(relatedQueries),
+            type: 'related'
+          },
+          {
+            id: groupeId,
+            role: 'assistant',
+            content: 'followup',
+            type: 'followup'
+          }
+        )
       }
+
+      aiState.done({
+        ...aiState.get(),
+        messages: [...aiState.get().messages, ...persistedMessages]
+      })
     } catch (error) {
-      console.error('Error in researcher:', error)
-      errorOccurred = true
-      streamText.done('The answer could not be completed before the service deadline. Please try again.')
+      console.error('Error finalizing chat response:', error)
+      const fallbackResponse = 'I could not generate a response right now. Please try again.'
+      streamText.done(fallbackResponse)
+      aiState.done({
+        ...aiState.get(),
+        messages: [
+          ...aiState.get().messages,
+          { id: groupeId, role: 'assistant', content: fallbackResponse, type: 'response' }
+        ]
+      })
     } finally {
       isGenerating.done(false)
       uiStream.done()
