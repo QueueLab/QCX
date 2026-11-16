@@ -31,6 +31,18 @@ export async function getModel(requireVision: boolean = false) {
   const awsRegion = process.env.AWS_REGION;
   const bedrockModelId = process.env.BEDROCK_MODEL_ID || 'anthropic.claude-3-5-sonnet-20241022-v2:0';
   const openaiApiKey = process.env.OPENAI_API_KEY;
+  const openrouterApiKey = process.env.OPENROUTER_API_KEY;
+  const openrouterModelId = process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini';
+
+  // Route shared chat/agent inference through OpenRouter whenever configured.
+  // Model IDs are configurable because OpenRouter exposes many providers/models.
+  if (openrouterApiKey) {
+    const openrouter = createOpenAI({
+      apiKey: openrouterApiKey,
+      baseURL: 'https://openrouter.ai/api/v1',
+    });
+    return openrouter(openrouterModelId);
+  }
 
   if (selectedModel) {
     switch (selectedModel) {

@@ -171,6 +171,11 @@ NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN="pk.your_mapbox_token_here"
 # ==========================================
 # 6. GENERATIVE AI PROVIDERS (Model Keys)
 # ==========================================
+# OpenRouter (primary chat/agent inference provider when configured)
+OPENROUTER_API_KEY="your-openrouter-api-key"
+# Optional; defaults to openai/gpt-4o-mini. Use an OpenRouter model slug.
+OPENROUTER_MODEL="openai/gpt-4o-mini"
+
 # xAI API Key (Grok models) - PLATFORM PRIMARY CHOICE
 XAI_API_KEY="xai-your-api-key"
 
