@@ -547,7 +547,6 @@ async function submit(formData?: FormData, skip?: boolean) {
   const groupeId = nanoid()
 
   const streamText = createStreamableValue<string>('')
-  let errorOccurred = false
 
   async function processEvents() {
     try {
@@ -562,7 +561,7 @@ async function submit(formData?: FormData, skip?: boolean) {
           : msg
       ) as CoreMessage[]
       const latestMessages = modifiedMessages.slice(maxMessages * -1)
-      const { fullResponse, toolResponses } = await researcher(
+      const { fullResponse, toolResponses, hasError } = await researcher(
         currentSystemPrompt || '',
         uiStream,
         streamText,
@@ -572,15 +571,21 @@ async function submit(formData?: FormData, skip?: boolean) {
         drawnFeatures
       )
 
-      if (!errorOccurred) {
-        const toolAiMessages: AIMessage[] = (toolResponses || []).map((tr: any) => ({
-          id: nanoid(),
-          role: 'tool',
-          name: tr.toolName,
-          content: typeof tr.result === 'string' ? tr.result : JSON.stringify(tr.result),
-          type: 'tool'
-        }))
+      const toolAiMessages: AIMessage[] = (toolResponses || []).map((tr: any) => ({
+        id: nanoid(),
+        role: 'tool',
+        name: tr.toolName,
+        content: typeof tr.result === 'string' ? tr.result : JSON.stringify(tr.result),
+        type: 'tool'
+      }))
+      const responseMessages: AIMessage[] = [{
+        id: groupeId,
+        role: 'assistant',
+        content: fullResponse,
+        type: 'response'
+      }]
 
+      if (!hasError) {
         const relatedQueries = await querySuggestor(uiStream, messages)
         uiStream.append(
           <Section title="Follow-up">
@@ -590,36 +595,42 @@ async function submit(formData?: FormData, skip?: boolean) {
 
         await new Promise(resolve => setTimeout(resolve, 500))
 
-        aiState.done({
-          ...aiState.get(),
-          messages: [
-            ...aiState.get().messages,
-            ...toolAiMessages,
-            {
-              id: groupeId,
-              role: 'assistant',
-              content: fullResponse,
-              type: 'response'
-            },
-            {
-              id: groupeId,
-              role: 'assistant',
-              content: JSON.stringify(relatedQueries),
-              type: 'related'
-            },
-            {
-              id: groupeId,
-              role: 'assistant',
-              content: 'followup',
-              type: 'followup'
-            }
-          ]
-        })
+        responseMessages.push(
+          {
+            id: groupeId,
+            role: 'assistant',
+            content: JSON.stringify(relatedQueries),
+            type: 'related'
+          },
+          {
+            id: groupeId,
+            role: 'assistant',
+            content: 'followup',
+            type: 'followup'
+          }
+        )
       }
+
+      aiState.done({
+        ...aiState.get(),
+        messages: [...aiState.get().messages, ...toolAiMessages, ...responseMessages]
+      })
     } catch (error) {
       console.error('Error in researcher:', error)
-      errorOccurred = true
-      streamText.done('The answer could not be completed before the service deadline. Please try again.')
+      const fallbackResponse = 'I could not generate a response right now. Please try again.'
+      streamText.done(fallbackResponse)
+      uiStream.append(
+        <Section title="response">
+          <BotMessage content={streamText.value} />
+        </Section>
+      )
+      aiState.done({
+        ...aiState.get(),
+        messages: [
+          ...aiState.get().messages,
+          { id: groupeId, role: 'assistant', content: fallbackResponse, type: 'response' }
+        ]
+      })
     } finally {
       isGenerating.done(false)
       uiStream.done()

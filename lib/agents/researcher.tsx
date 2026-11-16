@@ -14,7 +14,7 @@ import { getModel } from '../utils'
 import { MapProvider } from '@/lib/store/settings'
 import { DrawnFeature } from './resolution-search'
 import { getSelectedModel } from '@/lib/actions/users'
-import { AI_REQUEST_TIMEOUT_MS, createDeadlineSignal } from '@/lib/utils/with-timeout'
+import { AI_REQUEST_TIMEOUT_MS, withTimeout } from '@/lib/utils/with-timeout'
 
 // This magic tag lets us write raw multi-line strings with backticks, arrows, etc.
 const raw = String.raw
@@ -174,52 +174,75 @@ export async function researcher(
       : 'none'
   })
 
-  const result = await nonexperimental_streamText({
-    model: (await getModel(hasImage)) as LanguageModel,
-    maxTokens: 2500,
-    temperature: 0,
-    // Allow multi-step tool calling (tool round + synthesis step with headroom for chained tool calls)
-    maxSteps: 5,
-    abortSignal: createDeadlineSignal(AI_REQUEST_TIMEOUT_MS),
-    system: systemPromptToUse,
-    messages,
-    tools: getTools({ uiStream, fullResponse, mapProvider, selectedModel, drawnFeatures }),
-  })
-
-  uiStream.update(null) // remove spinner
-
   const toolCalls: ToolCallPart[] = []
   const toolResponses: ToolResultPart[] = []
   let hasAppendedAnswerSection = false
+  let result: any
+  const responseAbortController = new AbortController()
+  const responseTimeoutMs = Math.min(AI_REQUEST_TIMEOUT_MS, 30_000)
+  const responseDeadlineAt = Date.now() + responseTimeoutMs
+  const responseTimeoutId = setTimeout(() => responseAbortController.abort(), responseTimeoutMs)
+  const remainingResponseMs = () => Math.max(1, responseDeadlineAt - Date.now())
 
-  for await (const delta of result.fullStream) {
-    switch (delta.type) {
-      case 'text-delta':
-        if (delta.textDelta) {
-          if (!hasAppendedAnswerSection) {
-            uiStream.append(answerSection)
-            hasAppendedAnswerSection = true
-          }
-          fullResponse += delta.textDelta
-          streamText.update(fullResponse)
+  try {
+    const model = await withTimeout(getModel(hasImage), remainingResponseMs(), 'Model selection')
+    result = await withTimeout(
+      Promise.resolve(nonexperimental_streamText({
+        model: model as LanguageModel,
+        maxTokens: 2500,
+        temperature: 0,
+        // Keep one tool round plus synthesis, and stay below Vercel's serverless-function deadline.
+        maxSteps: 3,
+        abortSignal: responseAbortController.signal,
+        system: systemPromptToUse,
+        messages,
+        tools: getTools({ uiStream, fullResponse, mapProvider, selectedModel, drawnFeatures }),
+      })),
+      remainingResponseMs(),
+      'Model request initialization'
+    )
+
+    const consumeResponse = async () => {
+      for await (const delta of result!.fullStream) {
+        if (responseAbortController.signal.aborted) break
+        switch (delta.type) {
+          case 'text-delta':
+            if (delta.textDelta) {
+              if (!hasAppendedAnswerSection) {
+                uiStream.append(answerSection)
+                hasAppendedAnswerSection = true
+              }
+              fullResponse += delta.textDelta
+              streamText.update(fullResponse)
+            }
+            break
+
+          case 'tool-call':
+            toolCalls.push(delta)
+            break
+
+          case 'tool-result':
+            if (!delta.result) hasError = true
+            toolResponses.push(delta)
+            break
+
+          case 'error':
+            hasError = true
+            break
         }
-        break
-
-      case 'tool-call':
-        toolCalls.push(delta)
-        break
-
-      case 'tool-result':
-        if (!delta.result) hasError = true
-        toolResponses.push(delta)
-        break
-
-      case 'error':
-        hasError = true
-        fullResponse += `\n\nError: Model response generation failed.`
-        break
+      }
     }
+
+    await withTimeout(consumeResponse(), remainingResponseMs(), 'Model response stream')
+  } catch (error) {
+    hasError = true
+    responseAbortController.abort()
+    console.error('Researcher model response failed or timed out:', error instanceof Error ? error.message : 'Unknown error')
+  } finally {
+    clearTimeout(responseTimeoutId)
   }
+
+  uiStream.update(null) // remove spinner even when model setup or streaming fails
 
   if (toolResponses.length > 0 && !hasError && fullResponse.trim().length === 0) {
     fullResponse = 'Information gathered from search results.'
@@ -229,6 +252,19 @@ export async function researcher(
     }
     streamText.update(fullResponse)
   }
+
+  if (!fullResponse.trim()) {
+    hasError = true
+    fullResponse = 'I hit a temporary issue while generating this response. Please try again.'
+  } else if (hasError) {
+    fullResponse += '\n\nThe response was interrupted. Please retry for a complete answer.'
+  }
+
+  if (!hasAppendedAnswerSection) {
+    uiStream.append(answerSection)
+    hasAppendedAnswerSection = true
+  }
+  streamText.update(fullResponse)
 
   streamText.done(fullResponse)
 

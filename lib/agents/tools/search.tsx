@@ -96,7 +96,8 @@ async function tavilySearch(
     timeRange: time_range,
     includeImages: include_images,
     includeImageDescriptions: include_image_descriptions,
-    includeRawContent: include_raw_content ? 'text' : undefined
+    includeRawContent: include_raw_content ? 'text' : undefined,
+    timeout: 10_000
   })
 
   return { ...response, results: response.results.reverse() }
