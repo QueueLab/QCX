@@ -33,6 +33,7 @@ export async function getModel(requireVision: boolean = false) {
   const openaiApiKey = process.env.OPENAI_API_KEY;
   const openrouterApiKey = process.env.OPENROUTER_API_KEY;
   const openrouterModelId = process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini';
+  const openrouterModelId = process.env.OPENROUTER_MODEL || 'openai/gpt-6-luna';
 
   // Route shared chat/agent inference through OpenRouter whenever configured.
   // Model IDs are configurable because OpenRouter exposes many providers/models.
