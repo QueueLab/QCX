@@ -25,9 +25,9 @@ export const skyfiQuerySchema = z.object({
   orderId: z.string()
     .optional()
     .describe("ID of the order (used for tracking or placing orders)"),
-  params: z.record(z.any())
+  params: z.string()
     .optional()
-    .describe("Additional optional parameters to pass directly to the corresponding SkyFi MCP tool (e.g. { gsd: 100, sensorType: 'DAY' } etc.)"),
+    .describe('Optional JSON-encoded object of additional parameters for the SkyFi MCP tool (for example: {"gsd":100,"sensorType":"DAY"})'),
   maxResults: z.number()
     .int()
     .positive()

@@ -216,6 +216,7 @@ export async function researcher(
 
       case 'error':
         hasError = true
+        console.error('[Researcher] Model response stream error:', delta.error)
         fullResponse += `\n\nError: Model response generation failed.`
         break
     }

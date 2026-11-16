@@ -121,7 +121,8 @@ export const skyfiTool = ({
   Always ask the user for permission before placing a billable order! Ensure you call 'validate_order' first to display the cost.`,
   parameters: skyfiQuerySchema,
   execute: async (params: z.infer<typeof skyfiQuerySchema>) => {
-    const { queryType, location, aoi, orderId, params: extraParams, maxResults } = params;
+    const { queryType, location, aoi, orderId, params: rawExtraParams, maxResults } = params;
+    let extraParams: Record<string, any> | undefined;
     console.log('[SkyfiTool] Execute called for queryType:', queryType, { maxResults, confirm: params.confirm });
 
     const uiFeedbackStream = createStreamableValue<string>();
@@ -176,6 +177,14 @@ export const skyfiTool = ({
     try {
       feedbackMessage = `Successfully connected to SkyFi. Executing '${queryType}' action...`;
       uiFeedbackStream.update(feedbackMessage);
+
+      if (rawExtraParams) {
+        const parsedExtraParams: unknown = JSON.parse(rawExtraParams);
+        if (!parsedExtraParams || typeof parsedExtraParams !== 'object' || Array.isArray(parsedExtraParams)) {
+          throw new Error('The params field must be a JSON-encoded object.');
+        }
+        extraParams = parsedExtraParams as Record<string, any>;
+      }
 
       // Determine correct MCP tool name and format parameters
       let mcpToolName = '';
