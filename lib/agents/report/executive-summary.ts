@@ -2,10 +2,15 @@ import { generateText } from 'ai'
 import { getModel } from '@/lib/utils'
 
 function stripJsonFences(text: string): string {
-  // Models sometimes wrap JSON in ```json ... ``` even when told not to
+  // Try parsing as-is first — avoids stripping fence literals inside valid JSON
+  try {
+    JSON.parse(text)
+    return text
+  } catch {
+    // fall through to fence stripping
+  }
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/)
-  if (fenced) return fenced[1].trim()
-  return text.trim()
+  return fenced ? fenced[1].trim() : text.trim()
 }
 
 export async function executiveSummaryAgent(crossSessionContext: string, activeMessages: any[]) {
@@ -16,15 +21,15 @@ export async function executiveSummaryAgent(crossSessionContext: string, activeM
       model,
       maxTokens: 512,
       system: `You are a high-level geospatial intelligence analyst. Based on the provided user history and current conversation, generate:
-      1. A professional, concise report title (max 60 characters).
-      2. A 150-200 word executive summary that synthesizes the intelligence findings, observations, and spatial analysis discussed, taking into account broader system-wide context from previous sessions.
+1. A professional, concise report title (max 60 characters).
+2. A 150-200 word executive summary that synthesizes the intelligence findings, observations, and spatial analysis discussed, taking into account broader system-wide context from previous sessions.
 
-      Format your response as a JSON object:
-      {
-        "title": "The Title Here",
-        "summary": "The executive summary here..."
-      }
-      Do not include any other text or markdown formatting in your response.`,
+Format your response as a JSON object:
+{
+  "title": "The Title Here",
+  "summary": "The executive summary here..."
+}
+Keep your response under 400 tokens. Return only the JSON object with no extra text or markdown formatting.`,
       messages: [
         { role: 'system', content: `User History Context:\n${crossSessionContext}` },
         ...activeMessages
