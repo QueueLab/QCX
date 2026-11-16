@@ -32,7 +32,6 @@ export async function getModel(requireVision: boolean = false) {
   const bedrockModelId = process.env.BEDROCK_MODEL_ID || 'anthropic.claude-3-5-sonnet-20241022-v2:0';
   const openaiApiKey = process.env.OPENAI_API_KEY;
   const openrouterApiKey = process.env.OPENROUTER_API_KEY;
-  const openrouterModelId = process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini';
   const openrouterModelId = process.env.OPENROUTER_MODEL || 'openai/gpt-6-luna';
 
   // Route shared chat/agent inference through OpenRouter whenever configured.
