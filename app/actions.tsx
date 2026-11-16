@@ -562,15 +562,31 @@ async function submit(formData?: FormData, skip?: boolean) {
           : msg
       ) as CoreMessage[]
       const latestMessages = modifiedMessages.slice(maxMessages * -1)
-      const { fullResponse, toolResponses } = await researcher(
-        currentSystemPrompt || '',
-        uiStream,
-        streamText,
-        latestMessages,
-        'mapbox', // default provider
-        false,
-        drawnFeatures
-      )
+      let fullResponse = ''
+      let toolResponses: any[] = []
+      try {
+        const researcherResult = await researcher(
+          currentSystemPrompt || '',
+          uiStream,
+          streamText,
+          latestMessages,
+          'mapbox', // default provider
+          false,
+          drawnFeatures
+        )
+        fullResponse = researcherResult.fullResponse
+        toolResponses = researcherResult.toolResponses || []
+      } catch (error) {
+        console.error('Chat response generation failed:', error)
+        fullResponse = 'I couldn’t generate a chat response this time. Please try again.'
+        uiStream.append(
+          <Section title="response">
+            <BotMessage content={streamText.value} />
+          </Section>
+        )
+        streamText.update(fullResponse)
+        streamText.done(fullResponse)
+      }
 
       if (!errorOccurred) {
         const toolAiMessages: AIMessage[] = (toolResponses || []).map((tr: any) => ({
@@ -619,7 +635,8 @@ async function submit(formData?: FormData, skip?: boolean) {
     } catch (error) {
       console.error('Error in researcher:', error)
       errorOccurred = true
-      streamText.done('The answer could not be completed before the service deadline. Please try again.')
+      streamText.update('The answer could not be completed. Please try again.')
+      streamText.done('The answer could not be completed. Please try again.')
     } finally {
       isGenerating.done(false)
       uiStream.done()

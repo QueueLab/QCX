@@ -230,6 +230,17 @@ export async function researcher(
     streamText.update(fullResponse)
   }
 
+  // Keep the answer slot visible even when the model stream fails. Follow-up
+  // suggestions are generated independently and should not disappear because
+  // the primary response stream failed.
+  if (hasError || !fullResponse.trim()) {
+    if (!hasAppendedAnswerSection) {
+      uiStream.append(answerSection)
+    }
+    fullResponse = 'I couldn’t generate a chat response this time. Please try again.'
+    streamText.update(fullResponse)
+  }
+
   streamText.done(fullResponse)
 
   messages.push({
