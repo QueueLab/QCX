@@ -230,6 +230,18 @@ export async function researcher(
     streamText.update(fullResponse)
   }
 
+  // Always mount the answer section before querySuggestor appends Related and
+  // Follow-up. In particular, an error event or an empty model stream may not
+  // produce a text-delta, which previously left those sections without an answer.
+  if (fullResponse.trim().length === 0) {
+    fullResponse = 'I wasn’t able to produce a response. Please try again.'
+  }
+  if (!hasAppendedAnswerSection) {
+    streamText.update(fullResponse)
+    uiStream.append(answerSection)
+    hasAppendedAnswerSection = true
+  }
+
   streamText.done(fullResponse)
 
   messages.push({
