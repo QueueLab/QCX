@@ -36,6 +36,7 @@ import { createClient } from '@/lib/supabase/client'
 import { db } from '@/lib/db'
 import { documents, documentChunks } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
+import { getMessagesForCompletedTurn, getPreviousAssistantMessage } from '@/lib/utils/chat-state'
 
 // Define the type for related queries
 type RelatedQueries = {
@@ -344,9 +345,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     : ((formData?.get('related_query') as string) ||
       (formData?.get('input') as string))
   const relatedQueryTurn = Boolean(formData?.get('related_query'))
-  const previousAssistantMessage = [...aiState.get().messages]
-    .reverse()
-    .find(message => message.role === 'assistant')
+  const previousAssistantMessage = getPreviousAssistantMessage(aiState.get().messages)
 
   if (userInput && (userInput.toLowerCase().trim() === 'what is a planet computer?' || userInput.toLowerCase().trim() === 'what is qcx-terra?' || userInput.toLowerCase().trim() === 'how do i use the computer?')) {
     const definition = userInput.toLowerCase().trim() === 'how do i use the computer?' ? 'To use QCX-Terra, start by searching for a location or asking a geospatial question. You can also draw features on the map to focus your analysis. QCX-Terra uses multi-agent automation to streamline exploration and provide precise environmental insights.' : userInput.toLowerCase().trim() === 'what is a planet computer?'
@@ -575,21 +574,25 @@ async function submit(formData?: FormData, skip?: boolean) {
       if (!bypassClarification) {
         const decision = await taskManager(latestMessages)
         if (decision?.object?.next === 'inquire') {
-          const inquiry = await inquire(uiStream, latestMessages)
-          aiState.done({
-            ...aiState.get(),
-            messages: [
-              ...aiState.get().messages,
-              {
-                id: groupeId,
-                role: 'assistant',
-                content: JSON.stringify(inquiry),
-                type: 'inquiry'
-              }
-            ]
-          })
-          isCollapsed.done(false)
-          return
+          try {
+            const inquiry = await inquire(uiStream, latestMessages)
+            aiState.done({
+              ...aiState.get(),
+              messages: [
+                ...aiState.get().messages,
+                {
+                  id: groupeId,
+                  role: 'assistant',
+                  content: JSON.stringify(inquiry),
+                  type: 'inquiry'
+                }
+              ]
+            })
+            isCollapsed.done(false)
+            return
+          } catch (error) {
+            console.error('Failed to generate clarification inquiry; proceeding with research:', error)
+          }
         }
       }
       const { fullResponse, toolResponses } = await researcher(
@@ -717,11 +720,12 @@ export const AI = createAI<AIState, UIState>({
   onSetAIState: async ({ state }) => {
     'use server'
 
-    if (!state.messages.some(e => e.type === 'response')) {
+    const messages = getMessagesForCompletedTurn(state.messages)
+    if (!messages) {
       return
     }
 
-    const { chatId, messages } = state
+    const { chatId } = state
     const createdAt = new Date()
     const path = `/search/${chatId}`
 
