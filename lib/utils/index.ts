@@ -2,6 +2,7 @@ import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import { getSelectedModel } from '@/lib/actions/users'
 import { createOpenAI } from '@ai-sdk/openai'
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock'
 import { createXai } from '@ai-sdk/xai';
@@ -37,7 +38,11 @@ export async function getModel(requireVision: boolean = false) {
   // Route shared chat/agent inference through OpenRouter whenever configured.
   // Model IDs are configurable because OpenRouter exposes many providers/models.
   if (openrouterApiKey) {
-    const openrouter = createOpenAI({
+    // Use the generic OpenAI-compatible provider: @ai-sdk/openai treats any model ID
+    // starting with "o" (e.g. "openai/...") as an OpenAI reasoning model and rewrites
+    // the request (developer role, max_completion_tokens), which OpenRouter rejects or ignores.
+    const openrouter = createOpenAICompatible({
+      name: 'openrouter',
       apiKey: openrouterApiKey,
       baseURL: 'https://openrouter.ai/api/v1',
     });

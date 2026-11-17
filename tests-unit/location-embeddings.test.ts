@@ -427,3 +427,37 @@ describe('Location Embeddings Tool', () => {
     }
   })
 })
+
+describe('Location Embeddings Tool with drawn areas', () => {
+  it('uses the latest drawn polygon as the LGND search geometry when no location is given', async () => {
+    const polygon = [[[-122.5, 37.7], [-122.3, 37.7], [-122.3, 37.9], [-122.5, 37.9], [-122.5, 37.7]]]
+    const originalFetch = globalThis.fetch
+    const bodies: any[] = []
+    globalThis.fetch = (async (url: string | URL | Request, options?: RequestInit) => {
+      const urlStr = url.toString()
+      if (urlStr.includes('/search-by-text')) {
+        bodies.push(JSON.parse(String(options?.body)))
+        return new Response(JSON.stringify({ results: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      }
+      return new Response('Not found', { status: 404 })
+    }) as typeof fetch
+
+    try {
+      const tool = locationEmbeddingsTool({
+        uiStream: { append: () => {}, update: () => {} } as any,
+        fullResponse: '',
+        drawnFeatures: [
+          { id: 'line', type: 'LineString', measurement: '1 km', geometry: { type: 'LineString', coordinates: [[0, 0], [1, 1]] } },
+          { id: 'aoi', type: 'Polygon', measurement: '4 km²', geometry: { type: 'Polygon', coordinates: polygon } }
+        ]
+      })
+      const result: any = await tool.execute({ query: 'construction sites', apiKey: 'sk_test' })
+
+      expect(bodies[0].geometry).toEqual({ type: 'Polygon', coordinates: polygon })
+      expect(result.latitude).toBeCloseTo(37.8)
+      expect(result.longitude).toBeCloseTo(-122.4)
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
+})
