@@ -46,6 +46,10 @@ export async function inquire(
   }
 
   objectStream.done();
+
+  if (!finalInquiry.question) {
+    throw new Error('Clarification inquiry was empty.')
+  }
   
   // OPTIMIZATION: Single final UI update with the complete inquiry
   // The Copilot component will handle streaming its own state updates

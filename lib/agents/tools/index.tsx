@@ -34,7 +34,8 @@ export const getTools = ({ uiStream, fullResponse, mapProvider, selectedModel, d
     }),
     locationEmbeddingsQuery: locationEmbeddingsTool({
       uiStream,
-      fullResponse
+      fullResponse,
+      drawnFeatures
     })
   }
 

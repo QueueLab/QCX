@@ -32,7 +32,7 @@ Current date and time: ${date}.
 
 ${drawnFeatures && drawnFeatures.length > 0 ? `The user has drawn the following features on the map for your reference:
 ${drawnFeatures.map(f => `- ${f.type} with measurement ${f.measurement}`).join('\n')}
-Use these user-drawn areas/lines as primary areas of interest for your analysis if applicable to the query.` : ''}
+Use these user-drawn areas/lines as primary areas of interest for your analysis if applicable to the query. 'locationEmbeddingsQuery' automatically searches inside the drawn polygon when no 'location' or coordinates are passed.` : ''}
 
 **Exploration Efficiency Directives:**
 1. **Tool First:** Always check if a tool can directly or partially answer the user's query. Use the most specific tool available.
@@ -66,8 +66,8 @@ ${selectedModel === 'SkyFi' ? `#### **3. SkyFi Satellite Imagery and AOI**
   • Any request to list previous satellite image orders (use 'list_orders')` : `#### **3. Location, Geography, Navigation, and Mapping Queries**
 - **Tool**: \`geospatialQueryTool\` → **MUST be used (no exceptions)** for:
   • Finding places, businesses, "near me", distances, directions
-  • Travel times, routes, traffic, map generation
-  • Isochrones, travel-time matrices, multi-stop optimization`}
+  • Travel times, routes, map generation
+  • Resolving addresses, landmarks, cities or coordinates`}
 
 #### **4. Searching Uploaded Documents and Attachments**
 - **Tool**: \`documentRetrieve\`
@@ -180,7 +180,8 @@ export async function researcher(
   })
   const result = await nonexperimental_streamText({
     model: (await getModel(hasImage)) as LanguageModel,
-    maxTokens: 2500,
+    // Reasoning models (e.g. GPT-6 Luna via OpenRouter) spend part of this budget on hidden reasoning.
+    maxTokens: 8000,
     temperature: 0,
     // Allow multi-step tool calling (tool round + synthesis step with headroom for chained tool calls)
     maxSteps: 5,
@@ -226,6 +227,28 @@ export async function researcher(
               <MapQueryHandler toolOutput={toolResult} />
             </>
           )
+        } else if (
+          delta.toolName === 'locationEmbeddingsQuery' &&
+          !toolResult?.error &&
+          typeof toolResult?.latitude === 'number' &&
+          typeof toolResult?.longitude === 'number'
+        ) {
+          uiStream.append(
+            <MapQueryHandler
+              toolOutput={{
+                type: 'MAP_QUERY_TRIGGER',
+                originalUserInput: JSON.stringify((delta as any).args ?? {}),
+                timestamp: new Date().toISOString(),
+                mcp_response: {
+                  location: {
+                    latitude: toolResult.latitude,
+                    longitude: toolResult.longitude,
+                    place_name: (delta as any).args?.location
+                  }
+                }
+              }}
+            />
+          )
         }
         break
       }
@@ -261,6 +284,8 @@ export async function researcher(
           ].filter(Boolean)
           fallback.push(details.join('\n') || 'Location search returned a result.')
         }
+      } else if (typeof output.formattedResult === 'string' && output.formattedResult.trim()) {
+        fallback.push(output.formattedResult)
       }
     }
     fullResponse = fallback.length > 0

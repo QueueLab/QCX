@@ -39,6 +39,11 @@ export async function taskManager(messages: CoreMessage[]) {
 	    - **User:** "What are the latest news about the floods in India?" -> **Action:** "proceed" (Clear, ready for web search).
 	    - **User:** "What's the warmest temperature in my area?" -> **Action:** "inquire" (Missing location and preferred metric).
 	    - **User:** "Show me the nearest park." -> **Action:** "inquire" (Missing current location).
+	    - **User:** "Where is the Eiffel Tower?" -> **Action:** "proceed" (Named place; use the location tools).
+	    - **User:** "Coffee shops near Union Square, San Francisco" -> **Action:** "proceed" (Location is specific).
+	    - **User:** "Find construction sites around Phoenix, Arizona in satellite imagery" -> **Action:** "proceed" (Named region; use satellite embeddings search).
+
+	    Default to **"proceed"** whenever a named place, address, region, coordinates, or a drawn map area is available. Only inquire when the answer is impossible without more information.
 	    - **User:** "Tell me about the new AI model." -> **Action:** "inquire" (Too broad; ask for the model name or specific aspect).
 
 	    Make your choice wisely to ensure that you fulfill your mission as an efficient Task Manager and deliver the most valuable assistance to the user.

@@ -47,7 +47,36 @@ export type LocationEmbeddingsResult =
   | LocationEmbeddingsSuccessPayload
   | LocationEmbeddingsErrorPayload
 
-export const locationEmbeddingsTool = ({ uiStream, fullResponse }: ToolProps) => ({
+const isFiniteCoordinate = (value: unknown) => typeof value === 'number' && Number.isFinite(value)
+
+/** Uses the most recent user-drawn polygon as the LGND area of interest. */
+export function getDrawnAreaOfInterest(drawnFeatures: ToolProps['drawnFeatures'] = []) {
+  const polygon = [...(Array.isArray(drawnFeatures) ? drawnFeatures : [])]
+    .reverse()
+    .find(
+      feature =>
+        feature?.type === 'Polygon' &&
+        feature.geometry?.type === 'Polygon' &&
+        Array.isArray(feature.geometry.coordinates?.[0]) &&
+        feature.geometry.coordinates[0].length >= 4 &&
+        feature.geometry.coordinates[0].every(
+          (point: unknown) =>
+            Array.isArray(point) && isFiniteCoordinate(point[0]) && isFiniteCoordinate(point[1])
+        )
+    )
+  if (!polygon) return null
+  const ring: number[][] = polygon.geometry.coordinates[0]
+  const unique = ring.slice(0, -1)
+  const longitude = unique.reduce((sum, p) => sum + p[0], 0) / unique.length
+  const latitude = unique.reduce((sum, p) => sum + p[1], 0) / unique.length
+  return {
+    geometry: { type: 'Polygon', coordinates: polygon.geometry.coordinates },
+    latitude,
+    longitude
+  }
+}
+
+export const locationEmbeddingsTool = ({ uiStream, fullResponse, drawnFeatures }: ToolProps) => ({
   description:
     'Search geospatial satellite/aerial vector embeddings using natural language text queries or coordinates, geocodes place names via Mapbox, and retrieves satellite thumbnail preview URLs',
   parameters: locationEmbeddingsQuerySchema,
@@ -76,6 +105,16 @@ export const locationEmbeddingsTool = ({ uiStream, fullResponse }: ToolProps) =>
     let resolvedLatitude = latitude
     let resolvedLongitude = longitude
     let resolvedGeometry: any = null
+
+    const drawnArea =
+      !location && (latitude === undefined || longitude === undefined)
+        ? getDrawnAreaOfInterest(drawnFeatures)
+        : null
+    if (drawnArea) {
+      resolvedGeometry = drawnArea.geometry
+      resolvedLatitude = drawnArea.latitude
+      resolvedLongitude = drawnArea.longitude
+    }
 
     // If a place location is provided, geocode via Mapbox to extract coordinates/geometry
     if (location && (resolvedLatitude === undefined || resolvedLongitude === undefined || query)) {

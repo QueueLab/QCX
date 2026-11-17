@@ -103,6 +103,20 @@ describe('researcher outcome rendering', () => {
     expect(result.fullResponse).toContain('https://maps.example/cafe')
   })
 
+  it('summarizes LGND embeddings results and centers the map when the model returns no text', async () => {
+    const lgnd = {
+      latitude: 43.8041,
+      longitude: -120.5542,
+      formattedResult: '1. Chip ID: chip_oregon_1 | Score: 0.92'
+    }
+    const { result, uiStream } = await run([
+      { type: 'tool-result', toolName: 'locationEmbeddingsQuery', args: { query: 'clear-cut forest', location: 'Oregon' }, result: lgnd }
+    ])
+    expect(uiStream.appended).toHaveLength(2) // map handler and answer section
+    expect(result.fullResponse).toContain('chip_oregon_1')
+    expect(result.hasError).toBe(false)
+  })
+
   it('marks geospatial error envelopes as errors and makes their message visible', async () => {
     const { result, streamText } = await run([{
       type: 'tool-result', toolName: 'geospatialQueryTool',
