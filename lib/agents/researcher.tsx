@@ -9,6 +9,8 @@ import {
 } from 'ai'
 import { Section } from '@/components/section'
 import { BotMessage } from '@/components/message'
+import { MapQueryHandler } from '@/components/map/map-query-handler'
+import { ResolutionImage } from '@/components/resolution-image'
 import { getTools } from './tools'
 import { getModel } from '../utils'
 import { MapProvider } from '@/lib/store/settings'
@@ -101,7 +103,8 @@ ${selectedModel === 'SkyFi' ? `**Behavior when using \`skyfiQueryTool\`:**
 - Always ask for the user's explicit approval before placing any paid/billable orders.` : `**Behavior when using \`geospatialQueryTool\`:**
 - Issue the tool call immediately
 - In your final response: provide concise text only
-- → NEVER say “the map will update” or “markers are being added”
+- → NEVER announce map updates or say “the map will update” or “markers are being added”; this instruction does not remove the final answer
+- → After any tool call, state the location result concisely (including the place name/address and coordinates when available)
 - → Trust the system handles map rendering automatically`}
 
 #### **Summary of Decision Flow**
@@ -131,27 +134,29 @@ export async function researcher(
 ) {
   let fullResponse = ''
   let hasError = false
-
+  let hasAppendedAnswerSection = false
   const answerSection = (
     <Section title="response">
       <BotMessage content={streamText.value} />
     </Section>
   )
-
+  const ensureAnswerMounted = () => {
+    if (!hasAppendedAnswerSection) {
+      uiStream.append(answerSection)
+      hasAppendedAnswerSection = true
+    }
+  }
   const currentDate = new Date().toLocaleString()
   const selectedModel = await getSelectedModel();
-
   const systemPromptToUse =
     dynamicSystemPrompt?.trim()
       ? dynamicSystemPrompt
       : getDefaultSystemPrompt(currentDate, drawnFeatures, selectedModel)
-
   // Check if any message contains an image
   const hasImage = messages.some(message =>
     Array.isArray(message.content) &&
     message.content.some(part => part.type === 'image')
   )
-
   const lastUserMessage = [...messages].reverse().find(m => m.role === 'user')
   console.log('Researcher - Image pipeline trace:', {
     hasImage,
@@ -173,7 +178,6 @@ export async function researcher(
         }
       : 'none'
   })
-
   const result = await nonexperimental_streamText({
     model: (await getModel(hasImage)) as LanguageModel,
     maxTokens: 2500,
@@ -185,53 +189,91 @@ export async function researcher(
     messages,
     tools: getTools({ uiStream, fullResponse, mapProvider, selectedModel, drawnFeatures }),
   })
-
   uiStream.update(null) // remove spinner
-
   const toolCalls: ToolCallPart[] = []
   const toolResponses: ToolResultPart[] = []
-  let hasAppendedAnswerSection = false
-
   for await (const delta of result.fullStream) {
     switch (delta.type) {
       case 'text-delta':
         if (delta.textDelta) {
-          if (!hasAppendedAnswerSection) {
-            uiStream.append(answerSection)
-            hasAppendedAnswerSection = true
-          }
+          if (delta.textDelta.trim()) ensureAnswerMounted()
           fullResponse += delta.textDelta
           streamText.update(fullResponse)
         }
         break
-
       case 'tool-call':
         toolCalls.push(delta)
         break
-
-      case 'tool-result':
-        if (!delta.result) hasError = true
+      case 'tool-result': {
+        const toolResult = delta.result as any
+        if (!toolResult || (typeof toolResult === 'object' && toolResult.error)) hasError = true
         toolResponses.push(delta)
+        if (
+          delta.toolName === 'geospatialQueryTool' &&
+          toolResult?.type === 'MAP_QUERY_TRIGGER' &&
+          toolResult.mcp_response != null
+        ) {
+          const placeName = toolResult.mcp_response.location?.place_name
+          uiStream.append(
+            <>
+              {toolResult.mcp_response.mapUrl && (
+                <ResolutionImage
+                  src={toolResult.mcp_response.mapUrl}
+                  className="mb-0"
+                  alt={placeName ? `Map of ${placeName}` : 'Map Preview'}
+                />
+              )}
+              <MapQueryHandler toolOutput={toolResult} />
+            </>
+          )
+        }
         break
-
+      }
       case 'error':
         hasError = true
-        fullResponse += `\n\nError: Model response generation failed.`
+        ensureAnswerMounted()
+        fullResponse += `${fullResponse ? '\n\n' : ''}Error: Model response generation failed.`
+        streamText.update(fullResponse)
         break
     }
   }
-
-  if (toolResponses.length > 0 && !hasError && fullResponse.trim().length === 0) {
-    fullResponse = 'Information gathered from search results.'
-    if (!hasAppendedAnswerSection) {
-      uiStream.append(answerSection)
-      hasAppendedAnswerSection = true
+  if (!fullResponse.trim() && toolResponses.length > 0) {
+    const fallback: string[] = []
+    for (const toolResponse of toolResponses) {
+      const output = (toolResponse as any).result
+      if (!output) {
+        fallback.push('Error: Search tool returned no result.')
+      } else if (output.error) {
+        hasError = true
+        fallback.push(`Error: ${String(output.error)}`)
+      } else if (output.type === 'MAP_QUERY_TRIGGER') {
+        const location = output.mcp_response?.location
+        if (output.error) {
+          hasError = true
+          fallback.push(`Error: ${String(output.error)}`)
+        } else if (location) {
+          const details = [
+            location.place_name,
+            location.address,
+            typeof location.latitude === 'number' ? `Latitude: ${location.latitude}` : undefined,
+            typeof location.longitude === 'number' ? `Longitude: ${location.longitude}` : undefined,
+            output.mcp_response?.mapUrl ? `Map: ${output.mcp_response.mapUrl}` : undefined
+          ].filter(Boolean)
+          fallback.push(details.join('\n') || 'Location search returned a result.')
+        }
+      }
     }
+    fullResponse = fallback.length > 0
+      ? fallback.join('\n\n')
+      : 'Information gathered from search results.'
     streamText.update(fullResponse)
   }
-
+  if (!fullResponse.trim() && toolResponses.length === 0) {
+    fullResponse = 'No response was generated. Please try again.'
+    streamText.update(fullResponse)
+  }
+  ensureAnswerMounted()
   streamText.done(fullResponse)
-
   messages.push({
     role: 'assistant',
     content: [{ type: 'text', text: fullResponse }, ...toolCalls],

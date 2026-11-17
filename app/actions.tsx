@@ -595,7 +595,7 @@ async function submit(formData?: FormData, skip?: boolean) {
           }
         }
       }
-      const { fullResponse, toolResponses } = await researcher(
+      const { fullResponse, hasError, toolResponses } = await researcher(
         currentSystemPrompt || '',
         uiStream,
         streamText,
@@ -632,7 +632,8 @@ async function submit(formData?: FormData, skip?: boolean) {
               id: groupeId,
               role: 'assistant',
               content: fullResponse,
-              type: 'response'
+              type: 'response',
+              hasError
             },
             {
               id: groupeId,
@@ -652,7 +653,14 @@ async function submit(formData?: FormData, skip?: boolean) {
     } catch (error) {
       console.error('Error in researcher:', error)
       errorOccurred = true
-      streamText.done('The answer could not be completed before the service deadline. Please try again.')
+      const errorMessage = 'The answer could not be completed before the service deadline. Please try again.'
+      streamText.update(errorMessage)
+      streamText.done(errorMessage)
+      uiStream.append(
+        <Section title="response">
+          <BotMessage content={streamText.value} />
+        </Section>
+      )
     } finally {
       isGenerating.done(false)
       uiStream.done()
