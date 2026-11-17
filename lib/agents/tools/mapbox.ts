@@ -15,7 +15,11 @@ export interface MapboxRoute {
   distanceKm: number
   durationMin: number
   profile: string
+  steps: string[]
+  note?: string
 }
+
+const MAX_ROUTE_STEPS = 25
 
 export function getMapboxToken(): string {
   return (
@@ -113,23 +117,34 @@ export async function getRoute(
   mode: string = 'driving'
 ): Promise<MapboxRoute> {
   const profile = mode === 'walking' || mode === 'cycling' ? mode : 'driving'
+  const note = mode === 'transit'
+    ? 'Public transit routing is not available from Mapbox; showing a driving route instead.'
+    : undefined
   const path = `${origin.longitude},${origin.latitude};${destination.longitude},${destination.latitude}`
   const url = new URL(`https://api.mapbox.com/directions/v5/mapbox/${profile}/${path}`)
   url.searchParams.set('overview', 'false')
+  url.searchParams.set('steps', 'true')
   const data = await mapboxGet(url)
   const route = data?.routes?.[0]
   if (!route) throw new Error('No route found between the requested locations.')
+  const steps: string[] = (route.legs || [])
+    .flatMap((leg: any) => leg.steps || [])
+    .map((step: any) => step.maneuver?.instruction)
+    .filter((instruction: unknown): instruction is string => typeof instruction === 'string' && instruction.length > 0)
   return {
     distanceKm: Math.round((route.distance / 1000) * 10) / 10,
     durationMin: Math.round(route.duration / 60),
-    profile
+    profile,
+    steps: steps.slice(0, MAX_ROUTE_STEPS),
+    ...(note ? { note } : {})
   }
 }
 
 /** Static map preview URL; only built with a public (pk.) token because the URL is sent to the browser. */
 export function getStaticMapUrl(points: MapboxPlace[]): string | undefined {
-  const publicToken = (process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || '').trim() ||
-    (getMapboxToken().startsWith('pk.') ? getMapboxToken() : '')
+  const publicToken = [process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN, process.env.MAPBOX_ACCESS_TOKEN]
+    .map(token => (token || '').trim())
+    .find(token => token.startsWith('pk.'))
   const valid = points.filter(p => typeof p.latitude === 'number' && typeof p.longitude === 'number')
   if (!publicToken || valid.length === 0) return undefined
   const markers = valid

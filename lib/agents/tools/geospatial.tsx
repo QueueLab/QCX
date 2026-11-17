@@ -11,7 +11,6 @@ import { MapProvider } from '@/lib/store/settings';
 import {
   MapboxPlace,
   MapboxRoute,
-  geocodePlace,
   getMapboxToken,
   getRoute,
   getStaticMapUrl,
@@ -50,7 +49,7 @@ const toLocation = (place: MapboxPlace): Location => ({
 });
 
 async function resolvePlace(text: string): Promise<MapboxPlace> {
-  const [place] = await geocodePlace(text, { limit: 1 });
+  const [place] = await searchPlaces(text, { limit: 1 });
   if (!place || typeof place.latitude !== 'number' || typeof place.longitude !== 'number') {
     throw new Error(`Could not find a location matching "${text}".`);
   }
@@ -108,7 +107,8 @@ export async function runMapboxQuery(params: z.infer<typeof geospatialQuerySchem
     default: {
       const text = params.location || params.query;
       if (!text) throw new Error(`'${queryType}' query requires location`);
-      const places = await geocodePlace(text, { limit: queryType === 'map' ? 1 : maxResults, proximity });
+      // Search Box covers landmarks/POIs as well as addresses and places; it falls back to Geocoding v6.
+      const places = await searchPlaces(text, { limit: queryType === 'map' ? 1 : maxResults, proximity });
       if (places.length === 0) throw new Error(`Could not find a location matching "${text}".`);
       return {
         location: toLocation(places[0]),

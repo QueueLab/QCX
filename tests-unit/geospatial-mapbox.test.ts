@@ -30,10 +30,10 @@ const geocodeFeature = (name: string, longitude: number, latitude: number) => ({
 })
 
 describe('Mapbox geospatial tool', () => {
-  it('geocodes a place via the Mapbox Geocoding v6 API', async () => {
+  it('resolves landmarks via the Mapbox Search Box API', async () => {
     process.env.MAPBOX_ACCESS_TOKEN = 'sk.test'
     const { calls, restore } = mockFetch(url =>
-      url.pathname === '/search/geocode/v6/forward'
+      url.pathname === '/search/searchbox/v1/forward'
         ? { features: [geocodeFeature('Eiffel Tower', 2.2945, 48.8584)] }
         : undefined
     )
@@ -72,16 +72,63 @@ describe('Mapbox geospatial tool', () => {
           : { features: [geocodeFeature('Hollywood', -118.3287, 34.0928)] }
       }
       if (url.pathname.startsWith('/directions/v5/mapbox/walking/')) {
-        return { routes: [{ distance: 25_432, duration: 1_860 }] }
+        return {
+          routes: [{
+            distance: 25_432,
+            duration: 1_860,
+            legs: [{ steps: [{ maneuver: { instruction: 'Head north on World Way' } }, { maneuver: { instruction: 'Arrive at Hollywood' } }] }]
+          }]
+        }
       }
     })
     try {
       const result = await runMapboxQuery({ queryType: 'directions', origin: 'LAX', destination: 'Hollywood', mode: 'walking' } as any)
       expect(calls.at(-1)!.pathname).toBe('/directions/v5/mapbox/walking/-118.4085,33.9416;-118.3287,34.0928')
-      expect(result.route).toMatchObject({ distanceKm: 25.4, durationMin: 31, profile: 'walking' })
+      expect(calls.at(-1)!.searchParams.get('steps')).toBe('true')
+      expect(result.route).toMatchObject({
+        distanceKm: 25.4,
+        durationMin: 31,
+        profile: 'walking',
+        steps: ['Head north on World Way', 'Arrive at Hollywood']
+      })
       expect(result.location.place_name).toBe('Hollywood')
     } finally {
       restore()
+    }
+  })
+
+  it('falls back to a driving route with a note for transit requests', async () => {
+    process.env.MAPBOX_ACCESS_TOKEN = 'sk.test'
+    const { calls, restore } = mockFetch(url => {
+      if (url.pathname === '/search/searchbox/v1/forward') return { features: [geocodeFeature('Stop', -118.3, 34.0)] }
+      if (url.pathname.startsWith('/directions/v5/mapbox/driving/')) return { routes: [{ distance: 1000, duration: 120, legs: [] }] }
+    })
+    try {
+      const result = await runMapboxQuery({ queryType: 'directions', origin: 'A', destination: 'B', mode: 'transit' } as any)
+      expect(calls.at(-1)!.pathname.startsWith('/directions/v5/mapbox/driving/')).toBe(true)
+      expect(result.route?.note).toContain('transit')
+    } finally {
+      restore()
+    }
+  })
+
+  it('never puts a secret token into the static map URL', async () => {
+    const saved = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN
+    process.env.MAPBOX_ACCESS_TOKEN = 'sk.secret'
+    process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN = 'sk.misconfigured'
+    const { restore } = mockFetch(url =>
+      url.pathname === '/search/searchbox/v1/forward' ? { features: [geocodeFeature('Paris', 2.35, 48.85)] } : undefined
+    )
+    try {
+      const result = await runMapboxQuery({ queryType: 'map', location: 'Paris' } as any)
+      expect(result.mapUrl).toBeUndefined()
+      process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN = 'pk.public'
+      const withPublic = await runMapboxQuery({ queryType: 'map', location: 'Paris' } as any)
+      expect(withPublic.mapUrl).toContain('access_token=pk.public')
+    } finally {
+      restore()
+      if (saved) process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN = saved
+      else delete process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN
     }
   })
 
