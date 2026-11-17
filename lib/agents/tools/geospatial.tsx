@@ -336,13 +336,16 @@ Uses the Mapbox Search Box Text Search API endpoint to power searching for and g
         switch (queryType) {
           case 'directions': return prefer('directions_tool') 
           case 'distance': return prefer('matrix_tool');
-          case 'search': return prefer( 'isochrone_tool','category_search_tool') || 'poi_search_tool';
+          case 'search': return prefer('poi_search_tool', 'category_search_tool');
           case 'map': return prefer('static_map_image_tool') 
           case 'reverse': return prefer('reverse_geocode_tool');
           case 'geocode': return prefer('forward_geocode_tool');
         }
       })();
 
+      if (!toolName) {
+        throw new Error(`No matching mapping tool is advertised for query type '${queryType}'.`)
+      }
       // Build arguments
       const toolArgs = (() => {
         switch (queryType) {
@@ -379,7 +382,7 @@ Uses the Mapbox Search Box Text Search API endpoint to power searching for and g
       while (retryCount < MAX_RETRIES) {
         try {
           toolCallResult = await Promise.race([
-            mcpClient.callTool({ name: toolName ?? 'unknown_tool', arguments: toolArgs }),
+            mcpClient.callTool({ name: toolName, arguments: toolArgs }),
             new Promise((_, reject) => setTimeout(() => reject(new Error('Tool call timeout')), 30000)),
           ]);
           break;

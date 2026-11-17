@@ -36,6 +36,7 @@ import { createClient } from '@/lib/supabase/client'
 import { db } from '@/lib/db'
 import { documents, documentChunks } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
+import { getMessagesForCompletedTurn, getPreviousAssistantMessage } from '@/lib/utils/chat-state'
 
 // Define the type for related queries
 type RelatedQueries = {
@@ -343,13 +344,15 @@ async function submit(formData?: FormData, skip?: boolean) {
     ? `{"action": "skip"}`
     : ((formData?.get('related_query') as string) ||
       (formData?.get('input') as string))
+  const relatedQueryTurn = Boolean(formData?.get('related_query'))
+  const previousAssistantMessage = getPreviousAssistantMessage(aiState.get().messages)
 
   if (userInput && (userInput.toLowerCase().trim() === 'what is a planet computer?' || userInput.toLowerCase().trim() === 'what is qcx-terra?' || userInput.toLowerCase().trim() === 'how do i use the computer?')) {
     const definition = userInput.toLowerCase().trim() === 'how do i use the computer?' ? 'To use QCX-Terra, start by searching for a location or asking a geospatial question. You can also draw features on the map to focus your analysis. QCX-Terra uses multi-agent automation to streamline exploration and provide precise environmental insights.' : userInput.toLowerCase().trim() === 'what is a planet computer?'
       ? `A planet computer is a proprietary environment aware system that interoperates weather forecasting, mapping and scheduling using cutting edge multi-agents to streamline automation and exploration on a planet. Available for our Go and Enterprise customers. [QCX Pricing](https://www.queue.cx/#pricing)`
       : `QCX-Terra is a model garden of pixel level precision geospatial foundational models for efficient land feature predictions from satellite imagery. Available for our Go and Enterprise customers. [QCX Pricing] (https://www.queue.cx/#pricing)`;
 
-    const content = JSON.stringify(Object.fromEntries(formData!));
+    const content = formData ? JSON.stringify(Object.fromEntries(formData)) : userInput;
     const type = 'input';
     const groupeId = nanoid();
 
@@ -521,8 +524,8 @@ async function submit(formData?: FormData, skip?: boolean) {
         {
           id: nanoid(),
           role: 'user',
-          content: JSON.stringify(Object.fromEntries(formData!)),
-          type: 'input'
+          content: formData ? JSON.stringify(Object.fromEntries(formData)) : userInput,
+          type: skip ? 'skip' : 'input'
         }
       ]
     })
@@ -535,8 +538,8 @@ async function submit(formData?: FormData, skip?: boolean) {
         {
           id: nanoid(),
           role: 'user',
-          content: JSON.stringify(Object.fromEntries(formData!)),
-          type: 'input'
+          content: formData ? JSON.stringify(Object.fromEntries(formData)) : userInput,
+          type: skip ? 'skip' : 'input'
         }
       ]
     })
@@ -562,7 +565,37 @@ async function submit(formData?: FormData, skip?: boolean) {
           : msg
       ) as CoreMessage[]
       const latestMessages = modifiedMessages.slice(maxMessages * -1)
-      const { fullResponse, toolResponses } = await researcher(
+      const hasImageInput = latestMessages.some(message =>
+        Array.isArray(message.content) && message.content.some(part => part.type === 'image')
+      )
+      const bypassClarification = Boolean(
+        skip || relatedQueryTurn || hasImageInput || previousAssistantMessage?.type === 'inquiry'
+      )
+      if (!bypassClarification) {
+        const decision = await taskManager(latestMessages)
+        if (decision?.object?.next === 'inquire') {
+          try {
+            const inquiry = await inquire(uiStream, latestMessages)
+            aiState.done({
+              ...aiState.get(),
+              messages: [
+                ...aiState.get().messages,
+                {
+                  id: groupeId,
+                  role: 'assistant',
+                  content: JSON.stringify(inquiry),
+                  type: 'inquiry'
+                }
+              ]
+            })
+            isCollapsed.done(false)
+            return
+          } catch (error) {
+            console.error('Failed to generate clarification inquiry; proceeding with research:', error)
+          }
+        }
+      }
+      const { fullResponse, hasError, toolResponses } = await researcher(
         currentSystemPrompt || '',
         uiStream,
         streamText,
@@ -599,7 +632,8 @@ async function submit(formData?: FormData, skip?: boolean) {
               id: groupeId,
               role: 'assistant',
               content: fullResponse,
-              type: 'response'
+              type: 'response',
+              hasError
             },
             {
               id: groupeId,
@@ -619,7 +653,14 @@ async function submit(formData?: FormData, skip?: boolean) {
     } catch (error) {
       console.error('Error in researcher:', error)
       errorOccurred = true
-      streamText.done('The answer could not be completed before the service deadline. Please try again.')
+      const errorMessage = 'The answer could not be completed before the service deadline. Please try again.'
+      streamText.update(errorMessage)
+      streamText.done(errorMessage)
+      uiStream.append(
+        <Section title="response">
+          <BotMessage content={streamText.value} />
+        </Section>
+      )
     } finally {
       isGenerating.done(false)
       uiStream.done()
@@ -687,11 +728,12 @@ export const AI = createAI<AIState, UIState>({
   onSetAIState: async ({ state }) => {
     'use server'
 
-    if (!state.messages.some(e => e.type === 'response')) {
+    const messages = getMessagesForCompletedTurn(state.messages)
+    if (!messages) {
       return
     }
 
-    const { chatId, messages } = state
+    const { chatId } = state
     const createdAt = new Date()
     const path = `/search/${chatId}`
 
@@ -793,6 +835,8 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
               }
             case 'drawing_context':
               return null // Drawing context is handled by the map, not rendered in chat
+            case 'skip':
+              return { id, component: <span className="text-muted-foreground text-sm">Skipped</span> }
 
             case 'inquiry':
               return {
@@ -805,6 +849,26 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
           const answer = createStreamableValue(content as string)
           answer.done(content as string)
           switch (type) {
+            case 'inquiry': {
+              let inquiryText = content as string
+              try {
+                const inquiry = JSON.parse(content as string)
+                inquiryText = [
+                  inquiry.question,
+                  ...(Array.isArray(inquiry.options)
+                    ? inquiry.options.map((option: any) => option.label).filter(Boolean)
+                    : [])
+                ].filter(Boolean).join('\n')
+              } catch {
+                // Preserve legacy inquiry content when it is not structured JSON.
+              }
+              const inquiryAnswer = createStreamableValue(inquiryText)
+              inquiryAnswer.done(inquiryText)
+              return {
+                id,
+                component: <BotMessage content={inquiryAnswer.value} />
+              }
+            }
             case 'response':
               return {
                 id,
@@ -992,5 +1056,5 @@ export const getUIStateFromAIState = (aiState: AIState): UIState => {
           }
       }
     })
-    .filter(message => message !== null) as UIState
+    .filter(message => message !== null && message !== undefined) as UIState
 }

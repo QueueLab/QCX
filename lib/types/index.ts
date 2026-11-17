@@ -72,6 +72,7 @@ export type AIMessage = {
   content: CoreMessage['content']
   id: string
   name?: string
+  hasError?: boolean
   userId?: string // Added for multi-user chat ownership
   createdAt?: Date // Added optional createdAt timestamp
   type?:
