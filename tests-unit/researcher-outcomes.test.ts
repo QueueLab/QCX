@@ -43,25 +43,50 @@ const { researcher } = await import('../lib/agents/researcher')
 async function run(events: any[], prompt = '') {
   streamEvents = events
   const uiStream = { appended: [] as any[], update: (_value: any) => {}, append(value: any) { uiStream.appended.push(value) } }
+  const updates: string[] = []
+  const doneValues: string[] = []
+  const streamHandle = { kind: 'streamable-value' }
+  let currentValue = ''
   const streamText = {
-    value: '',
-    update(value: string) { this.value = value },
-    done(value?: string) { if (value !== undefined) this.value = value }
+    value: streamHandle,
+    get current() { return currentValue },
+    update(value: string) { currentValue = value; updates.push(value) },
+    done(value?: string) { if (value !== undefined) { currentValue = value; doneValues.push(value) } }
   }
   const messages: any[] = [{ role: 'user', content: 'coffee shops near a landmark' }]
   const result = await researcher(prompt, uiStream as any, streamText as any, messages, 'mapbox' as any)
-  return { result, streamText, uiStream, messages }
+  return { result, streamText, uiStream, messages, updates, doneValues }
 }
 
 describe('researcher outcome rendering', () => {
-  it('streams text into a mounted response section', async () => {
-    const { result, streamText, uiStream } = await run([{ type: 'text-delta', textDelta: 'Found three cafes.' }])
+  it('streams each regular-response token update into one mounted response section', async () => {
+    const { result, streamText, uiStream, messages, updates, doneValues } = await run([
+      { type: 'text-delta', textDelta: 'Found ' },
+      { type: 'text-delta', textDelta: 'three ' },
+      { type: 'text-delta', textDelta: 'cafes.' }
+    ])
+    expect(updates).toEqual(['Found ', 'Found three ', 'Found three cafes.'])
+    expect(doneValues).toEqual(['Found three cafes.'])
     expect(result.fullResponse).toBe('Found three cafes.')
-    expect(streamText.value).toBe('Found three cafes.')
+    expect(streamText.current).toBe('Found three cafes.')
     expect(uiStream.appended).toHaveLength(1)
+    const botMessage = uiStream.appended[0].props.children
+    expect(botMessage.props.content).toBe(streamText.value)
+    expect(messages.at(-1).content[0].text).toBe(result.fullResponse)
     expect(systemPrompt).toContain('does not remove the final answer')
     expect(systemPrompt).toContain('state the location result concisely')
     expect(result.hasError).toBe(false)
+  })
+
+  it('keeps leading whitespace but waits for visible text before mounting the answer', async () => {
+    const { result, streamText, uiStream, updates } = await run([
+      { type: 'text-delta', textDelta: '  ' },
+      { type: 'text-delta', textDelta: 'Answer' }
+    ])
+    expect(updates).toEqual(['  ', '  Answer'])
+    expect(streamText.current).toBe('  Answer')
+    expect(result.fullResponse).toBe('  Answer')
+    expect(uiStream.appended).toHaveLength(1)
   })
 
   it('builds a location fallback when geospatial results have no model text', async () => {
@@ -85,14 +110,14 @@ describe('researcher outcome rendering', () => {
     }])
     expect(result.hasError).toBe(true)
     expect(result.fullResponse).toContain('Mapping service unavailable')
-    expect(streamText.value).toContain('Mapping service unavailable')
+    expect(streamText.current).toContain('Mapping service unavailable')
   })
 
   it('mounts a response section when the stream emits an error delta', async () => {
     const { result, uiStream, streamText } = await run([{ type: 'error', error: new Error('generation failed') }])
     expect(result.hasError).toBe(true)
     expect(result.fullResponse).toContain('Error: Model response generation failed.')
-    expect(streamText.value).toContain('Error: Model response generation failed.')
+    expect(streamText.current).toContain('Error: Model response generation failed.')
     expect(uiStream.appended).toHaveLength(1)
   })
 
