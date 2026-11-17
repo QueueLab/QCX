@@ -554,17 +554,12 @@ async function submit(formData?: FormData, skip?: boolean) {
 
   async function processEvents() {
     try {
-      const modifiedMessages = messages.map(msg =>
-        msg.role === 'tool'
-          ? {
-              ...msg,
-              role: 'assistant',
-              content: JSON.stringify(msg.content),
-              type: 'tool'
-            }
-          : msg
-      ) as CoreMessage[]
-      const latestMessages = modifiedMessages.slice(maxMessages * -1)
+      // Tool records are persisted for UI/report rendering, but they are not
+      // provider-native tool-call messages (they lack toolCallId and the
+      // corresponding assistant tool-call part). Sending them back as
+      // assistant JSON can make the next prompt invalid or unresponsive.
+      const modelMessages = messages.filter(msg => msg.role !== 'tool') as CoreMessage[]
+      const latestMessages = modelMessages.slice(maxMessages * -1)
       const hasImageInput = latestMessages.some(message =>
         Array.isArray(message.content) && message.content.some(part => part.type === 'image')
       )
