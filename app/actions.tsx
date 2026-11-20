@@ -68,17 +68,21 @@ async function submit(formData?: FormData, skip?: boolean) {
   const isCollapsed = createStreamableValue(false)
   const traceState: ActionTrace = {
     steps: [{ id: 'request', label: 'Reviewing your request', status: 'active' }],
-    completed: false
+    completed: false,
+    hasError: false
   }
   const traceStream = createStreamableValue<ActionTrace>({
     steps: traceState.steps.map(step => ({ ...step })),
-    completed: false
+    completed: false,
+    hasError: false
   })
+  const rootUIStream = createStreamableUI()
   let traceClosed = false
   const activeToolCallIds = new Set<string>()
   const publishTrace = () => traceStream.update({
     steps: traceState.steps.map(step => ({ ...step })),
-    completed: traceState.completed
+    completed: traceState.completed,
+    hasError: traceState.hasError
   })
   const advanceTrace = (id: string, label: string, detail?: string) => {
     const current = traceState.steps.find(step => step.status === 'active')
@@ -88,6 +92,7 @@ async function submit(formData?: FormData, skip?: boolean) {
   }
   const finishTrace = (failed = false) => {
     if (traceClosed) return
+    if (failed) traceState.hasError = true
     traceState.steps.forEach(step => {
       if (step.status === 'active') step.status = failed ? 'error' : 'complete'
     })
@@ -95,9 +100,17 @@ async function submit(formData?: FormData, skip?: boolean) {
     traceClosed = true
     traceStream.done({
       steps: traceState.steps.map(step => ({ ...step })),
-      completed: true
+      completed: true,
+      hasError: traceState.hasError
     })
   }
+  const markResearchTraceFailed = () => {
+    const researchStep = traceState.steps.find(step => step.id === 'research')
+    if (researchStep) researchStep.status = 'error'
+    traceState.hasError = true
+    publishTrace()
+  }
+  let responseStageNumber = 0
   const updateTraceFromEvent = (event: ActionTraceEvent) => {
     if (event.type === 'tool-start') {
       const toolDescriptions: Record<string, { label: string; detail: string }> = {
@@ -125,9 +138,9 @@ async function submit(formData?: FormData, skip?: boolean) {
       const completed = traceState.steps.find(step => step.id === event.toolCallId)
       if (completed) completed.status = 'complete'
       activeToolCallIds.delete(event.toolCallId)
-      if (activeToolCallIds.size === 0 && !traceState.steps.some(step => step.id === 'response')) {
+      if (activeToolCallIds.size === 0) {
         advanceTrace(
-          'review-results',
+          `review-results-${traceState.steps.length}`,
           'Reviewing gathered information',
           'Using the results to decide what to include or check next.'
         )
@@ -142,7 +155,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         })
         activeToolCallIds.clear()
         traceState.steps.push({
-          id: 'response',
+          id: `response-${++responseStageNumber}`,
           label: 'Writing your response',
           detail: 'Summarizing the information gathered for you.',
           status: 'active'
@@ -151,12 +164,12 @@ async function submit(formData?: FormData, skip?: boolean) {
       }
     }
   }
-  uiStream.update(<ActionTracePanel trace={traceStream.value} />)
-  const tracedUIStream = {
-    update: (content: Parameters<typeof uiStream.update>[0]) =>
-      uiStream.update(<><ActionTracePanel trace={traceStream.value} />{content}</>),
-    append: (content: Parameters<typeof uiStream.append>[0]) => uiStream.append(content)
-  } as ReturnType<typeof createStreamableUI>
+  rootUIStream.update(<><ActionTracePanel trace={traceStream.value} />{uiStream.value}</>)
+  const tracedUIStream = uiStream
+  const finishUIStreams = () => {
+    uiStream.done()
+    rootUIStream.done()
+  }
 
   const action = formData?.get('action') as string;
   const drawnFeaturesString = formData?.get('drawnFeatures') as string;
@@ -389,13 +402,13 @@ async function submit(formData?: FormData, skip?: boolean) {
         } finally {
           finishTrace()
           isGenerating.done(false);
-          uiStream.done();
+          finishUIStreams();
         }
       }
 
       processResolutionSearch();
 
-      uiStream.append(
+      tracedUIStream.update(
         <Section title="response">
           <ResolutionCarousel
             mapboxImage={mapboxDataUrl || undefined}
@@ -409,7 +422,7 @@ async function submit(formData?: FormData, skip?: boolean) {
       return {
         id: nanoid(),
         isGenerating: isGenerating.value,
-        component: uiStream.value,
+        component: rootUIStream.value,
         isCollapsed: isCollapsed.value
       };
     } catch (err: any) {
@@ -417,21 +430,17 @@ async function submit(formData?: FormData, skip?: boolean) {
       const errorStream = createStreamableValue<string>(`Failed to perform resolution search: ${err?.message || 'Invalid parameters.'}`);
       errorStream.done();
       finishTrace(true)
-      uiStream.append(
+      tracedUIStream.update(
         <Section title="Error">
           <BotMessage content={errorStream.value} />
         </Section>
       )
       isGenerating.done(false);
-      uiStream.done();
+      finishUIStreams();
       return {
         id: nanoid(),
         isGenerating: isGenerating.value,
-        component: (
-          <Section title="Error">
-            <BotMessage content={errorStream.value} />
-          </Section>
-        ),
+        component: rootUIStream.value,
         isCollapsed: isCollapsed.value
       };
     }
@@ -479,14 +488,14 @@ async function submit(formData?: FormData, skip?: boolean) {
 
     advanceTrace('answer', 'Preparing your response', 'Putting the requested information into a concise answer.')
     finishTrace()
-    uiStream.append(
+    tracedUIStream.update(
       <Section title="response">
         <BotMessage content={summaryStream.value} />
       </Section>
     );
 
     isGenerating.done(false);
-    uiStream.done();
+    finishUIStreams();
 
     aiState.done({
       ...aiState.get(),
@@ -504,7 +513,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     return {
       id: nanoid(),
       isGenerating: isGenerating.value,
-      component: uiStream.value,
+      component: rootUIStream.value,
       isCollapsed: isCollapsed.value
     };
   }
@@ -716,6 +725,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         drawnFeatures,
         updateTraceFromEvent
       )
+      if (hasError) markResearchTraceFailed()
 
       if (!errorOccurred) {
         const toolAiMessages: AIMessage[] = (toolResponses || []).map((tr: any) => ({
@@ -771,7 +781,7 @@ async function submit(formData?: FormData, skip?: boolean) {
       const errorMessage = 'The answer could not be completed before the service deadline. Please try again.'
       streamText.update(errorMessage)
       streamText.done(errorMessage)
-      uiStream.append(
+      tracedUIStream.update(
         <Section title="response">
           <BotMessage content={streamText.value} />
         </Section>
@@ -779,7 +789,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     } finally {
       finishTrace(errorOccurred)
       isGenerating.done(false)
-      uiStream.done()
+      finishUIStreams()
     }
   }
 
@@ -788,7 +798,7 @@ async function submit(formData?: FormData, skip?: boolean) {
   return {
     id: nanoid(),
     isGenerating: isGenerating.value,
-    component: uiStream.value,
+    component: rootUIStream.value,
     isCollapsed: isCollapsed.value
   }
 }

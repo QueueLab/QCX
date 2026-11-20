@@ -10,6 +10,7 @@ export interface ActionTraceStep {
 export interface ActionTrace {
   steps: ActionTraceStep[]
   completed: boolean
+  hasError?: boolean
 }
 
 export type ActionTraceEvent =

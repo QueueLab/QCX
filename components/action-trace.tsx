@@ -41,9 +41,9 @@ export function ActionTracePanel({ trace: stream }: ActionTracePanelProps) {
       : Math.max(steps.length - 1, 0)
   }, [steps])
   const activeStep = steps[activeIndex]
-  const hasError = steps.some(step => step.status === 'error')
+  const hasError = Boolean(trace?.hasError) || steps.some(step => step.status === 'error')
   const summary = trace?.completed
-    ? hasError ? 'Action failed' : 'Actions complete'
+    ? hasError ? 'Completed with an issue' : 'Actions complete'
     : activeStep?.label || 'Preparing your response'
 
   useEffect(() => {

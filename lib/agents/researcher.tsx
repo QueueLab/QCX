@@ -210,6 +210,7 @@ export async function researcher(
         break
       case 'tool-call':
         toolCalls.push(delta)
+        responseStarted = false
         onAction?.({ type: 'tool-start', toolCallId: delta.toolCallId, toolName: delta.toolName })
         break
       case 'tool-result': {
