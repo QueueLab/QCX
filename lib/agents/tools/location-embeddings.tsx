@@ -185,6 +185,22 @@ export const locationEmbeddingsTool = ({ uiStream, fullResponse, drawnFeatures }
 
     // Determine endpoint: use search-by-text if natural language query is provided, else search-by-location
     const isTextSearch = Boolean(query && query.trim().length > 0)
+    const hasTextSearchLocation =
+      Boolean(location?.trim()) || latitude !== undefined || longitude !== undefined
+
+    if (isTextSearch && hasTextSearchLocation && !resolvedGeometry) {
+      const errorPayload = {
+        query,
+        location,
+        latitude: resolvedLatitude,
+        longitude: resolvedLongitude,
+        top_k,
+        error:
+          'Text search with a location requires a polygon boundary. Provide a place that can be resolved to a boundary or draw an area; for point-based similarity, omit the text query.'
+      }
+      streamResults.done(JSON.stringify(errorPayload))
+      return errorPayload
+    }
 
     if (
       !isTextSearch &&
@@ -192,6 +208,19 @@ export const locationEmbeddingsTool = ({ uiStream, fullResponse, drawnFeatures }
     ) {
       const errorPayload = {
         error: 'Location search requires valid latitude and longitude coordinates.'
+      }
+      streamResults.done(JSON.stringify(errorPayload))
+      return errorPayload
+    }
+
+    if (!effectiveApiKey) {
+      const errorPayload = {
+        query,
+        location,
+        latitude: resolvedLatitude,
+        longitude: resolvedLongitude,
+        top_k,
+        error: 'Location embeddings are not configured. Set LGND_EMBEDDINGS_API_KEY in the server environment.'
       }
       streamResults.done(JSON.stringify(errorPayload))
       return errorPayload

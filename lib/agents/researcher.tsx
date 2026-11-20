@@ -17,6 +17,7 @@ import { MapProvider } from '@/lib/store/settings'
 import { DrawnFeature } from './resolution-search'
 import { getSelectedModel } from '@/lib/actions/users'
 import { AI_REQUEST_TIMEOUT_MS, createDeadlineSignal } from '@/lib/utils/with-timeout'
+import type { ActionTraceEvent } from '@/lib/types/action-trace'
 
 // This magic tag lets us write raw multi-line strings with backticks, arrows, etc.
 const raw = String.raw
@@ -130,7 +131,8 @@ export async function researcher(
   messages: CoreMessage[],
   mapProvider: MapProvider,
   useSpecificModel?: boolean,
-  drawnFeatures?: DrawnFeature[]
+  drawnFeatures?: DrawnFeature[],
+  onAction?: (event: ActionTraceEvent) => void
 ) {
   let fullResponse = ''
   let hasError = false
@@ -190,13 +192,17 @@ export async function researcher(
     messages,
     tools: getTools({ uiStream, fullResponse, mapProvider, selectedModel, drawnFeatures }),
   })
-  uiStream.update(null) // remove spinner
   const toolCalls: ToolCallPart[] = []
   const toolResponses: ToolResultPart[] = []
+  let responseStarted = false
   for await (const delta of result.fullStream) {
     switch (delta.type) {
       case 'text-delta':
         if (delta.textDelta) {
+          if (delta.textDelta.trim() && !responseStarted) {
+            responseStarted = true
+            onAction?.({ type: 'response-start' })
+          }
           if (delta.textDelta.trim()) ensureAnswerMounted()
           fullResponse += delta.textDelta
           streamText.update(fullResponse)
@@ -204,11 +210,14 @@ export async function researcher(
         break
       case 'tool-call':
         toolCalls.push(delta)
+        responseStarted = false
+        onAction?.({ type: 'tool-start', toolCallId: delta.toolCallId, toolName: delta.toolName })
         break
       case 'tool-result': {
         const toolResult = delta.result as any
         if (!toolResult || (typeof toolResult === 'object' && toolResult.error)) hasError = true
         toolResponses.push(delta)
+        onAction?.({ type: 'tool-complete', toolCallId: delta.toolCallId })
         if (
           delta.toolName === 'geospatialQueryTool' &&
           toolResult?.type === 'MAP_QUERY_TRIGGER' &&
@@ -261,6 +270,10 @@ export async function researcher(
     }
   }
   if (!fullResponse.trim() && toolResponses.length > 0) {
+    if (!responseStarted) {
+      responseStarted = true
+      onAction?.({ type: 'response-start' })
+    }
     const fallback: string[] = []
     for (const toolResponse of toolResponses) {
       const output = (toolResponse as any).result
@@ -294,6 +307,10 @@ export async function researcher(
     streamText.update(fullResponse)
   }
   if (!fullResponse.trim() && toolResponses.length === 0) {
+    if (!responseStarted) {
+      responseStarted = true
+      onAction?.({ type: 'response-start' })
+    }
     fullResponse = 'No response was generated. Please try again.'
     streamText.update(fullResponse)
   }

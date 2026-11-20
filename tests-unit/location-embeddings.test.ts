@@ -203,8 +203,8 @@ describe('Location Embeddings Tool', () => {
 
       const result = await tool.execute({
         query: 'construction sites',
-        location: 'Phoenix, Arizona',
-        top_k: 5
+        top_k: 5,
+        apiKey: 'sk_test_api_key'
       })
 
       if (!('error' in result)) {
@@ -283,7 +283,8 @@ describe('Location Embeddings Tool', () => {
       const result = await tool.execute({
         query: 'heavy machinery used to fell timber',
         location: 'Oregon',
-        top_k: 10
+        top_k: 10,
+        apiKey: 'sk_test_api_key'
       })
 
       const textSearchCalls = fetchCalls.filter(c => c.url.includes('/search-by-text'))
@@ -329,6 +330,76 @@ describe('Location Embeddings Tool', () => {
     expect(result.error).toBe('Location search requires valid latitude and longitude coordinates.')
   })
 
+  it('rejects text searches that would silently ignore a requested location', async () => {
+    const mapboxNames = ['MAPBOX_ACCESS_TOKEN', 'NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN']
+    const originalMapboxValues = mapboxNames.map(name => process.env[name])
+    mapboxNames.forEach(name => { delete process.env[name] })
+    const originalFetch = globalThis.fetch
+    let fetchCalled = false
+    globalThis.fetch = (async () => {
+      fetchCalled = true
+      return new Response('Unexpected request', { status: 500 })
+    }) as typeof fetch
+
+    try {
+      const tool = locationEmbeddingsTool({
+        uiStream: { append: () => {}, update: () => {} } as any,
+        fullResponse: ''
+      })
+      const coordinateResult = await tool.execute({
+        query: 'solar farms',
+        latitude: 40,
+        longitude: -120,
+        apiKey: 'sk_test'
+      })
+      const placeResult = await tool.execute({
+        query: 'solar farms',
+        location: 'Nevada',
+        apiKey: 'sk_test'
+      })
+
+      expect('error' in coordinateResult && coordinateResult.error).toContain('polygon boundary')
+      expect('error' in placeResult && placeResult.error).toContain('polygon boundary')
+      expect(fetchCalled).toBe(false)
+    } finally {
+      globalThis.fetch = originalFetch
+      mapboxNames.forEach((name, index) => {
+        if (originalMapboxValues[index] === undefined) delete process.env[name]
+        else process.env[name] = originalMapboxValues[index]
+      })
+    }
+  })
+
+  it('returns a clear configuration error without making an unauthenticated request', async () => {
+    const names = ['LGND_EMBEDDINGS_API_KEY', 'EMBEDDINGS_API_KEY', 'LGND_API_KEY']
+    const originalValues = names.map(name => process.env[name])
+    names.forEach(name => { delete process.env[name] })
+    const originalFetch = globalThis.fetch
+    let fetchCalled = false
+    globalThis.fetch = (async () => {
+      fetchCalled = true
+      return new Response('Unauthorized', { status: 401 })
+    }) as typeof fetch
+
+    try {
+      const tool = locationEmbeddingsTool({
+        uiStream: { append: () => {}, update: () => {} } as any,
+        fullResponse: ''
+      })
+      const result = await tool.execute({ query: 'forest canopy' })
+
+      if (!('error' in result)) throw new Error('Expected missing-key error payload')
+      expect(result.error).toContain('Set LGND_EMBEDDINGS_API_KEY')
+      expect(fetchCalled).toBe(false)
+    } finally {
+      globalThis.fetch = originalFetch
+      names.forEach((name, index) => {
+        if (originalValues[index] === undefined) delete process.env[name]
+        else process.env[name] = originalValues[index]
+      })
+    }
+  })
+
   it('returns human-friendly error message when search-by-location returns 422 bounds error', async () => {
     const mockUiStream = {
       append: () => {},
@@ -356,7 +427,8 @@ describe('Location Embeddings Tool', () => {
       const result = await tool.execute({
         latitude: 45.5152,
         longitude: -122.6784,
-        top_k: 5
+        top_k: 5,
+        apiKey: 'sk_test_api_key'
       })
 
       if (!('error' in result)) {
@@ -411,7 +483,8 @@ describe('Location Embeddings Tool', () => {
       const result = await tool.execute({
         latitude: 40.8893,
         longitude: -124.0172,
-        top_k: 1
+        top_k: 1,
+        apiKey: 'sk_test_api_key'
       })
 
       if ('error' in result) {

@@ -54,8 +54,18 @@ async function run(events: any[], prompt = '') {
     done(value?: string) { if (value !== undefined) { currentValue = value; doneValues.push(value) } }
   }
   const messages: any[] = [{ role: 'user', content: 'coffee shops near a landmark' }]
-  const result = await researcher(prompt, uiStream as any, streamText as any, messages, 'mapbox' as any)
-  return { result, streamText, uiStream, messages, updates, doneValues }
+  const actionEvents: any[] = []
+  const result = await researcher(
+    prompt,
+    uiStream as any,
+    streamText as any,
+    messages,
+    'mapbox' as any,
+    false,
+    undefined,
+    event => actionEvents.push(event)
+  )
+  return { result, streamText, uiStream, messages, updates, doneValues, actionEvents }
 }
 
 describe('researcher outcome rendering', () => {
@@ -87,6 +97,17 @@ describe('researcher outcome rendering', () => {
     expect(streamText.current).toBe('  Answer')
     expect(result.fullResponse).toBe('  Answer')
     expect(uiStream.appended).toHaveLength(1)
+  })
+
+  it('starts a new response stage after a tool call and result', async () => {
+    const { actionEvents } = await run([
+      { type: 'text-delta', textDelta: 'Initial response.' },
+      { type: 'tool-call', toolCallId: 'search-1', toolName: 'search', args: { query: 'more' } },
+      { type: 'tool-result', toolCallId: 'search-1', toolName: 'search', result: { results: [] } },
+      { type: 'text-delta', textDelta: ' Follow-up response.' }
+    ])
+
+    expect(actionEvents.filter(event => event.type === 'response-start')).toHaveLength(2)
   })
 
   it('builds a location fallback when geospatial results have no model text', async () => {
