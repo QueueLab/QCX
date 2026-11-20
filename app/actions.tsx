@@ -37,6 +37,8 @@ import { db } from '@/lib/db'
 import { documents, documentChunks } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { getMessagesForCompletedTurn, getPreviousAssistantMessage } from '@/lib/utils/chat-state'
+import { ActionTracePanel } from '@/components/action-trace'
+import type { ActionTrace, ActionTraceEvent } from '@/lib/types/action-trace'
 
 // Define the type for related queries
 type RelatedQueries = {
@@ -64,6 +66,97 @@ async function submit(formData?: FormData, skip?: boolean) {
   const uiStream = createStreamableUI()
   const isGenerating = createStreamableValue(true)
   const isCollapsed = createStreamableValue(false)
+  const traceState: ActionTrace = {
+    steps: [{ id: 'request', label: 'Reviewing your request', status: 'active' }],
+    completed: false
+  }
+  const traceStream = createStreamableValue<ActionTrace>({
+    steps: traceState.steps.map(step => ({ ...step })),
+    completed: false
+  })
+  let traceClosed = false
+  const activeToolCallIds = new Set<string>()
+  const publishTrace = () => traceStream.update({
+    steps: traceState.steps.map(step => ({ ...step })),
+    completed: traceState.completed
+  })
+  const advanceTrace = (id: string, label: string, detail?: string) => {
+    const current = traceState.steps.find(step => step.status === 'active')
+    if (current) current.status = 'complete'
+    traceState.steps.push({ id, label, detail, status: 'active' })
+    publishTrace()
+  }
+  const finishTrace = (failed = false) => {
+    if (traceClosed) return
+    traceState.steps.forEach(step => {
+      if (step.status === 'active') step.status = failed ? 'error' : 'complete'
+    })
+    traceState.completed = true
+    traceClosed = true
+    traceStream.done({
+      steps: traceState.steps.map(step => ({ ...step })),
+      completed: true
+    })
+  }
+  const updateTraceFromEvent = (event: ActionTraceEvent) => {
+    if (event.type === 'tool-start') {
+      const toolDescriptions: Record<string, { label: string; detail: string }> = {
+        search: { label: 'Searching the web', detail: 'Checking current sources to support the answer.' },
+        geospatialQueryTool: { label: 'Looking up a location', detail: 'Resolving the place, address, route, or map request.' },
+        locationEmbeddingsQuery: { label: 'Searching satellite imagery', detail: 'Finding imagery that matches the spatial description.' },
+        skyfiQueryTool: { label: 'Searching SkyFi imagery', detail: 'Checking satellite imagery and available captures.' },
+        documentRetrieve: { label: 'Searching your document', detail: 'Finding relevant passages in the uploaded file.' },
+        retrieve: { label: 'Reading the provided page', detail: 'Inspecting the URL you supplied.' },
+        videoSearch: { label: 'Searching for videos', detail: 'Finding video results relevant to the request.' }
+      }
+      const id = event.toolCallId || `tool-${traceState.steps.length}`
+      if (activeToolCallIds.size === 0) {
+        const current = traceState.steps.find(step => step.status === 'active')
+        if (current) current.status = 'complete'
+      }
+      const description = toolDescriptions[event.toolName] || {
+        label: 'Using a research tool',
+        detail: 'Gathering information for the response.'
+      }
+      traceState.steps.push({ id, ...description, status: 'active' })
+      activeToolCallIds.add(id)
+      publishTrace()
+    } else if (event.type === 'tool-complete') {
+      const completed = traceState.steps.find(step => step.id === event.toolCallId)
+      if (completed) completed.status = 'complete'
+      activeToolCallIds.delete(event.toolCallId)
+      if (activeToolCallIds.size === 0 && !traceState.steps.some(step => step.id === 'response')) {
+        advanceTrace(
+          'review-results',
+          'Reviewing gathered information',
+          'Using the results to decide what to include or check next.'
+        )
+        return
+      }
+      publishTrace()
+    } else if (event.type === 'response-start') {
+      const current = traceState.steps.find(step => step.status === 'active')
+      if (!current || current.label !== 'Writing your response') {
+        traceState.steps.forEach(step => {
+          if (step.status === 'active') step.status = 'complete'
+        })
+        activeToolCallIds.clear()
+        traceState.steps.push({
+          id: 'response',
+          label: 'Writing your response',
+          detail: 'Summarizing the information gathered for you.',
+          status: 'active'
+        })
+        publishTrace()
+      }
+    }
+  }
+  uiStream.update(<ActionTracePanel trace={traceStream.value} />)
+  const tracedUIStream = {
+    update: (content: Parameters<typeof uiStream.update>[0]) =>
+      uiStream.update(<><ActionTracePanel trace={traceStream.value} />{content}</>),
+    append: (content: Parameters<typeof uiStream.append>[0]) => uiStream.append(content)
+  } as ReturnType<typeof createStreamableUI>
 
   const action = formData?.get('action') as string;
   const drawnFeaturesString = formData?.get('drawnFeatures') as string;
@@ -140,6 +233,7 @@ async function submit(formData?: FormData, skip?: boolean) {
 
       const processResolutionSearch = async () => {
         try {
+          advanceTrace('resolution-analysis', 'Analyzing satellite imagery', 'Examining the submitted image for geospatial features.')
           const streamResult = await resolutionSearch(messages, timezone, drawnFeatures, location);
 
           let fullSummary = '';
@@ -152,6 +246,7 @@ async function submit(formData?: FormData, skip?: boolean) {
 
           const analysisResult = await streamResult.object;
           summaryStream.done(analysisResult.summary || 'Analysis complete.');
+          advanceTrace('analysis-summary', 'Preparing the analysis summary', 'Turning the analysis results into a readable response.')
 
           // Reconstruct standard GeoJSON from flattened schema if present.
           // Structured-output models should return flat Point coordinates, but
@@ -239,7 +334,8 @@ async function submit(formData?: FormData, skip?: boolean) {
             }
             return m
           });
-          const relatedQueries = await querySuggestor(uiStream, sanitizedMessages);
+          advanceTrace('follow-up', 'Preparing follow-up suggestions', 'Finding useful next questions based on this analysis.')
+          const relatedQueries = await querySuggestor(tracedUIStream, sanitizedMessages);
           uiStream.append(
             <Section title="Follow-up">
               <FollowupPanel />
@@ -248,6 +344,7 @@ async function submit(formData?: FormData, skip?: boolean) {
 
           await new Promise(resolve => setTimeout(resolve, 500));
 
+          finishTrace()
           aiState.done({
             ...aiState.get(),
             messages: [
@@ -288,7 +385,9 @@ async function submit(formData?: FormData, skip?: boolean) {
         } catch (error) {
           console.error('Error in resolution search:', error);
           summaryStream.done('Resolution analysis is temporarily unavailable. Please try again.');
+          finishTrace(true)
         } finally {
+          finishTrace()
           isGenerating.done(false);
           uiStream.done();
         }
@@ -296,7 +395,7 @@ async function submit(formData?: FormData, skip?: boolean) {
 
       processResolutionSearch();
 
-      uiStream.update(
+      uiStream.append(
         <Section title="response">
           <ResolutionCarousel
             mapboxImage={mapboxDataUrl || undefined}
@@ -317,6 +416,12 @@ async function submit(formData?: FormData, skip?: boolean) {
       console.error('Failed to parse files or initialize resolution search:', err);
       const errorStream = createStreamableValue<string>(`Failed to perform resolution search: ${err?.message || 'Invalid parameters.'}`);
       errorStream.done();
+      finishTrace(true)
+      uiStream.append(
+        <Section title="Error">
+          <BotMessage content={errorStream.value} />
+        </Section>
+      )
       isGenerating.done(false);
       uiStream.done();
       return {
@@ -372,7 +477,9 @@ async function submit(formData?: FormData, skip?: boolean) {
     const summaryStream = createStreamableValue<string>(definition);
     summaryStream.done(definition);
 
-    uiStream.update(
+    advanceTrace('answer', 'Preparing your response', 'Putting the requested information into a concise answer.')
+    finishTrace()
+    uiStream.append(
       <Section title="response">
         <BotMessage content={summaryStream.value} />
       </Section>
@@ -572,10 +679,13 @@ async function submit(formData?: FormData, skip?: boolean) {
         skip || relatedQueryTurn || hasImageInput || previousAssistantMessage?.type === 'inquiry'
       )
       if (!bypassClarification) {
+        advanceTrace('clarification-check', 'Checking whether more detail is needed', 'Determining whether the request can be answered as written.')
         const decision = await taskManager(latestMessages)
         if (decision?.object?.next === 'inquire') {
           try {
-            const inquiry = await inquire(uiStream, latestMessages)
+            advanceTrace('clarification', 'Preparing a clarification', 'Asking for missing context before proceeding.')
+            const inquiry = await inquire(tracedUIStream, latestMessages)
+            finishTrace()
             aiState.done({
               ...aiState.get(),
               messages: [
@@ -595,14 +705,16 @@ async function submit(formData?: FormData, skip?: boolean) {
           }
         }
       }
+      advanceTrace('research', 'Researching relevant information', 'Gathering relevant information before drafting the answer.')
       const { fullResponse, hasError, toolResponses } = await researcher(
         currentSystemPrompt || '',
-        uiStream,
+        tracedUIStream,
         streamText,
         latestMessages,
         'mapbox', // default provider
         false,
-        drawnFeatures
+        drawnFeatures,
+        updateTraceFromEvent
       )
 
       if (!errorOccurred) {
@@ -614,7 +726,8 @@ async function submit(formData?: FormData, skip?: boolean) {
           type: 'tool'
         }))
 
-        const relatedQueries = await querySuggestor(uiStream, messages)
+        advanceTrace('follow-up', 'Preparing follow-up suggestions', 'Suggesting useful next questions based on the answer.')
+        const relatedQueries = await querySuggestor(tracedUIStream, messages)
         uiStream.append(
           <Section title="Follow-up">
             <FollowupPanel />
@@ -623,6 +736,7 @@ async function submit(formData?: FormData, skip?: boolean) {
 
         await new Promise(resolve => setTimeout(resolve, 500))
 
+        finishTrace()
         aiState.done({
           ...aiState.get(),
           messages: [
@@ -653,6 +767,7 @@ async function submit(formData?: FormData, skip?: boolean) {
     } catch (error) {
       console.error('Error in researcher:', error)
       errorOccurred = true
+      finishTrace(true)
       const errorMessage = 'The answer could not be completed before the service deadline. Please try again.'
       streamText.update(errorMessage)
       streamText.done(errorMessage)
@@ -662,6 +777,7 @@ async function submit(formData?: FormData, skip?: boolean) {
         </Section>
       )
     } finally {
+      finishTrace(errorOccurred)
       isGenerating.done(false)
       uiStream.done()
     }
